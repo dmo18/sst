@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MSP Status HUD</title>
+<style>
+:root{color-scheme:dark;--bg:#070a0f;--line:rgba(255,255,255,.16);--text:#f2f6ff;--muted:#a9b4c4;--green:#12d85a;--amber:#ffb21a;--red:#ff3939;--blue:#58a6ff}*{box-sizing:border-box}body{margin:0;min-height:100vh;background:#05070a;color:var(--text);font-family:Arial,Helvetica,sans-serif;display:grid;place-items:center;padding:28px}.wrap{width:min(100%,920px)}.label{margin:0 0 10px 2px;color:var(--muted);font-size:13px}.slot{width:458px;height:291px;max-width:100%;border:2px solid #ff7b1a;overflow:hidden;background:#111722;box-shadow:0 20px 60px rgba(0,0,0,.48)}.hud{height:100%;padding:8px 9px;display:grid;grid-template-rows:23px 62px 158px 26px;gap:4px;background:linear-gradient(180deg,rgba(255,255,255,.05),transparent 38%),var(--bg)}.top{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);padding-bottom:4px}.title{font-size:13.5px;font-weight:800}.updated{font-size:10.5px;color:var(--muted);white-space:nowrap}.providers{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;overflow:hidden}.provider{border:1px solid var(--line);border-radius:5px;padding:3px 5px;min-width:0;background:rgba(255,255,255,.035)}.provider-name{font-size:10.3px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.provider-state{margin-top:3px;display:flex;align-items:center;gap:4px;font-size:9.8px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.provider-state span:last-child{overflow:hidden;text-overflow:ellipsis}.dot{width:8px;height:8px;border-radius:999px;flex:0 0 auto}.green{color:var(--green)}.amber{color:var(--amber)}.red{color:var(--red)}.blue{color:var(--blue)}.dot.green{background:var(--green);box-shadow:0 0 10px rgba(18,216,90,.8)}.dot.amber{background:var(--amber);box-shadow:0 0 10px rgba(255,178,26,.8)}.dot.red{background:var(--red);box-shadow:0 0 10px rgba(255,57,57,.8)}.dot.blue{background:var(--blue);box-shadow:0 0 10px rgba(88,166,255,.8)}.notes{border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:5px 0;display:grid;grid-template-rows:15px 1fr;gap:5px;min-height:0}.notes-head{display:flex;justify-content:space-between;align-items:center;font-size:11.5px;font-weight:800}.notes-head span:last-child{color:var(--muted);font-weight:600;font-size:10px}.queue{display:grid;grid-template-rows:1.1fr 1fr 1fr;gap:4px;min-height:0}.note{border:1px solid var(--line);border-radius:5px;background:rgba(255,255,255,.04);padding:4px 6px;min-height:0;overflow:hidden}.meta{display:flex;align-items:center;gap:5px;margin-bottom:2px;font-size:9.8px;color:var(--muted);white-space:nowrap}.badge{color:#f2f6ff;border:1px solid var(--line);border-radius:999px;padding:1px 5px;font-weight:800;background:rgba(255,255,255,.06)}.time{margin-left:auto}.note-title{color:#fff;font-size:11.5px;font-weight:900;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.note-body{color:#e4ebf7;font-size:10.7px;line-height:1.16;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.ticker{border:1px solid var(--line);border-radius:5px;background:#141b25;display:flex;align-items:center;overflow:hidden}.ticker span{white-space:nowrap;font-size:10.8px;color:#d6deec;animation:ticker 30s linear infinite;padding-left:100%}@keyframes ticker{from{transform:translateX(0)}to{transform:translateX(-100%)}}.after{max-width:850px;color:#b5c0cf;font-size:13px;line-height:1.45;margin-top:14px}.legend{margin-top:10px;display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:8px}.mini{border:1px solid var(--line);border-radius:8px;padding:8px;background:rgba(255,255,255,.035);font-size:12px;color:#d9e2f0}.mini b{display:block;color:#fff;margin-bottom:4px}.mini small{word-break:break-all;color:#9ca8b8}
+</style>
+</head>
+<body>
+<main class="wrap">
+<p class="label">MSP status HUD. GitHub Actions updates status.json every 5 minutes.</p>
+<section class="slot"><div class="hud"><header class="top"><div class="title">MSP Cloud Alerts</div><div class="updated" id="updated">Loading</div></header><div class="providers" id="providers"></div><section class="notes"><div class="notes-head"><div>Active incident notes</div><span id="feedCount">loading</span></div><div class="queue" id="queue"></div></section><div class="ticker"><span id="ticker">Loading status.json...</span></div></div></section>
+<p class="after">This page does not fetch vendor status feeds directly. GitHub Actions does that server side, then this HUD reads the generated local status.json file.</p>
+<div class="legend" id="legend"></div>
+</main>
+<script>
+const priorityProviders=['Microsoft 365','Entra ID','AWS','Cloudflare','Google Workspace','OpenAI'];
+function esc(v){return String(v||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function dot(c){return `<span class="dot ${esc(c)}"></span>`}
+function shortGenerated(value){if(!value)return 'unknown';const d=new Date(value);if(Number.isNaN(d.getTime()))return value;return d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});}
+function render(data){
+ const providers=data.providers||[];
+ const first=priorityProviders.map(n=>providers.find(p=>p.name===n)).filter(Boolean);
+ document.getElementById('providers').innerHTML=first.map(p=>`<div class="provider"><div class="provider-name">${esc(p.name)}</div><div class="provider-state ${esc(p.color)}">${dot(p.color)}<span>${esc(p.status)}</span></div></div>`).join('');
+ const incidents=(data.incidents||[]).slice(0,3);
+ document.getElementById('queue').innerHTML=incidents.length?incidents.map(i=>`<article class="note"><div class="meta">${dot(i.color)}<span class="badge">${esc(i.provider)}</span><span>${esc(i.source)}</span><span class="time">${esc(i.time)}</span></div><div class="note-title">${esc(i.title)}</div><div class="note-body">${esc(i.note)}</div></article>`).join(''):`<article class="note"><div class="note-title">No active incidents found</div><div class="note-body">Readable sources are clear. Limited or unavailable sources are listed below the widget.</div></article>`;
+ const ok=(data.summary&&data.summary.providers_ok)||0,total=(data.summary&&data.summary.providers_total)||providers.length;
+ document.getElementById('feedCount').textContent=`${ok}/${total} sources`;
+ document.getElementById('updated').textContent='Updated '+shortGenerated(data.generated_at);
+ const items=(data.history&&data.history.length?data.history:['No active incidents across readable feeds']);
+ const tick=items.map(x=>`<b>${esc(x)}</b>`).join(' | ');
+ document.getElementById('ticker').innerHTML=tick+' | '+tick;
+ document.getElementById('legend').innerHTML=providers.map(p=>`<div class="mini"><b>${esc(p.name)}</b><span class="${esc(p.color)}">${esc(p.status)}</span><br><small>${esc(p.message||'')}${p.message?'<br>':''}${esc(p.source)}</small></div>`).join('');
+}
+async function load(){try{const r=await fetch('status.json?ts='+Date.now(),{cache:'no-store'});if(!r.ok)throw new Error('HTTP '+r.status);render(await r.json());}catch(e){document.getElementById('updated').textContent='status.json failed';document.getElementById('queue').innerHTML=`<article class="note"><div class="note-title">Could not load status.json</div><div class="note-body">${esc(e.message||e)}</div></article>`}}
+load();setInterval(load,60000);
+</script>
+</body>
+</html>
