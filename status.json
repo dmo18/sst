@@ -1,0 +1,25 @@
+{
+  "generated_at": "1970-01-01T00:00:00.000Z",
+  "summary": {
+    "overall": "blue",
+    "active_incident_count": 0,
+    "providers_ok": 0,
+    "providers_total": 22
+  },
+  "providers": [
+    {
+      "id": "bootstrap",
+      "name": "Bootstrap",
+      "category": "System",
+      "status": "Waiting for first GitHub Actions update",
+      "color": "blue",
+      "message": "Run the update workflow manually or wait for the next 5 minute schedule.",
+      "ok": true,
+      "source": "status.json"
+    }
+  ],
+  "incidents": [],
+  "history": [
+    "Waiting for first GitHub Actions update"
+  ]
+}
