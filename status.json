@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-06-30T23:36:24.606Z",
+  "generated_at": "2026-07-01T00:34:23.490Z",
   "summary": {
     "overall": "red",
-    "active_incident_count": 16,
-    "providers_ok": 19,
+    "active_incident_count": 3,
+    "providers_ok": 21,
     "providers_total": 22
   },
   "providers": [
@@ -11,41 +11,45 @@
       "id": "microsoft365",
       "name": "Microsoft 365",
       "category": "Cloud Services",
-      "status": "Public summary limited",
+      "status": "Microsoft Graph needed",
       "color": "blue",
-      "message": "Detailed service health requires authenticated Microsoft Graph",
+      "message": "Primary service. Public source is limited; rich Microsoft 365 service health requires authenticated Graph.",
       "ok": true,
-      "source": "https://status.cloud.microsoft/api/"
+      "source": "https://status.cloud.microsoft/api/",
+      "priority": 130
     },
     {
       "id": "entra",
       "name": "Entra ID",
       "category": "Identity",
-      "status": "Public summary limited",
+      "status": "Microsoft Graph needed",
       "color": "blue",
-      "message": "Detailed service health requires authenticated Microsoft Graph",
+      "message": "Primary service. Public source is limited; rich Microsoft 365 service health requires authenticated Graph.",
       "ok": true,
-      "source": "https://status.cloud.microsoft/api/"
+      "source": "https://status.cloud.microsoft/api/",
+      "priority": 125
     },
     {
       "id": "aws",
       "name": "AWS",
       "category": "Cloud Services",
-      "status": "20 public RSS events",
+      "status": "1 recent active RSS event",
       "color": "amber",
       "message": "",
       "ok": true,
-      "source": "https://status.aws.amazon.com/rss/all.rss"
+      "source": "https://status.aws.amazon.com/rss/all.rss",
+      "priority": 82
     },
     {
       "id": "cloudflare",
       "name": "Cloudflare",
       "category": "Cloud Services",
-      "status": "Minor Service Outage",
-      "color": "red",
+      "status": "1 active issue",
+      "color": "amber",
       "message": "",
       "ok": true,
-      "source": "https://www.cloudflarestatus.com/api/v2/summary.json"
+      "source": "https://www.cloudflarestatus.com/api/v2/summary.json",
+      "priority": 95
     },
     {
       "id": "google-workspace",
@@ -53,9 +57,10 @@
       "category": "Cloud Services",
       "status": "Public page reachable",
       "color": "blue",
-      "message": "Public page needs custom parser or limited detail",
+      "message": "Limited public source, no active issue parser yet",
       "ok": true,
-      "source": "https://www.google.com/appsstatus/dashboard/summary"
+      "source": "https://www.google.com/appsstatus/dashboard/summary",
+      "priority": 82
     },
     {
       "id": "google-cloud",
@@ -65,7 +70,8 @@
       "color": "green",
       "message": "",
       "ok": true,
-      "source": "https://status.cloud.google.com/incidents.json"
+      "source": "https://status.cloud.google.com/incidents.json",
+      "priority": 65
     },
     {
       "id": "openai",
@@ -75,17 +81,19 @@
       "color": "green",
       "message": "",
       "ok": true,
-      "source": "https://status.openai.com/api/v2/summary.json"
+      "source": "https://status.openai.com/api/v2/summary.json",
+      "priority": 70
     },
     {
       "id": "anthropic",
       "name": "Anthropic",
       "category": "AI",
-      "status": "All Systems Operational",
+      "status": "1 active issue",
       "color": "red",
       "message": "",
       "ok": true,
-      "source": "https://status.claude.com/api/v2/summary.json"
+      "source": "https://status.claude.com/api/v2/summary.json",
+      "priority": 62
     },
     {
       "id": "sentinelone",
@@ -95,17 +103,19 @@
       "color": "green",
       "message": "",
       "ok": true,
-      "source": "https://status.sentinelone.com/api/v2/summary.json"
+      "source": "https://status.sentinelone.com/api/v2/summary.json",
+      "priority": 88
     },
     {
       "id": "sophos",
       "name": "Sophos",
       "category": "Security",
-      "status": "Source unavailable",
+      "status": "Public source limited",
       "color": "blue",
-      "message": "HTTP 403",
+      "message": "Limited public source: HTTP 403",
       "ok": false,
-      "source": "https://centralstatus.sophos.com/"
+      "source": "https://centralstatus.sophos.com/",
+      "priority": 84
     },
     {
       "id": "dnsfilter",
@@ -115,17 +125,19 @@
       "color": "green",
       "message": "",
       "ok": true,
-      "source": "https://status.dnsfilter.com/api/v2/summary.json"
+      "source": "https://status.dnsfilter.com/api/v2/summary.json",
+      "priority": 88
     },
     {
       "id": "connectwise",
       "name": "ConnectWise",
       "category": "MSP Platforms",
-      "status": "Source unavailable",
+      "status": "Public page reachable",
       "color": "blue",
-      "message": "HTTP 404",
-      "ok": false,
-      "source": "https://status.connectwise.com/api/v2/summary.json"
+      "message": "Limited public source, no active issue parser yet",
+      "ok": true,
+      "source": "https://status.connectwise.com/",
+      "priority": 90
     },
     {
       "id": "halopsa",
@@ -133,9 +145,10 @@
       "category": "MSP Platforms",
       "status": "Public page reachable",
       "color": "blue",
-      "message": "Public page needs custom parser or limited detail",
+      "message": "Limited public source, no active issue parser yet",
       "ok": true,
-      "source": "https://status.haloservicesolutions.com/"
+      "source": "https://status.haloservicesolutions.com/",
+      "priority": 88
     },
     {
       "id": "ninjaone",
@@ -145,7 +158,8 @@
       "color": "green",
       "message": "",
       "ok": true,
-      "source": "https://status.ninjaone.com/api/v2/summary.json"
+      "source": "https://status.ninjaone.com/api/v2/summary.json",
+      "priority": 90
     },
     {
       "id": "meraki",
@@ -155,7 +169,8 @@
       "color": "green",
       "message": "",
       "ok": true,
-      "source": "https://status.meraki.net/api/v2/summary.json"
+      "source": "https://status.meraki.net/api/v2/summary.json",
+      "priority": 84
     },
     {
       "id": "ubiquiti",
@@ -165,7 +180,8 @@
       "color": "green",
       "message": "",
       "ok": true,
-      "source": "https://status.ui.com/api/v2/summary.json"
+      "source": "https://status.ui.com/api/v2/summary.json",
+      "priority": 80
     },
     {
       "id": "dropbox",
@@ -175,7 +191,8 @@
       "color": "green",
       "message": "",
       "ok": true,
-      "source": "https://status.dropbox.com/api/v2/summary.json"
+      "source": "https://status.dropbox.com/api/v2/summary.json",
+      "priority": 52
     },
     {
       "id": "box",
@@ -185,7 +202,8 @@
       "color": "green",
       "message": "",
       "ok": true,
-      "source": "https://status.box.com/api/v2/summary.json"
+      "source": "https://status.box.com/api/v2/summary.json",
+      "priority": 52
     },
     {
       "id": "wasabi",
@@ -195,17 +213,19 @@
       "color": "green",
       "message": "",
       "ok": true,
-      "source": "https://status.wasabi.com/api/v2/summary.json"
+      "source": "https://status.wasabi.com/api/v2/summary.json",
+      "priority": 58
     },
     {
       "id": "backblaze",
       "name": "Backblaze",
       "category": "Storage",
-      "status": "Source unavailable",
+      "status": "Public page reachable",
       "color": "blue",
-      "message": "Unexpected token '<', \"<!doctype \"... is not valid JSON",
-      "ok": false,
-      "source": "https://status.backblaze.com/api/v2/summary.json"
+      "message": "Limited public source, no active issue parser yet",
+      "ok": true,
+      "source": "https://status.backblaze.com/",
+      "priority": 58
     },
     {
       "id": "slack",
@@ -215,17 +235,19 @@
       "color": "green",
       "message": "",
       "ok": true,
-      "source": "https://status.slack.com/api/v2.0.0/current"
+      "source": "https://status.slack.com/api/v2.0.0/current",
+      "priority": 72
     },
     {
       "id": "zoom",
       "name": "Zoom",
       "category": "Collaboration",
       "status": "All Systems Operational",
-      "color": "amber",
+      "color": "green",
       "message": "",
       "ok": true,
-      "source": "https://www.zoomstatus.com/api/v2/summary.json"
+      "source": "https://www.zoomstatus.com/api/v2/summary.json",
+      "priority": 72
     }
   ],
   "incidents": [
@@ -238,8 +260,10 @@
       "source": "Statuspage API",
       "url": "https://stspg.io/hp348196t57r",
       "time": "06-19 08:20",
+      "rawTime": "2026-06-19T08:20:52.265Z",
+      "status": "investigating",
       "color": "amber",
-      "priority": 90
+      "priority": 95
     },
     {
       "providerId": "aws",
@@ -250,90 +274,8 @@
       "source": "AWS RSS",
       "url": "https://status.aws.amazon.com/rss/all.rss",
       "time": "06-30 21:21",
-      "color": "amber",
-      "priority": 82
-    },
-    {
-      "providerId": "aws",
-      "provider": "AWS",
-      "category": "Cloud Services",
-      "title": "Service impact: EC2 API Errors",
-      "note": "We are investigating increased launch errors and API errors in the EU-NORTH-1 Region. Existing instances are not affected by this issue.",
-      "source": "AWS RSS",
-      "url": "https://status.aws.amazon.com/rss/all.rss",
-      "time": "06-30 21:02",
-      "color": "amber",
-      "priority": 82
-    },
-    {
-      "providerId": "aws",
-      "provider": "AWS",
-      "category": "Cloud Services",
-      "title": "Service disruption: Increased Error Rates",
-      "note": "We are providing an update on the ongoing service disruptions affecting the AWS Middle East (UAE) Region (ME-CENTRAL-1). We continue to make progress on recovery efforts across multiple workstreams. For Amazon S3, we are seeing continued improvement in PUT and LIST availability. Newly written objects are now able to be successfully retrieved, and we continue to work on reducing GET error rates for objects written prior to the event. Full recovery of GET operations for pre-existing data remains dependent on restoring the affected infrastructure. For Amazon DynamoDB, error rates remain elevated and our teams continue to focus on recovery; we expect to see improvement over the coming hours. As these foundational services recover, dependent services — including AWS Lambda, Amazon Kinesis, Amazon CloudWatch, and Amazon RDS — will follow. Amazon EC2 instance launches remain throttled in the ME-CENTRAL-1 Region and will be relaxed as foundational service recovery and capacity allow. The AWS Management Console is operational, though customers may continue to experience errors on certain pages as underlying services work through their recovery. With the immediate phase of this event now better understood, we are moving to a more targeted communication model. Going forward, updates will be delivered directly to affected customers through the AWS Personal Health Dashboard. Customers who require assistance with this event are encouraged to contact AWS Support through the AWS Management Console or the AWS Support Center. We continue to strongly recommend that customers with workloads running in the Middle East take action now to migrate those workloads to alternate AWS Regions. Customers should enact their disaster recovery plans, recover from remote backups stored in other Regions, and update their applications to direct traffic away from the affected Regions. For customers requiring guidance on alternate regions, we recommend considering AWS Regions in the United States, Europe, or Asia Pacific, as appropriate for your latency and data residency requirements.",
-      "source": "AWS RSS",
-      "url": "https://status.aws.amazon.com/rss/all.rss",
-      "time": "03-03 16:14",
-      "color": "amber",
-      "priority": 82
-    },
-    {
-      "providerId": "aws",
-      "provider": "AWS",
-      "category": "Cloud Services",
-      "title": "Service impact: Increased Connectivity Issues and API Error Rates",
-      "note": "Recovery efforts in the affected Availability Zone (mes1-az2) in the ME-SOUTH-1 Region are ongoing, with the situation remaining consistent with our last update. We have no change to expected timelines for fully restoring power and connectivity. While progress is being made, significant work remains before full restoration is complete. We continue to recommend customers launch replacement resources in one of the unaffected Availability Zones or an alternate AWS Region. Given the extended nature of this event, we continue to encourage customers to replicate Amazon S3 data and other critical workloads from ME-SOUTH-1 to another AWS Region using the guidance shared previously. We will provide our next update by 12:00 PM PST on March 3, or sooner if conditions change.",
-      "source": "AWS RSS",
-      "url": "https://status.aws.amazon.com/rss/all.rss",
-      "time": "03-03 14:02",
-      "color": "amber",
-      "priority": 82
-    },
-    {
-      "providerId": "aws",
-      "provider": "AWS",
-      "category": "Cloud Services",
-      "title": "Service disruption: Increased Error Rates",
-      "note": "We are providing an update on the ongoing service disruptions affecting the AWS Middle East (UAE) Region (ME-CENTRAL-1). The overall state of the region remains largely unchanged, though our teams continue to make progress on recovery efforts across multiple workstreams. For Amazon S3, we are seeing continued improvement in PUT and LIST availability. Newly written objects are now able to be successfully retrieved, and we continue to work on reducing GET error rates for objects written prior to the event. Full recovery of GET operations for pre-existing data remains dependent on restoring the affected infrastructure. For Amazon DynamoDB, error rates remain elevated and our teams continue to focus on recovery; we expect to see improvement over the coming hours. As these foundational services recover, dependent services — including AWS Lambda, Amazon Kinesis, Amazon CloudWatch, and Amazon RDS will follow. Amazon EC2 instance launches remain throttled in the ME-CENTRAL-1 Region and will be relaxed as foundational service recovery and capacity allow. The AWS Management Console is operational, though customers may continue to experience errors on certain pages as underlying services work through their recovery. We recommend that customers continue to retry requests where possible. We strongly recommend that customers with workloads running in the Middle East take action now to migrate those workloads to alternate AWS Regions. Customers should enact their disaster recovery plans, recover from remote backups stored in other Regions, and update their applications to direct traffic away from the affected Regions. For customers requiring guidance on alternate regions, we recommend considering AWS Regions in the United States, Europe, or Asia Pacific, as appropriate for your latency and data residency requirements. We will provide another update by March 3 at 10:00 AM PST, or sooner if new information becomes available.",
-      "source": "AWS RSS",
-      "url": "https://status.aws.amazon.com/rss/all.rss",
-      "time": "03-03 12:58",
-      "color": "amber",
-      "priority": 82
-    },
-    {
-      "providerId": "aws",
-      "provider": "AWS",
-      "category": "Cloud Services",
-      "title": "Service impact: Increased Connectivity Issues and API Error Rates",
-      "note": "We continue to work toward restoring power in the affected Availability Zone (mes1-az2) in the ME-SOUTH-1 Region. The overall state of the region remains largely unchanged from our previous update. At this time, we have no updated guidance on expected timelines for fully restoring power and connectivity. We are taking all necessary steps to support the recovery process. While progress is being made, significant work remains before full restoration is complete. Given the ongoing uncertainty, we encourage customers to replicate their Amazon S3 data and other critical data from the ME-SOUTH-1 Region to another AWS Region, using the guidance provided in our previous update. We will continue to provide updates as recovery progresses and as the situation evolves. Our next update will be provided by 6:00 AM PST on March 3, or sooner if new information becomes available.",
-      "source": "AWS RSS",
-      "url": "https://status.aws.amazon.com/rss/all.rss",
-      "time": "03-03 11:10",
-      "color": "amber",
-      "priority": 82
-    },
-    {
-      "providerId": "aws",
-      "provider": "AWS",
-      "category": "Cloud Services",
-      "title": "Service disruption: Increased Error Rates",
-      "note": "We are providing an update on the ongoing service disruptions affecting the AWS Middle East (UAE) Region (ME-CENTRAL-1). The overall state of the region remains largely unchanged from our previous update. We continue to work closely with local authorities and are prioritizing the safety of our personnel throughout our recovery efforts. Teams continue to assess the damage to the affected facilities and are working to restore infrastructure impacted by the event. With respect to Amazon S3, we are seeing improvement in PUT and LIST availability. We continue to work on improving GET error rates, but full recovery will be dependent on restoring the affected infrastructure, which our teams continue to work toward. For Amazon DynamoDB, error rates remain elevated and our teams continue to focus on recovery efforts. We have not yet seen meaningful improvement in DynamoDB availability, but expect conditions to improve over the coming hours as recovery work progresses. Amazon EC2 instance launches remain throttled in the ME-CENTRAL-1 Region. We will begin relaxing these throttles as soon as we have fully recovered our foundational services and have sufficient capacity to support new launches safely. The AWS Management Console is now operational, though customers may continue to experience errors on certain pages and operations as the underlying services work through their recovery. We recommend customers continue to retry requests where possible. AWS Lambda, Amazon Kinesis, Amazon CloudWatch, Amazon RDS, and a number of other AWS services that were impacted by this event remain degraded. The availability of these services is dependent on the recovery of our foundational services — primarily Amazon S3 and Amazon DynamoDB — and we expect to see improvement across these services as that recovery progresses. Finally, even as we work to restore these facilities, the ongoing conflict in the region means that the broader operating environment in the Middle East remains unpredictable. We strongly recommend that customers with workloads running in the Middle East take action now to migrate those workloads to alternate AWS Regions. Customers should enact their disaster recovery plans, recover from remote backups stored in other regions, and update their applications to direct traffic away from the affected regions. For customers requiring guidance on alternate regions, we recommend considering AWS Regions in the United States, Europe, or Asia Pacific, as appropriate for your latency and data residency requirements. We will continue to provide updates as recovery progresses and as the situation evolves. Our next update will be provided by 5:00 AM PST on March 3, or sooner if new information becomes available.",
-      "source": "AWS RSS",
-      "url": "https://status.aws.amazon.com/rss/all.rss",
-      "time": "03-03 09:04",
-      "color": "amber",
-      "priority": 82
-    },
-    {
-      "providerId": "aws",
-      "provider": "AWS",
-      "category": "Cloud Services",
-      "title": "Service impact: Increased Connectivity Issues and API Error Rates",
-      "note": "We continue to work towards restoring power in the affected Availability Zone (mes1-az2) in the ME-SOUTH-1 Region. We have no updated guidance on expected recovery times, and still expect this to take at least a day to fully restore power and connectivity. AWS infrastructure is designed to be highly resilient, but given the uncertainty of the current situation, we encourage our customers to replicate Amazon S3 and critical data from the ME-SOUTH-1 Region to another AWS Region. For customers requiring guidance on alternate regions, we recommend considering AWS Regions in the United States, Europe, or Asia Pacific, as appropriate for your latency and data residency requirements. We will provide another update by March 3 at 3:00 AM PST, or sooner if new information becomes available. For more information on Cross-Region Replication, refer [1]. For more information on S3 Batch Replication, see [2]. For a simple script to quickly set up and start S3 Replication, see [3]. If you have questions or concerns, please contact AWS Support [4]. [1] https://docs.aws.amazon.com/AmazonS3/latest/userguide/replication.html [2] https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-batch-replication-batch.html [3] https://github.com/awslabs/aws-support-tools/blob/master/S3/Setup_Replication/setup_replication.py [4] https://aws.amazon.com/support",
-      "source": "AWS RSS",
-      "url": "https://status.aws.amazon.com/rss/all.rss",
-      "time": "03-03 06:27",
+      "rawTime": "Tue, 30 Jun 2026 14:21:53 PDT",
+      "status": "",
       "color": "amber",
       "priority": 82
     },
@@ -346,98 +288,15 @@
       "source": "Statuspage API",
       "url": "https://stspg.io/kqx0j625mrgv",
       "time": "06-23 14:19",
+      "rawTime": "2026-06-23T14:19:06.164Z",
+      "status": "monitoring",
       "color": "red",
       "priority": 62
-    },
-    {
-      "providerId": "zoom",
-      "provider": "Zoom",
-      "category": "Collaboration",
-      "title": "Deprecation of 'Use Content Delivery Network' Feature",
-      "note": "We are completing the final phase of the deprecation of the \"Use Content Delivery Network\" (CDN) feature in Zoom Meetings Web. The UI-side disablement was rolled out last year, and we are now performing a full backend cleanup — removing the remaining codebase and associated database tables. What Is Changing? The backend infrastructure supporting the \"Use Content Delivery Network\" toggle is being permanently removed. This includes: - Removal of all code related to the CDN feature - Cleanup of associated database tables The feature's UI control has already been disabled and was communicated in a prior release. This update completes the full deprecation cycle. Why Are We Making This Change? This cleanup effort is designed to reduce technical debt, streamline our codebase, and minimise the risk of future regressions. It is part of our ongoing commitment to maintaining a healthy and efficient platform. Impact on Administrators - No disruption is expected. This is a backend-only cleanup with no customer-facing impact. - No breaking changes or compatibility issues are anticipated. - No action is required from administrators or end users. This communication is being sent proactively out of an abundance of caution, in the unlikely event of any minor hiccups during the maintenance window. Questions or Concerns? If you have any questions, please reach out to the Zoom support. Thank you for your continued partnership. We appreciate your patience as we work to keep the platform robust and reliable.",
-      "source": "Statuspage API",
-      "url": "https://stspg.io/89r8zgdg1r23",
-      "time": "06-16 01:49",
-      "color": "amber",
-      "priority": 72
-    },
-    {
-      "providerId": "zoom",
-      "provider": "Zoom",
-      "category": "Collaboration",
-      "title": "Scheduled Zoom Software Quarterly Lifecycle Update (8/1/2026)",
-      "note": "Zoom will be enforcing a new minimum version for the following areas, approximately 90 days from now, on August 1, 2026: Zoom Rooms (Windows, macOS, iPad, appliances, iOS and Android controllers) Zoom Phone Appliances VDI Client and Plugin Zoom Node (including Agent and Meeting Connector ZC) Zoom Phone Local Survivability (ZPLS) module Meeting SDK (Native and Web) Video SDK (Native and Web) Video SDK UI Toolkit (iOS and Web) Zoom Contact Center SDK (Web) All other clients and plugins not listed here will maintain the same version requirements as the May 2026 enforcement. For more information, such as specific versions we are enforcing, refer to the Zoom Software Quarterly Lifecycle Policy support article: https://support.zoom.com/hc/en/article?id=zm_kb&sysparm_article=KB0061130 To assist with checking the client versions on your account, refer to the Dashboard support article: https://support.zoom.com/hc/en/article?id=zm_kb&sysparm_article=KB0062208#h_13ce9a73-91e5-4df6-9cb5-c815b1605cf5",
-      "source": "Statuspage API",
-      "url": "https://stspg.io/xtl0ky3c609f",
-      "time": "04-30 22:05",
-      "color": "amber",
-      "priority": 72
-    },
-    {
-      "providerId": "zoom",
-      "provider": "Zoom",
-      "category": "Collaboration",
-      "title": "Zoom Phone/Zoom Contact Center General Underlying Provider Maintenance",
-      "note": "Scheduled maintenance is currently in progress. We will provide updates as necessary.",
-      "source": "Statuspage API",
-      "url": "https://stspg.io/sxft3wrg6q7j",
-      "time": "06-09 00:00",
-      "color": "amber",
-      "priority": 72
-    },
-    {
-      "providerId": "connectwise",
-      "provider": "ConnectWise",
-      "category": "MSP Platforms",
-      "title": "Feed could not be read",
-      "note": "HTTP 404",
-      "source": "https://status.connectwise.com/api/v2/summary.json",
-      "url": "https://status.connectwise.com/api/v2/summary.json",
-      "time": "now",
-      "color": "blue",
-      "priority": 90
-    },
-    {
-      "providerId": "sophos",
-      "provider": "Sophos",
-      "category": "Security",
-      "title": "Feed could not be read",
-      "note": "HTTP 403",
-      "source": "https://centralstatus.sophos.com/",
-      "url": "https://centralstatus.sophos.com/",
-      "time": "now",
-      "color": "blue",
-      "priority": 84
-    },
-    {
-      "providerId": "backblaze",
-      "provider": "Backblaze",
-      "category": "Storage",
-      "title": "Feed could not be read",
-      "note": "Unexpected token '<', \"<!doctype \"... is not valid JSON",
-      "source": "https://status.backblaze.com/api/v2/summary.json",
-      "url": "https://status.backblaze.com/api/v2/summary.json",
-      "time": "now",
-      "color": "blue",
-      "priority": 58
     }
   ],
   "history": [
     "Cloudflare: Workers AI experiencing degraded availability in some models",
     "AWS: Service impact: EC2 API Errors",
-    "AWS: Service impact: EC2 API Errors",
-    "AWS: Service disruption: Increased Error Rates",
-    "AWS: Service impact: Increased Connectivity Issues and API Error Rates",
-    "AWS: Service disruption: Increased Error Rates",
-    "AWS: Service impact: Increased Connectivity Issues and API Error Rates",
-    "AWS: Service disruption: Increased Error Rates",
-    "AWS: Service impact: Increased Connectivity Issues and API Error Rates",
-    "Anthropic: We’ve suspended access to Claude Mythos 5 and Claude Fable 5",
-    "Zoom: Deprecation of 'Use Content Delivery Network' Feature",
-    "Zoom: Scheduled Zoom Software Quarterly Lifecycle Update (8/1/2026)",
-    "Zoom: Zoom Phone/Zoom Contact Center General Underlying Provider Maintenance",
-    "ConnectWise: Feed could not be read",
-    "Sophos: Feed could not be read",
-    "Backblaze: Feed could not be read"
+    "Anthropic: We’ve suspended access to Claude Mythos 5 and Claude Fable 5"
   ]
 }
