@@ -2,7 +2,8 @@ name: Update status
 
 on:
   schedule:
-    - cron: "*/5 * * * *"
+    # Avoid minute 0 because GitHub Actions schedules are busiest near the top of each hour.
+    - cron: "3,8,13,18,23,28,33,38,43,48,53,58 * * * *"
   workflow_dispatch:
 
 permissions:
@@ -16,6 +17,12 @@ jobs:
   update:
     runs-on: ubuntu-latest
     steps:
+      - name: Show trigger
+        run: |
+          echo "event_name=${{ github.event_name }}"
+          echo "ref=${{ github.ref }}"
+          date -u
+
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -25,7 +32,7 @@ jobs:
           node-version: "20"
 
       - name: Fetch provider status feeds
-        run: node scripts/fetch-status.js
+        run: npm run update-status
 
       - name: Commit updated status.json
         run: |
