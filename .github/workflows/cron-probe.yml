@@ -1,0 +1,20 @@
+name: Cron probe
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print cron proof
+        run: |
+          echo "workflow=${{ github.workflow }}"
+          echo "event_name=${{ github.event_name }}"
+          echo "run_id=${{ github.run_id }}"
+          date -u
