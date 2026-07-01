@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-07-01T03:29:43.658Z",
+  "generated_at": "2026-07-01T04:14:52.376Z",
   "summary": {
     "overall": "red",
-    "active_incident_count": 3,
+    "active_incident_count": 4,
     "providers_ok": 21,
     "providers_total": 22
   },
@@ -77,8 +77,8 @@
       "id": "openai",
       "name": "OpenAI",
       "category": "AI",
-      "status": "All Systems Operational",
-      "color": "green",
+      "status": "1 active issue",
+      "color": "red",
       "message": "",
       "ok": true,
       "source": "https://status.openai.com/api/v2/summary.json",
@@ -266,6 +266,20 @@
       "priority": 95
     },
     {
+      "providerId": "openai",
+      "provider": "OpenAI",
+      "category": "AI",
+      "title": "Codex, workspace analytics, conversation search, searching for custom GPTs, ChatGPT user invites, and Compliance Log Platform download endpoint not working in FedRAMP workspaces",
+      "note": "Core functionality has been restored but we are aware of known and ongoing issues in FedRAMP workspaces with Codex, workspace analytics, conversation search, searching for custom GPTs, ChatGPT user invites, and the Compliance Logs Platform download endpoint. We are working to resolve these issues and will share further updates we have more information available.",
+      "source": "Statuspage API",
+      "url": "https://status.openai.com/api/v2/summary.json",
+      "time": "07-01 03:38",
+      "rawTime": "2026-07-01T03:38:18Z",
+      "status": "investigating",
+      "color": "red",
+      "priority": 70
+    },
+    {
       "providerId": "aws",
       "provider": "AWS",
       "category": "Cloud Services",
@@ -296,6 +310,7 @@
   ],
   "history": [
     "Cloudflare: Workers AI experiencing degraded availability in some models",
+    "OpenAI: Codex, workspace analytics, conversation search, searching for custom GPTs, ChatGPT user invites, and Compliance Log Platform download endpoint not working in FedRAMP workspaces",
     "AWS: Service impact: EC2 API Errors",
     "Anthropic: We’ve suspended access to Claude Mythos 5 and Claude Fable 5"
   ]
