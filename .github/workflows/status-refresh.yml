@@ -1,6 +1,14 @@
 name: Status refresh
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/status-refresh.yml
+      - scripts/fetch-status.js
+      - config/providers.json
+      - package.json
   schedule:
     - cron: "2,7,12,17,22,27,32,37,42,47,52,57 * * * *"
   workflow_dispatch:
