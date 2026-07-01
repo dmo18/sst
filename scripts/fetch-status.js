@@ -268,6 +268,11 @@ function incidentWeight(item) {
   return (item.priority || 0) + (sev[item.color] || 0) * 20;
 }
 
+function writeJson(targetPath, output) {
+  fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+  fs.writeFileSync(targetPath, JSON.stringify(output, null, 2) + '\n');
+}
+
 async function main() {
   const results = await Promise.all(providers.map(loadProvider));
   const incidents = results.flatMap(result => result.incidents || []).filter(item => item.color !== 'green');
@@ -286,8 +291,9 @@ async function main() {
     incidents,
     history
   };
-  fs.writeFileSync(path.join(__dirname, '..', 'status.json'), JSON.stringify(output, null, 2) + '\n');
-  console.log(`Wrote status.json with ${incidents.length} active incidents from ${results.length} providers`);
+  writeJson(path.join(__dirname, '..', 'status.json'), output);
+  writeJson(path.join(__dirname, '..', 'public', 'status.json'), output);
+  console.log(`Wrote status.json and public/status.json with ${incidents.length} active incidents from ${results.length} providers`);
 }
 
 main().catch(error => {
