@@ -5,8 +5,9 @@
   "description": "GitHub Pages MSP status HUD updated by GitHub Actions.",
   "type": "module",
   "scripts": {
-    "dev": "vite --host 0.0.0.0",
-    "build": "tsc --noEmit && vite build",
+    "dev": "npm run sync-assets && vite --host 0.0.0.0",
+    "sync-assets": "rm -rf public/assets && cp -R assets public/assets",
+    "build": "npm run sync-assets && tsc --noEmit && vite build",
     "preview": "vite preview --host 0.0.0.0",
     "update-status": "node scripts/fetch-status.js",
     "test:render": "playwright test",
@@ -14,6 +15,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.49.0",
+    "@types/node": "^22.10.0",
     "typescript": "^5.7.0",
     "vite": "^6.0.0"
   },
