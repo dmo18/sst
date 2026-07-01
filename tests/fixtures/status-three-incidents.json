@@ -1,0 +1,23 @@
+{
+  "generated_at": "2026-07-01T12:00:00.000Z",
+  "summary": {
+    "overall": "amber",
+    "active_incident_count": 3,
+    "providers_ok": 21,
+    "providers_total": 22
+  },
+  "providers": [
+    {"id":"microsoft365","name":"Microsoft 365","category":"Cloud Services","status":"Microsoft Graph needed","color":"blue","ok":true,"source":"https://status.cloud.microsoft/api/","priority":130},
+    {"id":"entra","name":"Entra ID","category":"Identity","status":"Microsoft Graph needed","color":"blue","ok":true,"source":"https://status.cloud.microsoft/api/","priority":125},
+    {"id":"cloudflare","name":"Cloudflare","category":"Cloud Services","status":"1 active issue","color":"amber","ok":true,"source":"https://www.cloudflarestatus.com/api/v2/summary.json","priority":95},
+    {"id":"aws","name":"AWS","category":"Cloud Services","status":"1 recent active RSS event","color":"amber","ok":true,"source":"https://status.aws.amazon.com/rss/all.rss","priority":82},
+    {"id":"google-workspace","name":"Google Workspace","category":"Cloud Services","status":"Public page reachable","color":"blue","ok":true,"source":"https://www.google.com/appsstatus/dashboard/summary","priority":82},
+    {"id":"openai","name":"OpenAI","category":"AI","status":"Operational","color":"green","ok":true,"source":"https://status.openai.com/api/v2/summary.json","priority":70}
+  ],
+  "incidents": [
+    {"providerId":"cloudflare","provider":"Cloudflare","category":"Cloud Services","title":"Workers AI degraded availability","note":"Cloudflare is investigating degraded availability for Workers AI models in multiple regions.","source":"Statuspage API","url":"https://example.com","time":"07-01 10:00","color":"amber","priority":95},
+    {"providerId":"aws","provider":"AWS","category":"Cloud Services","title":"Service impact: EC2 API Errors","note":"Increased error rates for EC2 APIs and instance launches in one AWS region. Existing instances are not affected.","source":"AWS RSS","url":"https://example.com","time":"07-01 09:30","color":"amber","priority":82},
+    {"providerId":"anthropic","provider":"Anthropic","category":"AI","title":"Claude access issue","note":"Some Claude users may see elevated errors while the provider investigates.","source":"Statuspage API","url":"https://example.com","time":"07-01 08:00","color":"amber","priority":62}
+  ],
+  "history": ["Cloudflare: Workers AI degraded availability", "AWS: Service impact: EC2 API Errors", "Anthropic: Claude access issue"]
+}
