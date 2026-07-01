@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-07-01T22:38:26.364Z",
+  "generated_at": "2026-07-01T23:37:39.566Z",
   "summary": {
     "overall": "red",
-    "active_incident_count": 3,
+    "active_incident_count": 2,
     "providers_ok": 21,
     "providers_total": 22
   },
@@ -33,8 +33,8 @@
       "id": "aws",
       "name": "AWS",
       "category": "Cloud Services",
-      "status": "1 recent active RSS event",
-      "color": "amber",
+      "status": "No active RSS events",
+      "color": "green",
       "message": "",
       "ok": true,
       "source": "https://status.aws.amazon.com/rss/all.rss",
@@ -278,25 +278,10 @@
       "status": "investigating",
       "color": "red",
       "priority": 70
-    },
-    {
-      "providerId": "aws",
-      "provider": "AWS",
-      "category": "Cloud Services",
-      "title": "Service impact: EC2 API Errors",
-      "note": "We can confirm increased error rates for the EC2 APIs, as well as errors launching new EC2 instances in the EU-NORTH-1 Region. Other AWS Services that launch new instances or call the EC2 APIs as part of their workflows may also be affected by this issue. During this time, customers may receive an Internal Server Error in the Management Console and APIs. Engineers were automatically engaged and began investigating the issue. We are actively working on identifying the root cause. Existing instances are unaffected by this issue. We will provide an update by 3:15 PM, or sooner if we have additional information to share.",
-      "source": "AWS RSS",
-      "url": "https://status.aws.amazon.com/rss/all.rss",
-      "time": "06-30 21:21",
-      "rawTime": "Tue, 30 Jun 2026 14:21:53 PDT",
-      "status": "",
-      "color": "amber",
-      "priority": 82
     }
   ],
   "history": [
     "Cloudflare: Workers AI experiencing degraded availability in some models",
-    "OpenAI: Codex, workspace analytics, conversation search, searching for custom GPTs, ChatGPT user invites, and Compliance Log Platform download endpoint not working in FedRAMP workspaces",
-    "AWS: Service impact: EC2 API Errors"
+    "OpenAI: Codex, workspace analytics, conversation search, searching for custom GPTs, ChatGPT user invites, and Compliance Log Platform download endpoint not working in FedRAMP workspaces"
   ]
 }
