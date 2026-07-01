@@ -2,9 +2,8 @@ name: Cron probe
 
 on:
   schedule:
-    # GitHub scheduled workflows are more reliable away from the top of the hour
-    # and at a less aggressive cadence than every 5 minutes.
-    - cron: "7,22,37,52 * * * *"
+    # Temporary high-frequency schedule for testing.
+    - cron: "* * * * *"
   workflow_dispatch:
 
 permissions:
