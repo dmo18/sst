@@ -1,0 +1,28 @@
+name: Cron probe
+
+on:
+  schedule:
+    # Every 15 minutes, starting at minute 18 of each hour.
+    - cron: "18,33,48,3 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cron-probe
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Print cron proof
+        run: |
+          echo "workflow=${{ github.workflow }}"
+          echo "event_name=${{ github.event_name }}"
+          echo "run_id=${{ github.run_id }}"
+          echo "run_attempt=${{ github.run_attempt }}"
+          echo "sha=${{ github.sha }}"
+          date -u +"utc=%Y-%m-%dT%H:%M:%SZ"
