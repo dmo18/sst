@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>MSP Status HUD</title>
+<link rel="stylesheet" href="src/styles/hud.css">
 </head>
 <body>
 <main class="wrap">
@@ -23,6 +24,32 @@
   <p class="after">Internal development build. Logo assets are local SVG files in assets/logos. The browser reads only the generated local status.json file.</p>
   <div class="legend" id="legend"></div>
 </main>
-<script type="module" src="/src/main.ts"></script>
+<script>
+const priorityProviders=['Microsoft 365','Entra ID','Cloudflare','AWS','Google Workspace','OpenAI'];
+const logos={microsoft365:'microsoft365.svg',entra:'entra.svg',aws:'aws.svg',cloudflare:'cloudflare.svg','google-workspace':'google-workspace.svg','google-cloud':'google-cloud.svg',openai:'openai.svg',anthropic:'anthropic.svg',slack:'slack.svg',zoom:'zoom.svg'};
+function esc(v){return String(v||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function logo(id,name){const file=logos[id]||'provider.svg';return `<img class="logo" src="assets/logos/${esc(file)}" alt="${esc(name||id||'Provider')}">`}
+function shortGenerated(value){if(!value)return 'unknown';const d=new Date(value);if(Number.isNaN(d.getTime()))return value;return d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});}
+function renderIncident(i,hero){return `<article class="incident ${hero?'hero':'row'} ${esc(i.color||'blue')}">${logo(i.providerId,i.provider)}<div class="copy"><div class="meta"><span class="provider-name">${esc(i.provider)}</span><span class="source">${esc(i.source)}</span><span class="time">${esc(i.time)}</span></div><div class="title">${esc(i.title)}</div><div class="note">${esc(i.note)}</div></div></article>`}
+function render(data){
+ const providers=data.providers||[];
+ const first=priorityProviders.map(n=>providers.find(p=>p.name===n)).filter(Boolean);
+ document.getElementById('providers').innerHTML=first.map(p=>`<div class="provider ${esc(p.color||'blue')}" title="${esc(p.name+': '+p.status)}">${logo(p.id,p.name)}</div>`).join('');
+ const incidents=(data.incidents||[]).slice(0,3);
+ const q=document.getElementById('queue');
+ q.className='incidents '+(incidents.length===1?'one':incidents.length===2?'two':'three');
+ q.innerHTML=incidents.length?incidents.map((i,idx)=>renderIncident(i,idx===0)).join(''):`<div class="allclear"><div><b>All clear</b><span>No active monitored incidents</span></div></div>`;
+ const count=(data.summary&&data.summary.active_incident_count)||incidents.length;
+ const overall=(data.summary&&data.summary.overall)||'blue';
+ document.getElementById('summaryPill').innerHTML=`<span class="dot ${esc(overall)}"></span>${count} active`;
+ document.getElementById('updated').textContent='Updated '+shortGenerated(data.generated_at);
+ const items=(data.history&&data.history.length?data.history:['No active incidents across readable feeds']);
+ const tick=items.map(x=>`<b>${esc(x)}</b>`).join(' | ');
+ document.getElementById('ticker').innerHTML=tick+' | '+tick;
+ document.getElementById('legend').innerHTML=providers.map(p=>`<div class="mini"><div class="mini-head">${logo(p.id,p.name)}<div><b>${esc(p.name)}</b><span class="${esc(p.color)}">${esc(p.status)}</span></div></div><small>${esc(p.message||'')}${p.message?'<br>':''}${esc(p.source)}</small></div>`).join('');
+}
+async function load(){try{const r=await fetch('status.json?ts='+Date.now(),{cache:'no-store'});if(!r.ok)throw new Error('HTTP '+r.status);render(await r.json());}catch(e){document.getElementById('updated').textContent='status.json failed';document.getElementById('queue').innerHTML=`<article class="incident hero red"><div></div><div class="copy"><div class="title">Could not load status.json</div><div class="note">${esc(e.message||e)}</div></div></article>`}}
+load();setInterval(load,60000);
+</script>
 </body>
 </html>
