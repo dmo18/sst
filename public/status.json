@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-07-01T19:20:12.513Z",
+  "generated_at": "2026-07-01T21:01:10.046Z",
   "summary": {
     "overall": "red",
-    "active_incident_count": 4,
+    "active_incident_count": 3,
     "providers_ok": 21,
     "providers_total": 22
   },
@@ -88,8 +88,8 @@
       "id": "anthropic",
       "name": "Anthropic",
       "category": "AI",
-      "status": "1 active issue",
-      "color": "red",
+      "status": "All Systems Operational",
+      "color": "green",
       "message": "",
       "ok": true,
       "source": "https://status.claude.com/api/v2/summary.json",
@@ -292,26 +292,11 @@
       "status": "",
       "color": "amber",
       "priority": 82
-    },
-    {
-      "providerId": "anthropic",
-      "provider": "Anthropic",
-      "category": "AI",
-      "title": "We’ve suspended access to Claude Mythos 5 and Claude Fable 5",
-      "note": "Learn more here: https://anthropic.com/news/fable-mythos-access",
-      "source": "Statuspage API",
-      "url": "https://stspg.io/kqx0j625mrgv",
-      "time": "06-23 14:19",
-      "rawTime": "2026-06-23T14:19:06.164Z",
-      "status": "monitoring",
-      "color": "red",
-      "priority": 62
     }
   ],
   "history": [
     "Cloudflare: Workers AI experiencing degraded availability in some models",
     "OpenAI: Codex, workspace analytics, conversation search, searching for custom GPTs, ChatGPT user invites, and Compliance Log Platform download endpoint not working in FedRAMP workspaces",
-    "AWS: Service impact: EC2 API Errors",
-    "Anthropic: We’ve suspended access to Claude Mythos 5 and Claude Fable 5"
+    "AWS: Service impact: EC2 API Errors"
   ]
 }
