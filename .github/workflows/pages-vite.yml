@@ -1,6 +1,8 @@
 name: Deploy Vite Pages
 
 on:
+  schedule:
+    - cron: "4,9,14,19,24,29,34,39,44,49,54,59 * * * *"
   push:
     branches: [main]
   workflow_dispatch:
@@ -23,6 +25,8 @@ jobs:
         with:
           node-version: "20"
       - run: npm install
+      - name: Fetch live provider status data
+        run: npm run update-status
       - run: npm run build
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
