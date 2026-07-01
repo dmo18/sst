@@ -2,15 +2,14 @@ name: Update status
 
 on:
   schedule:
-    # Avoid minute 0 because GitHub Actions schedules are busiest near the top of each hour.
-    - cron: "3,8,13,18,23,28,33,38,43,48,53,58 * * * *"
+    - cron: "4,9,14,19,24,29,34,39,44,49,54,59 * * * *"
   workflow_dispatch:
 
 permissions:
   contents: write
 
 concurrency:
-  group: update-status
+  group: update-status-v2
   cancel-in-progress: true
 
 jobs:
