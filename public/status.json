@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-01T12:14:31.755Z",
+  "generated_at": "2026-07-01T15:15:32.749Z",
   "summary": {
     "overall": "red",
     "active_incident_count": 4,
@@ -154,8 +154,8 @@
       "id": "ninjaone",
       "name": "NinjaOne",
       "category": "MSP Platforms",
-      "status": "All Systems Operational",
-      "color": "green",
+      "status": "Service Under Maintenance",
+      "color": "blue",
       "message": "",
       "ok": true,
       "source": "https://status.ninjaone.com/api/v2/summary.json",
