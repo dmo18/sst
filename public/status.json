@@ -1,14 +1,317 @@
 {
-  "generated_at": "1970-01-01T00:00:00.000Z",
+  "generated_at": "2026-07-01T05:08:46.052Z",
   "summary": {
-    "overall": "blue",
-    "active_incident_count": 0,
-    "providers_ok": 0,
-    "providers_total": 0
+    "overall": "red",
+    "active_incident_count": 4,
+    "providers_ok": 21,
+    "providers_total": 22
   },
-  "providers": [],
-  "incidents": [],
+  "providers": [
+    {
+      "id": "microsoft365",
+      "name": "Microsoft 365",
+      "category": "Cloud Services",
+      "status": "Microsoft Graph needed",
+      "color": "blue",
+      "message": "Primary service. Public source is limited; rich Microsoft 365 service health requires authenticated Graph.",
+      "ok": true,
+      "source": "https://status.cloud.microsoft/api/",
+      "priority": 130
+    },
+    {
+      "id": "entra",
+      "name": "Entra ID",
+      "category": "Identity",
+      "status": "Microsoft Graph needed",
+      "color": "blue",
+      "message": "Primary service. Public source is limited; rich Microsoft 365 service health requires authenticated Graph.",
+      "ok": true,
+      "source": "https://status.cloud.microsoft/api/",
+      "priority": 125
+    },
+    {
+      "id": "aws",
+      "name": "AWS",
+      "category": "Cloud Services",
+      "status": "1 recent active RSS event",
+      "color": "amber",
+      "message": "",
+      "ok": true,
+      "source": "https://status.aws.amazon.com/rss/all.rss",
+      "priority": 82
+    },
+    {
+      "id": "cloudflare",
+      "name": "Cloudflare",
+      "category": "Cloud Services",
+      "status": "1 active issue",
+      "color": "amber",
+      "message": "",
+      "ok": true,
+      "source": "https://www.cloudflarestatus.com/api/v2/summary.json",
+      "priority": 95
+    },
+    {
+      "id": "google-workspace",
+      "name": "Google Workspace",
+      "category": "Cloud Services",
+      "status": "Public page reachable",
+      "color": "blue",
+      "message": "Limited public source, no active issue parser yet",
+      "ok": true,
+      "source": "https://www.google.com/appsstatus/dashboard/summary",
+      "priority": 82
+    },
+    {
+      "id": "google-cloud",
+      "name": "Google Cloud",
+      "category": "Cloud Services",
+      "status": "Operational",
+      "color": "green",
+      "message": "",
+      "ok": true,
+      "source": "https://status.cloud.google.com/incidents.json",
+      "priority": 65
+    },
+    {
+      "id": "openai",
+      "name": "OpenAI",
+      "category": "AI",
+      "status": "1 active issue",
+      "color": "red",
+      "message": "",
+      "ok": true,
+      "source": "https://status.openai.com/api/v2/summary.json",
+      "priority": 70
+    },
+    {
+      "id": "anthropic",
+      "name": "Anthropic",
+      "category": "AI",
+      "status": "1 active issue",
+      "color": "red",
+      "message": "",
+      "ok": true,
+      "source": "https://status.claude.com/api/v2/summary.json",
+      "priority": 62
+    },
+    {
+      "id": "sentinelone",
+      "name": "SentinelOne",
+      "category": "Security",
+      "status": "All Systems Operational",
+      "color": "green",
+      "message": "",
+      "ok": true,
+      "source": "https://status.sentinelone.com/api/v2/summary.json",
+      "priority": 88
+    },
+    {
+      "id": "sophos",
+      "name": "Sophos",
+      "category": "Security",
+      "status": "Public source limited",
+      "color": "blue",
+      "message": "Limited public source: HTTP 403",
+      "ok": false,
+      "source": "https://centralstatus.sophos.com/",
+      "priority": 84
+    },
+    {
+      "id": "dnsfilter",
+      "name": "DNSFilter",
+      "category": "Security",
+      "status": "All Systems Operational",
+      "color": "green",
+      "message": "",
+      "ok": true,
+      "source": "https://status.dnsfilter.com/api/v2/summary.json",
+      "priority": 88
+    },
+    {
+      "id": "connectwise",
+      "name": "ConnectWise",
+      "category": "MSP Platforms",
+      "status": "Public page reachable",
+      "color": "blue",
+      "message": "Limited public source, no active issue parser yet",
+      "ok": true,
+      "source": "https://status.connectwise.com/",
+      "priority": 90
+    },
+    {
+      "id": "halopsa",
+      "name": "HaloPSA",
+      "category": "MSP Platforms",
+      "status": "Public page reachable",
+      "color": "blue",
+      "message": "Limited public source, no active issue parser yet",
+      "ok": true,
+      "source": "https://status.haloservicesolutions.com/",
+      "priority": 88
+    },
+    {
+      "id": "ninjaone",
+      "name": "NinjaOne",
+      "category": "MSP Platforms",
+      "status": "All Systems Operational",
+      "color": "green",
+      "message": "",
+      "ok": true,
+      "source": "https://status.ninjaone.com/api/v2/summary.json",
+      "priority": 90
+    },
+    {
+      "id": "meraki",
+      "name": "Cisco Meraki",
+      "category": "Networking",
+      "status": "All Systems Operational",
+      "color": "green",
+      "message": "",
+      "ok": true,
+      "source": "https://status.meraki.net/api/v2/summary.json",
+      "priority": 84
+    },
+    {
+      "id": "ubiquiti",
+      "name": "Ubiquiti",
+      "category": "Networking",
+      "status": "All Systems Operational",
+      "color": "green",
+      "message": "",
+      "ok": true,
+      "source": "https://status.ui.com/api/v2/summary.json",
+      "priority": 80
+    },
+    {
+      "id": "dropbox",
+      "name": "Dropbox",
+      "category": "Storage",
+      "status": "All Systems Operational",
+      "color": "green",
+      "message": "",
+      "ok": true,
+      "source": "https://status.dropbox.com/api/v2/summary.json",
+      "priority": 52
+    },
+    {
+      "id": "box",
+      "name": "Box",
+      "category": "Storage",
+      "status": "All Systems Operational",
+      "color": "green",
+      "message": "",
+      "ok": true,
+      "source": "https://status.box.com/api/v2/summary.json",
+      "priority": 52
+    },
+    {
+      "id": "wasabi",
+      "name": "Wasabi",
+      "category": "Storage",
+      "status": "All Systems Operational",
+      "color": "green",
+      "message": "",
+      "ok": true,
+      "source": "https://status.wasabi.com/api/v2/summary.json",
+      "priority": 58
+    },
+    {
+      "id": "backblaze",
+      "name": "Backblaze",
+      "category": "Storage",
+      "status": "Public page reachable",
+      "color": "blue",
+      "message": "Limited public source, no active issue parser yet",
+      "ok": true,
+      "source": "https://status.backblaze.com/",
+      "priority": 58
+    },
+    {
+      "id": "slack",
+      "name": "Slack",
+      "category": "Collaboration",
+      "status": "ok",
+      "color": "green",
+      "message": "",
+      "ok": true,
+      "source": "https://status.slack.com/api/v2.0.0/current",
+      "priority": 72
+    },
+    {
+      "id": "zoom",
+      "name": "Zoom",
+      "category": "Collaboration",
+      "status": "All Systems Operational",
+      "color": "green",
+      "message": "",
+      "ok": true,
+      "source": "https://www.zoomstatus.com/api/v2/summary.json",
+      "priority": 72
+    }
+  ],
+  "incidents": [
+    {
+      "providerId": "cloudflare",
+      "provider": "Cloudflare",
+      "category": "Cloud Services",
+      "title": "Workers AI experiencing degraded availability in some models",
+      "note": "Cloudflare is aware of and investigating Workers AI experiencing degraded availability in some models. Impacted models: - @cf/moonshotai/kimi-k2.6 - @cf/moonshotai/kimi-k2.7-code",
+      "source": "Statuspage API",
+      "url": "https://stspg.io/hp348196t57r",
+      "time": "06-19 08:20",
+      "rawTime": "2026-06-19T08:20:52.265Z",
+      "status": "investigating",
+      "color": "amber",
+      "priority": 95
+    },
+    {
+      "providerId": "openai",
+      "provider": "OpenAI",
+      "category": "AI",
+      "title": "Codex, workspace analytics, conversation search, searching for custom GPTs, ChatGPT user invites, and Compliance Log Platform download endpoint not working in FedRAMP workspaces",
+      "note": "Core functionality has been restored but we are aware of known and ongoing issues in FedRAMP workspaces with Codex, workspace analytics, conversation search, searching for custom GPTs, ChatGPT user invites, and the Compliance Logs Platform download endpoint. We are working to resolve these issues and will share further updates we have more information available.",
+      "source": "Statuspage API",
+      "url": "https://status.openai.com/api/v2/summary.json",
+      "time": "07-01 03:38",
+      "rawTime": "2026-07-01T03:38:18Z",
+      "status": "investigating",
+      "color": "red",
+      "priority": 70
+    },
+    {
+      "providerId": "aws",
+      "provider": "AWS",
+      "category": "Cloud Services",
+      "title": "Service impact: EC2 API Errors",
+      "note": "We can confirm increased error rates for the EC2 APIs, as well as errors launching new EC2 instances in the EU-NORTH-1 Region. Other AWS Services that launch new instances or call the EC2 APIs as part of their workflows may also be affected by this issue. During this time, customers may receive an Internal Server Error in the Management Console and APIs. Engineers were automatically engaged and began investigating the issue. We are actively working on identifying the root cause. Existing instances are unaffected by this issue. We will provide an update by 3:15 PM, or sooner if we have additional information to share.",
+      "source": "AWS RSS",
+      "url": "https://status.aws.amazon.com/rss/all.rss",
+      "time": "06-30 21:21",
+      "rawTime": "Tue, 30 Jun 2026 14:21:53 PDT",
+      "status": "",
+      "color": "amber",
+      "priority": 82
+    },
+    {
+      "providerId": "anthropic",
+      "provider": "Anthropic",
+      "category": "AI",
+      "title": "We’ve suspended access to Claude Mythos 5 and Claude Fable 5",
+      "note": "Learn more here: https://anthropic.com/news/fable-mythos-access",
+      "source": "Statuspage API",
+      "url": "https://stspg.io/kqx0j625mrgv",
+      "time": "06-23 14:19",
+      "rawTime": "2026-06-23T14:19:06.164Z",
+      "status": "monitoring",
+      "color": "red",
+      "priority": 62
+    }
+  ],
   "history": [
-    "Waiting for first status update"
+    "Cloudflare: Workers AI experiencing degraded availability in some models",
+    "OpenAI: Codex, workspace analytics, conversation search, searching for custom GPTs, ChatGPT user invites, and Compliance Log Platform download endpoint not working in FedRAMP workspaces",
+    "AWS: Service impact: EC2 API Errors",
+    "Anthropic: We’ve suspended access to Claude Mythos 5 and Claude Fable 5"
   ]
 }
