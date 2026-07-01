@@ -9,7 +9,7 @@
     "sync-assets": "rm -rf public/assets && cp -R assets public/assets",
     "build": "npm run sync-assets && tsc --noEmit && vite build",
     "preview": "vite preview --host 0.0.0.0",
-    "update-status": "node scripts/fetch-status.js",
+    "update-status": "node scripts/fetch-status.cjs",
     "test:render": "playwright test",
     "test": "npm run build && npm run test:render"
   },
