@@ -1,21 +1,27 @@
 {
   "name": "msp-status-hud",
-  "version": "0.2.0",
+  "version": "1.0.0",
   "private": true,
-  "description": "GitHub Pages MSP status HUD updated by GitHub Actions.",
+  "description": "GitHub Pages MSP status aggregator updated by GitHub Actions.",
   "type": "module",
   "scripts": {
-    "dev": "npm run sync-assets && vite --host 0.0.0.0",
-    "sync-assets": "rm -rf public/assets && cp -R assets public/assets",
-    "build": "npm run sync-assets && tsc --noEmit && vite build",
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host 0.0.0.0",
     "update-status": "node scripts/fetch-status.cjs",
     "test:render": "playwright test",
     "test": "npm run build && npm run test:render"
   },
+  "dependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
   "devDependencies": {
     "@playwright/test": "^1.49.0",
     "@types/node": "^22.10.0",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
     "typescript": "^5.7.0",
     "vite": "^6.0.0"
   },
