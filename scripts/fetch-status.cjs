@@ -5,6 +5,7 @@ const providers = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'config'
 
 const sev = { red: 3, amber: 2, blue: 1, green: 0 };
 const RSS_MAX_AGE_HOURS = 72;
+const FETCH_TIMEOUT_MS = 10000;
 
 function stripHtml(value) {
   return String(value || '')
@@ -62,14 +63,31 @@ function hoursOld(value) {
   return (Date.now() - date.getTime()) / 36e5;
 }
 
+async function fetchWithTimeout(url, options = {}) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), options.timeoutMs || FETCH_TIMEOUT_MS);
+  try {
+    return await fetch(url, {
+      ...options,
+      signal: controller.signal,
+      headers: {
+        'user-agent': 'msp-status-hud/1.0',
+        ...(options.headers || {})
+      }
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function getText(url) {
-  const res = await fetch(url, { headers: { 'user-agent': 'msp-status-hud/1.0' } });
+  const res = await fetchWithTimeout(url);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return await res.text();
 }
 
 async function getJson(url) {
-  const res = await fetch(url, { headers: { 'user-agent': 'msp-status-hud/1.0' } });
+  const res = await fetchWithTimeout(url, { headers: { accept: 'application/json' } });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return await res.json();
 }
@@ -221,6 +239,104 @@ async function parseSlack(provider) {
   return providerResult(provider, incidents.length ? `${incidents.length} active issue${incidents.length === 1 ? '' : 's'}` : (data.status || 'Operational'), incidents.length ? 'amber' : 'green', incidents, true);
 }
 
+async function parseHttpProbe(provider) {
+  const checks = provider.checks || [];
+  const incidents = [];
+  let okCount = 0;
+
+  for (const check of checks) {
+    const started = Date.now();
+    try {
+      const res = await fetchWithTimeout(check.url, {
+        timeoutMs: check.timeoutMs || FETCH_TIMEOUT_MS,
+        headers: check.headers || {}
+      });
+      const elapsed = Date.now() - started;
+      const allowed = check.okStatuses || [200, 204, 301, 302, 308];
+      if (!allowed.includes(res.status)) {
+        incidents.push(probeIncident(provider, check, `HTTP ${res.status} from ${check.url}`, 'amber'));
+      } else if (check.maxMs && elapsed > check.maxMs) {
+        incidents.push(probeIncident(provider, check, `${elapsed} ms response exceeded ${check.maxMs} ms threshold`, 'amber'));
+      } else {
+        okCount += 1;
+      }
+    } catch (error) {
+      incidents.push(probeIncident(provider, check, `${error.name || 'Error'}: ${error.message || error}`, 'red'));
+    }
+  }
+
+  const color = incidents.some(item => item.color === 'red') ? 'red' : incidents.length ? 'amber' : 'green';
+  return providerResult(provider, `${okCount}/${checks.length} probes healthy`, color, incidents, true, provider.message || 'Synthetic HTTP reachability from GitHub Actions runner');
+}
+
+function probeIncident(provider, check, note, color) {
+  return {
+    providerId: provider.id,
+    provider: provider.name,
+    category: provider.category,
+    title: `${check.name || 'Probe'} failed`,
+    note,
+    source: 'HTTP probe',
+    url: check.url,
+    time: shortTime(new Date().toISOString()),
+    rawTime: new Date().toISOString(),
+    status: 'probe-failed',
+    color,
+    priority: provider.priority
+  };
+}
+
+async function parseRipestatPrefixes(provider) {
+  const prefixes = provider.prefixes || [];
+  const incidents = [];
+  let okCount = 0;
+
+  for (const item of prefixes) {
+    const url = `https://stat.ripe.net/data/prefix-overview/data.json?resource=${encodeURIComponent(item.prefix)}`;
+    try {
+      const data = await getJson(url);
+      const asns = (data.data?.asns || []).map(entry => Number(entry.asn));
+      const expected = Number(item.expectedAsn);
+      if (asns.includes(expected)) {
+        okCount += 1;
+      } else {
+        incidents.push({
+          providerId: provider.id,
+          provider: provider.name,
+          category: provider.category,
+          title: `${item.name || item.prefix} origin mismatch`,
+          note: `${item.prefix} expected AS${expected}, RIPEstat saw ${asns.length ? asns.map(asn => `AS${asn}`).join(', ') : 'no origin AS'}.`,
+          source: 'RIPEstat prefix-overview',
+          url,
+          time: shortTime(new Date().toISOString()),
+          rawTime: new Date().toISOString(),
+          status: 'origin-mismatch',
+          color: 'red',
+          priority: provider.priority
+        });
+      }
+    } catch (error) {
+      incidents.push({
+        providerId: provider.id,
+        provider: provider.name,
+        category: provider.category,
+        title: `${item.name || item.prefix} route monitor unavailable`,
+        note: `${error.name || 'Error'}: ${error.message || error}`,
+        source: 'RIPEstat prefix-overview',
+        url,
+        time: shortTime(new Date().toISOString()),
+        rawTime: new Date().toISOString(),
+        status: 'route-monitor-failed',
+        color: 'amber',
+        priority: provider.priority
+      });
+    }
+  }
+
+  const color = incidents.some(item => item.color === 'red') ? 'red' : incidents.length ? 'amber' : 'green';
+  return providerResult(provider, `${okCount}/${prefixes.length} prefixes expected origin`, color, incidents, true, provider.message || 'Control-plane route origin checks through RIPEstat');
+}
+
 async function parseHtmlLimited(provider) {
   try {
     await getText(provider.url);
@@ -256,6 +372,8 @@ async function loadProvider(provider) {
     if (provider.sourceType === 'rss') return await parseAwsRss(provider);
     if (provider.sourceType === 'google-cloud-json') return await parseGoogleCloud(provider);
     if (provider.sourceType === 'slack') return await parseSlack(provider);
+    if (provider.sourceType === 'http-probe') return await parseHttpProbe(provider);
+    if (provider.sourceType === 'ripestat-prefixes') return await parseRipestatPrefixes(provider);
     if (provider.sourceType === 'html-limited') return await parseHtmlLimited(provider);
     if (provider.sourceType === 'limited-microsoft') return await parseLimitedMicrosoft(provider);
     return providerResult(provider, 'Unsupported source type', 'blue', [], false);
