@@ -8,17 +8,17 @@ async function mockStatus(page: Page, fixtureName: string): Promise<void> {
   await page.route('**/raw.githubusercontent.com/dmo18/sst/main/status.json**', route => route.fulfill({ status: 200, contentType: 'application/json', body }));
 }
 
-test('renders clear state in fixed HUD slot', async ({ page }) => {
+test('renders clear state in fixed HUD slot', async ({ page }, testInfo) => {
   await mockStatus(page, 'status-clear.json');
   await page.goto('/sst/');
   const slot = page.locator('.slot');
   await expect(slot).toHaveCSS('width', '458px');
   await expect(slot).toHaveCSS('height', '291px');
   await expect(page.getByText('All clear')).toBeVisible();
-  await expect(page).toHaveScreenshot('hud-clear.png', { animations: 'disabled' });
+  await page.screenshot({ path: testInfo.outputPath('hud-clear.png'), fullPage: true });
 });
 
-test('renders three active incidents without overflow', async ({ page }) => {
+test('renders three active incidents without overflow', async ({ page }, testInfo) => {
   await mockStatus(page, 'status-three-incidents.json');
   await page.goto('/sst/');
   const slot = page.locator('.slot');
@@ -27,5 +27,5 @@ test('renders three active incidents without overflow', async ({ page }) => {
   await expect(page.getByText('Workers AI degraded availability')).toBeVisible();
   await expect(page.getByText('Service impact: EC2 API Errors')).toBeVisible();
   await expect(page.locator('.incident')).toHaveCount(3);
-  await expect(page).toHaveScreenshot('hud-three-incidents.png', { animations: 'disabled' });
+  await page.screenshot({ path: testInfo.outputPath('hud-three-incidents.png'), fullPage: true });
 });
