@@ -1,4 +1,4 @@
-import type { Incident, ProviderStatus, StatusColor, StatusPayload } from './types';
+import type { Incident, ProviderDownloadLog, ProviderStatus, StatusColor, StatusPayload } from './types';
 
 const severityRank: Record<StatusColor, number> = { red: 4, amber: 3, blue: 2, green: 1 };
 
@@ -24,8 +24,12 @@ export interface DiagnosticSource {
   severity: StatusColor;
   label: string;
   status: string;
+  message: string;
   source: string;
   ok: boolean;
+  checkedAt: string;
+  sourceType: string;
+  downloadLog: ProviderDownloadLog[];
 }
 
 export interface IssueConsoleModel {
@@ -71,7 +75,19 @@ function toBrief(incident: Incident): IssueBrief {
   };
 }
 
-function toDiagnostic(provider: ProviderStatus): DiagnosticSource {
+function fallbackDownloadLog(provider: ProviderStatus, generatedAt: string): ProviderDownloadLog[] {
+  return [{
+    timestamp: provider.checked_at || generatedAt,
+    completed_at: provider.checked_at || generatedAt,
+    url: provider.source,
+    source_type: provider.source_type || 'unknown',
+    ok: provider.ok,
+    status: provider.status,
+    message: provider.message || 'Per-source download timing was not recorded by this status payload.'
+  }];
+}
+
+function toDiagnostic(provider: ProviderStatus, generatedAt: string): DiagnosticSource {
   return {
     id: provider.id,
     provider: provider.name,
@@ -79,14 +95,18 @@ function toDiagnostic(provider: ProviderStatus): DiagnosticSource {
     severity: provider.color,
     label: labelForSeverity(provider.color),
     status: provider.status,
+    message: provider.message || '',
     source: provider.source,
-    ok: provider.ok
+    ok: provider.ok,
+    checkedAt: provider.checked_at || generatedAt,
+    sourceType: provider.source_type || 'unknown',
+    downloadLog: provider.download_log?.length ? provider.download_log : fallbackDownloadLog(provider, generatedAt)
   };
 }
 
 export function buildIssueConsoleModel(payload: StatusPayload, version: string): IssueConsoleModel {
   const briefs = [...payload.incidents].sort(sortIncident).map(toBrief);
-  const diagnostics = [...payload.providers].sort(sortProvider).map(toDiagnostic);
+  const diagnostics = [...payload.providers].sort(sortProvider).map(provider => toDiagnostic(provider, payload.generated_at));
   const affected = diagnostics.filter(source => source.severity === 'red' || source.severity === 'amber');
 
   return {
