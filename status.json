@@ -1,10 +1,10 @@
 {
-  "generated_at": "2026-07-02T01:31:49.976Z",
+  "generated_at": "2026-07-02T01:33:30.850Z",
   "summary": {
     "overall": "red",
     "active_incident_count": 3,
-    "providers_ok": 26,
-    "providers_total": 33
+    "providers_ok": 29,
+    "providers_total": 36
   },
   "providers": [
     {
@@ -281,6 +281,39 @@
       "ok": false,
       "source": "https://status.quad9.net/api/v2/summary.json",
       "priority": 68
+    },
+    {
+      "id": "att",
+      "name": "AT&T",
+      "category": "ISPs and Backbone",
+      "status": "Public status page reachable",
+      "color": "blue",
+      "message": "Official public status source is reachable, but no active issue parser is available yet.",
+      "ok": true,
+      "source": "https://www.att.com/outages/",
+      "priority": 55
+    },
+    {
+      "id": "cox",
+      "name": "Cox",
+      "category": "ISPs and Backbone",
+      "status": "Public status page reachable",
+      "color": "blue",
+      "message": "Official public status source is reachable, but no active issue parser is available yet.",
+      "ok": true,
+      "source": "https://www.cox.com/residential/support/outages.html",
+      "priority": 53
+    },
+    {
+      "id": "comcast-business",
+      "name": "Comcast Business",
+      "category": "ISPs and Backbone",
+      "status": "Public status page reachable",
+      "color": "blue",
+      "message": "Official public status source is reachable, but no active issue parser is available yet.",
+      "ok": true,
+      "source": "https://business.comcast.com/status/",
+      "priority": 55
     },
     {
       "id": "lumen",
