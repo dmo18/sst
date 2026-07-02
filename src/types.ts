@@ -1,5 +1,17 @@
 export type StatusColor = 'green' | 'amber' | 'red' | 'blue';
 
+export interface ProviderDownloadLog {
+  timestamp?: string;
+  completed_at?: string;
+  duration_ms?: number;
+  url?: string;
+  source_type?: string;
+  ok?: boolean;
+  status?: string;
+  message?: string;
+  error?: string;
+}
+
 export interface ProviderStatus {
   id: string;
   name: string;
@@ -10,6 +22,9 @@ export interface ProviderStatus {
   ok: boolean;
   source: string;
   priority?: number;
+  checked_at?: string;
+  source_type?: string;
+  download_log?: ProviderDownloadLog[];
 }
 
 export interface Incident {
