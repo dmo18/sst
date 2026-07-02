@@ -1,10 +1,10 @@
 {
-  "generated_at": "2026-07-02T01:28:24.042Z",
+  "generated_at": "2026-07-02T01:31:49.976Z",
   "summary": {
     "overall": "red",
     "active_incident_count": 3,
-    "providers_ok": 28,
-    "providers_total": 35
+    "providers_ok": 26,
+    "providers_total": 33
   },
   "providers": [
     {
@@ -55,9 +55,9 @@
       "id": "google-workspace",
       "name": "Google Workspace",
       "category": "Cloud Services",
-      "status": "Public page reachable",
+      "status": "Public status page reachable",
       "color": "blue",
-      "message": "Limited public source, no active issue parser yet",
+      "message": "Official public status source is reachable, but no active issue parser is available yet.",
       "ok": true,
       "source": "https://www.google.com/appsstatus/dashboard/summary",
       "priority": 82
@@ -110,9 +110,9 @@
       "id": "sophos",
       "name": "Sophos",
       "category": "Security",
-      "status": "Public source limited",
+      "status": "Public status source limited",
       "color": "blue",
-      "message": "Limited public source: HTTP 403",
+      "message": "Official public status source unavailable: HTTP 403",
       "ok": false,
       "source": "https://centralstatus.sophos.com/",
       "priority": 84
@@ -132,9 +132,9 @@
       "id": "connectwise",
       "name": "ConnectWise",
       "category": "MSP Platforms",
-      "status": "Public page reachable",
+      "status": "Public status page reachable",
       "color": "blue",
-      "message": "Limited public source, no active issue parser yet",
+      "message": "Official public status source is reachable, but no active issue parser is available yet.",
       "ok": true,
       "source": "https://status.connectwise.com/",
       "priority": 90
@@ -143,9 +143,9 @@
       "id": "halopsa",
       "name": "HaloPSA",
       "category": "MSP Platforms",
-      "status": "Public page reachable",
+      "status": "Public status page reachable",
       "color": "blue",
-      "message": "Limited public source, no active issue parser yet",
+      "message": "Official public status source is reachable, but no active issue parser is available yet.",
       "ok": true,
       "source": "https://status.haloservicesolutions.com/",
       "priority": 88
@@ -264,9 +264,9 @@
       "id": "zscaler",
       "name": "Zscaler",
       "category": "Security",
-      "status": "Public page reachable",
+      "status": "Public status page reachable",
       "color": "blue",
-      "message": "Limited public source, no active issue parser yet",
+      "message": "Official public status source is reachable, but no active issue parser is available yet.",
       "ok": true,
       "source": "https://trust.zscaler.com/",
       "priority": 74
@@ -283,34 +283,12 @@
       "priority": 68
     },
     {
-      "id": "internet-probes",
-      "name": "Internet Probes",
-      "category": "DNS and Internet",
-      "status": "4/4 probes healthy",
-      "color": "green",
-      "message": "Synthetic reachability checks from the GitHub Actions runner. This is not a user-site ISP probe.",
-      "ok": true,
-      "source": "synthetic:http-probe",
-      "priority": 96
-    },
-    {
-      "id": "ripe-route-monitor",
-      "name": "RIPE Route Monitor",
-      "category": "Routing",
-      "status": "4/4 prefixes expected origin",
-      "color": "green",
-      "message": "RIPEstat control-plane route origin checks for major DNS and edge networks.",
-      "ok": true,
-      "source": "https://stat.ripe.net/",
-      "priority": 94
-    },
-    {
       "id": "lumen",
       "name": "Lumen",
       "category": "ISPs and Backbone",
-      "status": "Public source limited",
+      "status": "Public status source limited",
       "color": "blue",
-      "message": "Limited public source: fetch failed",
+      "message": "Official public status source unavailable: fetch failed",
       "ok": false,
       "source": "https://status.lumen.com/",
       "priority": 52
@@ -319,9 +297,9 @@
       "id": "cogent",
       "name": "Cogent",
       "category": "ISPs and Backbone",
-      "status": "Public source limited",
+      "status": "Public status source limited",
       "color": "blue",
-      "message": "Limited public source: HTTP 404",
+      "message": "Official public status source unavailable: HTTP 404",
       "ok": false,
       "source": "https://www.cogentco.com/en/network/status",
       "priority": 50
@@ -363,9 +341,9 @@
       "id": "backblaze",
       "name": "Backblaze",
       "category": "Storage",
-      "status": "Public page reachable",
+      "status": "Public status page reachable",
       "color": "blue",
-      "message": "Limited public source, no active issue parser yet",
+      "message": "Official public status source is reachable, but no active issue parser is available yet.",
       "ok": true,
       "source": "https://status.backblaze.com/",
       "priority": 58
