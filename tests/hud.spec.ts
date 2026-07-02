@@ -7,23 +7,28 @@ async function mockStatus(page: Page, fixtureName: string): Promise<void> {
   await page.route('**/status.json**', route => route.fulfill({ status: 200, contentType: 'application/json', body }));
 }
 
-test('renders clear v6 status wall state', async ({ page }, testInfo) => {
+test('renders clear v7 compact radar in allotted space', async ({ page }, testInfo) => {
   await mockStatus(page, 'status-clear.json');
   await page.goto('/sst/');
-  await expect(page.getByText('MSP STATUS WALL')).toBeVisible();
-  await expect(page.getByText('v6')).toBeVisible();
+  const tile = page.locator('.tile');
+  await expect(tile).toHaveCSS('width', '458px');
+  await expect(tile).toHaveCSS('height', '291px');
+  await expect(page.getByText('MSP STATUS')).toBeVisible();
+  await expect(page.getByText('v7')).toBeVisible();
   await expect(page.getByText('All clear')).toBeVisible();
-  await expect(page.getByText('Provider health matrix')).toBeVisible();
-  await page.screenshot({ path: testInfo.outputPath('status-wall-clear.png'), fullPage: true });
+  await expect(page.locator('.status-pixel').first()).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath('v7-radar-clear.png'), fullPage: true });
 });
 
-test('renders active incidents and provider matrix', async ({ page }, testInfo) => {
+test('renders active incident in v7 compact radar', async ({ page }, testInfo) => {
   await mockStatus(page, 'status-three-incidents.json');
   await page.goto('/sst/');
-  await expect(page.getByText('MSP STATUS WALL')).toBeVisible();
+  const tile = page.locator('.tile');
+  await expect(tile).toHaveCSS('width', '458px');
+  await expect(tile).toHaveCSS('height', '291px');
   await expect(page.getByText('Workers AI degraded availability')).toBeVisible();
-  await expect(page.locator('.incident-panel')).toHaveCount(1);
-  await expect(page.locator('.incident-line')).toHaveCount(2);
-  await expect(page.locator('.provider-line').first()).toBeVisible();
-  await page.screenshot({ path: testInfo.outputPath('status-wall-incidents.png'), fullPage: true });
+  await expect(page.locator('.radar')).toBeVisible();
+  await expect(page.locator('.priority-node')).toHaveCount(6);
+  await expect(page.locator('.status-pixel').first()).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath('v7-radar-incidents.png'), fullPage: true });
 });
