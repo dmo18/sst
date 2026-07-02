@@ -3,26 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>MSP Status HUD</title>
+<title>MSP Status Command Center</title>
 </head>
 <body>
-<main class="wrap">
-  <p class="label">MSP status HUD. GitHub Actions updates status.json every 5 minutes.</p>
-  <section class="slot">
-    <div class="hud">
-      <header class="top">
-        <div class="brand">MSP Cloud Alerts</div>
-        <div class="summary-pill" id="summaryPill"><span class="dot blue"></span>loading</div>
-        <div class="stamp" id="updated">Loading</div>
-      </header>
-      <div class="providers" id="providers"></div>
-      <section class="content"><div class="incidents" id="queue"></div></section>
-      <div class="ticker"><span id="ticker">Loading status.json...</span></div>
-    </div>
-  </section>
-  <p class="after">Internal development build. Logo assets are local SVG files in assets/logos. The browser reads only the generated local status.json file.</p>
-  <div class="legend" id="legend"></div>
-</main>
-<script type="module" src="/src/main.ts"></script>
+<div id="root"></div>
+<script type="module" src="/src/main.tsx"></script>
 </body>
 </html>
