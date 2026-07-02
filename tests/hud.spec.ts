@@ -7,28 +7,27 @@ async function mockStatus(page: Page, fixtureName: string): Promise<void> {
   await page.route('**/status.json**', route => route.fulfill({ status: 200, contentType: 'application/json', body }));
 }
 
-test('renders clear v7 compact radar in allotted space', async ({ page }, testInfo) => {
+test('renders clear v8 issues only control panel', async ({ page }, testInfo) => {
   await mockStatus(page, 'status-clear.json');
   await page.goto('/sst/');
-  const tile = page.locator('.tile');
-  await expect(tile).toHaveCSS('width', '458px');
-  await expect(tile).toHaveCSS('height', '291px');
-  await expect(page.getByText('MSP STATUS')).toBeVisible();
-  await expect(page.getByText('v7')).toBeVisible();
-  await expect(page.getByText('All clear')).toBeVisible();
-  await expect(page.locator('.status-pixel').first()).toBeVisible();
-  await page.screenshot({ path: testInfo.outputPath('v7-radar-clear.png'), fullPage: true });
+  const panel = page.locator('.control-panel');
+  await expect(panel).toHaveCSS('width', '458px');
+  await expect(panel).toHaveCSS('height', '291px');
+  await expect(page.getByText('ISSUES ONLY')).toBeVisible();
+  await expect(page.getByText('v8')).toBeVisible();
+  await expect(page.getByText('No active issues')).toBeVisible();
+  await expect(page.getByText('DIAGNOSTIC PROVIDER LIST')).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath('v8-clear.png'), fullPage: true });
 });
 
-test('renders active incident in v7 compact radar', async ({ page }, testInfo) => {
+test('renders active issues and diagnostic rows', async ({ page }, testInfo) => {
   await mockStatus(page, 'status-three-incidents.json');
   await page.goto('/sst/');
-  const tile = page.locator('.tile');
-  await expect(tile).toHaveCSS('width', '458px');
-  await expect(tile).toHaveCSS('height', '291px');
+  const panel = page.locator('.control-panel');
+  await expect(panel).toHaveCSS('width', '458px');
+  await expect(panel).toHaveCSS('height', '291px');
   await expect(page.getByText('Workers AI degraded availability')).toBeVisible();
-  await expect(page.locator('.radar')).toBeVisible();
-  await expect(page.locator('.priority-node')).toHaveCount(6);
-  await expect(page.locator('.status-pixel').first()).toBeVisible();
-  await page.screenshot({ path: testInfo.outputPath('v7-radar-incidents.png'), fullPage: true });
+  await expect(page.locator('.issue-card')).toHaveCount(3);
+  await expect(page.locator('.diag-panel tbody tr').first()).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath('v8-issues.png'), fullPage: true });
 });
