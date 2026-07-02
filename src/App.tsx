@@ -6,6 +6,7 @@ const primaryNames = ['Microsoft 365', 'Entra ID', 'Cloudflare', 'AWS', 'Google 
 const rank: Record<StatusColor, number> = { red: 4, amber: 3, blue: 2, green: 1 };
 
 type LoadState = { data?: StatusPayload; error?: string };
+type ProviderGroup = [string, ProviderStatus[]];
 
 async function fetchStatus(): Promise<StatusPayload> {
   const response = await fetch(`status.json?ts=${Date.now()}`, { cache: 'no-store' });
@@ -35,10 +36,15 @@ function sortIncident(a: Incident, b: Incident): number {
   return (rank[b.color] - rank[a.color]) || (b.priority - a.priority) || String(b.rawTime ?? '').localeCompare(String(a.rawTime ?? ''));
 }
 
-function groupProviders(providers: ProviderStatus[]): Array<[string, ProviderStatus[]]> {
+function groupProviders(providers: ProviderStatus[]): ProviderGroup[] {
   const map = new Map<string, ProviderStatus[]>();
-  for (const provider of providers) map.set(provider.category, [...(map.get(provider.category) ?? []), provider]);
-  return [...map.entries()].map(([name, items]) => [name, items.sort(sortProvider)]).sort((a, b) => a[0].localeCompare(b[0]));
+  for (const provider of providers) {
+    const existing = map.get(provider.category) ?? [];
+    map.set(provider.category, [...existing, provider]);
+  }
+  return Array.from(map.entries())
+    .map(([name, items]): ProviderGroup => [name, [...items].sort(sortProvider)])
+    .sort((a, b) => a[0].localeCompare(b[0]));
 }
 
 function Dot({ color }: { color: StatusColor }): JSX.Element {
