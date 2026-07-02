@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Incident, ProviderStatus, StatusColor, StatusPayload } from './types';
 
-const APP_VERSION = 'v7';
-const priorityNames = ['Microsoft 365', 'Entra ID', 'Cloudflare', 'AWS', 'Google Workspace', 'OpenAI'];
+const APP_VERSION = 'v8';
 const rank: Record<StatusColor, number> = { red: 4, amber: 3, blue: 2, green: 1 };
 
 type LoadState = { data?: StatusPayload; error?: string };
@@ -13,67 +12,48 @@ async function fetchStatus(): Promise<StatusPayload> {
   return await response.json() as StatusPayload;
 }
 
-function shortTime(value?: string): string {
-  if (!value) return 'unknown';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-}
-
-function labelFor(color: StatusColor): string {
-  if (color === 'red') return 'major';
-  if (color === 'amber') return 'degraded';
-  if (color === 'green') return 'clear';
-  return 'limited';
+function sortIncident(a: Incident, b: Incident): number {
+  return (rank[b.color] - rank[a.color]) || (b.priority - a.priority) || String(b.rawTime ?? '').localeCompare(String(a.rawTime ?? ''));
 }
 
 function sortProvider(a: ProviderStatus, b: ProviderStatus): number {
   return (rank[b.color] - rank[a.color]) || ((b.priority ?? 0) - (a.priority ?? 0)) || a.name.localeCompare(b.name);
 }
 
-function sortIncident(a: Incident, b: Incident): number {
-  return (rank[b.color] - rank[a.color]) || (b.priority - a.priority) || String(b.rawTime ?? '').localeCompare(String(a.rawTime ?? ''));
+function labelFor(color: StatusColor): string {
+  if (color === 'red') return 'major';
+  if (color === 'amber') return 'degraded';
+  if (color === 'green') return 'ok';
+  return 'limited';
 }
 
-function serviceInitials(name: string): string {
-  return name.split(/\s+/).map(part => part[0] ?? '').join('').slice(0, 3).toUpperCase();
+function timeLabel(value?: string): string {
+  if (!value) return 'unknown';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString([], { month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' });
 }
 
-function StatusPixel({ color, title }: { color: StatusColor; title: string }): JSX.Element {
-  return <span className={`status-pixel ${color}`} title={title} aria-label={`${title} ${labelFor(color)}`} />;
-}
-
-function RadarRing({ red, amber, limited, clear }: { red: number; amber: number; limited: number; clear: number }): JSX.Element {
-  return <div className="radar" aria-label="status count radar">
-    <div className="radar-core"><strong>{red + amber}</strong><span>impacting</span></div>
-    <div className="radar-stat red"><b>{red}</b><span>major</span></div>
-    <div className="radar-stat amber"><b>{amber}</b><span>degraded</span></div>
-    <div className="radar-stat green"><b>{clear}</b><span>clear</span></div>
-    <div className="radar-stat blue"><b>{limited}</b><span>limited</span></div>
-  </div>;
-}
-
-function PriorityNode({ provider }: { provider: ProviderStatus }): JSX.Element {
-  return <article className={`priority-node ${provider.color}`}>
-    <b>{serviceInitials(provider.name)}</b>
-    <span>{labelFor(provider.color)}</span>
+function IssueCard({ incident, featured = false }: { incident: Incident; featured?: boolean }): JSX.Element {
+  return <article className={`issue-card ${incident.color} ${featured ? 'featured' : ''}`}>
+    <header><b>{incident.provider}</b><span>{incident.status || labelFor(incident.color)}</span></header>
+    <h2>{incident.title}</h2>
+    <p>{incident.note}</p>
+    <footer><time>{incident.time}</time><span>{incident.source}</span></footer>
   </article>;
 }
 
-function IncidentFocus({ incident }: { incident?: Incident }): JSX.Element {
-  if (!incident) return <section className="focus clear"><span>NO ACTIVE INCIDENTS</span><b>All clear</b><p>Readable official feeds report no active issues.</p></section>;
-  return <section className={`focus ${incident.color}`}>
-    <span>{incident.provider} / {incident.time}</span>
-    <b>{incident.title}</b>
-    <p>{incident.note}</p>
-  </section>;
+function EmptyPanel(): JSX.Element {
+  return <section className="empty-panel"><b>No active issues</b><span>Readable official status feeds are clear.</span></section>;
 }
 
-function Ticker({ incidents }: { incidents: Incident[] }): JSX.Element {
-  const text = incidents.length
-    ? incidents.slice(0, 4).map(incident => `${incident.provider}: ${incident.title}`).join('  •  ')
-    : 'No active incidents from readable official status feeds';
-  return <div className="ticker"><span>{text}</span></div>;
+function DiagRow({ provider }: { provider: ProviderStatus }): JSX.Element {
+  return <tr className={provider.color}>
+    <td><span className={`diag-dot ${provider.color}`} />{provider.name}</td>
+    <td>{labelFor(provider.color)}</td>
+    <td>{provider.status}</td>
+    <td><a href={provider.source} target="_blank" rel="noreferrer">{provider.source}</a></td>
+  </tr>;
 }
 
 export function App(): JSX.Element {
@@ -95,35 +75,31 @@ export function App(): JSX.Element {
   }, []);
 
   const data = state.data;
-  const providers = data?.providers ?? [];
   const incidents = useMemo(() => [...(data?.incidents ?? [])].sort(sortIncident), [data]);
-  const sortedProviders = useMemo(() => [...providers].sort(sortProvider), [providers]);
-  const priority = useMemo(() => priorityNames.map(name => providers.find(provider => provider.name === name)).filter((provider): provider is ProviderStatus => Boolean(provider)), [providers]);
-  const red = providers.filter(provider => provider.color === 'red').length;
-  const amber = providers.filter(provider => provider.color === 'amber').length;
-  const clear = providers.filter(provider => provider.color === 'green').length;
-  const limited = providers.filter(provider => provider.color === 'blue' || !provider.ok).length;
+  const providers = useMemo(() => [...(data?.providers ?? [])].sort(sortProvider), [data]);
+  const issueProviders = providers.filter(provider => provider.color === 'red' || provider.color === 'amber');
 
-  if (!data) return <main className="tile-shell"><section className="tile loading"><b>{state.error ? 'DATA FAILED' : 'LOADING'}</b><span>{state.error ?? 'Reading status.json'}</span><em>{APP_VERSION}</em></section></main>;
+  if (!data) return <main className="app-frame"><section className="control-panel loading"><b>{state.error ? 'DATA FAILED' : 'LOADING'}</b><span>{state.error ?? 'Reading status.json'}</span><em>{APP_VERSION}</em></section></main>;
 
-  return <main className="tile-shell">
-    <section className={`tile ${data.summary.overall}`}>
-      <header className="tile-head">
-        <div><b>MSP STATUS</b><em>{APP_VERSION}</em></div>
-        <span>{data.summary.active_incident_count} active / {providers.length} sources / {shortTime(data.generated_at)}</span>
+  return <main className="app-frame">
+    <section className={`control-panel ${data.summary.overall}`}>
+      <header className="control-head">
+        <div><b>ISSUES ONLY</b><em>{APP_VERSION}</em></div>
+        <span>{incidents.length} active incidents</span>
       </header>
 
-      <section className="tile-body">
-        <RadarRing red={red} amber={amber} limited={limited} clear={clear} />
-        <IncidentFocus incident={incidents[0]} />
-        <aside className="priority-stack">{priority.map(provider => <PriorityNode key={provider.id} provider={provider} />)}</aside>
-      </section>
+      {incidents.length ? <section className="issue-grid">
+        <IssueCard incident={incidents[0]} featured />
+        <div className="issue-list">{incidents.slice(1, 4).map(incident => <IssueCard key={`${incident.providerId}-${incident.title}`} incident={incident} />)}</div>
+      </section> : <EmptyPanel />}
+    </section>
 
-      <section className="source-ribbon" aria-label="all provider status pixels">
-        {sortedProviders.map(provider => <StatusPixel key={provider.id} color={provider.color} title={provider.name} />)}
-      </section>
-
-      <Ticker incidents={incidents} />
+    <section className="diag-panel">
+      <header><div><b>DIAGNOSTIC PROVIDER LIST</b><span>Testing only. Shows every source, status, and URL.</span></div><em>{providers.length} providers / {issueProviders.length} issue sources / updated {timeLabel(data.generated_at)}</em></header>
+      <table>
+        <thead><tr><th>Provider</th><th>Status</th><th>Message</th><th>URL</th></tr></thead>
+        <tbody>{providers.map(provider => <DiagRow key={provider.id} provider={provider} />)}</tbody>
+      </table>
     </section>
   </main>;
 }
