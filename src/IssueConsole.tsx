@@ -38,8 +38,26 @@ function DiagnosticRow({ source }: { source: DiagnosticSource }): JSX.Element {
   return <tr className={source.severity}>
     <td><span className={`state-dot ${source.severity}`} />{source.provider}</td>
     <td>{source.label}</td>
-    <td>{source.status}</td>
-    <td><a href={source.source} target="_blank" rel="noreferrer">{source.source}</a></td>
+    <td>
+      <b>{source.status}</b>
+      <span>{source.message || 'No extra message returned.'}</span>
+      <small>checked {timeLabel(source.checkedAt)} / {source.sourceType}</small>
+    </td>
+    <td>
+      <a href={source.source} target="_blank" rel="noreferrer">{source.source}</a>
+      <details>
+        <summary>received status details</summary>
+        {source.downloadLog.map((log, index) => <div className="download-log" key={`${source.id}-${index}`}>
+          <span>started: {timeLabel(log.timestamp)}</span>
+          <span>completed: {timeLabel(log.completed_at)}</span>
+          {typeof log.duration_ms === 'number' ? <span>duration: {log.duration_ms} ms</span> : null}
+          <span>ok: {String(log.ok ?? source.ok)}</span>
+          <span>status: {log.status || source.status}</span>
+          <span>message: {log.message || source.message || 'No message.'}</span>
+          {log.error ? <span>error: {log.error}</span> : null}
+        </div>)}
+      </details>
+    </td>
   </tr>;
 }
 
@@ -71,9 +89,9 @@ export function IssueConsole({ model }: { model: IssueConsoleModel }): JSX.Eleme
     </section>
 
     <section className="diag-panel">
-      <header><div><b>DIAGNOSTIC PROVIDER LIST</b><span>Testing only. Every source, status, and URL.</span></div><em>{model.diagnostics.length} providers</em></header>
+      <header><div><b>DIAGNOSTIC PROVIDER LIST</b><span>Testing only. Every source, received status, timestamp, URL, and source detail.</span></div><em>{model.diagnostics.length} providers</em></header>
       <table>
-        <thead><tr><th>Provider</th><th>Status</th><th>Message</th><th>URL</th></tr></thead>
+        <thead><tr><th>Provider</th><th>Status</th><th>Received detail</th><th>Source detail</th></tr></thead>
         <tbody>{model.diagnostics.map(source => <DiagnosticRow key={source.id} source={source} />)}</tbody>
       </table>
     </section>
