@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Incident, ProviderStatus, StatusColor, StatusPayload } from './types';
 
-const APP_VERSION = 'v8';
+const APP_VERSION = 'v9';
 const rank: Record<StatusColor, number> = { red: 4, amber: 3, blue: 2, green: 1 };
 
 type LoadState = { data?: StatusPayload; error?: string };
@@ -34,17 +34,30 @@ function timeLabel(value?: string): string {
   return date.toLocaleString([], { month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' });
 }
 
-function IssueCard({ incident, featured = false }: { incident: Incident; featured?: boolean }): JSX.Element {
-  return <article className={`issue-card ${incident.color} ${featured ? 'featured' : ''}`}>
-    <header><b>{incident.provider}</b><span>{incident.status || labelFor(incident.color)}</span></header>
-    <h2>{incident.title}</h2>
-    <p>{incident.note}</p>
-    <footer><time>{incident.time}</time><span>{incident.source}</span></footer>
+function SourceChip({ incident }: { incident: Incident }): JSX.Element {
+  return <article className={`source-chip ${incident.color}`}>
+    <b>{incident.provider}</b>
+    <span>{incident.status || labelFor(incident.color)}</span>
   </article>;
 }
 
+function LeadIssue({ incident }: { incident: Incident }): JSX.Element {
+  return <section className={`lead-issue ${incident.color}`}>
+    <header><b>{incident.provider}</b><span>{incident.time}</span></header>
+    <h1>{incident.title}</h1>
+    <p>{incident.note}</p>
+    <footer><span>{incident.status || labelFor(incident.color)}</span><span>{incident.source}</span></footer>
+  </section>;
+}
+
+function IssueRail({ incidents }: { incidents: Incident[] }): JSX.Element {
+  return <aside className="issue-rail">
+    {incidents.map(incident => <article key={`${incident.providerId}-${incident.title}`} className={`rail-item ${incident.color}`}><b>{incident.provider}</b><span>{incident.title}</span></article>)}
+  </aside>;
+}
+
 function EmptyPanel(): JSX.Element {
-  return <section className="empty-panel"><b>No active issues</b><span>Readable official status feeds are clear.</span></section>;
+  return <section className="empty-state"><b>CLEAR</b><span>No active incidents from readable official feeds.</span></section>;
 }
 
 function DiagRow({ provider }: { provider: ProviderStatus }): JSX.Element {
@@ -77,25 +90,27 @@ export function App(): JSX.Element {
   const data = state.data;
   const incidents = useMemo(() => [...(data?.incidents ?? [])].sort(sortIncident), [data]);
   const providers = useMemo(() => [...(data?.providers ?? [])].sort(sortProvider), [data]);
-  const issueProviders = providers.filter(provider => provider.color === 'red' || provider.color === 'amber');
+  const affected = useMemo(() => providers.filter(provider => provider.color === 'red' || provider.color === 'amber'), [providers]);
+  const lead = incidents[0];
 
-  if (!data) return <main className="app-frame"><section className="control-panel loading"><b>{state.error ? 'DATA FAILED' : 'LOADING'}</b><span>{state.error ?? 'Reading status.json'}</span><em>{APP_VERSION}</em></section></main>;
+  if (!data) return <main className="app-frame"><section className="operator-board loading"><b>{state.error ? 'DATA FAILED' : 'LOADING'}</b><span>{state.error ?? 'Reading status.json'}</span><em>{APP_VERSION}</em></section></main>;
 
   return <main className="app-frame">
-    <section className={`control-panel ${data.summary.overall}`}>
-      <header className="control-head">
-        <div><b>ISSUES ONLY</b><em>{APP_VERSION}</em></div>
-        <span>{incidents.length} active incidents</span>
+    <section className={`operator-board ${data.summary.overall}`}>
+      <header className="board-head">
+        <div><b>ACTIVE ISSUES</b><em>{APP_VERSION}</em></div>
+        <span>{incidents.length} incidents / {affected.length} affected providers</span>
       </header>
 
-      {incidents.length ? <section className="issue-grid">
-        <IssueCard incident={incidents[0]} featured />
-        <div className="issue-list">{incidents.slice(1, 4).map(incident => <IssueCard key={`${incident.providerId}-${incident.title}`} incident={incident} />)}</div>
-      </section> : <EmptyPanel />}
+      {lead ? <div className="board-body">
+        <section className="affected-strip">{affected.slice(0, 5).map(provider => <SourceChip key={provider.id} incident={{ providerId: provider.id, provider: provider.name, category: provider.category, title: provider.status, note: provider.message ?? '', source: provider.source, url: provider.source, time: '', color: provider.color, priority: provider.priority ?? 0 }} />)}</section>
+        <LeadIssue incident={lead} />
+        <IssueRail incidents={incidents.slice(1, 4)} />
+      </div> : <EmptyPanel />}
     </section>
 
     <section className="diag-panel">
-      <header><div><b>DIAGNOSTIC PROVIDER LIST</b><span>Testing only. Shows every source, status, and URL.</span></div><em>{providers.length} providers / {issueProviders.length} issue sources / updated {timeLabel(data.generated_at)}</em></header>
+      <header><div><b>DIAGNOSTIC PROVIDER LIST</b><span>Testing only. Shows every source, status, and URL.</span></div><em>{providers.length} providers / updated {timeLabel(data.generated_at)}</em></header>
       <table>
         <thead><tr><th>Provider</th><th>Status</th><th>Message</th><th>URL</th></tr></thead>
         <tbody>{providers.map(provider => <DiagRow key={provider.id} provider={provider} />)}</tbody>
