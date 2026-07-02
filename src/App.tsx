@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Incident, ProviderStatus, StatusColor, StatusPayload } from './types';
 
+const APP_VERSION = 'v5';
 const priorityNames = ['Microsoft 365', 'Entra ID', 'Cloudflare', 'AWS', 'Google Workspace', 'OpenAI'];
 const rank: Record<StatusColor, number> = { red: 4, amber: 3, blue: 2, green: 1 };
 
@@ -89,7 +90,7 @@ export function App(): JSX.Element {
   const groups = useMemo(() => groupProviders(data?.providers ?? []), [data]);
   const sorted = useMemo(() => [...(data?.providers ?? [])].sort(sortProvider), [data]);
 
-  if (!data) return <main className="shell"><div className="loading"><b>{state.error ? 'Status data failed' : 'Loading status data'}</b><span>{state.error ?? 'Reading status.json'}</span></div></main>;
+  if (!data) return <main className="shell"><div className="loading"><b>{state.error ? 'Status data failed' : 'Loading status data'}</b><span>{state.error ?? 'Reading status.json'}</span><em className="version-chip">{APP_VERSION}</em></div></main>;
 
   const incidents = data.incidents ?? [];
   const priority = priorityNames.map(name => data.providers.find(provider => provider.name === name)).filter((provider): provider is ProviderStatus => Boolean(provider));
@@ -98,7 +99,7 @@ export function App(): JSX.Element {
 
   return <main className="shell">
     <header className="hero">
-      <div><p>MSP Status Aggregator</p><h1>Service health dashboard</h1><span>Updated {timeLabel(data.generated_at)}. Official provider status sources only.</span></div>
+      <div><p>MSP Status Aggregator <em className="version-chip">{APP_VERSION}</em></p><h1>Service health dashboard</h1><span>Updated {timeLabel(data.generated_at)}. Official provider status sources only.</span></div>
       <div className={`badge ${data.summary.overall}`}><Dot color={data.summary.overall} /><b>{labelFor(data.summary.overall)}</b><span>{data.summary.active_incident_count} active</span></div>
     </header>
 
