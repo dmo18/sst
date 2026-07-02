@@ -239,13 +239,77 @@ async function parseSlack(provider) {
   return providerResult(provider, incidents.length ? `${incidents.length} active issue${incidents.length === 1 ? '' : 's'}` : (data.status || 'Operational'), incidents.length ? 'amber' : 'green', incidents, true);
 }
 
+function extractObjectsWithField(text, field) {
+  const objects = [];
+  const marker = `"${field}"`;
+  let pos = 0;
+  while ((pos = text.indexOf(marker, pos)) !== -1) {
+    let start = pos;
+    while (start >= 0 && text[start] !== '{') start -= 1;
+    if (start < 0) break;
+    let depth = 0;
+    let inString = false;
+    let escape = false;
+    for (let end = start; end < text.length; end += 1) {
+      const ch = text[end];
+      if (escape) {
+        escape = false;
+        continue;
+      }
+      if (ch === '\\') {
+        escape = true;
+        continue;
+      }
+      if (ch === '"') inString = !inString;
+      if (inString) continue;
+      if (ch === '{') depth += 1;
+      if (ch === '}') depth -= 1;
+      if (depth === 0) {
+        try {
+          objects.push(JSON.parse(text.slice(start, end + 1)));
+        } catch {}
+        pos = end + 1;
+        break;
+      }
+    }
+  }
+  return objects;
+}
+
+async function parseOktaHtml(provider) {
+  const html = await getText(provider.url);
+  const objects = extractObjectsWithField(html, 'Incident_Title__c');
+  const incidents = objects
+    .filter(item => isActiveStatus(item.Status__c || ''))
+    .map(item => ({
+      providerId: provider.id,
+      provider: provider.name,
+      category: provider.category,
+      title: stripHtml(item.Incident_Title__c || item.Name || 'Okta incident'),
+      note: stripHtml(item.Log__c || item.Category__c || 'No detail text provided by feed.'),
+      source: 'Okta status page',
+      url: provider.url,
+      time: shortTime(item.Last_Updated__c || item.Start_Time__c || item.CreatedDate),
+      rawTime: item.Last_Updated__c || item.Start_Time__c || item.CreatedDate,
+      status: item.Status__c || '',
+      color: colorFromText(`${item.Category__c || ''} ${item.Log__c || ''} ${item.Status__c || ''}`),
+      priority: provider.priority
+    }))
+    .filter(item => keepIncident(provider, item));
+  return providerResult(provider, incidents.length ? `${incidents.length} active issue${incidents.length === 1 ? '' : 's'}` : 'No active incidents', incidents.length ? 'amber' : 'green', incidents, true);
+}
+
 async function parseHtmlLimited(provider) {
   try {
     await getText(provider.url);
-    return providerResult(provider, 'Public status page reachable', 'blue', [], true, 'Official public status source is reachable, but no active issue parser is available yet.');
+    return providerResult(provider, 'Official page reachable', 'blue', [], true, 'Official public status source is reachable, but no active issue parser is available yet.');
   } catch (error) {
-    return providerResult(provider, 'Public status source limited', 'blue', [], false, `Official public status source unavailable: ${error.message || error}`);
+    return providerResult(provider, 'Official source limited', 'blue', [], true, `Official public source could not be parsed from GitHub Actions: ${error.message || error}`);
   }
+}
+
+async function parseOfficialLimited(provider) {
+  return providerResult(provider, 'Official source limited', 'blue', [], true, provider.message || 'Official public status source is not reliably readable from GitHub Actions, so it is listed but not parsed.');
 }
 
 async function parseLimitedMicrosoft(provider) {
@@ -274,7 +338,9 @@ async function loadProvider(provider) {
     if (provider.sourceType === 'rss') return await parseAwsRss(provider);
     if (provider.sourceType === 'google-cloud-json') return await parseGoogleCloud(provider);
     if (provider.sourceType === 'slack') return await parseSlack(provider);
+    if (provider.sourceType === 'okta-html') return await parseOktaHtml(provider);
     if (provider.sourceType === 'html-limited') return await parseHtmlLimited(provider);
+    if (provider.sourceType === 'official-limited') return await parseOfficialLimited(provider);
     if (provider.sourceType === 'limited-microsoft') return await parseLimitedMicrosoft(provider);
     return providerResult(provider, 'Unsupported source type', 'blue', [], false, 'Provider source type is not part of the status aggregator contract.');
   } catch (error) {
