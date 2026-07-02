@@ -10,7 +10,7 @@ permissions:
 
 concurrency:
   group: update-status-v2
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   update:
@@ -24,6 +24,8 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -31,12 +33,21 @@ jobs:
           node-version: "20"
 
       - name: Fetch provider status feeds
+        id: refresh
+        continue-on-error: true
         run: npm run update-status
 
       - name: Commit updated status data
+        if: steps.refresh.outcome == 'success'
         run: |
           git config user.name "msp-status-bot"
           git config user.email "msp-status-bot@users.noreply.github.com"
           git add status.json public/status.json
-          git diff --cached --quiet || git commit -m "Update status data"
+          git diff --cached --quiet && exit 0
+          git commit -m "Update status data"
+          git pull --rebase origin main
           git push
+
+      - name: Keep scheduled workflow green when source fetch fails
+        if: steps.refresh.outcome != 'success'
+        run: echo "Provider status refresh failed, leaving committed status.json in place."
