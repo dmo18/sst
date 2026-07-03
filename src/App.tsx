@@ -3,7 +3,7 @@ import { IssueConsole } from './IssueConsole';
 import { buildIssueConsoleModel } from './statusViewModel';
 import type { StatusPayload } from './types';
 
-const APP_VERSION = 'v10';
+const APP_VERSION = 'v11';
 
 type LoadState = { data?: StatusPayload; error?: string };
 
