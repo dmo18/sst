@@ -1,15 +1,14 @@
 {
   "name": "msp-status-hud",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
-  "description": "GitHub Pages MSP status aggregator updated by GitHub Actions.",
+  "description": "GitHub Pages MSP status aggregator with catalog-backed diagnostics.",
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host 0.0.0.0",
-    "update-status": "node scripts/merge-providers.cjs && node scripts/fetch-status-v2.cjs",
-    "test:render": "playwright test",
+    "update-status": "node scripts/update-status.mjs",
     "test": "npm run build"
   },
   "dependencies": {
@@ -18,7 +17,6 @@
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
-    "@playwright/test": "^1.49.0",
     "@types/node": "^22.10.0",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
