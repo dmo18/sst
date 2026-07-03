@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
+import providerCatalog from '../config/providers.json';
 import { IssueConsole } from './IssueConsole';
 import { buildIssueConsoleModel } from './statusViewModel';
-import type { StatusPayload } from './types';
+import type { ProviderConfig, StatusPayload } from './types';
 
-const APP_VERSION = 'v11';
+const APP_VERSION = 'v12';
+const CATALOG = providerCatalog as ProviderConfig[];
 
 type LoadState = { data?: StatusPayload; error?: string };
 
@@ -31,7 +33,7 @@ export function App(): JSX.Element {
     return () => { active = false; window.clearInterval(id); };
   }, []);
 
-  const model = useMemo(() => state.data ? buildIssueConsoleModel(state.data, APP_VERSION) : undefined, [state.data]);
+  const model = useMemo(() => state.data ? buildIssueConsoleModel(state.data, APP_VERSION, CATALOG) : undefined, [state.data]);
 
   if (!model) return <main className="app-frame"><section className="briefing-console loading"><b>{state.error ? 'DATA FAILED' : 'LOADING'}</b><span>{state.error ?? 'Reading status.json'}</span><em>{APP_VERSION}</em></section></main>;
 
