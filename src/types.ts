@@ -12,6 +12,18 @@ export interface ProviderDownloadLog {
   error?: string;
 }
 
+export interface ProviderConfig {
+  id: string;
+  name: string;
+  category: string;
+  priority?: number;
+  enabled?: boolean;
+  sourceType?: string;
+  url: string;
+  message?: string;
+  services?: string[];
+}
+
 export interface ProviderStatus {
   id: string;
   name: string;
