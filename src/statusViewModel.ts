@@ -88,6 +88,7 @@ function fallbackDownloadLog(provider: ProviderStatus, generatedAt: string): Pro
 }
 
 function toDiagnostic(provider: ProviderStatus, generatedAt: string): DiagnosticSource {
+  const downloadLog = provider.download_log ?? [];
   return {
     id: provider.id,
     provider: provider.name,
@@ -100,7 +101,7 @@ function toDiagnostic(provider: ProviderStatus, generatedAt: string): Diagnostic
     ok: provider.ok,
     checkedAt: provider.checked_at || generatedAt,
     sourceType: provider.source_type || 'unknown',
-    downloadLog: provider.download_log?.length ? provider.download_log : fallbackDownloadLog(provider, generatedAt)
+    downloadLog: downloadLog.length ? downloadLog : fallbackDownloadLog(provider, generatedAt)
   };
 }
 
