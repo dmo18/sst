@@ -1,4 +1,4 @@
-import type { Incident, ProviderDownloadLog, ProviderStatus, StatusColor, StatusPayload } from './types';
+import type { Incident, ProviderConfig, ProviderDownloadLog, ProviderStatus, StatusColor, StatusPayload } from './types';
 
 const severityRank: Record<StatusColor, number> = { red: 4, amber: 3, blue: 2, green: 1 };
 
@@ -87,6 +87,32 @@ function fallbackDownloadLog(provider: ProviderStatus, generatedAt: string): Pro
   }];
 }
 
+function catalogFallback(provider: ProviderConfig, generatedAt: string): ProviderStatus {
+  return {
+    id: provider.id,
+    name: provider.name,
+    category: provider.category,
+    status: provider.enabled === false ? 'Disabled in provider catalog' : 'Pending source refresh',
+    color: 'blue',
+    message: provider.message || 'Provider exists in the canonical catalog but is not present in the latest generated status payload yet.',
+    ok: provider.enabled !== false,
+    source: provider.url,
+    priority: provider.priority ?? 0,
+    checked_at: generatedAt,
+    source_type: provider.sourceType || 'unknown',
+    download_log: [{
+      timestamp: generatedAt,
+      completed_at: generatedAt,
+      duration_ms: 0,
+      url: provider.url,
+      source_type: provider.sourceType || 'unknown',
+      ok: provider.enabled !== false,
+      status: 'catalog only',
+      message: 'Waiting for the next Update status workflow to fetch this provider.'
+    }]
+  };
+}
+
 function toDiagnostic(provider: ProviderStatus, generatedAt: string): DiagnosticSource {
   const downloadLog = provider.download_log ?? [];
   return {
@@ -105,9 +131,18 @@ function toDiagnostic(provider: ProviderStatus, generatedAt: string): Diagnostic
   };
 }
 
-export function buildIssueConsoleModel(payload: StatusPayload, version: string): IssueConsoleModel {
+function mergeCatalog(payload: StatusPayload, catalog: ProviderConfig[] = []): ProviderStatus[] {
+  const byId = new Map<string, ProviderStatus>();
+  for (const provider of payload.providers) byId.set(provider.id, provider);
+  for (const provider of catalog) {
+    if (!byId.has(provider.id)) byId.set(provider.id, catalogFallback(provider, payload.generated_at));
+  }
+  return [...byId.values()];
+}
+
+export function buildIssueConsoleModel(payload: StatusPayload, version: string, catalog: ProviderConfig[] = []): IssueConsoleModel {
   const briefs = [...payload.incidents].sort(sortIncident).map(toBrief);
-  const diagnostics = [...payload.providers].sort(sortProvider).map(provider => toDiagnostic(provider, payload.generated_at));
+  const diagnostics = mergeCatalog(payload, catalog).sort(sortProvider).map(provider => toDiagnostic(provider, payload.generated_at));
   const affected = diagnostics.filter(source => source.severity === 'red' || source.severity === 'amber');
 
   return {
