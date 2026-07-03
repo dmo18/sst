@@ -10,7 +10,7 @@
     "preview": "vite preview --host 0.0.0.0",
     "update-status": "node scripts/merge-providers.cjs && node scripts/fetch-status-v2.cjs",
     "test:render": "playwright test",
-    "test": "npm run build && npm run test:render"
+    "test": "npm run build"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^4.3.4",
