@@ -1,77 +1,115 @@
 {
-  "generated_at": "2026-07-01T23:56:50.857Z",
+  "generated_at": "2026-07-03T21:36:28.472Z",
   "summary": {
     "overall": "red",
-    "active_incident_count": 2,
-    "providers_ok": 21,
-    "providers_total": 22
+    "active_incident_count": 31,
+    "providers_ok": 90,
+    "providers_total": 127
   },
   "providers": [
     {
-      "id": "microsoft365",
-      "name": "Microsoft 365",
-      "category": "Cloud Services",
-      "status": "Microsoft Graph needed",
-      "color": "blue",
-      "message": "Primary service. Public source is limited; rich Microsoft 365 service health requires authenticated Graph.",
-      "ok": true,
-      "source": "https://status.cloud.microsoft/api/",
-      "priority": 130
-    },
-    {
-      "id": "entra",
-      "name": "Entra ID",
-      "category": "Identity",
-      "status": "Microsoft Graph needed",
-      "color": "blue",
-      "message": "Primary service. Public source is limited; rich Microsoft 365 service health requires authenticated Graph.",
-      "ok": true,
-      "source": "https://status.cloud.microsoft/api/",
-      "priority": 125
-    },
-    {
-      "id": "aws",
-      "name": "AWS",
-      "category": "Cloud Services",
-      "status": "No active RSS events",
-      "color": "green",
+      "id": "datto",
+      "name": "Datto",
+      "category": "MSP Platforms",
+      "status": "7 active issues",
+      "color": "red",
       "message": "",
       "ok": true,
-      "source": "https://status.aws.amazon.com/rss/all.rss",
-      "priority": 82
+      "source": "https://status.datto.com/api/v2/summary.json",
+      "priority": 86,
+      "checked_at": "2026-07-03T21:36:17.331Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:16.652Z",
+          "completed_at": "2026-07-03T21:36:17.330Z",
+          "duration_ms": 678,
+          "url": "https://status.datto.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=266907",
+          "error": ""
+        }
+      ]
     },
     {
-      "id": "cloudflare",
-      "name": "Cloudflare",
-      "category": "Cloud Services",
+      "id": "kaseya",
+      "name": "Kaseya",
+      "category": "MSP Platforms",
+      "status": "7 active issues",
+      "color": "red",
+      "message": "",
+      "ok": true,
+      "source": "https://status.kaseya.com/api/v2/summary.json",
+      "priority": 86,
+      "checked_at": "2026-07-03T21:36:17.216Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:16.641Z",
+          "completed_at": "2026-07-03T21:36:17.215Z",
+          "duration_ms": 574,
+          "url": "https://status.kaseya.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=266907",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "eset",
+      "name": "ESET",
+      "category": "Security",
       "status": "1 active issue",
-      "color": "amber",
+      "color": "red",
       "message": "",
       "ok": true,
-      "source": "https://www.cloudflarestatus.com/api/v2/summary.json",
-      "priority": 95
+      "source": "https://status.eset.com/api/v2/summary.json",
+      "priority": 78,
+      "checked_at": "2026-07-03T21:36:17.439Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:17.169Z",
+          "completed_at": "2026-07-03T21:36:17.439Z",
+          "duration_ms": 270,
+          "url": "https://status.eset.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=26286",
+          "error": ""
+        }
+      ]
     },
     {
-      "id": "google-workspace",
-      "name": "Google Workspace",
-      "category": "Cloud Services",
-      "status": "Public page reachable",
-      "color": "blue",
-      "message": "Limited public source, no active issue parser yet",
-      "ok": true,
-      "source": "https://www.google.com/appsstatus/dashboard/summary",
-      "priority": 82
-    },
-    {
-      "id": "google-cloud",
-      "name": "Google Cloud",
-      "category": "Cloud Services",
-      "status": "Operational",
-      "color": "green",
+      "id": "tenable",
+      "name": "Tenable",
+      "category": "Security",
+      "status": "1 active issue",
+      "color": "red",
       "message": "",
       "ok": true,
-      "source": "https://status.cloud.google.com/incidents.json",
-      "priority": 65
+      "source": "https://status.tenable.com/api/v2/summary.json",
+      "priority": 78,
+      "checked_at": "2026-07-03T21:36:18.525Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:17.785Z",
+          "completed_at": "2026-07-03T21:36:18.525Z",
+          "duration_ms": 740,
+          "url": "https://status.tenable.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=66254",
+          "error": ""
+        }
+      ]
     },
     {
       "id": "openai",
@@ -82,51 +120,280 @@
       "message": "",
       "ok": true,
       "source": "https://status.openai.com/api/v2/summary.json",
-      "priority": 70
+      "priority": 70,
+      "checked_at": "2026-07-03T21:36:14.504Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:13.983Z",
+          "completed_at": "2026-07-03T21:36:14.503Z",
+          "duration_ms": 520,
+          "url": "https://status.openai.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; bytes=6281",
+          "error": ""
+        }
+      ]
     },
     {
-      "id": "anthropic",
-      "name": "Anthropic",
-      "category": "AI",
-      "status": "All Systems Operational",
-      "color": "green",
+      "id": "elastic-cloud",
+      "name": "Elastic Cloud",
+      "category": "Search / Observability",
+      "status": "1 active issue",
+      "color": "red",
       "message": "",
       "ok": true,
-      "source": "https://status.claude.com/api/v2/summary.json",
-      "priority": 62
+      "source": "https://status.elastic.co/api/v2/summary.json",
+      "priority": 60,
+      "checked_at": "2026-07-03T21:36:21.219Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:20.681Z",
+          "completed_at": "2026-07-03T21:36:21.218Z",
+          "duration_ms": 537,
+          "url": "https://status.elastic.co/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=256764",
+          "error": ""
+        }
+      ]
     },
     {
-      "id": "sentinelone",
-      "name": "SentinelOne",
-      "category": "Security",
-      "status": "All Systems Operational",
-      "color": "green",
+      "id": "mongodb-atlas",
+      "name": "MongoDB Atlas",
+      "category": "Database",
+      "status": "1 active issue",
+      "color": "red",
       "message": "",
       "ok": true,
-      "source": "https://status.sentinelone.com/api/v2/summary.json",
-      "priority": 88
+      "source": "https://status.mongodb.com/api/v2/summary.json",
+      "priority": 60,
+      "checked_at": "2026-07-03T21:36:21.096Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:20.643Z",
+          "completed_at": "2026-07-03T21:36:21.096Z",
+          "duration_ms": 453,
+          "url": "https://status.mongodb.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=41011",
+          "error": ""
+        }
+      ]
     },
     {
-      "id": "sophos",
-      "name": "Sophos",
+      "id": "cloudflare",
+      "name": "Cloudflare",
+      "category": "Cloud Services",
+      "status": "2 active issues",
+      "color": "amber",
+      "message": "",
+      "ok": true,
+      "source": "https://www.cloudflarestatus.com/api/v2/summary.json",
+      "priority": 95,
+      "checked_at": "2026-07-03T21:36:14.276Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:13.979Z",
+          "completed_at": "2026-07-03T21:36:14.274Z",
+          "duration_ms": 295,
+          "url": "https://www.cloudflarestatus.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=188413",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "twilio",
+      "name": "Twilio",
+      "category": "Messaging API",
+      "status": "3 active issues",
+      "color": "amber",
+      "message": "",
+      "ok": true,
+      "source": "https://status.twilio.com/api/v2/summary.json",
+      "priority": 86,
+      "checked_at": "2026-07-03T21:36:20.201Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:19.873Z",
+          "completed_at": "2026-07-03T21:36:20.201Z",
+          "duration_ms": 328,
+          "url": "https://status.twilio.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=166680",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "akamai",
+      "name": "Akamai",
+      "category": "Edge and CDN",
+      "status": "1 active issue",
+      "color": "amber",
+      "message": "",
+      "ok": true,
+      "source": "https://www.akamaistatus.com/api/v2/summary.json",
+      "priority": 78,
+      "checked_at": "2026-07-03T21:36:14.979Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:14.270Z",
+          "completed_at": "2026-07-03T21:36:14.979Z",
+          "duration_ms": 709,
+          "url": "https://www.akamaistatus.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=21470",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "qualys",
+      "name": "Qualys",
       "category": "Security",
-      "status": "Public source limited",
+      "status": "1 active issue",
+      "color": "amber",
+      "message": "",
+      "ok": true,
+      "source": "https://status.qualys.com/api/v2/summary.json",
+      "priority": 78,
+      "checked_at": "2026-07-03T21:36:18.323Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:17.573Z",
+          "completed_at": "2026-07-03T21:36:18.321Z",
+          "duration_ms": 748,
+          "url": "https://status.qualys.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=308102",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "linode",
+      "name": "Linode",
+      "category": "Edge / Hosting",
+      "status": "4 active issues",
+      "color": "amber",
+      "message": "",
+      "ok": true,
+      "source": "https://status.linode.com/api/v2/summary.json",
+      "priority": 60,
+      "checked_at": "2026-07-03T21:36:19.510Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:18.895Z",
+          "completed_at": "2026-07-03T21:36:19.508Z",
+          "duration_ms": 613,
+          "url": "https://status.linode.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=453179",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "snyk",
+      "name": "Snyk",
+      "category": "Security / DevSecOps",
+      "status": "1 active issue",
+      "color": "amber",
+      "message": "",
+      "ok": true,
+      "source": "https://status.snyk.io/api/v2/summary.json",
+      "priority": 60,
+      "checked_at": "2026-07-03T21:36:18.513Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:17.786Z",
+          "completed_at": "2026-07-03T21:36:18.513Z",
+          "duration_ms": 727,
+          "url": "https://status.snyk.io/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=64808",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "microsoft365",
+      "name": "Microsoft 365",
+      "category": "Cloud Services",
+      "status": "Official source limited",
       "color": "blue",
-      "message": "Limited public source: HTTP 403",
-      "ok": false,
-      "source": "https://centralstatus.sophos.com/",
-      "priority": 84
+      "message": "Official public status source is listed, but no reliable unauthenticated parser is available yet.",
+      "ok": true,
+      "source": "https://status.cloud.microsoft/api/",
+      "priority": 130,
+      "checked_at": "2026-07-03T21:36:13.918Z",
+      "source_type": "limited-microsoft",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:13.918Z",
+          "completed_at": "2026-07-03T21:36:13.918Z",
+          "duration_ms": 0,
+          "url": "https://status.cloud.microsoft/api/",
+          "source_type": "limited-microsoft",
+          "ok": true,
+          "status": "listed only",
+          "message": "Official public status source is listed, but no reliable unauthenticated parser is available yet."
+        }
+      ]
     },
     {
-      "id": "dnsfilter",
-      "name": "DNSFilter",
-      "category": "Security",
-      "status": "All Systems Operational",
-      "color": "green",
-      "message": "",
+      "id": "entra",
+      "name": "Entra ID",
+      "category": "Identity",
+      "status": "Official source limited",
+      "color": "blue",
+      "message": "Official public status source is listed, but no reliable unauthenticated parser is available yet.",
       "ok": true,
-      "source": "https://status.dnsfilter.com/api/v2/summary.json",
-      "priority": 88
+      "source": "https://status.cloud.microsoft/api/",
+      "priority": 125,
+      "checked_at": "2026-07-03T21:36:13.918Z",
+      "source_type": "limited-microsoft",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:13.918Z",
+          "completed_at": "2026-07-03T21:36:13.918Z",
+          "duration_ms": 0,
+          "url": "https://status.cloud.microsoft/api/",
+          "source_type": "limited-microsoft",
+          "ok": true,
+          "status": "listed only",
+          "message": "Official public status source is listed, but no reliable unauthenticated parser is available yet."
+        }
+      ]
     },
     {
       "id": "connectwise",
@@ -134,10 +401,25 @@
       "category": "MSP Platforms",
       "status": "Public page reachable",
       "color": "blue",
-      "message": "Limited public source, no active issue parser yet",
+      "message": "Public source is reachable, but no rich active incident parser is available yet.",
       "ok": true,
       "source": "https://status.connectwise.com/",
-      "priority": 90
+      "priority": 90,
+      "checked_at": "2026-07-03T21:36:14.655Z",
+      "source_type": "html-limited",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:13.988Z",
+          "completed_at": "2026-07-03T21:36:14.655Z",
+          "duration_ms": 667,
+          "url": "https://status.connectwise.com/",
+          "source_type": "html-limited",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=text/html; charset=utf-8; bytes=137027",
+          "error": ""
+        }
+      ]
     },
     {
       "id": "halopsa",
@@ -145,10 +427,1374 @@
       "category": "MSP Platforms",
       "status": "Public page reachable",
       "color": "blue",
-      "message": "Limited public source, no active issue parser yet",
+      "message": "Public source is reachable, but no rich active incident parser is available yet.",
       "ok": true,
       "source": "https://status.haloservicesolutions.com/",
-      "priority": 88
+      "priority": 88,
+      "checked_at": "2026-07-03T21:36:14.666Z",
+      "source_type": "html-limited",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:13.989Z",
+          "completed_at": "2026-07-03T21:36:14.665Z",
+          "duration_ms": 676,
+          "url": "https://status.haloservicesolutions.com/",
+          "source_type": "html-limited",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=text/html; charset=utf-8; bytes=107302",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "crowdstrike",
+      "name": "CrowdStrike",
+      "category": "Security",
+      "status": "Source unavailable: HTTP failed",
+      "color": "blue",
+      "message": "fetch failed",
+      "ok": false,
+      "source": "https://status.crowdstrike.com/api/v2/summary.json",
+      "priority": 86,
+      "checked_at": "2026-07-03T21:36:17.172Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:16.807Z",
+          "completed_at": "2026-07-03T21:36:17.172Z",
+          "duration_ms": 365,
+          "url": "https://status.crowdstrike.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": false,
+          "status": "fetch failed",
+          "message": "Fetch failed before a readable payload was returned.",
+          "error": "fetch failed"
+        }
+      ]
+    },
+    {
+      "id": "n-able",
+      "name": "N-able",
+      "category": "MSP Platforms",
+      "status": "Source unavailable: HTTP 404",
+      "color": "blue",
+      "message": "Not Found; content-type=text/html; charset=UTF-8; bytes=48225",
+      "ok": false,
+      "source": "https://status.n-able.com/api/v2/summary.json",
+      "priority": 86,
+      "checked_at": "2026-07-03T21:36:17.573Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:16.727Z",
+          "completed_at": "2026-07-03T21:36:17.573Z",
+          "duration_ms": 846,
+          "url": "https://status.n-able.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": false,
+          "status": "HTTP 404",
+          "message": "Not Found; content-type=text/html; charset=UTF-8; bytes=48225",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "okta",
+      "name": "Okta",
+      "category": "Identity",
+      "status": "Public page reachable",
+      "color": "blue",
+      "message": "Public source is reachable, but no rich active incident parser is available yet.",
+      "ok": true,
+      "source": "https://status.okta.com/",
+      "priority": 86,
+      "checked_at": "2026-07-03T21:36:15.726Z",
+      "source_type": "okta-html",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:14.414Z",
+          "completed_at": "2026-07-03T21:36:15.726Z",
+          "duration_ms": 1312,
+          "url": "https://status.okta.com/",
+          "source_type": "okta-html",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=text/html;charset=UTF-8; bytes=331743",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "ringcentral",
+      "name": "RingCentral",
+      "category": "VoIP",
+      "status": "Source unavailable: HTTP 404",
+      "color": "blue",
+      "message": "Not Found; content-type=application/json; bytes=24079",
+      "ok": false,
+      "source": "https://status.ringcentral.com/api/v2/summary.json",
+      "priority": 86,
+      "checked_at": "2026-07-03T21:36:19.744Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:19.323Z",
+          "completed_at": "2026-07-03T21:36:19.744Z",
+          "duration_ms": 421,
+          "url": "https://status.ringcentral.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": false,
+          "status": "HTTP 404",
+          "message": "Not Found; content-type=application/json; bytes=24079",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "sophos",
+      "name": "Sophos",
+      "category": "Security",
+      "status": "Official source limited",
+      "color": "blue",
+      "message": "Official Sophos Central status page blocks GitHub Actions, so it is listed as limited until a readable official source is available.",
+      "ok": true,
+      "source": "https://centralstatus.sophos.com/",
+      "priority": 84,
+      "checked_at": "2026-07-03T21:36:13.987Z",
+      "source_type": "official-limited",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:13.987Z",
+          "completed_at": "2026-07-03T21:36:13.987Z",
+          "duration_ms": 0,
+          "url": "https://centralstatus.sophos.com/",
+          "source_type": "official-limited",
+          "ok": true,
+          "status": "listed only",
+          "message": "Official Sophos Central status page blocks GitHub Actions, so it is listed as limited until a readable official source is available."
+        }
+      ]
+    },
+    {
+      "id": "google-workspace",
+      "name": "Google Workspace",
+      "category": "Cloud Services",
+      "status": "Public page reachable",
+      "color": "blue",
+      "message": "Public source is reachable, but no rich active incident parser is available yet.",
+      "ok": true,
+      "source": "https://www.google.com/appsstatus/dashboard/summary",
+      "priority": 82,
+      "checked_at": "2026-07-03T21:36:14.414Z",
+      "source_type": "html-limited",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:13.980Z",
+          "completed_at": "2026-07-03T21:36:14.414Z",
+          "duration_ms": 434,
+          "url": "https://www.google.com/appsstatus/dashboard/summary",
+          "source_type": "html-limited",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=text/html; bytes=159360",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "acronis",
+      "name": "Acronis",
+      "category": "Backup",
+      "status": "Source returned non-JSON",
+      "color": "blue",
+      "message": "Parser failed: Unexpected token '<', \"\r\n<!DOCTYPE \"... is not valid JSON",
+      "ok": false,
+      "source": "https://status.acronis.com/api/v2/summary.json",
+      "priority": 78,
+      "checked_at": "2026-07-03T21:36:19.674Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:17.926Z",
+          "completed_at": "2026-07-03T21:36:19.674Z",
+          "duration_ms": 1748,
+          "url": "https://status.acronis.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=text/html; charset=utf-8; bytes=89183",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "auth0",
+      "name": "Auth0",
+      "category": "Identity / Access",
+      "status": "Source unavailable: HTTP 404",
+      "color": "blue",
+      "message": "Not Found; content-type=text/html; charset=utf-8; bytes=3564",
+      "ok": false,
+      "source": "https://status.auth0.com/api/v2/summary.json",
+      "priority": 78,
+      "checked_at": "2026-07-03T21:36:16.423Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:15.741Z",
+          "completed_at": "2026-07-03T21:36:16.423Z",
+          "duration_ms": 682,
+          "url": "https://status.auth0.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": false,
+          "status": "HTTP 404",
+          "message": "Not Found; content-type=text/html; charset=utf-8; bytes=3564",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "bitdefender-gravityzone",
+      "name": "Bitdefender GravityZone",
+      "category": "Security",
+      "status": "Source unavailable: HTTP failed",
+      "color": "blue",
+      "message": "fetch failed",
+      "ok": false,
+      "source": "https://status.bitdefender.com/api/v2/summary.json",
+      "priority": 78,
+      "checked_at": "2026-07-03T21:36:17.310Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:17.001Z",
+          "completed_at": "2026-07-03T21:36:17.310Z",
+          "duration_ms": 309,
+          "url": "https://status.bitdefender.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": false,
+          "status": "fetch failed",
+          "message": "Fetch failed before a readable payload was returned.",
+          "error": "fetch failed"
+        }
+      ]
+    },
+    {
+      "id": "bitwarden",
+      "name": "Bitwarden",
+      "category": "Identity / Access",
+      "status": "Source unavailable: HTTP 404",
+      "color": "blue",
+      "message": "Not Found; content-type=application/json; charset=UTF-8; bytes=34",
+      "ok": false,
+      "source": "https://status.bitwarden.com/api/v2/summary.json",
+      "priority": 78,
+      "checked_at": "2026-07-03T21:36:16.807Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:15.957Z",
+          "completed_at": "2026-07-03T21:36:16.807Z",
+          "duration_ms": 850,
+          "url": "https://status.bitwarden.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": false,
+          "status": "HTTP 404",
+          "message": "Not Found; content-type=application/json; charset=UTF-8; bytes=34",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "cove-data-protection",
+      "name": "Cove Data Protection",
+      "category": "Backup",
+      "status": "Source unavailable: HTTP failed",
+      "color": "blue",
+      "message": "fetch failed",
+      "ok": false,
+      "source": "https://status.covedataprotection.com/api/v2/summary.json",
+      "priority": 78,
+      "checked_at": "2026-07-03T21:36:18.744Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:18.194Z",
+          "completed_at": "2026-07-03T21:36:18.744Z",
+          "duration_ms": 550,
+          "url": "https://status.covedataprotection.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": false,
+          "status": "fetch failed",
+          "message": "Fetch failed before a readable payload was returned.",
+          "error": "fetch failed"
+        }
+      ]
+    },
+    {
+      "id": "druva",
+      "name": "Druva",
+      "category": "Backup",
+      "status": "Source unavailable: HTTP failed",
+      "color": "blue",
+      "message": "fetch failed",
+      "ok": false,
+      "source": "https://status.druva.com/api/v2/summary.json",
+      "priority": 78,
+      "checked_at": "2026-07-03T21:36:28.465Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:18.097Z",
+          "completed_at": "2026-07-03T21:36:28.465Z",
+          "duration_ms": 10368,
+          "url": "https://status.druva.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": false,
+          "status": "fetch failed",
+          "message": "Fetch failed before a readable payload was returned.",
+          "error": "fetch failed"
+        }
+      ]
+    },
+    {
+      "id": "fastly",
+      "name": "Fastly",
+      "category": "Edge and CDN",
+      "status": "Official source limited",
+      "color": "blue",
+      "message": "Official Fastly status source blocks GitHub Actions from this environment, so it is listed as limited until a readable official source is available.",
+      "ok": true,
+      "source": "https://status.fastly.com/",
+      "priority": 78,
+      "checked_at": "2026-07-03T21:36:14.276Z",
+      "source_type": "official-limited",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:14.276Z",
+          "completed_at": "2026-07-03T21:36:14.276Z",
+          "duration_ms": 0,
+          "url": "https://status.fastly.com/",
+          "source_type": "official-limited",
+          "ok": true,
+          "status": "listed only",
+          "message": "Official Fastly status source blocks GitHub Actions from this environment, so it is listed as limited until a readable official source is available."
+        }
+      ]
+    },
+    {
+      "id": "fortinet",
+      "name": "Fortinet",
+      "category": "Security",
+      "status": "Source unavailable: HTTP failed",
+      "color": "blue",
+      "message": "fetch failed",
+      "ok": false,
+      "source": "https://status.fortinet.com/api/v2/summary.json",
+      "priority": 78,
+      "checked_at": "2026-07-03T21:36:17.491Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:17.172Z",
+          "completed_at": "2026-07-03T21:36:17.491Z",
+          "duration_ms": 319,
+          "url": "https://status.fortinet.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": false,
+          "status": "fetch failed",
+          "message": "Fetch failed before a readable payload was returned.",
+          "error": "fetch failed"
+        }
+      ]
+    },
+    {
+      "id": "keeper",
+      "name": "Keeper",
+      "category": "Identity / Access",
+      "status": "Source unavailable: HTTP failed",
+      "color": "blue",
+      "message": "fetch failed",
+      "ok": false,
+      "source": "https://status.keeper.io/api/v2/summary.json",
+      "priority": 78,
+      "checked_at": "2026-07-03T21:36:16.505Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:15.986Z",
+          "completed_at": "2026-07-03T21:36:16.505Z",
+          "duration_ms": 519,
+          "url": "https://status.keeper.io/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": false,
+          "status": "fetch failed",
+          "message": "Fetch failed before a readable payload was returned.",
+          "error": "fetch failed"
+        }
+      ]
+    },
+    {
+      "id": "lastpass",
+      "name": "LastPass",
+      "category": "Identity / Access",
+      "status": "Source unavailable: HTTP 403",
+      "color": "blue",
+      "message": "Forbidden; content-type=text/html; charset=UTF-8; bytes=5645",
+      "ok": false,
+      "source": "https://status.lastpass.com/api/v2/summary.json",
+      "priority": 78,
+      "checked_at": "2026-07-03T21:36:16.641Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:16.118Z",
+          "completed_at": "2026-07-03T21:36:16.641Z",
+          "duration_ms": 523,
+          "url": "https://status.lastpass.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": false,
+          "status": "HTTP 403",
+          "message": "Forbidden; content-type=text/html; charset=UTF-8; bytes=5645",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "malwarebytes",
+      "name": "Malwarebytes",
+      "category": "Security",
+      "status": "Source returned non-JSON",
+      "color": "blue",
+      "message": "Parser failed: Unexpected token '<', \"<!DOCTYPE \"... is not valid JSON",
+      "ok": false,
+      "source": "https://status.malwarebytes.com/api/v2/summary.json",
+      "priority": 78,
+      "checked_at": "2026-07-03T21:36:18.297Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:16.935Z",
+          "completed_at": "2026-07-03T21:36:18.297Z",
+          "duration_ms": 1362,
+          "url": "https://status.malwarebytes.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=text/html; charset=UTF-8; bytes=250351",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "mimecast",
+      "name": "Mimecast",
+      "category": "Security / Email",
+      "status": "Source unavailable: HTTP 404",
+      "color": "blue",
+      "message": "Not Found; content-type=text/html; charset=utf-8; bytes=427",
+      "ok": false,
+      "source": "https://status.mimecast.com/api/v2/summary.json",
+      "priority": 78,
+      "checked_at": "2026-07-03T21:36:17.960Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:17.310Z",
+          "completed_at": "2026-07-03T21:36:17.960Z",
+          "duration_ms": 650,
+          "url": "https://status.mimecast.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": false,
+          "status": "HTTP 404",
+          "message": "Not Found; content-type=text/html; charset=utf-8; bytes=427",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "onelogin",
+      "name": "OneLogin",
+      "category": "Identity / Access",
+      "status": "Source unavailable: HTTP failed",
+      "color": "blue",
+      "message": "fetch failed",
+      "ok": false,
+      "source": "https://status.onelogin.com/api/v2/summary.json",
+      "priority": 78,
+      "checked_at": "2026-07-03T21:36:25.965Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:15.798Z",
+          "completed_at": "2026-07-03T21:36:25.965Z",
+          "duration_ms": 10167,
+          "url": "https://status.onelogin.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": false,
+          "status": "fetch failed",
+          "message": "Fetch failed before a readable payload was returned.",
+          "error": "fetch failed"
+        }
+      ]
+    },
+    {
+      "id": "proofpoint",
+      "name": "Proofpoint",
+      "category": "Security / Email",
+      "status": "Source unavailable: HTTP failed",
+      "color": "blue",
+      "message": "fetch failed",
+      "ok": false,
+      "source": "https://status.proofpoint.com/api/v2/summary.json",
+      "priority": 78,
+      "checked_at": "2026-07-03T21:36:17.504Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:17.287Z",
+          "completed_at": "2026-07-03T21:36:17.504Z",
+          "duration_ms": 217,
+          "url": "https://status.proofpoint.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": false,
+          "status": "fetch failed",
+          "message": "Fetch failed before a readable payload was returned.",
+          "error": "fetch failed"
+        }
+      ]
+    },
+    {
+      "id": "superops",
+      "name": "SuperOps",
+      "category": "MSP Platforms",
+      "status": "Source returned non-JSON",
+      "color": "blue",
+      "message": "Parser failed: Unexpected token '<', \"<div class\"... is not valid JSON",
+      "ok": false,
+      "source": "https://status.superops.com/api/v2/summary.json",
+      "priority": 78,
+      "checked_at": "2026-07-03T21:36:18.707Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:16.749Z",
+          "completed_at": "2026-07-03T21:36:18.707Z",
+          "duration_ms": 1958,
+          "url": "https://status.superops.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=516737",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "syncro",
+      "name": "Syncro",
+      "category": "MSP Platforms",
+      "status": "Source unavailable: HTTP 406",
+      "color": "blue",
+      "message": "Not Acceptable; content-type=application/json; charset=UTF-8; bytes=39",
+      "ok": false,
+      "source": "https://status.syncromsp.com/api/v2/summary.json",
+      "priority": 78,
+      "checked_at": "2026-07-03T21:36:17.786Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:16.539Z",
+          "completed_at": "2026-07-03T21:36:17.786Z",
+          "duration_ms": 1247,
+          "url": "https://status.syncromsp.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": false,
+          "status": "HTTP 406",
+          "message": "Not Acceptable; content-type=application/json; charset=UTF-8; bytes=39",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "veeam-cloud-services",
+      "name": "Veeam Cloud Services",
+      "category": "Backup",
+      "status": "Source unavailable: HTTP failed",
+      "color": "blue",
+      "message": "fetch failed",
+      "ok": false,
+      "source": "https://status.veeam.com/api/v2/summary.json",
+      "priority": 78,
+      "checked_at": "2026-07-03T21:36:18.574Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:17.960Z",
+          "completed_at": "2026-07-03T21:36:18.574Z",
+          "duration_ms": 614,
+          "url": "https://status.veeam.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": false,
+          "status": "fetch failed",
+          "message": "Fetch failed before a readable payload was returned.",
+          "error": "fetch failed"
+        }
+      ]
+    },
+    {
+      "id": "zscaler",
+      "name": "Zscaler",
+      "category": "Security",
+      "status": "Public page reachable",
+      "color": "blue",
+      "message": "Public source is reachable, but no rich active incident parser is available yet.",
+      "ok": true,
+      "source": "https://trust.zscaler.com/",
+      "priority": 74,
+      "checked_at": "2026-07-03T21:36:15.243Z",
+      "source_type": "html-limited",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:14.608Z",
+          "completed_at": "2026-07-03T21:36:15.243Z",
+          "duration_ms": 635,
+          "url": "https://trust.zscaler.com/",
+          "source_type": "html-limited",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=text/html; charset=UTF-8; bytes=29923",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "quad9",
+      "name": "Quad9",
+      "category": "DNS and Internet",
+      "status": "Public page reachable",
+      "color": "blue",
+      "message": "Public source is reachable, but no rich active incident parser is available yet.",
+      "ok": true,
+      "source": "https://status.quad9.net/",
+      "priority": 68,
+      "checked_at": "2026-07-03T21:36:16.539Z",
+      "source_type": "html-limited",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:14.655Z",
+          "completed_at": "2026-07-03T21:36:16.539Z",
+          "duration_ms": 1884,
+          "url": "https://status.quad9.net/",
+          "source_type": "html-limited",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=text/html; charset=utf-8; bytes=227759",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "8x8",
+      "name": "8x8",
+      "category": "VoIP",
+      "status": "Source unavailable: HTTP 403",
+      "color": "blue",
+      "message": "Forbidden; content-type=text/html; bytes=28",
+      "ok": false,
+      "source": "https://status.8x8.com/api/v2/summary.json",
+      "priority": 60,
+      "checked_at": "2026-07-03T21:36:20.045Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:19.326Z",
+          "completed_at": "2026-07-03T21:36:20.045Z",
+          "duration_ms": 719,
+          "url": "https://status.8x8.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": false,
+          "status": "HTTP 403",
+          "message": "Forbidden; content-type=text/html; bytes=28",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "action1",
+      "name": "Action1",
+      "category": "Endpoint / Patch",
+      "status": "Source unavailable: HTTP 404",
+      "color": "blue",
+      "message": "Not Found; content-type=text/html; bytes=150",
+      "ok": false,
+      "source": "https://status.action1.com/api/v2/summary.json",
+      "priority": 60,
+      "checked_at": "2026-07-03T21:36:17.001Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:16.469Z",
+          "completed_at": "2026-07-03T21:36:17.001Z",
+          "duration_ms": 532,
+          "url": "https://status.action1.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": false,
+          "status": "HTTP 404",
+          "message": "Not Found; content-type=text/html; bytes=150",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "automox",
+      "name": "Automox",
+      "category": "Endpoint / Patch",
+      "status": "Source unavailable: HTTP 403",
+      "color": "blue",
+      "message": "Forbidden; content-type=text/html; charset=UTF-8; bytes=5644",
+      "ok": false,
+      "source": "https://status.automox.com/api/v2/summary.json",
+      "priority": 60,
+      "checked_at": "2026-07-03T21:36:16.829Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:16.423Z",
+          "completed_at": "2026-07-03T21:36:16.829Z",
+          "duration_ms": 406,
+          "url": "https://status.automox.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": false,
+          "status": "HTTP 403",
+          "message": "Forbidden; content-type=text/html; charset=UTF-8; bytes=5644",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "docker",
+      "name": "Docker",
+      "category": "DevOps",
+      "status": "Source returned non-JSON",
+      "color": "blue",
+      "message": "Parser failed: Unexpected token '<', \"<!DOCTYPE \"... is not valid JSON",
+      "ok": false,
+      "source": "https://status.docker.com/api/v2/summary.json",
+      "priority": 60,
+      "checked_at": "2026-07-03T21:36:21.477Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:20.045Z",
+          "completed_at": "2026-07-03T21:36:21.477Z",
+          "duration_ms": 1432,
+          "url": "https://status.docker.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=text/html; charset=utf-8; bytes=192492",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "gitlab",
+      "name": "GitLab",
+      "category": "DevOps",
+      "status": "Source unavailable: HTTP 404",
+      "color": "blue",
+      "message": "Not Found; content-type=text/html; charset=utf-8; bytes=427",
+      "ok": false,
+      "source": "https://status.gitlab.com/api/v2/summary.json",
+      "priority": 60,
+      "checked_at": "2026-07-03T21:36:20.574Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:19.990Z",
+          "completed_at": "2026-07-03T21:36:20.574Z",
+          "duration_ms": 584,
+          "url": "https://status.gitlab.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": false,
+          "status": "HTTP 404",
+          "message": "Not Found; content-type=text/html; charset=utf-8; bytes=427",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "heroku",
+      "name": "Heroku",
+      "category": "Edge / Hosting",
+      "status": "Public page reachable",
+      "color": "blue",
+      "message": "Public source is reachable, but no rich active incident parser is available yet.",
+      "ok": true,
+      "source": "https://status.heroku.com/api/v4/current-status",
+      "priority": 60,
+      "checked_at": "2026-07-03T21:36:19.873Z",
+      "source_type": "html-limited",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:19.120Z",
+          "completed_at": "2026-07-03T21:36:19.873Z",
+          "duration_ms": 753,
+          "url": "https://status.heroku.com/api/v4/current-status",
+          "source_type": "html-limited",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; bytes=2168",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "intercom",
+      "name": "Intercom",
+      "category": "Support",
+      "status": "Source returned non-JSON",
+      "color": "blue",
+      "message": "Parser failed: Unexpected token '<', \"<!DOCTYPE \"... is not valid JSON",
+      "ok": false,
+      "source": "https://status.intercom.com/api/v2/summary.json",
+      "priority": 60,
+      "checked_at": "2026-07-03T21:36:22.137Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:20.930Z",
+          "completed_at": "2026-07-03T21:36:22.137Z",
+          "duration_ms": 1207,
+          "url": "https://status.intercom.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=text/html; charset=utf-8; bytes=72335",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "intermedia",
+      "name": "Intermedia",
+      "category": "VoIP",
+      "status": "Source unavailable: HTTP failed",
+      "color": "blue",
+      "message": "fetch failed",
+      "ok": false,
+      "source": "https://status.intermedia.net/api/v2/summary.json",
+      "priority": 60,
+      "checked_at": "2026-07-03T21:36:20.157Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:19.744Z",
+          "completed_at": "2026-07-03T21:36:20.157Z",
+          "duration_ms": 413,
+          "url": "https://status.intermedia.net/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": false,
+          "status": "fetch failed",
+          "message": "Fetch failed before a readable payload was returned.",
+          "error": "fetch failed"
+        }
+      ]
+    },
+    {
+      "id": "namecheap",
+      "name": "Namecheap",
+      "category": "Registrar / DNS",
+      "status": "Source unavailable: HTTP failed",
+      "color": "blue",
+      "message": "fetch failed",
+      "ok": false,
+      "source": "https://status.namecheap.com/api/v2/summary.json",
+      "priority": 60,
+      "checked_at": "2026-07-03T21:36:19.323Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:18.892Z",
+          "completed_at": "2026-07-03T21:36:19.323Z",
+          "duration_ms": 431,
+          "url": "https://status.namecheap.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": false,
+          "status": "fetch failed",
+          "message": "Fetch failed before a readable payload was returned.",
+          "error": "fetch failed"
+        }
+      ]
+    },
+    {
+      "id": "notion",
+      "name": "Notion",
+      "category": "Productivity",
+      "status": "Source returned non-JSON",
+      "color": "blue",
+      "message": "Parser failed: Unexpected token '<', \"<!DOCTYPE \"... is not valid JSON",
+      "ok": false,
+      "source": "https://status.notion.so/api/v2/summary.json",
+      "priority": 60,
+      "checked_at": "2026-07-03T21:36:22.141Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:20.985Z",
+          "completed_at": "2026-07-03T21:36:22.141Z",
+          "duration_ms": 1156,
+          "url": "https://status.notion.so/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=text/html; charset=utf-8; bytes=253070",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "ns1-ibm-ns1",
+      "name": "NS1 / IBM NS1",
+      "category": "DNS",
+      "status": "Source unavailable: HTTP failed",
+      "color": "blue",
+      "message": "fetch failed",
+      "ok": false,
+      "source": "https://status.ns1.com/api/v2/summary.json",
+      "priority": 60,
+      "checked_at": "2026-07-03T21:36:19.120Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:18.707Z",
+          "completed_at": "2026-07-03T21:36:19.120Z",
+          "duration_ms": 413,
+          "url": "https://status.ns1.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": false,
+          "status": "fetch failed",
+          "message": "Fetch failed before a readable payload was returned.",
+          "error": "fetch failed"
+        }
+      ]
+    },
+    {
+      "id": "pagerduty",
+      "name": "PagerDuty",
+      "category": "Operations",
+      "status": "Public page reachable",
+      "color": "blue",
+      "message": "Public source is reachable, but no rich active incident parser is available yet.",
+      "ok": true,
+      "source": "https://status.pagerduty.com/",
+      "priority": 60,
+      "checked_at": "2026-07-03T21:36:15.722Z",
+      "source_type": "html-limited",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:14.504Z",
+          "completed_at": "2026-07-03T21:36:15.722Z",
+          "duration_ms": 1218,
+          "url": "https://status.pagerduty.com/",
+          "source_type": "html-limited",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=text/html; charset=utf-8; bytes=20156",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "paypal",
+      "name": "PayPal",
+      "category": "Payments",
+      "status": "Source returned non-JSON",
+      "color": "blue",
+      "message": "Parser failed: Unexpected token '<', \"<!DOCTYPE \"... is not valid JSON",
+      "ok": false,
+      "source": "https://www.paypal-status.com/api/v2/summary.json",
+      "priority": 60,
+      "checked_at": "2026-07-03T21:36:22.470Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:21.477Z",
+          "completed_at": "2026-07-03T21:36:22.470Z",
+          "duration_ms": 993,
+          "url": "https://www.paypal-status.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=text/html; charset=utf-8; bytes=1080",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "pcloud-business",
+      "name": "pCloud Business",
+      "category": "Storage",
+      "status": "Source unavailable: HTTP failed",
+      "color": "blue",
+      "message": "fetch failed",
+      "ok": false,
+      "source": "https://status.pcloud.com/api/v2/summary.json",
+      "priority": 60,
+      "checked_at": "2026-07-03T21:36:18.908Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:18.513Z",
+          "completed_at": "2026-07-03T21:36:18.908Z",
+          "duration_ms": 395,
+          "url": "https://status.pcloud.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": false,
+          "status": "fetch failed",
+          "message": "Fetch failed before a readable payload was returned.",
+          "error": "fetch failed"
+        }
+      ]
+    },
+    {
+      "id": "quickbooks-online",
+      "name": "QuickBooks Online",
+      "category": "Accounting",
+      "status": "Public page reachable",
+      "color": "blue",
+      "message": "Public source is reachable, but no rich active incident parser is available yet.",
+      "ok": true,
+      "source": "https://status.quickbooks.intuit.com/",
+      "priority": 60,
+      "checked_at": "2026-07-03T21:36:21.959Z",
+      "source_type": "html-limited",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:21.240Z",
+          "completed_at": "2026-07-03T21:36:21.959Z",
+          "duration_ms": 719,
+          "url": "https://status.quickbooks.intuit.com/",
+          "source_type": "html-limited",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=text/html; charset=utf-8; bytes=255985",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "category": "CRM",
+      "status": "Public page reachable",
+      "color": "blue",
+      "message": "Public source is reachable, but no rich active incident parser is available yet.",
+      "ok": true,
+      "source": "https://status.salesforce.com/",
+      "priority": 60,
+      "checked_at": "2026-07-03T21:36:21.240Z",
+      "source_type": "html-limited",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:20.788Z",
+          "completed_at": "2026-07-03T21:36:21.240Z",
+          "duration_ms": 452,
+          "url": "https://status.salesforce.com/",
+          "source_type": "html-limited",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=text/html; charset=utf-8; bytes=1507",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "stripe",
+      "name": "Stripe",
+      "category": "Payments",
+      "status": "Source unavailable: HTTP 404",
+      "color": "blue",
+      "message": "Not Found; content-type=text/html; charset=utf-8; bytes=7841",
+      "ok": false,
+      "source": "https://status.stripe.com/api/v2/summary.json",
+      "priority": 60,
+      "checked_at": "2026-07-03T21:36:22.006Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:21.395Z",
+          "completed_at": "2026-07-03T21:36:22.006Z",
+          "duration_ms": 611,
+          "url": "https://status.stripe.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": false,
+          "status": "HTTP 404",
+          "message": "Not Found; content-type=text/html; charset=utf-8; bytes=7841",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "ultradns",
+      "name": "UltraDNS",
+      "category": "DNS",
+      "status": "Source unavailable: HTTP 404",
+      "color": "blue",
+      "message": "Not Found; content-type=text/html; charset=utf-8; bytes=427",
+      "ok": false,
+      "source": "https://status.ultradns.com/api/v2/summary.json",
+      "priority": 60,
+      "checked_at": "2026-07-03T21:36:19.469Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:18.744Z",
+          "completed_at": "2026-07-03T21:36:19.469Z",
+          "duration_ms": 725,
+          "url": "https://status.ultradns.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": false,
+          "status": "HTTP 404",
+          "message": "Not Found; content-type=text/html; charset=utf-8; bytes=427",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "vonage",
+      "name": "Vonage",
+      "category": "VoIP",
+      "status": "Source unavailable: HTTP failed",
+      "color": "blue",
+      "message": "fetch failed",
+      "ok": false,
+      "source": "https://status.vonage.com/api/v2/summary.json",
+      "priority": 60,
+      "checked_at": "2026-07-03T21:36:19.931Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:19.510Z",
+          "completed_at": "2026-07-03T21:36:19.931Z",
+          "duration_ms": 421,
+          "url": "https://status.vonage.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": false,
+          "status": "fetch failed",
+          "message": "Fetch failed before a readable payload was returned.",
+          "error": "fetch failed"
+        }
+      ]
+    },
+    {
+      "id": "vultr",
+      "name": "Vultr",
+      "category": "Edge / Hosting",
+      "status": "Source unavailable: HTTP 404",
+      "color": "blue",
+      "message": "Not Found; content-type=text/html; charset=UTF-8; bytes=0",
+      "ok": false,
+      "source": "https://status.vultr.com/api/v2/summary.json",
+      "priority": 60,
+      "checked_at": "2026-07-03T21:36:19.388Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:18.908Z",
+          "completed_at": "2026-07-03T21:36:19.388Z",
+          "duration_ms": 480,
+          "url": "https://status.vultr.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": false,
+          "status": "HTTP 404",
+          "message": "Not Found; content-type=text/html; charset=UTF-8; bytes=0",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "webex",
+      "name": "Webex",
+      "category": "Meetings",
+      "status": "Source returned non-JSON",
+      "color": "blue",
+      "message": "Parser failed: Unexpected token '<', \"<!doctype \"... is not valid JSON",
+      "ok": false,
+      "source": "https://status.webex.com/api/v2/summary.json",
+      "priority": 60,
+      "checked_at": "2026-07-03T21:36:20.402Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:19.931Z",
+          "completed_at": "2026-07-03T21:36:20.402Z",
+          "duration_ms": 471,
+          "url": "https://status.webex.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=text/html; bytes=463",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "zendesk",
+      "name": "Zendesk",
+      "category": "Support",
+      "status": "Source unavailable: HTTP 404",
+      "color": "blue",
+      "message": "Not Found; content-type=application/json; charset=UTF-8; bytes=34",
+      "ok": false,
+      "source": "https://status.zendesk.com/api/v2/summary.json",
+      "priority": 60,
+      "checked_at": "2026-07-03T21:36:21.386Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:20.903Z",
+          "completed_at": "2026-07-03T21:36:21.386Z",
+          "duration_ms": 483,
+          "url": "https://status.zendesk.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": false,
+          "status": "HTTP 404",
+          "message": "Not Found; content-type=application/json; charset=UTF-8; bytes=34",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "backblaze",
+      "name": "Backblaze",
+      "category": "Storage",
+      "status": "Public page reachable",
+      "color": "blue",
+      "message": "Public source is reachable, but no rich active incident parser is available yet.",
+      "ok": true,
+      "source": "https://status.backblaze.com/",
+      "priority": 58,
+      "checked_at": "2026-07-03T21:36:15.986Z",
+      "source_type": "html-limited",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:15.119Z",
+          "completed_at": "2026-07-03T21:36:15.986Z",
+          "duration_ms": 867,
+          "url": "https://status.backblaze.com/",
+          "source_type": "html-limited",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=text/html; bytes=1787",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "att",
+      "name": "AT&T",
+      "category": "ISPs and Backbone",
+      "status": "Public page reachable",
+      "color": "blue",
+      "message": "Public source is reachable, but no rich active incident parser is available yet.",
+      "ok": true,
+      "source": "https://www.att.com/outages/",
+      "priority": 55,
+      "checked_at": "2026-07-03T21:36:15.798Z",
+      "source_type": "html-limited",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:14.666Z",
+          "completed_at": "2026-07-03T21:36:15.798Z",
+          "duration_ms": 1132,
+          "url": "https://www.att.com/outages/",
+          "source_type": "html-limited",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=text/html; charset=utf-8; bytes=646094",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "comcast-business",
+      "name": "Comcast Business",
+      "category": "ISPs and Backbone",
+      "status": "Public page reachable",
+      "color": "blue",
+      "message": "Public source is reachable, but no rich active incident parser is available yet.",
+      "ok": true,
+      "source": "https://business.comcast.com/status/",
+      "priority": 55,
+      "checked_at": "2026-07-03T21:36:17.785Z",
+      "source_type": "html-limited",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:14.979Z",
+          "completed_at": "2026-07-03T21:36:17.785Z",
+          "duration_ms": 2806,
+          "url": "https://business.comcast.com/status/",
+          "source_type": "html-limited",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=text/html; charset=utf-8; bytes=13191",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "cox",
+      "name": "Cox",
+      "category": "ISPs and Backbone",
+      "status": "Public page reachable",
+      "color": "blue",
+      "message": "Public source is reachable, but no rich active incident parser is available yet.",
+      "ok": true,
+      "source": "https://www.cox.com/residential/support/outages.html",
+      "priority": 53,
+      "checked_at": "2026-07-03T21:36:15.544Z",
+      "source_type": "html-limited",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:14.881Z",
+          "completed_at": "2026-07-03T21:36:15.544Z",
+          "duration_ms": 663,
+          "url": "https://www.cox.com/residential/support/outages.html",
+          "source_type": "html-limited",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=text/html;charset=utf-8; bytes=91615",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "lumen",
+      "name": "Lumen",
+      "category": "ISPs and Backbone",
+      "status": "Official source limited",
+      "color": "blue",
+      "message": "Official Lumen status source is not reliably readable from GitHub Actions, so it is listed as limited until a readable official source is available.",
+      "ok": true,
+      "source": "https://status.lumen.com/",
+      "priority": 52,
+      "checked_at": "2026-07-03T21:36:15.042Z",
+      "source_type": "official-limited",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:15.042Z",
+          "completed_at": "2026-07-03T21:36:15.042Z",
+          "duration_ms": 0,
+          "url": "https://status.lumen.com/",
+          "source_type": "official-limited",
+          "ok": true,
+          "status": "listed only",
+          "message": "Official Lumen status source is not reliably readable from GitHub Actions, so it is listed as limited until a readable official source is available."
+        }
+      ]
     },
     {
       "id": "ninjaone",
@@ -159,7 +1805,152 @@
       "message": "",
       "ok": true,
       "source": "https://status.ninjaone.com/api/v2/summary.json",
-      "priority": 90
+      "priority": 90,
+      "checked_at": "2026-07-03T21:36:15.042Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:13.990Z",
+          "completed_at": "2026-07-03T21:36:15.042Z",
+          "duration_ms": 1052,
+          "url": "https://status.ninjaone.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=2592",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "dnsfilter",
+      "name": "DNSFilter",
+      "category": "Security",
+      "status": "All Systems Operational",
+      "color": "green",
+      "message": "",
+      "ok": true,
+      "source": "https://status.dnsfilter.com/api/v2/summary.json",
+      "priority": 88,
+      "checked_at": "2026-07-03T21:36:14.388Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:13.987Z",
+          "completed_at": "2026-07-03T21:36:14.388Z",
+          "duration_ms": 401,
+          "url": "https://status.dnsfilter.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=14280",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "sentinelone",
+      "name": "SentinelOne",
+      "category": "Security",
+      "status": "All Systems Operational",
+      "color": "green",
+      "message": "",
+      "ok": true,
+      "source": "https://status.sentinelone.com/api/v2/summary.json",
+      "priority": 88,
+      "checked_at": "2026-07-03T21:36:14.378Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:13.986Z",
+          "completed_at": "2026-07-03T21:36:14.378Z",
+          "duration_ms": 392,
+          "url": "https://status.sentinelone.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=20565",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "1password",
+      "name": "1Password",
+      "category": "Identity / Access",
+      "status": "All Systems Operational",
+      "color": "green",
+      "message": "",
+      "ok": true,
+      "source": "https://status.1password.com/api/v2/summary.json",
+      "priority": 86,
+      "checked_at": "2026-07-03T21:36:16.270Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:15.544Z",
+          "completed_at": "2026-07-03T21:36:16.270Z",
+          "duration_ms": 726,
+          "url": "https://status.1password.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=30947",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "duo",
+      "name": "Duo",
+      "category": "Identity / Access",
+      "status": "All Systems Operational",
+      "color": "green",
+      "message": "",
+      "ok": true,
+      "source": "https://status.duo.com/api/v2/summary.json",
+      "priority": 86,
+      "checked_at": "2026-07-03T21:36:16.340Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:15.722Z",
+          "completed_at": "2026-07-03T21:36:16.339Z",
+          "duration_ms": 617,
+          "url": "https://status.duo.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=300982",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "huntress",
+      "name": "Huntress",
+      "category": "Security",
+      "status": "All Systems Operational",
+      "color": "green",
+      "message": "",
+      "ok": true,
+      "source": "https://status.huntress.com/api/v2/summary.json",
+      "priority": 86,
+      "checked_at": "2026-07-03T21:36:17.287Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:16.829Z",
+          "completed_at": "2026-07-03T21:36:17.287Z",
+          "duration_ms": 458,
+          "url": "https://status.huntress.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=2479",
+          "error": ""
+        }
+      ]
     },
     {
       "id": "meraki",
@@ -170,7 +1961,48 @@
       "message": "",
       "ok": true,
       "source": "https://status.meraki.net/api/v2/summary.json",
-      "priority": 84
+      "priority": 84,
+      "checked_at": "2026-07-03T21:36:14.881Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:13.991Z",
+          "completed_at": "2026-07-03T21:36:14.881Z",
+          "duration_ms": 890,
+          "url": "https://status.meraki.net/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=19431",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "aws",
+      "name": "AWS",
+      "category": "Cloud Services",
+      "status": "No active RSS events",
+      "color": "green",
+      "message": "",
+      "ok": true,
+      "source": "https://status.aws.amazon.com/rss/all.rss",
+      "priority": 82,
+      "checked_at": "2026-07-03T21:36:14.608Z",
+      "source_type": "rss",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:13.918Z",
+          "completed_at": "2026-07-03T21:36:14.603Z",
+          "duration_ms": 685,
+          "url": "https://status.aws.amazon.com/rss/all.rss",
+          "source_type": "rss",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/rss+xml; bytes=53435",
+          "error": ""
+        }
+      ]
     },
     {
       "id": "ubiquiti",
@@ -181,51 +2013,256 @@
       "message": "",
       "ok": true,
       "source": "https://status.ui.com/api/v2/summary.json",
-      "priority": 80
+      "priority": 80,
+      "checked_at": "2026-07-03T21:36:15.053Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:14.217Z",
+          "completed_at": "2026-07-03T21:36:15.053Z",
+          "duration_ms": 836,
+          "url": "https://status.ui.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=8083",
+          "error": ""
+        }
+      ]
     },
     {
-      "id": "dropbox",
-      "name": "Dropbox",
-      "category": "Storage",
+      "id": "arctic-wolf",
+      "name": "Arctic Wolf",
+      "category": "Security",
       "status": "All Systems Operational",
       "color": "green",
       "message": "",
       "ok": true,
-      "source": "https://status.dropbox.com/api/v2/summary.json",
-      "priority": 52
+      "source": "https://status.arcticwolf.com/api/v2/summary.json",
+      "priority": 78,
+      "checked_at": "2026-07-03T21:36:18.194Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:17.491Z",
+          "completed_at": "2026-07-03T21:36:18.194Z",
+          "duration_ms": 703,
+          "url": "https://status.arcticwolf.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=23231",
+          "error": ""
+        }
+      ]
     },
     {
-      "id": "box",
-      "name": "Box",
-      "category": "Storage",
+      "id": "atera",
+      "name": "Atera",
+      "category": "MSP Platforms",
       "status": "All Systems Operational",
       "color": "green",
       "message": "",
       "ok": true,
-      "source": "https://status.box.com/api/v2/summary.json",
-      "priority": 52
+      "source": "https://status.atera.com/api/v2/summary.json",
+      "priority": 78,
+      "checked_at": "2026-07-03T21:36:17.169Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:16.505Z",
+          "completed_at": "2026-07-03T21:36:17.169Z",
+          "duration_ms": 664,
+          "url": "https://status.atera.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=6805",
+          "error": ""
+        }
+      ]
     },
     {
-      "id": "wasabi",
-      "name": "Wasabi",
-      "category": "Storage",
+      "id": "barracuda",
+      "name": "Barracuda",
+      "category": "Security / Email",
       "status": "All Systems Operational",
       "color": "green",
       "message": "",
       "ok": true,
-      "source": "https://status.wasabi.com/api/v2/summary.json",
-      "priority": 58
+      "source": "https://status.barracuda.com/api/v2/summary.json",
+      "priority": 78,
+      "checked_at": "2026-07-03T21:36:17.926Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:17.331Z",
+          "completed_at": "2026-07-03T21:36:17.926Z",
+          "duration_ms": 595,
+          "url": "https://status.barracuda.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=42535",
+          "error": ""
+        }
+      ]
     },
     {
-      "id": "backblaze",
-      "name": "Backblaze",
-      "category": "Storage",
-      "status": "Public page reachable",
-      "color": "blue",
-      "message": "Limited public source, no active issue parser yet",
+      "id": "cisco-umbrella",
+      "name": "Cisco Umbrella",
+      "category": "Security / DNS",
+      "status": "All Systems Operational",
+      "color": "green",
+      "message": "",
       "ok": true,
-      "source": "https://status.backblaze.com/",
-      "priority": 58
+      "source": "https://status.umbrella.com/api/v2/summary.json",
+      "priority": 78,
+      "checked_at": "2026-07-03T21:36:18.400Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:17.216Z",
+          "completed_at": "2026-07-03T21:36:18.399Z",
+          "duration_ms": 1183,
+          "url": "https://status.umbrella.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=50599",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "crashplan",
+      "name": "CrashPlan",
+      "category": "Backup",
+      "status": "All Systems Operational",
+      "color": "green",
+      "message": "",
+      "ok": true,
+      "source": "https://status.crashplan.com/api/v2/summary.json",
+      "priority": 78,
+      "checked_at": "2026-07-03T21:36:18.892Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:18.119Z",
+          "completed_at": "2026-07-03T21:36:18.892Z",
+          "duration_ms": 773,
+          "url": "https://status.crashplan.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=7223",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "jumpcloud",
+      "name": "JumpCloud",
+      "category": "Identity / Access",
+      "status": "All Systems Operational",
+      "color": "green",
+      "message": "",
+      "ok": true,
+      "source": "https://status.jumpcloud.com/api/v2/summary.json",
+      "priority": 78,
+      "checked_at": "2026-07-03T21:36:16.381Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:15.726Z",
+          "completed_at": "2026-07-03T21:36:16.381Z",
+          "duration_ms": 655,
+          "url": "https://status.jumpcloud.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=51392",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "ping-identity",
+      "name": "Ping Identity",
+      "category": "Identity / Access",
+      "status": "All Systems Operational",
+      "color": "green",
+      "message": "",
+      "ok": true,
+      "source": "https://status.pingidentity.com/api/v2/summary.json",
+      "priority": 78,
+      "checked_at": "2026-07-03T21:36:16.652Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:15.749Z",
+          "completed_at": "2026-07-03T21:36:16.652Z",
+          "duration_ms": 903,
+          "url": "https://status.pingidentity.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=65222",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "rapid7",
+      "name": "Rapid7",
+      "category": "Security",
+      "status": "All Systems Operational",
+      "color": "green",
+      "message": "",
+      "ok": true,
+      "source": "https://status.rapid7.com/api/v2/summary.json",
+      "priority": 78,
+      "checked_at": "2026-07-03T21:36:18.119Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:17.504Z",
+          "completed_at": "2026-07-03T21:36:18.119Z",
+          "duration_ms": 615,
+          "url": "https://status.rapid7.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=107305",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "github",
+      "name": "GitHub",
+      "category": "Developer Platforms",
+      "status": "All Systems Operational",
+      "color": "green",
+      "message": "",
+      "ok": true,
+      "source": "https://www.githubstatus.com/api/v2/summary.json",
+      "priority": 76,
+      "checked_at": "2026-07-03T21:36:15.130Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:14.276Z",
+          "completed_at": "2026-07-03T21:36:15.130Z",
+          "duration_ms": 854,
+          "url": "https://www.githubstatus.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=4310",
+          "error": ""
+        }
+      ]
     },
     {
       "id": "slack",
@@ -236,7 +2273,22 @@
       "message": "",
       "ok": true,
       "source": "https://status.slack.com/api/v2.0.0/current",
-      "priority": 72
+      "priority": 72,
+      "checked_at": "2026-07-03T21:36:16.469Z",
+      "source_type": "slack",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:15.130Z",
+          "completed_at": "2026-07-03T21:36:16.469Z",
+          "duration_ms": 1339,
+          "url": "https://status.slack.com/api/v2.0.0/current",
+          "source_type": "slack",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; bytes=123",
+          "error": ""
+        }
+      ]
     },
     {
       "id": "zoom",
@@ -247,10 +2299,1125 @@
       "message": "",
       "ok": true,
       "source": "https://www.zoomstatus.com/api/v2/summary.json",
-      "priority": 72
+      "priority": 72,
+      "checked_at": "2026-07-03T21:36:16.118Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:15.243Z",
+          "completed_at": "2026-07-03T21:36:16.117Z",
+          "duration_ms": 874,
+          "url": "https://www.zoomstatus.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=130992",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "google-cloud",
+      "name": "Google Cloud",
+      "category": "Cloud Services",
+      "status": "Operational",
+      "color": "green",
+      "message": "",
+      "ok": true,
+      "source": "https://status.cloud.google.com/incidents.json",
+      "priority": 65,
+      "checked_at": "2026-07-03T21:36:14.217Z",
+      "source_type": "google-cloud-json",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:13.982Z",
+          "completed_at": "2026-07-03T21:36:14.214Z",
+          "duration_ms": 232,
+          "url": "https://status.cloud.google.com/incidents.json",
+          "source_type": "google-cloud-json",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; bytes=47502",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "anthropic",
+      "name": "Anthropic",
+      "category": "AI",
+      "status": "All Systems Operational",
+      "color": "green",
+      "message": "",
+      "ok": true,
+      "source": "https://status.claude.com/api/v2/summary.json",
+      "priority": 62,
+      "checked_at": "2026-07-03T21:36:14.270Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:13.985Z",
+          "completed_at": "2026-07-03T21:36:14.270Z",
+          "duration_ms": 285,
+          "url": "https://status.claude.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=2154",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "addigy",
+      "name": "Addigy",
+      "category": "MDM / Apple",
+      "status": "All Systems Operational",
+      "color": "green",
+      "message": "",
+      "ok": true,
+      "source": "https://status.addigy.com/api/v2/summary.json",
+      "priority": 60,
+      "checked_at": "2026-07-03T21:36:16.935Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:16.381Z",
+          "completed_at": "2026-07-03T21:36:16.935Z",
+          "duration_ms": 554,
+          "url": "https://status.addigy.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=6526",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "asana",
+      "name": "Asana",
+      "category": "Productivity",
+      "status": "All Systems Operational",
+      "color": "green",
+      "message": "",
+      "ok": true,
+      "source": "https://status.asana.com/api/v2/summary.json",
+      "priority": 60,
+      "checked_at": "2026-07-03T21:36:21.555Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:21.088Z",
+          "completed_at": "2026-07-03T21:36:21.555Z",
+          "duration_ms": 467,
+          "url": "https://status.asana.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=12183",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "circleci",
+      "name": "CircleCI",
+      "category": "DevOps",
+      "status": "All Systems Operational",
+      "color": "green",
+      "message": "",
+      "ok": true,
+      "source": "https://status.circleci.com/api/v2/summary.json",
+      "priority": 60,
+      "checked_at": "2026-07-03T21:36:20.788Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:20.201Z",
+          "completed_at": "2026-07-03T21:36:20.788Z",
+          "duration_ms": 587,
+          "url": "https://status.circleci.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=15274",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "cloudsmith",
+      "name": "Cloudsmith",
+      "category": "Artifact Registry",
+      "status": "All Systems Operational",
+      "color": "green",
+      "message": "",
+      "ok": true,
+      "source": "https://status.cloudsmith.com/api/v2/summary.json",
+      "priority": 60,
+      "checked_at": "2026-07-03T21:36:21.395Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:20.726Z",
+          "completed_at": "2026-07-03T21:36:21.395Z",
+          "duration_ms": 669,
+          "url": "https://status.cloudsmith.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; bytes=7677",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "datadog",
+      "name": "Datadog",
+      "category": "Monitoring",
+      "status": "All Systems Operational",
+      "color": "green",
+      "message": "",
+      "ok": true,
+      "source": "https://status.datadoghq.com/api/v2/summary.json",
+      "priority": 60,
+      "checked_at": "2026-07-03T21:36:20.903Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:20.363Z",
+          "completed_at": "2026-07-03T21:36:20.902Z",
+          "duration_ms": 540,
+          "url": "https://status.datadoghq.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=13036",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "dialpad",
+      "name": "Dialpad",
+      "category": "VoIP",
+      "status": "All Systems Operational",
+      "color": "green",
+      "message": "",
+      "ok": true,
+      "source": "https://status.dialpad.com/api/v2/summary.json",
+      "priority": 60,
+      "checked_at": "2026-07-03T21:36:19.990Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:19.388Z",
+          "completed_at": "2026-07-03T21:36:19.990Z",
+          "duration_ms": 602,
+          "url": "https://status.dialpad.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=6538",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "discord",
+      "name": "Discord",
+      "category": "Communications",
+      "status": "All Systems Operational",
+      "color": "green",
+      "message": "",
+      "ok": true,
+      "source": "https://discordstatus.com/api/v2/summary.json",
+      "priority": 60,
+      "checked_at": "2026-07-03T21:36:20.363Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:19.946Z",
+          "completed_at": "2026-07-03T21:36:20.363Z",
+          "duration_ms": 417,
+          "url": "https://discordstatus.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=11851",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "dnsimple",
+      "name": "DNSimple",
+      "category": "DNS",
+      "status": "All Systems Operational",
+      "color": "green",
+      "message": "",
+      "ok": true,
+      "source": "https://status.dnsimple.com/api/v2/summary.json",
+      "priority": 60,
+      "checked_at": "2026-07-03T21:36:20.500Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:18.574Z",
+          "completed_at": "2026-07-03T21:36:20.500Z",
+          "duration_ms": 1926,
+          "url": "https://status.dnsimple.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=4384",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "docusign",
+      "name": "DocuSign",
+      "category": "E-signature",
+      "status": "All Systems Operational",
+      "color": "green",
+      "message": "",
+      "ok": true,
+      "source": "https://status.docusign.com/api/v2/summary.json",
+      "priority": 60,
+      "checked_at": "2026-07-03T21:36:21.669Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:21.219Z",
+          "completed_at": "2026-07-03T21:36:21.668Z",
+          "duration_ms": 449,
+          "url": "https://status.docusign.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=19227",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "egnyte",
+      "name": "Egnyte",
+      "category": "File Sharing",
+      "status": "All Systems Operational",
+      "color": "green",
+      "message": "",
+      "ok": true,
+      "source": "https://status.egnyte.com/api/v2/summary.json",
+      "priority": 60,
+      "checked_at": "2026-07-03T21:36:18.895Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:18.297Z",
+          "completed_at": "2026-07-03T21:36:18.895Z",
+          "duration_ms": 598,
+          "url": "https://status.egnyte.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=26528",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "godaddy",
+      "name": "GoDaddy",
+      "category": "Registrar / DNS",
+      "status": "All Systems Operational",
+      "color": "green",
+      "message": "",
+      "ok": true,
+      "source": "https://status.godaddy.com/api/v2/summary.json",
+      "priority": 60,
+      "checked_at": "2026-07-03T21:36:19.326Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:18.885Z",
+          "completed_at": "2026-07-03T21:36:19.326Z",
+          "duration_ms": 441,
+          "url": "https://status.godaddy.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=28713",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "goto",
+      "name": "GoTo",
+      "category": "VoIP",
+      "status": "All Systems Operational",
+      "color": "green",
+      "message": "",
+      "ok": true,
+      "source": "https://status.goto.com/api/v2/summary.json",
+      "priority": 60,
+      "checked_at": "2026-07-03T21:36:19.946Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:19.469Z",
+          "completed_at": "2026-07-03T21:36:19.946Z",
+          "duration_ms": 477,
+          "url": "https://status.goto.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=30030",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "grafana-cloud",
+      "name": "Grafana Cloud",
+      "category": "Monitoring",
+      "status": "All Systems Operational",
+      "color": "green",
+      "message": "",
+      "ok": true,
+      "source": "https://status.grafana.com/api/v2/summary.json",
+      "priority": 60,
+      "checked_at": "2026-07-03T21:36:21.088Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:20.500Z",
+          "completed_at": "2026-07-03T21:36:21.087Z",
+          "duration_ms": 587,
+          "url": "https://status.grafana.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=171256",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "category": "CRM",
+      "status": "All Systems Operational",
+      "color": "green",
+      "message": "",
+      "ok": true,
+      "source": "https://status.hubspot.com/api/v2/summary.json",
+      "priority": 60,
+      "checked_at": "2026-07-03T21:36:21.372Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:20.851Z",
+          "completed_at": "2026-07-03T21:36:21.372Z",
+          "duration_ms": 521,
+          "url": "https://status.hubspot.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=4357",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "jamf",
+      "name": "Jamf",
+      "category": "MDM / Apple",
+      "status": "All Systems Operational",
+      "color": "green",
+      "message": "",
+      "ok": true,
+      "source": "https://status.jamf.com/api/v2/summary.json",
+      "priority": 60,
+      "checked_at": "2026-07-03T21:36:16.727Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:16.270Z",
+          "completed_at": "2026-07-03T21:36:16.726Z",
+          "duration_ms": 456,
+          "url": "https://status.jamf.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=28903",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "kandji",
+      "name": "Kandji",
+      "category": "MDM / Apple",
+      "status": "All Systems Operational",
+      "color": "green",
+      "message": "",
+      "ok": true,
+      "source": "https://status.kandji.io/api/v2/summary.json",
+      "priority": 60,
+      "checked_at": "2026-07-03T21:36:16.749Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:16.340Z",
+          "completed_at": "2026-07-03T21:36:16.749Z",
+          "duration_ms": 409,
+          "url": "https://status.kandji.io/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=8364",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "knowbe4",
+      "name": "KnowBe4",
+      "category": "Security Training",
+      "status": "All Systems Operational",
+      "color": "green",
+      "message": "",
+      "ok": true,
+      "source": "https://status.knowbe4.com/api/v2/summary.json",
+      "priority": 60,
+      "checked_at": "2026-07-03T21:36:18.097Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:17.439Z",
+          "completed_at": "2026-07-03T21:36:18.096Z",
+          "duration_ms": 657,
+          "url": "https://status.knowbe4.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=17261",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "lucidlink",
+      "name": "LucidLink",
+      "category": "File Sharing",
+      "status": "All Systems Operational",
+      "color": "green",
+      "message": "",
+      "ok": true,
+      "source": "https://status.lucidlink.com/api/v2/summary.json",
+      "priority": 60,
+      "checked_at": "2026-07-03T21:36:19.236Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:18.400Z",
+          "completed_at": "2026-07-03T21:36:19.236Z",
+          "duration_ms": 836,
+          "url": "https://status.lucidlink.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=5317",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "monday-com",
+      "name": "monday.com",
+      "category": "Productivity",
+      "status": "All Systems Operational",
+      "color": "green",
+      "message": "",
+      "ok": true,
+      "source": "https://status.monday.com/api/v2/summary.json",
+      "priority": 60,
+      "checked_at": "2026-07-03T21:36:21.629Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:21.096Z",
+          "completed_at": "2026-07-03T21:36:21.629Z",
+          "duration_ms": 533,
+          "url": "https://status.monday.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=24491",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "netlify",
+      "name": "Netlify",
+      "category": "Edge / Hosting",
+      "status": "All Systems Operational",
+      "color": "green",
+      "message": "",
+      "ok": true,
+      "source": "https://status.netlify.com/api/v2/summary.json",
+      "priority": 60,
+      "checked_at": "2026-07-03T21:36:20.681Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:19.170Z",
+          "completed_at": "2026-07-03T21:36:20.681Z",
+          "duration_ms": 1511,
+          "url": "https://status.netlify.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=14855",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "new-relic",
+      "name": "New Relic",
+      "category": "Monitoring",
+      "status": "All Systems Operational",
+      "color": "green",
+      "message": "",
+      "ok": true,
+      "source": "https://status.newrelic.com/api/v2/summary.json",
+      "priority": 60,
+      "checked_at": "2026-07-03T21:36:20.930Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:20.402Z",
+          "completed_at": "2026-07-03T21:36:20.930Z",
+          "duration_ms": 528,
+          "url": "https://status.newrelic.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=38481",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "nextiva",
+      "name": "Nextiva",
+      "category": "VoIP",
+      "status": "All Systems Operational",
+      "color": "green",
+      "message": "",
+      "ok": true,
+      "source": "https://status.nextiva.com/api/v2/summary.json",
+      "priority": 60,
+      "checked_at": "2026-07-03T21:36:20.246Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:19.674Z",
+          "completed_at": "2026-07-03T21:36:20.246Z",
+          "duration_ms": 572,
+          "url": "https://status.nextiva.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=6644",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "npm",
+      "name": "npm",
+      "category": "DevOps",
+      "status": "All Systems Operational",
+      "color": "green",
+      "message": "",
+      "ok": true,
+      "source": "https://status.npmjs.org/api/v2/summary.json",
+      "priority": 60,
+      "checked_at": "2026-07-03T21:36:20.726Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:20.157Z",
+          "completed_at": "2026-07-03T21:36:20.726Z",
+          "duration_ms": 569,
+          "url": "https://status.npmjs.org/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=2379",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "sentry",
+      "name": "Sentry",
+      "category": "Monitoring",
+      "status": "All Systems Operational",
+      "color": "green",
+      "message": "",
+      "ok": true,
+      "source": "https://status.sentry.io/api/v2/summary.json",
+      "priority": 60,
+      "checked_at": "2026-07-03T21:36:20.985Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:20.574Z",
+          "completed_at": "2026-07-03T21:36:20.985Z",
+          "duration_ms": 411,
+          "url": "https://status.sentry.io/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=15538",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "sharefile",
+      "name": "ShareFile",
+      "category": "File Sharing",
+      "status": "All Systems Operational",
+      "color": "green",
+      "message": "",
+      "ok": true,
+      "source": "https://status.sharefile.com/api/v2/summary.json",
+      "priority": 60,
+      "checked_at": "2026-07-03T21:36:18.885Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:18.323Z",
+          "completed_at": "2026-07-03T21:36:18.885Z",
+          "duration_ms": 562,
+          "url": "https://status.sharefile.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=610",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "shopify",
+      "name": "Shopify",
+      "category": "E-commerce",
+      "status": "All Systems Operational",
+      "color": "green",
+      "message": "",
+      "ok": true,
+      "source": "https://www.shopifystatus.com/api/v2/summary.json",
+      "priority": 60,
+      "checked_at": "2026-07-03T21:36:21.891Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:21.386Z",
+          "completed_at": "2026-07-03T21:36:21.891Z",
+          "duration_ms": 505,
+          "url": "https://www.shopifystatus.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=3078",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "square",
+      "name": "Square",
+      "category": "Payments",
+      "status": "All Systems Operational",
+      "color": "green",
+      "message": "",
+      "ok": true,
+      "source": "https://www.issquareup.com/api/v2/summary.json",
+      "priority": 60,
+      "checked_at": "2026-07-03T21:36:22.067Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:21.555Z",
+          "completed_at": "2026-07-03T21:36:22.067Z",
+          "duration_ms": 512,
+          "url": "https://www.issquareup.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; bytes=219",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "sync-com",
+      "name": "Sync.com",
+      "category": "Storage",
+      "status": "All Systems Operational",
+      "color": "green",
+      "message": "",
+      "ok": true,
+      "source": "https://status.sync.com/api/v2/summary.json",
+      "priority": 60,
+      "checked_at": "2026-07-03T21:36:19.170Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:18.525Z",
+          "completed_at": "2026-07-03T21:36:19.170Z",
+          "duration_ms": 645,
+          "url": "https://status.sync.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=4353",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "travis-ci",
+      "name": "Travis CI",
+      "category": "DevOps",
+      "status": "All Systems Operational",
+      "color": "green",
+      "message": "",
+      "ok": true,
+      "source": "https://www.traviscistatus.com/api/v2/summary.json",
+      "priority": 60,
+      "checked_at": "2026-07-03T21:36:20.851Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:20.246Z",
+          "completed_at": "2026-07-03T21:36:20.851Z",
+          "duration_ms": 605,
+          "url": "https://www.traviscistatus.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=8766",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "vercel",
+      "name": "Vercel",
+      "category": "Edge / Hosting",
+      "status": "All Systems Operational",
+      "color": "green",
+      "message": "",
+      "ok": true,
+      "source": "https://status.vercel.com/api/v2/summary.json",
+      "priority": 60,
+      "checked_at": "2026-07-03T21:36:20.643Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:19.236Z",
+          "completed_at": "2026-07-03T21:36:20.642Z",
+          "duration_ms": 1406,
+          "url": "https://status.vercel.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=51818",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "xero",
+      "name": "Xero",
+      "category": "Accounting",
+      "status": "All Systems Operational",
+      "color": "green",
+      "message": "",
+      "ok": true,
+      "source": "https://status.xero.com/api/v2/summary.json",
+      "priority": 60,
+      "checked_at": "2026-07-03T21:36:21.771Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:21.372Z",
+          "completed_at": "2026-07-03T21:36:21.771Z",
+          "duration_ms": 399,
+          "url": "https://status.xero.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=16609",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "atlassian",
+      "name": "Atlassian",
+      "category": "SaaS Platforms",
+      "status": "All Systems Operational",
+      "color": "green",
+      "message": "",
+      "ok": true,
+      "source": "https://status.atlassian.com/api/v2/summary.json",
+      "priority": 58,
+      "checked_at": "2026-07-03T21:36:15.119Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:14.388Z",
+          "completed_at": "2026-07-03T21:36:15.119Z",
+          "duration_ms": 731,
+          "url": "https://status.atlassian.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=277",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "digitalocean",
+      "name": "DigitalOcean",
+      "category": "Cloud Services",
+      "status": "All Systems Operational",
+      "color": "green",
+      "message": "",
+      "ok": true,
+      "source": "https://status.digitalocean.com/api/v2/summary.json",
+      "priority": 58,
+      "checked_at": "2026-07-03T21:36:15.078Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:14.378Z",
+          "completed_at": "2026-07-03T21:36:15.078Z",
+          "duration_ms": 700,
+          "url": "https://status.digitalocean.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=74735",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "wasabi",
+      "name": "Wasabi",
+      "category": "Storage",
+      "status": "All Systems Operational",
+      "color": "green",
+      "message": "",
+      "ok": true,
+      "source": "https://status.wasabi.com/api/v2/summary.json",
+      "priority": 58,
+      "checked_at": "2026-07-03T21:36:15.957Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:15.078Z",
+          "completed_at": "2026-07-03T21:36:15.956Z",
+          "duration_ms": 878,
+          "url": "https://status.wasabi.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=8211",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "box",
+      "name": "Box",
+      "category": "Storage",
+      "status": "All Systems Operational",
+      "color": "green",
+      "message": "",
+      "ok": true,
+      "source": "https://status.box.com/api/v2/summary.json",
+      "priority": 52,
+      "checked_at": "2026-07-03T21:36:15.749Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:15.053Z",
+          "completed_at": "2026-07-03T21:36:15.749Z",
+          "duration_ms": 696,
+          "url": "https://status.box.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=31385",
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "dropbox",
+      "name": "Dropbox",
+      "category": "Storage",
+      "status": "All Systems Operational",
+      "color": "green",
+      "message": "",
+      "ok": true,
+      "source": "https://status.dropbox.com/api/v2/summary.json",
+      "priority": 52,
+      "checked_at": "2026-07-03T21:36:15.741Z",
+      "source_type": "statuspage",
+      "download_log": [
+        {
+          "timestamp": "2026-07-03T21:36:15.042Z",
+          "completed_at": "2026-07-03T21:36:15.741Z",
+          "duration_ms": 699,
+          "url": "https://status.dropbox.com/api/v2/summary.json",
+          "source_type": "statuspage",
+          "ok": true,
+          "status": "HTTP 200",
+          "message": "OK; content-type=application/json; charset=utf-8; bytes=3968",
+          "error": ""
+        }
+      ]
     }
   ],
   "incidents": [
+    {
+      "providerId": "kaseya",
+      "provider": "Kaseya",
+      "category": "MSP Platforms",
+      "title": "Datto RMM - Syrah, Vidal - 15.0.1 Cagservice.exe being flagged as malicious (Rapidstop) by Microsoft Defender for Endpoint",
+      "note": "A fix has been implemented and we are monitoring the results. The Kaseya R&D team confirmed with Microsoft counterparts that the issue was caused by misclassification of the 15.0 Datto RMM version's cagservice.exe in a recent security intelligence update for Microsoft Defender Antivirus and other Microsoft antimalware. This issue was fixed in the security intelligence update version 1.453.344.0, and the issue should no longer occur as long as the device is on this definition version or later. Microsoft currently does not offer an automated way to revert the quarantining of a file, therefore manual action is required to bring affected devices back online in Datto RMM. We recommend our partners to ensure that devices are updated with security intelligence version 1.453.344.0 or later to avoid the agent being falsely flagged as malicious by Microsoft antimalware. Users can use the below commands and instructions to ensure that the latest security intelligence update is installed on the device to prevent the behavior: Updating the security intelligence version: - PowerShell: Update-MpSignature - Command Prompt (CMD): MpCmdRun.exe -SignatureUpdate After running the update, users can verify the installed version with the following command: - Get-MpComputerStatus | Select-Object AntivirusSignatureVersion, AntivirusSignatureLastUpdated",
+      "source": "Statuspage API",
+      "url": "https://stspg.io/96wv59g544kl",
+      "time": "06-30 09:08",
+      "rawTime": "2026-06-30T05:08:08.265-04:00",
+      "status": "monitoring",
+      "color": "red",
+      "priority": 86
+    },
+    {
+      "providerId": "datto",
+      "provider": "Datto",
+      "category": "MSP Platforms",
+      "title": "Datto RMM - Syrah, Vidal - 15.0.1 Cagservice.exe being flagged as malicious (Rapidstop) by Microsoft Defender for Endpoint",
+      "note": "A fix has been implemented and we are monitoring the results. The Kaseya R&D team confirmed with Microsoft counterparts that the issue was caused by misclassification of the 15.0 Datto RMM version's cagservice.exe in a recent security intelligence update for Microsoft Defender Antivirus and other Microsoft antimalware. This issue was fixed in the security intelligence update version 1.453.344.0, and the issue should no longer occur as long as the device is on this definition version or later. Microsoft currently does not offer an automated way to revert the quarantining of a file, therefore manual action is required to bring affected devices back online in Datto RMM. We recommend our partners to ensure that devices are updated with security intelligence version 1.453.344.0 or later to avoid the agent being falsely flagged as malicious by Microsoft antimalware. Users can use the below commands and instructions to ensure that the latest security intelligence update is installed on the device to prevent the behavior: Updating the security intelligence version: - PowerShell: Update-MpSignature - Command Prompt (CMD): MpCmdRun.exe -SignatureUpdate After running the update, users can verify the installed version with the following command: - Get-MpComputerStatus | Select-Object AntivirusSignatureVersion, AntivirusSignatureLastUpdated",
+      "source": "Statuspage API",
+      "url": "https://stspg.io/96wv59g544kl",
+      "time": "06-30 09:08",
+      "rawTime": "2026-06-30T05:08:08.265-04:00",
+      "status": "monitoring",
+      "color": "red",
+      "priority": 86
+    },
+    {
+      "providerId": "eset",
+      "provider": "ESET",
+      "category": "Security",
+      "title": "Customers connected via Telia ISP cannot connect to ESET Cloud Services",
+      "note": "We are aware of an issue with the Telia internet service provider that prevents customers from accessing ESET Cloud Services. We will provide updates in due course.",
+      "source": "Statuspage API",
+      "url": "https://stspg.io/vfx6pz2hs2fn",
+      "time": "06-29 11:44",
+      "rawTime": "2026-06-29T13:44:13.191+02:00",
+      "status": "investigating",
+      "color": "red",
+      "priority": 78
+    },
+    {
+      "providerId": "tenable",
+      "provider": "Tenable",
+      "category": "Security",
+      "title": "Tenable One, Tenable Vulnerability Management, Cloud Security: Login and Platform Issues on UAE",
+      "note": "We are continuing to work on a fix for this issue.",
+      "source": "Statuspage API",
+      "url": "https://stspg.io/mxf9p0krbj8x",
+      "time": "06-17 15:02",
+      "rawTime": "2026-06-17T15:02:09.319Z",
+      "status": "identified",
+      "color": "red",
+      "priority": 78
+    },
+    {
+      "providerId": "openai",
+      "provider": "OpenAI",
+      "category": "AI",
+      "title": "Codex, workspace analytics, conversation search, searching for custom GPTs, ChatGPT user invites, and Compliance Log Platform download endpoint not working in FedRAMP workspaces",
+      "note": "Core functionality has been restored but we are aware of known and ongoing issues in FedRAMP workspaces with Codex, workspace analytics, conversation search, searching for custom GPTs, ChatGPT user invites, and the Compliance Logs Platform download endpoint. We are working to resolve these issues and will share further updates we have more information available.",
+      "source": "Statuspage API",
+      "url": "https://status.openai.com/api/v2/summary.json",
+      "time": "07-01 03:38",
+      "rawTime": "2026-07-01T03:38:18Z",
+      "status": "investigating",
+      "color": "red",
+      "priority": 70
+    },
+    {
+      "providerId": "elastic-cloud",
+      "provider": "Elastic Cloud",
+      "category": "Search / Observability",
+      "title": "Connectivity disruption for AWS Bahrain (me-south-1)",
+      "note": "Update — This incident is still ongoing. AWS Bahrain (me-south-1) has been removed from new deployment selection on cloud.elastic.co. Existing deployments remain inaccessible due to the AWS infrastructure disruption, with no recovery timeline provided by AWS. Assume the region is unavailable for the foreseeable future. For assistance, please open a case in our Support portal (https://support.elastic.co) or email mailto:mailto:support@elastic.co.",
+      "source": "Statuspage API",
+      "url": "https://stspg.io/w6dmrtc20hz7",
+      "time": "06-29 17:14",
+      "rawTime": "2026-06-29T17:14:50.403Z",
+      "status": "identified",
+      "color": "red",
+      "priority": 60
+    },
+    {
+      "providerId": "mongodb-atlas",
+      "provider": "MongoDB Atlas",
+      "category": "Database",
+      "title": "Impaired Cluster Operations – AWS me-central-1 (United Arab Emirates) and AWS me-south-1 (Bahrain)",
+      "note": "AWS me-central-1 (UAE) and me-south-1 (Bahrain) have suffered damage in these regions. Workloads in me-central-1 (UAE) continue to experience significant impairments. In addition, workloads in me-south-1 (Bahrain) are currently not operational, cannot be modified, and are not able to migrate to other regions or support other disaster recovery actions such as backup and restore. According to the AWS Service Health Dashboard update from April 30th, recovery is expected to take several months. The latest information from AWS is available at: https://health.aws.amazon.com/health/status. We strongly recommend that customers with workloads in AWS me-central-1 act now to move their clusters to alternate regions instead of waiting for full availability to be restored. There are currently no recovery options available for data that is only present in the AWS me-south-1 region. We continue to assist customers in their chosen remediation path to the extent possible. Customers running workloads in the Middle East should consider alternate Atlas regions, such as those in North America, Europe, or Asia Pacific, as appropriate for your latency and data residency requirements. Customers may continue to extend their backup snapshot expirations in me-central-1 as needed. We will move to an as-needed status post update cadence as new information becomes available. If you would like assistance assessing how these events may affect your Atlas deployment, our support team is available: * Open a support case through the MongoDB Support Portal * Start a chat with Support using the Intercom widget within the MongoDB Atlas interface",
+      "source": "Statuspage API",
+      "url": "https://stspg.io/mg7m971rdhw8",
+      "time": "06-03 15:46",
+      "rawTime": "2026-06-03T15:46:56.709Z",
+      "status": "monitoring",
+      "color": "red",
+      "priority": 60
+    },
+    {
+      "providerId": "cloudflare",
+      "provider": "Cloudflare",
+      "category": "Cloud Services",
+      "title": "Free WARP and WARP+ new registrations",
+      "note": "Cloudflare is investigating issues with Cloudflare Free WARP and Cloudflare WARP+. Cloudflare Free WARP and Cloudflare WARP+ users may experience new registration issues. Cloudflare One Client and Zero Trust is not affected.",
+      "source": "Statuspage API",
+      "url": "https://stspg.io/gwzq5pfrg8d6",
+      "time": "07-03 21:18",
+      "rawTime": "2026-07-03T21:18:09.894Z",
+      "status": "investigating",
+      "color": "amber",
+      "priority": 95
+    },
     {
       "providerId": "cloudflare",
       "provider": "Cloudflare",
@@ -266,22 +3433,345 @@
       "priority": 95
     },
     {
-      "providerId": "openai",
-      "provider": "OpenAI",
-      "category": "AI",
-      "title": "Codex, workspace analytics, conversation search, searching for custom GPTs, ChatGPT user invites, and Compliance Log Platform download endpoint not working in FedRAMP workspaces",
-      "note": "Core functionality has been restored but we are aware of known and ongoing issues in FedRAMP workspaces with Codex, workspace analytics, conversation search, searching for custom GPTs, ChatGPT user invites, and the Compliance Logs Platform download endpoint. We are working to resolve these issues and will share further updates we have more information available.",
+      "providerId": "kaseya",
+      "provider": "Kaseya",
+      "category": "MSP Platforms",
+      "title": "Uniview - Uniview homepage and assets not currently loading",
+      "note": "After monitoring the deployed fix, the Kaseya R&D team has observed that Uniview performance has returned to normal and is now reliably loading assets again. We believe this issue to be resolved but will continue monitoring over the weekend to ensure resolution.",
       "source": "Statuspage API",
-      "url": "https://status.openai.com/api/v2/summary.json",
-      "time": "07-01 03:38",
-      "rawTime": "2026-07-01T03:38:18Z",
+      "url": "https://stspg.io/2dm2bxlw4l9z",
+      "time": "07-03 18:34",
+      "rawTime": "2026-07-03T14:34:31.421-04:00",
+      "status": "monitoring",
+      "color": "amber",
+      "priority": 86
+    },
+    {
+      "providerId": "datto",
+      "provider": "Datto",
+      "category": "MSP Platforms",
+      "title": "Uniview - Uniview homepage and assets not currently loading",
+      "note": "After monitoring the deployed fix, the Kaseya R&D team has observed that Uniview performance has returned to normal and is now reliably loading assets again. We believe this issue to be resolved but will continue monitoring over the weekend to ensure resolution.",
+      "source": "Statuspage API",
+      "url": "https://stspg.io/2dm2bxlw4l9z",
+      "time": "07-03 18:34",
+      "rawTime": "2026-07-03T14:34:31.421-04:00",
+      "status": "monitoring",
+      "color": "amber",
+      "priority": 86
+    },
+    {
+      "providerId": "twilio",
+      "provider": "Twilio",
+      "category": "Messaging API",
+      "title": "SMS Delivery Failures from Twilio to Tigo Bolivia",
+      "note": "We have observed a recovery in SMS delivery from Twilio to Tigo network subscribers in Bolivia and are monitoring service stability. We will provide another update in 4 hours or as soon as more information becomes available.",
+      "source": "Statuspage API",
+      "url": "https://stspg.io/y3qt7cx40r42",
+      "time": "07-03 19:24",
+      "rawTime": "2026-07-03T12:24:25.224-07:00",
+      "status": "monitoring",
+      "color": "amber",
+      "priority": 86
+    },
+    {
+      "providerId": "twilio",
+      "provider": "Twilio",
+      "category": "Messaging API",
+      "title": "SMS Delivery Failures from Twilio to Asia Cell Netwokr In Iraq",
+      "note": "Twilio customers may be experiencing SMS delivery failures from Twilio to Asia Cell network subscribers in Iraq. Our team has identified the cause, and is working to resolve the issue. We will provide another update in 8 hours or as soon as more information becomes available.",
+      "source": "Statuspage API",
+      "url": "https://stspg.io/dzk8xn5crg98",
+      "time": "07-03 13:53",
+      "rawTime": "2026-07-03T06:53:33.860-07:00",
+      "status": "identified",
+      "color": "amber",
+      "priority": 86
+    },
+    {
+      "providerId": "twilio",
+      "provider": "Twilio",
+      "category": "Messaging API",
+      "title": "SMS Delivery Failures from Twilio to Natcom Haiti",
+      "note": "Twilio customers may be experiencing SMS delivery failures from Twilio to Natcom network subscribers in Haiti. Our team has identified the cause, and is working to resolve the issue. We will provide another update in 24 hours or as soon as more information becomes available.",
+      "source": "Statuspage API",
+      "url": "https://stspg.io/92msq4szl7y2",
+      "time": "07-03 05:47",
+      "rawTime": "2026-07-02T22:47:27.219-07:00",
+      "status": "identified",
+      "color": "amber",
+      "priority": 86
+    },
+    {
+      "providerId": "kaseya",
+      "provider": "Kaseya",
+      "category": "MSP Platforms",
+      "title": "Datto SaaS Protection - Backup performance degradation for some SharePoint/Teams services on pod 'des1-saas-p1'",
+      "note": "Backup cadence on pod 'des1-saas-p1' remains at the normal 3x daily backups and our R&D team has deployed additional improvements to further address the issue. They are continuing to closely monitor backup performance of all services on the pod.",
+      "source": "Statuspage API",
+      "url": "https://stspg.io/fnzfsqns6ctf",
+      "time": "07-02 18:32",
+      "rawTime": "2026-07-02T14:32:04.218-04:00",
+      "status": "monitoring",
+      "color": "amber",
+      "priority": 86
+    },
+    {
+      "providerId": "datto",
+      "provider": "Datto",
+      "category": "MSP Platforms",
+      "title": "Datto SaaS Protection - Backup performance degradation for some SharePoint/Teams services on pod 'des1-saas-p1'",
+      "note": "Backup cadence on pod 'des1-saas-p1' remains at the normal 3x daily backups and our R&D team has deployed additional improvements to further address the issue. They are continuing to closely monitor backup performance of all services on the pod.",
+      "source": "Statuspage API",
+      "url": "https://stspg.io/fnzfsqns6ctf",
+      "time": "07-02 18:32",
+      "rawTime": "2026-07-02T14:32:04.218-04:00",
+      "status": "monitoring",
+      "color": "amber",
+      "priority": 86
+    },
+    {
+      "providerId": "kaseya",
+      "provider": "Kaseya",
+      "category": "MSP Platforms",
+      "title": "Datto SaaS Protection - Backup performance degradation for Teams services on pod 'cae1-saas-p0'",
+      "note": "Backup cadence on pod 'cae1-saas-p0' remains at the normal 3x daily backups and our R&D team has deployed additional improvements to further address the issue. They are continuing to closely monitor backup performance of all services on the pod.",
+      "source": "Statuspage API",
+      "url": "https://stspg.io/c68ycgkcc6vw",
+      "time": "07-02 18:31",
+      "rawTime": "2026-07-02T14:31:42.113-04:00",
+      "status": "monitoring",
+      "color": "amber",
+      "priority": 86
+    },
+    {
+      "providerId": "datto",
+      "provider": "Datto",
+      "category": "MSP Platforms",
+      "title": "Datto SaaS Protection - Backup performance degradation for Teams services on pod 'cae1-saas-p0'",
+      "note": "Backup cadence on pod 'cae1-saas-p0' remains at the normal 3x daily backups and our R&D team has deployed additional improvements to further address the issue. They are continuing to closely monitor backup performance of all services on the pod.",
+      "source": "Statuspage API",
+      "url": "https://stspg.io/c68ycgkcc6vw",
+      "time": "07-02 18:31",
+      "rawTime": "2026-07-02T14:31:42.113-04:00",
+      "status": "monitoring",
+      "color": "amber",
+      "priority": 86
+    },
+    {
+      "providerId": "kaseya",
+      "provider": "Kaseya",
+      "category": "MSP Platforms",
+      "title": "Datto SaaS Protection - Backup performance degradation for SharePoint services on pod 'des1-saas-p0'",
+      "note": "Backup cadence on pod 'des1-saas-p0' remains at the normal 3x daily backups and our R&D team has deployed additional improvements to further address the issue. They are continuing to closely monitor backup performance of all services on the pod.",
+      "source": "Statuspage API",
+      "url": "https://stspg.io/61j039161x0r",
+      "time": "07-02 18:31",
+      "rawTime": "2026-07-02T14:31:34.227-04:00",
+      "status": "monitoring",
+      "color": "amber",
+      "priority": 86
+    },
+    {
+      "providerId": "datto",
+      "provider": "Datto",
+      "category": "MSP Platforms",
+      "title": "Datto SaaS Protection - Backup performance degradation for SharePoint services on pod 'des1-saas-p0'",
+      "note": "Backup cadence on pod 'des1-saas-p0' remains at the normal 3x daily backups and our R&D team has deployed additional improvements to further address the issue. They are continuing to closely monitor backup performance of all services on the pod.",
+      "source": "Statuspage API",
+      "url": "https://stspg.io/61j039161x0r",
+      "time": "07-02 18:31",
+      "rawTime": "2026-07-02T14:31:34.227-04:00",
+      "status": "monitoring",
+      "color": "amber",
+      "priority": 86
+    },
+    {
+      "providerId": "kaseya",
+      "provider": "Kaseya",
+      "category": "MSP Platforms",
+      "title": "Datto SaaS Protection - Backup performance degradation for some SharePoint/Teams services on pod 'gbe2-saas-p1'",
+      "note": "The backup cadence for pod ‘gbe2‑saas‑p1’ is still temporarily set to 2x backups per day and backup success rates remain stable. Our R&D team has finished deploying additional improvements to further address the issue and they are actively monitoring the results. Backup cadence will be reverted to 3x daily backups as soon as it is safe and reliable for all customers hosted on the pod.",
+      "source": "Statuspage API",
+      "url": "https://stspg.io/y393s4rppcbz",
+      "time": "07-02 18:31",
+      "rawTime": "2026-07-02T14:31:03.185-04:00",
+      "status": "monitoring",
+      "color": "amber",
+      "priority": 86
+    },
+    {
+      "providerId": "datto",
+      "provider": "Datto",
+      "category": "MSP Platforms",
+      "title": "Datto SaaS Protection - Backup performance degradation for some SharePoint/Teams services on pod 'gbe2-saas-p1'",
+      "note": "The backup cadence for pod ‘gbe2‑saas‑p1’ is still temporarily set to 2x backups per day and backup success rates remain stable. Our R&D team has finished deploying additional improvements to further address the issue and they are actively monitoring the results. Backup cadence will be reverted to 3x daily backups as soon as it is safe and reliable for all customers hosted on the pod.",
+      "source": "Statuspage API",
+      "url": "https://stspg.io/y393s4rppcbz",
+      "time": "07-02 18:31",
+      "rawTime": "2026-07-02T14:31:03.185-04:00",
+      "status": "monitoring",
+      "color": "amber",
+      "priority": 86
+    },
+    {
+      "providerId": "kaseya",
+      "provider": "Kaseya",
+      "category": "MSP Platforms",
+      "title": "Datto RMM - Intermittent Job Creation Failures on the Syrah (APAC) and Vidal (US East) platforms",
+      "note": "The fix has been implemented on both the Syrah and Vidal platforms.",
+      "source": "Statuspage API",
+      "url": "https://stspg.io/3yrxkx2pbcp9",
+      "time": "07-01 10:20",
+      "rawTime": "2026-07-01T06:20:39.439-04:00",
+      "status": "monitoring",
+      "color": "amber",
+      "priority": 86
+    },
+    {
+      "providerId": "datto",
+      "provider": "Datto",
+      "category": "MSP Platforms",
+      "title": "Datto RMM - Intermittent Job Creation Failures on the Syrah (APAC) and Vidal (US East) platforms",
+      "note": "The fix has been implemented on both the Syrah and Vidal platforms.",
+      "source": "Statuspage API",
+      "url": "https://stspg.io/3yrxkx2pbcp9",
+      "time": "07-01 10:20",
+      "rawTime": "2026-07-01T06:20:39.439-04:00",
+      "status": "monitoring",
+      "color": "amber",
+      "priority": 86
+    },
+    {
+      "providerId": "akamai",
+      "provider": "Akamai",
+      "category": "Edge and CDN",
+      "title": "Edge Delivery - Content Delivery in Pakistan",
+      "note": "We have implemented network changes to route traffic away from the affected areas while the ISP continues to work on the submarine cable issue; based on current observations, the service has resumed normal operations. Customers and partners can find more details on the Akamai Community: https://community.akamai.com/customers/s/feed/0D5a700001GuST3CAN. We will continue to monitor to ensure that the impact has been fully mitigated.",
+      "source": "Statuspage API",
+      "url": "https://stspg.io/zk82m29rb29b",
+      "time": "07-02 21:42",
+      "rawTime": "2026-07-02T21:42:41.122Z",
+      "status": "monitoring",
+      "color": "amber",
+      "priority": 78
+    },
+    {
+      "providerId": "qualys",
+      "provider": "Qualys",
+      "category": "Security",
+      "title": "US Platform3: Users may notice delayed data visibility across AssetView, VM Dashboard, Cloud Agent UI, CSAM/GAV, and Unified Dashboard(IM-12737).",
+      "note": "The issue has been identified and a fix is being implemented.",
+      "source": "Statuspage API",
+      "url": "https://stspg.io/yccznbjq1s8c",
+      "time": "07-01 22:41",
+      "rawTime": "2026-07-01T15:41:33.168-07:00",
+      "status": "identified",
+      "color": "amber",
+      "priority": 78
+    },
+    {
+      "providerId": "linode",
+      "provider": "Linode",
+      "category": "Edge / Hosting",
+      "title": "Service Issue - GPU and VPU Booting issues",
+      "note": "We are currently deploying a fix for this issue in phases, which will take several months to complete. We will continue to share updates on our progress as the mitigation efforts move forward.",
+      "source": "Statuspage API",
+      "url": "https://stspg.io/cc42sd3y5lgb",
+      "time": "07-03 13:55",
+      "rawTime": "2026-07-03T13:55:20.524Z",
+      "status": "identified",
+      "color": "amber",
+      "priority": 60
+    },
+    {
+      "providerId": "linode",
+      "provider": "Linode",
+      "category": "Edge / Hosting",
+      "title": "Service Issue - ACLP Metrics",
+      "note": "We are continuing to monitor for any further issues.",
+      "source": "Statuspage API",
+      "url": "https://stspg.io/vclyqyzwb4yj",
+      "time": "06-30 00:02",
+      "rawTime": "2026-06-30T00:02:46.521Z",
+      "status": "monitoring",
+      "color": "amber",
+      "priority": 60
+    },
+    {
+      "providerId": "snyk",
+      "provider": "Snyk",
+      "category": "Security / DevSecOps",
+      "title": "Third-Party Vendor Security Incident (Klue)",
+      "note": "We were notified of a security incident involving Klue, a market intelligence platform used by Snyk and a wide range of companies for competitive intelligence. An unauthorized party accessed data from Snyk's Salesforce environment through Klue's integration. Other security vendors, such as Recorded Future, Tanium, Huntress, and Jamf have been impacted and have shared updates publicly. Our investigation shows that, to our knowledge at this point in time, the impact was primarily limited to business data fields within the Salesforce environments. This includes customer business contact information and only the title and description from a limited subset of customer support cases. The body or contents of the support cases were not included nor did it affect Snyk's products. There was no impact on our ability to serve our customers. Snyk's platform, services, and infrastructure remain fully operational and were not involved. Upon notification from Klue, we promptly disabled the Klue integration in Salesforce and began our own review. We will post updates here as we learn more.",
+      "source": "Statuspage API",
+      "url": "https://stspg.io/6wtd2kq8qbx1",
+      "time": "06-23 01:24",
+      "rawTime": "2026-06-23T01:24:30.646Z",
+      "status": "monitoring",
+      "color": "amber",
+      "priority": 60
+    },
+    {
+      "providerId": "linode",
+      "provider": "Linode",
+      "category": "Edge / Hosting",
+      "title": "[Fragnesia] Linux Privilege Escalation Vulnerability",
+      "note": "We are responding to the publication of the most recent variation of the CopyFail[1] adjacent vulnerabilities “DirtyFrag” and “Fragnesia” with additional updates while we wait for upstream OS providers to release patches. Please see our detailed advisory[2] for more information on the current status, possible mitigation mechanisms, and our recommended actions. We will provide another update when more OS images have been updated and/or additional attack vectors are discovered. [1] https://www.linode.com/docs/guides/cve-2026-31431-copy-fail-mitigation/ [2] https://www.linode.com/docs/guides/dirty-frag-mitigation/",
+      "source": "Statuspage API",
+      "url": "https://stspg.io/bvtxz5p5063d",
+      "time": "06-05 20:24",
+      "rawTime": "2026-06-05T20:24:19.767Z",
       "status": "investigating",
-      "color": "red",
-      "priority": 70
+      "color": "amber",
+      "priority": 60
+    },
+    {
+      "providerId": "linode",
+      "provider": "Linode",
+      "category": "Edge / Hosting",
+      "title": "[DirtyFrag] Linux Privilege Escalation Vulnerability",
+      "note": "We are responding to the publication of the most recent variation of the CopyFail[1] adjacent vulnerabilities “DirtyFrag” and “Fragnesia” with additional updates while we wait for upstream OS providers to release patches. Please see our detailed advisory[2] for more information on the current status, possible mitigation mechanisms, and our recommended actions. We will provide another update when more OS images have been updated and/or additional attack vectors are discovered. [1] https://www.linode.com/docs/guides/cve-2026-31431-copy-fail-mitigation/ [2] https://www.linode.com/docs/guides/dirty-frag-mitigation/",
+      "source": "Statuspage API",
+      "url": "https://stspg.io/nffg57tmk72n",
+      "time": "06-05 20:23",
+      "rawTime": "2026-06-05T20:23:52.294Z",
+      "status": "investigating",
+      "color": "amber",
+      "priority": 60
     }
   ],
   "history": [
+    "Kaseya: Datto RMM - Syrah, Vidal - 15.0.1 Cagservice.exe being flagged as malicious (Rapidstop) by Microsoft Defender for Endpoint",
+    "Datto: Datto RMM - Syrah, Vidal - 15.0.1 Cagservice.exe being flagged as malicious (Rapidstop) by Microsoft Defender for Endpoint",
+    "ESET: Customers connected via Telia ISP cannot connect to ESET Cloud Services",
+    "Tenable: Tenable One, Tenable Vulnerability Management, Cloud Security: Login and Platform Issues on UAE",
+    "OpenAI: Codex, workspace analytics, conversation search, searching for custom GPTs, ChatGPT user invites, and Compliance Log Platform download endpoint not working in FedRAMP workspaces",
+    "Elastic Cloud: Connectivity disruption for AWS Bahrain (me-south-1)",
+    "MongoDB Atlas: Impaired Cluster Operations – AWS me-central-1 (United Arab Emirates) and AWS me-south-1 (Bahrain)",
+    "Cloudflare: Free WARP and WARP+ new registrations",
     "Cloudflare: Workers AI experiencing degraded availability in some models",
-    "OpenAI: Codex, workspace analytics, conversation search, searching for custom GPTs, ChatGPT user invites, and Compliance Log Platform download endpoint not working in FedRAMP workspaces"
+    "Kaseya: Uniview - Uniview homepage and assets not currently loading",
+    "Datto: Uniview - Uniview homepage and assets not currently loading",
+    "Twilio: SMS Delivery Failures from Twilio to Tigo Bolivia",
+    "Twilio: SMS Delivery Failures from Twilio to Asia Cell Netwokr In Iraq",
+    "Twilio: SMS Delivery Failures from Twilio to Natcom Haiti",
+    "Kaseya: Datto SaaS Protection - Backup performance degradation for some SharePoint/Teams services on pod 'des1-saas-p1'",
+    "Datto: Datto SaaS Protection - Backup performance degradation for some SharePoint/Teams services on pod 'des1-saas-p1'",
+    "Kaseya: Datto SaaS Protection - Backup performance degradation for Teams services on pod 'cae1-saas-p0'",
+    "Datto: Datto SaaS Protection - Backup performance degradation for Teams services on pod 'cae1-saas-p0'",
+    "Kaseya: Datto SaaS Protection - Backup performance degradation for SharePoint services on pod 'des1-saas-p0'",
+    "Datto: Datto SaaS Protection - Backup performance degradation for SharePoint services on pod 'des1-saas-p0'",
+    "Kaseya: Datto SaaS Protection - Backup performance degradation for some SharePoint/Teams services on pod 'gbe2-saas-p1'",
+    "Datto: Datto SaaS Protection - Backup performance degradation for some SharePoint/Teams services on pod 'gbe2-saas-p1'",
+    "Kaseya: Datto RMM - Intermittent Job Creation Failures on the Syrah (APAC) and Vidal (US East) platforms",
+    "Datto: Datto RMM - Intermittent Job Creation Failures on the Syrah (APAC) and Vidal (US East) platforms",
+    "Akamai: Edge Delivery - Content Delivery in Pakistan",
+    "Qualys: US Platform3: Users may notice delayed data visibility across AssetView, VM Dashboard, Cloud Agent UI, CSAM/GAV, and Unified Dashboard(IM-12737).",
+    "Linode: Service Issue - GPU and VPU Booting issues",
+    "Linode: Service Issue - ACLP Metrics",
+    "Snyk: Third-Party Vendor Security Incident (Klue)",
+    "Linode: [Fragnesia] Linux Privilege Escalation Vulnerability",
+    "Linode: [DirtyFrag] Linux Privilege Escalation Vulnerability"
   ]
 }
