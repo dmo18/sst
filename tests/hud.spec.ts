@@ -14,7 +14,7 @@ test('renders clear incident briefing console', async ({ page }, testInfo) => {
   await expect(panel).toHaveCSS('width', '458px');
   await expect(panel).toHaveCSS('height', '291px');
   await expect(page.getByText('INCIDENT BRIEF')).toBeVisible();
-  await expect(page.getByText('v10')).toBeVisible();
+  await expect(page.getByText('v12')).toBeVisible();
   await expect(page.getByText('No active issues')).toBeVisible();
   await expect(page.getByText('DIAGNOSTIC PROVIDER LIST')).toBeVisible();
   await expect(page.locator('.diag-panel tbody tr').first()).toBeVisible();
