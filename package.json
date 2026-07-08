@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
-    "build": "tsc --noEmit && vite build",
+    "build": "node scripts/build.mjs",
     "preview": "vite preview --host 0.0.0.0",
     "update-status": "node scripts/update-status.mjs",
     "test": "npm run build"
