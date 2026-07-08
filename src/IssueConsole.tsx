@@ -36,12 +36,12 @@ function ClearBrief(): JSX.Element {
 
 function DiagnosticRow({ source }: { source: DiagnosticSource }): JSX.Element {
   return <tr className={source.severity}>
-    <td><span className={`state-dot ${source.severity}`} />{source.provider}</td>
+    <td><span className={`state-dot ${source.severity}`} />{source.provider}<small>{source.category}</small></td>
     <td>{source.label}</td>
     <td>
       <b>{source.status}</b>
       <span>{source.message || 'No extra message returned.'}</span>
-      <small>checked {timeLabel(source.checkedAt)} / {source.sourceType}</small>
+      <small>checked {timeLabel(source.checkedAt)} / parser {source.sourceType}</small>
     </td>
     <td>
       <a href={source.source} target="_blank" rel="noreferrer">{source.source}</a>
@@ -89,7 +89,14 @@ export function IssueConsole({ model }: { model: IssueConsoleModel }): JSX.Eleme
     </section>
 
     <section className="diag-panel">
-      <header><div><b>DIAGNOSTIC PROVIDER LIST</b><span>Testing only. Every source, received status, timestamp, URL, and source detail.</span></div><em>{model.diagnostics.length} providers</em></header>
+      <header><div><b>DIAGNOSTIC PROVIDER LIST</b><span>Every configured source. HTTP result, parser, timing, URL, and source detail are retained.</span></div><em>{model.diagnostics.length} providers / {model.summary.categoryCount} categories</em></header>
+      <div className="diag-summary">
+        <span>ok {model.summary.okCount}</span>
+        <span>failed {model.summary.failedCount}</span>
+        <span>major {model.summary.redCount}</span>
+        <span>degraded {model.summary.amberCount}</span>
+        <span>limited {model.summary.blueCount}</span>
+      </div>
       <table>
         <thead><tr><th>Provider</th><th>Status</th><th>Received detail</th><th>Source detail</th></tr></thead>
         <tbody>{model.diagnostics.map(source => <DiagnosticRow key={source.id} source={source} />)}</tbody>
