@@ -2,117 +2,80 @@
 
 Guidance for coding agents working on this repository.
 
-## Project goal
+## Goal
 
-Build a free MSP status heads-up display hosted on GitHub Pages and updated by GitHub Actions every 5 minutes.
+Build a free static MSP status aggregator hosted on GitHub Pages.
 
-## Hard constraints
+## Constraints
 
-- Do not add Docker.
-- Do not add a server runtime.
-- Do not use paid APIs.
-- Do not require a database.
-- Do not require browser-side calls to vendor status pages.
-- Keep the app compatible with GitHub Pages static hosting.
-- Keep scheduled updates compatible with GitHub Actions free usage.
+- No Docker.
+- No server runtime.
+- No database.
+- No paid APIs.
+- No browser side vendor feed calls.
+- No synthetic monitoring.
+- No third party outage scraping.
+- Keep GitHub Pages static hosting.
 
-## Architecture
+## V2 files
 
 ```text
-config/providers.json
-  provider definitions and service filters
-
-scripts/fetch-status.js
-  GitHub Actions fetcher
-  writes status.json
-
-status.json
-  generated data file committed by the workflow
-
-index.html
-  static HUD
-  reads status.json only
+config/providers.json       single provider catalog
+scripts/validate-providers.mjs catalog validator
+scripts/update-status.mjs   official source fetcher
+scripts/build.mjs           release build wrapper
+public/status.json          generated during build
+src/App.tsx                 React app with catalog fallback
+src/statusViewModel.ts      merges catalog and generated status
+src/IssueConsole.tsx        incident and diagnostics UI
+.github/workflows/refresh-pages.yml deploy workflow
 ```
 
-## UI behavior
+## UI rules
 
-The HUD is designed for a fixed wallboard slot, about 458 x 291 pixels.
+```text
+Incident panel shows active issues only.
+Diagnostic panel shows every configured provider.
+Limited, failed, pending, and catalog only providers must still be visible.
+```
 
-The browser should show:
+Diagnostic rows should show provider, category, status, parser, checked time, source URL, fetch timing, HTTP status, and any error.
 
-- compact provider summary rows
-- active incident note queue
-- latest note text, not just incident title
-- last update timestamp
-- history ticker
-- provider/source status below the widget
+## Feed rules
 
-Incident note boxes are generic queue slots. They must not be dedicated to one provider. Sort incidents by provider priority and severity, then show the highest priority items.
+```text
+statuspage          official Statuspage summary API
+rss                 official RSS feed
+google-cloud-json   official Google Cloud incidents JSON
+slack               official Slack status API
+okta-html           official Okta public status page
+html-limited        reachable public HTML page
+official-limited    official source listed but not reliably readable
+limited-microsoft   public Microsoft source with limited detail
+```
 
-## Feed behavior
+Do not create incidents from pings, routes, unofficial outage reports, or synthetic probes.
 
-Status sources vary:
+## Noise filtering
 
-- Statuspage API providers return `status`, `incidents`, `scheduled_maintenances`, and `incident_updates`.
-- RSS providers need stale item filtering and deduplication.
-- HTML providers should not be treated as rich sources until a custom parser is implemented.
-- Limited providers should stay blue and explain why detail is limited.
+Filter resolved incidents, completed maintenance, old RSS items, deprecations, lifecycle notices, informational notices, and maintenance with no customer impact.
 
-## Filtering rules
+Show active incidents, degraded availability, service disruption, authentication failures, email failures, MSP platform failures, DNS impact, network impact, and security tool outages.
 
-Avoid showing noise:
+## Commands
 
-- old RSS items
-- resolved incidents
-- completed maintenance
-- deprecation announcements
-- lifecycle notices
-- informational notices
-- maintenance with no customer impact
+```bash
+npm run validate-providers
+npm run update-status
+npm run build
+npm test
+```
 
-Prefer showing:
-
-- active incidents
-- degraded availability
-- service disruption
-- authentication or email failures
-- MSP platform failures
-- DNS or networking impact
-- security tool outages
-
-## Current known issues to address
-
-- AWS RSS included stale March events. Add max age filtering and deduplication.
-- Anthropic showed red even while summary said operational. Fix provider color to green when no active impacting incidents.
-- Zoom scheduled/deprecation notices were counted as active incidents. Filter non-impacting maintenance and lifecycle notices.
-- Sophos returned HTTP 403 from GitHub Actions. Keep as limited or find a better official source.
-- ConnectWise Statuspage API URL returned 404. Replace with the correct official machine-readable feed if available, or keep as public HTML limited.
-- Backblaze API path returned HTML instead of JSON. Replace with correct source or limited public HTML.
-
-## Code style
-
-- Plain Node.js, no package dependencies unless there is a strong reason.
-- Keep functions small and readable.
-- Prefer provider-specific parser helpers over large conditionals as the project grows.
-- Always escape text in `index.html` before rendering.
-- Do not store secrets in the repo.
+`npm run build` validates providers, generates status data, checks TypeScript, and builds the Vite artifact.
 
 ## Deployment
 
-GitHub Pages source:
-
 ```text
-main branch, / root
-```
-
-Workflow:
-
-```text
-.github/workflows/update-status.yml
-```
-
-Manual run path:
-
-```text
-Actions -> Update status -> Run workflow -> main
+Settings -> Pages -> Source -> GitHub Actions
+.github/workflows/refresh-pages.yml
 ```
