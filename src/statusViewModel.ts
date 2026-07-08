@@ -32,6 +32,17 @@ export interface DiagnosticSource {
   downloadLog: ProviderDownloadLog[];
 }
 
+export interface DiagnosticSummary {
+  okCount: number;
+  failedCount: number;
+  limitedCount: number;
+  greenCount: number;
+  amberCount: number;
+  redCount: number;
+  blueCount: number;
+  categoryCount: number;
+}
+
 export interface IssueConsoleModel {
   version: string;
   generatedAt: string;
@@ -41,6 +52,7 @@ export interface IssueConsoleModel {
   briefs: IssueBrief[];
   affected: DiagnosticSource[];
   diagnostics: DiagnosticSource[];
+  summary: DiagnosticSummary;
 }
 
 export function labelForSeverity(color: StatusColor): string {
@@ -108,7 +120,7 @@ function catalogFallback(provider: ProviderConfig, generatedAt: string): Provide
       source_type: provider.sourceType || 'unknown',
       ok: provider.enabled !== false,
       status: 'catalog only',
-      message: 'Waiting for the next Update status workflow to fetch this provider.'
+      message: 'Waiting for the next v2 Pages build to fetch this provider.'
     }]
   };
 }
@@ -140,6 +152,20 @@ function mergeCatalog(payload: StatusPayload, catalog: ProviderConfig[] = []): P
   return [...byId.values()];
 }
 
+function summarize(diagnostics: DiagnosticSource[]): DiagnosticSummary {
+  const categories = new Set(diagnostics.map(source => source.category));
+  return {
+    okCount: diagnostics.filter(source => source.ok).length,
+    failedCount: diagnostics.filter(source => !source.ok).length,
+    limitedCount: diagnostics.filter(source => source.severity === 'blue').length,
+    greenCount: diagnostics.filter(source => source.severity === 'green').length,
+    amberCount: diagnostics.filter(source => source.severity === 'amber').length,
+    redCount: diagnostics.filter(source => source.severity === 'red').length,
+    blueCount: diagnostics.filter(source => source.severity === 'blue').length,
+    categoryCount: categories.size
+  };
+}
+
 export function buildIssueConsoleModel(payload: StatusPayload, version: string, catalog: ProviderConfig[] = []): IssueConsoleModel {
   const briefs = [...payload.incidents].sort(sortIncident).map(toBrief);
   const diagnostics = mergeCatalog(payload, catalog).sort(sortProvider).map(provider => toDiagnostic(provider, payload.generated_at));
@@ -153,6 +179,7 @@ export function buildIssueConsoleModel(payload: StatusPayload, version: string, 
     lead: briefs[0],
     briefs,
     affected,
-    diagnostics
+    diagnostics,
+    summary: summarize(diagnostics)
   };
 }
