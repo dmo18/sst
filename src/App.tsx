@@ -7,7 +7,22 @@ import type { ProviderConfig, StatusPayload } from './types';
 const APP_VERSION = 'v2.0';
 const CATALOG = providerCatalog as ProviderConfig[];
 
-type LoadState = { data?: StatusPayload; error?: string };
+type LoadState = { data: StatusPayload; error?: string };
+
+function fallbackStatus(): StatusPayload {
+  return {
+    generated_at: new Date().toISOString(),
+    summary: {
+      overall: 'blue',
+      active_incident_count: 0,
+      providers_ok: 0,
+      providers_total: CATALOG.length
+    },
+    providers: [],
+    incidents: [],
+    history: []
+  };
+}
 
 async function fetchStatus(): Promise<StatusPayload> {
   const response = await fetch(`status.json?ts=${Date.now()}`, { cache: 'no-store' });
@@ -16,7 +31,7 @@ async function fetchStatus(): Promise<StatusPayload> {
 }
 
 export function App(): JSX.Element {
-  const [state, setState] = useState<LoadState>({});
+  const [state, setState] = useState<LoadState>({ data: fallbackStatus() });
 
   useEffect(() => {
     let active = true;
@@ -25,7 +40,7 @@ export function App(): JSX.Element {
         const data = await fetchStatus();
         if (active) setState({ data });
       } catch (error) {
-        if (active) setState(previous => ({ ...previous, error: error instanceof Error ? error.message : String(error) }));
+        if (active) setState({ data: fallbackStatus(), error: error instanceof Error ? error.message : String(error) });
       }
     }
     void refresh();
@@ -33,9 +48,7 @@ export function App(): JSX.Element {
     return () => { active = false; window.clearInterval(id); };
   }, []);
 
-  const model = useMemo(() => state.data ? buildIssueConsoleModel(state.data, APP_VERSION, CATALOG) : undefined, [state.data]);
-
-  if (!model) return <main className="app-frame"><section className="briefing-console loading"><b>{state.error ? 'DATA FAILED' : 'LOADING'}</b><span>{state.error ?? 'Reading status.json'}</span><em>{APP_VERSION}</em></section></main>;
+  const model = useMemo(() => buildIssueConsoleModel(state.data, APP_VERSION, CATALOG), [state.data]);
 
   return <main className="app-frame"><IssueConsole model={model} /></main>;
 }
