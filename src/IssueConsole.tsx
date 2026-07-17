@@ -53,6 +53,7 @@ function DiagnosticRow({ source }: { source: DiagnosticSource }): JSX.Element {
           {typeof log.duration_ms === 'number' ? <span>duration: {log.duration_ms} ms</span> : null}
           <span>ok: {String(log.ok ?? source.ok)}</span>
           <span>status: {log.status || source.status}</span>
+          <span>parser: {log.parser || 'unknown'}</span>
           <span>message: {log.message || source.message || 'No message.'}</span>
           {log.error ? <span>error: {log.error}</span> : null}
         </div>)}

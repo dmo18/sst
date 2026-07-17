@@ -95,6 +95,7 @@ function fallbackDownloadLog(provider: ProviderStatus, generatedAt: string): Pro
     source_type: provider.source_type || 'unknown',
     ok: provider.ok,
     status: provider.status,
+    parser: 'parsed',
     message: provider.message || 'Per-source download timing was not recorded by this status payload.'
   }];
 }
@@ -120,6 +121,7 @@ function catalogFallback(provider: ProviderConfig, generatedAt: string): Provide
       source_type: provider.sourceType || 'unknown',
       ok: provider.enabled !== false,
       status: 'catalog only',
+      parser: 'limited',
       message: 'Waiting for the next v2 Pages build to fetch this provider.'
     }]
   };

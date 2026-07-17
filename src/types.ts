@@ -8,6 +8,7 @@ export interface ProviderDownloadLog {
   source_type?: string;
   ok?: boolean;
   status?: string;
+  parser?: string;
   message?: string;
   error?: string;
 }

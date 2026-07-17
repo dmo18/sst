@@ -78,6 +78,12 @@ function makeLog(provider, startedAt, startedMs, status, ok, message, error = ''
   };
 }
 
+function markParser(logs, parser) {
+  const last = logs.at(-1);
+  if (last) last.parser = parser;
+  return logs;
+}
+
 async function fetchSource(provider, accept = '*/*') {
   const startedAt = new Date().toISOString();
   const startedMs = Date.now();
@@ -146,7 +152,7 @@ function noisyIncident(item) {
 async function parseStatuspage(provider) {
   const result = await fetchSource(provider, 'application/json');
   const logs = [result.log];
-  if (!result.ok) return providerStatus(provider, `Source unavailable: HTTP ${result.status || 'failed'}`, 'blue', false, result.log.error || result.log.message, logs);
+  if (!result.ok) return providerStatus(provider, `Source unavailable: HTTP ${result.status || 'failed'}`, 'blue', false, result.log.error || result.log.message, markParser(logs, 'parser failed'));
 
   try {
     const data = JSON.parse(result.body);
@@ -159,19 +165,19 @@ async function parseStatuspage(provider) {
     }).filter(activeIncident);
     if (incidents.length) {
       const worst = incidents.reduce((current, item) => severityRank[item.color] > severityRank[current] ? item.color : current, 'amber');
-      return providerStatus(provider, `${incidents.length} active issue${incidents.length === 1 ? '' : 's'}`, worst, true, '', logs, incidents);
+      return providerStatus(provider, `${incidents.length} active issue${incidents.length === 1 ? '' : 's'}`, worst, true, '', markParser(logs, 'active incidents found'), incidents);
     }
     const statusText = data.status?.description || 'All Systems Operational';
-    return providerStatus(provider, statusText, colorFromText(`${data.status?.indicator || ''} ${statusText}`), true, '', logs);
+    return providerStatus(provider, statusText, colorFromText(`${data.status?.indicator || ''} ${statusText}`), true, '', markParser(logs, 'no active incidents'));
   } catch (error) {
-    return providerStatus(provider, 'Parser failed', 'blue', false, `Statuspage parser failed: ${error?.message || error}`, logs);
+    return providerStatus(provider, 'Parser failed', 'blue', false, `Statuspage parser failed: ${error?.message || error}`, markParser(logs, 'parser failed'));
   }
 }
 
 async function parseRss(provider) {
   const result = await fetchSource(provider, 'application/rss+xml, application/xml, text/xml, */*');
   const logs = [result.log];
-  if (!result.ok) return providerStatus(provider, `Source unavailable: HTTP ${result.status || 'failed'}`, 'blue', false, result.log.error || result.log.message, logs);
+  if (!result.ok) return providerStatus(provider, `Source unavailable: HTTP ${result.status || 'failed'}`, 'blue', false, result.log.error || result.log.message, markParser(logs, 'parser failed'));
   const items = [...result.body.matchAll(/<item>([\s\S]*?)<\/item>/gi)].map(match => {
     const block = match[1];
     const title = cleanText((/<title><!\[CDATA\[([\s\S]*?)\]\]><\/title>/i.exec(block) || /<title>([\s\S]*?)<\/title>/i.exec(block) || [])[1]);
@@ -180,13 +186,13 @@ async function parseRss(provider) {
     return incident(provider, title, note, 'RSS', provider.url, time, '', colorFromText(`${title} ${note}`));
   }).filter(item => activeIncident(item) && recentIncident(item, provider.id === 'aws' ? 7 : 14) && !noisyIncident(item)).slice(0, provider.id === 'aws' ? 6 : 10);
   const worst = items.reduce((current, item) => severityRank[item.color] > severityRank[current] ? item.color : current, 'amber');
-  return providerStatus(provider, items.length ? `${items.length} recent active RSS event${items.length === 1 ? '' : 's'}` : 'No active RSS events', items.length ? worst : 'green', true, '', logs, items);
+  return providerStatus(provider, items.length ? `${items.length} recent active RSS event${items.length === 1 ? '' : 's'}` : 'No active RSS events', items.length ? worst : 'green', true, '', markParser(logs, items.length ? 'active incidents found' : 'no active incidents'), items);
 }
 
 async function parseGoogleCloudIncidents(provider) {
   const result = await fetchSource(provider, 'application/json');
   const logs = [result.log];
-  if (!result.ok) return providerStatus(provider, `Source unavailable: HTTP ${result.status || 'failed'}`, 'blue', false, result.log.error || result.log.message, logs);
+  if (!result.ok) return providerStatus(provider, `Source unavailable: HTTP ${result.status || 'failed'}`, 'blue', false, result.log.error || result.log.message, markParser(logs, 'parser failed'));
   try {
     const data = JSON.parse(result.body);
     const items = Array.isArray(data) ? data : (Array.isArray(data.incidents) ? data.incidents : []);
@@ -200,18 +206,18 @@ async function parseGoogleCloudIncidents(provider) {
     }).filter(item => activeIncident(item) && recentIncident(item, 21));
     if (incidents.length) {
       const worst = incidents.reduce((current, item) => severityRank[item.color] > severityRank[current] ? item.color : current, 'amber');
-      return providerStatus(provider, `${incidents.length} active Google Cloud incident${incidents.length === 1 ? '' : 's'}`, worst, true, '', logs, incidents.slice(0, 10));
+      return providerStatus(provider, `${incidents.length} active Google Cloud incident${incidents.length === 1 ? '' : 's'}`, worst, true, '', markParser(logs, 'active incidents found'), incidents.slice(0, 10));
     }
-    return providerStatus(provider, 'No active Google Cloud incidents', 'green', true, '', logs);
+    return providerStatus(provider, 'No active Google Cloud incidents', 'green', true, '', markParser(logs, 'no active incidents'));
   } catch (error) {
-    return providerStatus(provider, 'Parser failed', 'blue', false, `Google Cloud incidents parser failed: ${error?.message || error}`, logs);
+    return providerStatus(provider, 'Parser failed', 'blue', false, `Google Cloud incidents parser failed: ${error?.message || error}`, markParser(logs, 'parser failed'));
   }
 }
 
 async function parseSlackCurrentStatus(provider) {
   const result = await fetchSource(provider, 'application/json');
   const logs = [result.log];
-  if (!result.ok) return providerStatus(provider, `Source unavailable: HTTP ${result.status || 'failed'}`, 'blue', false, result.log.error || result.log.message, logs);
+  if (!result.ok) return providerStatus(provider, `Source unavailable: HTTP ${result.status || 'failed'}`, 'blue', false, result.log.error || result.log.message, markParser(logs, 'parser failed'));
   try {
     const data = JSON.parse(result.body);
     const active = Array.isArray(data.active_incidents) ? data.active_incidents : [];
@@ -222,27 +228,27 @@ async function parseSlackCurrentStatus(provider) {
     }).filter(activeIncident);
     if (incidents.length) {
       const worst = incidents.reduce((current, item) => severityRank[item.color] > severityRank[current] ? item.color : current, 'amber');
-      return providerStatus(provider, `${incidents.length} active Slack incident${incidents.length === 1 ? '' : 's'}`, worst, true, '', logs, incidents);
+      return providerStatus(provider, `${incidents.length} active Slack incident${incidents.length === 1 ? '' : 's'}`, worst, true, '', markParser(logs, 'active incidents found'), incidents);
     }
     const status = data.status || 'ok';
-    return providerStatus(provider, status === 'ok' ? 'Slack reports no active incidents' : `Slack status: ${status}`, colorFromText(status), true, '', logs);
+    return providerStatus(provider, status === 'ok' ? 'Slack reports no active incidents' : `Slack status: ${status}`, colorFromText(status), true, '', markParser(logs, status === 'ok' ? 'no active incidents' : 'active incidents found'));
   } catch (error) {
-    return providerStatus(provider, 'Parser failed', 'blue', false, `Slack current status parser failed: ${error?.message || error}`, logs);
+    return providerStatus(provider, 'Parser failed', 'blue', false, `Slack current status parser failed: ${error?.message || error}`, markParser(logs, 'parser failed'));
   }
 }
 
 async function parseHerokuCurrentStatus(provider) {
   const result = await fetchSource(provider, 'application/json');
   const logs = [result.log];
-  if (!result.ok) return providerStatus(provider, `Source unavailable: HTTP ${result.status || 'failed'}`, 'blue', false, result.log.error || result.log.message, logs);
+  if (!result.ok) return providerStatus(provider, `Source unavailable: HTTP ${result.status || 'failed'}`, 'blue', false, result.log.error || result.log.message, markParser(logs, 'parser failed'));
   try {
     const data = JSON.parse(result.body);
     const statusText = [data.status?.Production, data.status?.Development, data.status?.production, data.status?.development].filter(Boolean).join('; ') || data.status || 'Heroku current status reachable';
     const color = colorFromText(statusText);
     const incidents = color === 'green' ? [] : [incident(provider, 'Heroku current status', statusText, 'Heroku current status API', provider.url, data.updated_at || data.updatedAt, statusText, color)];
-    return providerStatus(provider, incidents.length ? 'Heroku current status reports issues' : 'Heroku reports no active incidents', color, true, '', logs, incidents);
+    return providerStatus(provider, incidents.length ? 'Heroku current status reports issues' : 'Heroku reports no active incidents', color, true, '', markParser(logs, incidents.length ? 'active incidents found' : 'no active incidents'), incidents);
   } catch (error) {
-    return providerStatus(provider, 'Parser failed', 'blue', false, `Heroku current status parser failed: ${error?.message || error}`, logs);
+    return providerStatus(provider, 'Parser failed', 'blue', false, `Heroku current status parser failed: ${error?.message || error}`, markParser(logs, 'parser failed'));
   }
 }
 
@@ -264,6 +270,7 @@ async function parseLimitedSource(provider, message) {
     source_type: provider.sourceType || 'limited',
     ok: true,
     status: 'limited source',
+    parser: 'limited',
     message
   }]);
 }
