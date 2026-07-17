@@ -208,24 +208,88 @@ async function parseGoogleCloudIncidents(provider) {
   }
 }
 
+function slackArrayOfStrings(value) {
+  if (!Array.isArray(value)) return [];
+  return value.map(item => {
+    if (typeof item === 'string') return item;
+    if (item && typeof item === 'object') return item.name || item.title || item.id || '';
+    return '';
+  }).filter(Boolean);
+}
+
+function slackNotes(value) {
+  if (!Array.isArray(value)) return [];
+  return value.map(note => {
+    if (typeof note === 'string') return { body: note, date_created: '' };
+    if (!note || typeof note !== 'object') return { body: '', date_created: '' };
+    return {
+      body: note.body || note.text || note.message || '',
+      date_created: note.date_created || note.date_updated || note.created_at || note.updated_at || ''
+    };
+  }).filter(note => note.body || note.date_created);
+}
+
+function slackImpactColor(item, notes, services) {
+  const text = [
+    item.type,
+    item.status,
+    item.title,
+    services.join(' '),
+    notes.map(note => note.body).join(' ')
+  ].join(' ').toLowerCase();
+  if (item.type === 'outage' || /\b(major|critical|severe|outage|unavailable|down)\b/.test(text)) return 'red';
+  if (/\b(degrad(?:ed|ation|ing)?|partial|disruption|incident|issue|error|elevated|latency|delayed|intermittent|fail(?:ing|ure)?)\b/.test(text)) return 'amber';
+  return 'amber';
+}
+
+function slackImpactingIncident(item, notes, services) {
+  if (!item || typeof item !== 'object') return false;
+  if (item.status !== 'active') return false;
+  const text = [item.type, item.status, item.title, services.join(' '), notes.map(note => note.body).join(' ')].join(' ').toLowerCase();
+  if (item.type === 'incident' || item.type === 'outage') return true;
+  return /\b(major|critical|severe|outage|unavailable|down|degrad(?:ed|ation|ing)?|partial|disruption|incident|issue|error|elevated|latency|delayed|intermittent|fail(?:ing|ure)?)\b/.test(text);
+}
+
 async function parseSlackCurrentStatus(provider) {
   const result = await fetchSource(provider, 'application/json');
   const logs = [result.log];
   if (!result.ok) return providerStatus(provider, `Source unavailable: HTTP ${result.status || 'failed'}`, 'blue', false, result.log.error || result.log.message, logs);
   try {
     const data = JSON.parse(result.body);
-    const active = Array.isArray(data.active_incidents) ? data.active_incidents : [];
-    const incidents = active.map(item => {
-      const note = item.notes?.at?.(-1)?.body || item.notes?.[0]?.body || item.services?.map(service => service.name).join(', ') || item.status || '';
-      const color = colorFromText(`${item.type || ''} ${item.status || ''} ${note}`);
-      return incident(provider, item.title || item.id || 'Slack incident', note, 'Slack current status API', item.url || provider.url, item.date_updated || item.date_created, item.status, color);
-    }).filter(activeIncident);
+    if (!data || typeof data !== 'object' || typeof data.status !== 'string' || !Array.isArray(data.active_incidents)) {
+      throw new Error('Expected Slack current status object with string status and active_incidents array.');
+    }
+
+    const incidents = data.active_incidents.map(item => {
+      if (!item || typeof item !== 'object') throw new Error('Expected each Slack active_incidents item to be an object.');
+      const notes = slackNotes(item.notes);
+      const services = slackArrayOfStrings(item.services);
+      const latestNote = notes.at(-1) || notes[0] || {};
+      const serviceText = services.length ? `Affected services: ${services.join(', ')}.` : '';
+      const note = [latestNote.body, serviceText].filter(Boolean).join(' ');
+      const color = slackImpactColor(item, notes, services);
+      return {
+        ...incident(provider, item.title || item.id || 'Slack incident', note || item.status, 'Slack current status API', item.url || provider.url, item.date_updated || latestNote.date_created || item.date_created || data.date_updated || data.date_created, item.status, color),
+        affectedServices: services,
+        dateCreated: item.date_created || '',
+        dateUpdated: item.date_updated || '',
+        type: item.type || ''
+      };
+    }).filter((item, index) => {
+      const source = data.active_incidents[index];
+      return slackImpactingIncident(source, slackNotes(source.notes), slackArrayOfStrings(source.services));
+    });
+
     if (incidents.length) {
       const worst = incidents.reduce((current, item) => severityRank[item.color] > severityRank[current] ? item.color : current, 'amber');
-      return providerStatus(provider, `${incidents.length} active Slack incident${incidents.length === 1 ? '' : 's'}`, worst, true, '', logs, incidents);
+      return providerStatus(provider, `${incidents.length} active Slack impacting incident${incidents.length === 1 ? '' : 's'}`, worst, true, '', logs, incidents);
     }
-    const status = data.status || 'ok';
-    return providerStatus(provider, status === 'ok' ? 'Slack reports no active incidents' : `Slack status: ${status}`, colorFromText(status), true, '', logs);
+
+    if (data.status === 'ok' && data.active_incidents.length === 0) {
+      return providerStatus(provider, 'Slack explicitly reports normal service', 'green', true, '', logs);
+    }
+
+    return providerStatus(provider, `Slack status is ${data.status} but no active impacting incidents were parsed`, 'blue', false, `Slack current status parser could not confirm normal service from status=${data.status} active_incidents=${data.active_incidents.length}.`, logs);
   } catch (error) {
     return providerStatus(provider, 'Parser failed', 'blue', false, `Slack current status parser failed: ${error?.message || error}`, logs);
   }
@@ -274,6 +338,7 @@ async function loadProvider(provider) {
     case 'statuspage': return parseStatuspage(provider);
     case 'rss': return parseRss(provider);
     case 'google-cloud-incidents': return parseGoogleCloudIncidents(provider);
+    case 'slack':
     case 'slack-current-status': return parseSlackCurrentStatus(provider);
     case 'heroku-current-status': return parseHerokuCurrentStatus(provider);
     case 'limited-microsoft': return parseLimitedMicrosoft(provider);
