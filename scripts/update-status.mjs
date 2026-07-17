@@ -118,11 +118,29 @@ function incident(provider, title, note, source, url, time, status, color) {
   };
 }
 
+function parseDateMs(value) {
+  if (!value) return 0;
+  const ms = new Date(value).getTime();
+  return Number.isNaN(ms) ? 0 : ms;
+}
+
 function activeIncident(item) {
   const text = `${item.title} ${item.note} ${item.status}`.toLowerCase();
   if (/resolved|completed|postmortem|closed|fixed/.test(text)) return false;
   if (/scheduled|maintenance|planned|announcement|informational|deprecation/.test(text) && !/outage|degrad|disruption|error|latency|incident/.test(text)) return false;
   return item.color !== 'green';
+}
+
+function recentIncident(item, maxAgeDays = 14) {
+  const ms = parseDateMs(item.rawTime);
+  if (!ms) return true;
+  return Date.now() - ms <= maxAgeDays * 24 * 60 * 60 * 1000;
+}
+
+function noisyIncident(item) {
+  const text = `${item.title} ${item.note} ${item.status}`.toLowerCase();
+  return /(?:informational|maintenance|scheduled|completed|resolved|postmortem|customer action required|between \d{1,2}:\d{2})/.test(text)
+    && !/(?:outage|degrad|disruption|error|latency|unavailable|elevated|incident)/.test(text);
 }
 
 async function parseStatuspage(provider) {
@@ -160,50 +178,111 @@ async function parseRss(provider) {
     const note = cleanText((/<description><!\[CDATA\[([\s\S]*?)\]\]><\/description>/i.exec(block) || /<description>([\s\S]*?)<\/description>/i.exec(block) || [])[1]);
     const time = cleanText((/<pubDate>([\s\S]*?)<\/pubDate>/i.exec(block) || [])[1]);
     return incident(provider, title, note, 'RSS', provider.url, time, '', colorFromText(`${title} ${note}`));
-  }).filter(activeIncident).slice(0, 10);
-  return providerStatus(provider, items.length ? `${items.length} recent active RSS event${items.length === 1 ? '' : 's'}` : 'No active RSS events', items.length ? 'amber' : 'green', true, '', logs, items);
+  }).filter(item => activeIncident(item) && recentIncident(item, provider.id === 'aws' ? 7 : 14) && !noisyIncident(item)).slice(0, provider.id === 'aws' ? 6 : 10);
+  const worst = items.reduce((current, item) => severityRank[item.color] > severityRank[current] ? item.color : current, 'amber');
+  return providerStatus(provider, items.length ? `${items.length} recent active RSS event${items.length === 1 ? '' : 's'}` : 'No active RSS events', items.length ? worst : 'green', true, '', logs, items);
 }
 
-async function parseJson(provider) {
+async function parseGoogleCloudIncidents(provider) {
   const result = await fetchSource(provider, 'application/json');
   const logs = [result.log];
   if (!result.ok) return providerStatus(provider, `Source unavailable: HTTP ${result.status || 'failed'}`, 'blue', false, result.log.error || result.log.message, logs);
   try {
-    JSON.parse(result.body);
-    return providerStatus(provider, 'JSON source reachable', 'blue', true, 'Generic JSON source is reachable. No provider-specific incident parser is configured yet.', logs);
+    const data = JSON.parse(result.body);
+    const items = Array.isArray(data) ? data : (Array.isArray(data.incidents) ? data.incidents : []);
+    const incidents = items.map(item => {
+      const updates = Array.isArray(item.updates) ? item.updates : [];
+      const update = updates.at(-1) || updates[0] || {};
+      const note = update.text || item.external_desc || item.description || item.service_name || item.status_impact || '';
+      const status = item.status || item.state || item.incident_state || '';
+      const color = colorFromText(`${item.severity || ''} ${item.status_impact || ''} ${status} ${note}`);
+      return incident(provider, item.external_desc || item.service_name || item.id || 'Google Cloud incident', note, 'Google Cloud incidents JSON', item.uri || provider.url, update.when || item.modified || item.begin, status, color);
+    }).filter(item => activeIncident(item) && recentIncident(item, 21));
+    if (incidents.length) {
+      const worst = incidents.reduce((current, item) => severityRank[item.color] > severityRank[current] ? item.color : current, 'amber');
+      return providerStatus(provider, `${incidents.length} active Google Cloud incident${incidents.length === 1 ? '' : 's'}`, worst, true, '', logs, incidents.slice(0, 10));
+    }
+    return providerStatus(provider, 'No active Google Cloud incidents', 'green', true, '', logs);
   } catch (error) {
-    return providerStatus(provider, 'Source returned non-JSON', 'blue', false, `JSON parser failed: ${error?.message || error}`, logs);
+    return providerStatus(provider, 'Parser failed', 'blue', false, `Google Cloud incidents parser failed: ${error?.message || error}`, logs);
   }
 }
 
-async function parseHtml(provider) {
-  const result = await fetchSource(provider, 'text/html, */*');
+async function parseSlackCurrentStatus(provider) {
+  const result = await fetchSource(provider, 'application/json');
   const logs = [result.log];
-  if (!result.ok) return providerStatus(provider, `Limited source unavailable: HTTP ${result.status || 'failed'}`, 'blue', false, result.log.error || result.log.message, logs);
-  return providerStatus(provider, 'Public page reachable', 'blue', true, provider.message || 'Public status page is reachable, but no rich parser is configured yet.', logs);
+  if (!result.ok) return providerStatus(provider, `Source unavailable: HTTP ${result.status || 'failed'}`, 'blue', false, result.log.error || result.log.message, logs);
+  try {
+    const data = JSON.parse(result.body);
+    const active = Array.isArray(data.active_incidents) ? data.active_incidents : [];
+    const incidents = active.map(item => {
+      const note = item.notes?.at?.(-1)?.body || item.notes?.[0]?.body || item.services?.map(service => service.name).join(', ') || item.status || '';
+      const color = colorFromText(`${item.type || ''} ${item.status || ''} ${note}`);
+      return incident(provider, item.title || item.id || 'Slack incident', note, 'Slack current status API', item.url || provider.url, item.date_updated || item.date_created, item.status, color);
+    }).filter(activeIncident);
+    if (incidents.length) {
+      const worst = incidents.reduce((current, item) => severityRank[item.color] > severityRank[current] ? item.color : current, 'amber');
+      return providerStatus(provider, `${incidents.length} active Slack incident${incidents.length === 1 ? '' : 's'}`, worst, true, '', logs, incidents);
+    }
+    const status = data.status || 'ok';
+    return providerStatus(provider, status === 'ok' ? 'Slack reports no active incidents' : `Slack status: ${status}`, colorFromText(status), true, '', logs);
+  } catch (error) {
+    return providerStatus(provider, 'Parser failed', 'blue', false, `Slack current status parser failed: ${error?.message || error}`, logs);
+  }
 }
 
-async function parseListed(provider) {
+async function parseHerokuCurrentStatus(provider) {
+  const result = await fetchSource(provider, 'application/json');
+  const logs = [result.log];
+  if (!result.ok) return providerStatus(provider, `Source unavailable: HTTP ${result.status || 'failed'}`, 'blue', false, result.log.error || result.log.message, logs);
+  try {
+    const data = JSON.parse(result.body);
+    const statusText = [data.status?.Production, data.status?.Development, data.status?.production, data.status?.development].filter(Boolean).join('; ') || data.status || 'Heroku current status reachable';
+    const color = colorFromText(statusText);
+    const incidents = color === 'green' ? [] : [incident(provider, 'Heroku current status', statusText, 'Heroku current status API', provider.url, data.updated_at || data.updatedAt, statusText, color)];
+    return providerStatus(provider, incidents.length ? 'Heroku current status reports issues' : 'Heroku reports no active incidents', color, true, '', logs, incidents);
+  } catch (error) {
+    return providerStatus(provider, 'Parser failed', 'blue', false, `Heroku current status parser failed: ${error?.message || error}`, logs);
+  }
+}
+
+async function parseLimitedMicrosoft(provider) {
+  return parseLimitedSource(provider, 'Microsoft service health is tenant-scoped; this public endpoint does not provide complete account-specific Microsoft 365 or Entra incident detail.');
+}
+
+async function parseLimitedPublicPage(provider) {
+  return parseLimitedSource(provider, provider.message || 'Official public status is limited by account, region, location, tenant, login, or bot filtering; results are intentionally catalog-only.');
+}
+
+async function parseLimitedSource(provider, message) {
   const now = new Date().toISOString();
-  return providerStatus(provider, 'Listed source', 'blue', true, provider.message || 'Source is cataloged but not fetched by this parser type.', [{
+  return providerStatus(provider, 'Limited official source', 'blue', true, message, [{
     timestamp: now,
     completed_at: now,
     duration_ms: 0,
     url: provider.url,
-    source_type: provider.sourceType || 'listed',
+    source_type: provider.sourceType || 'limited',
     ok: true,
-    status: 'catalog only',
-    message: 'No network fetch required for this limited source.'
+    status: 'limited source',
+    message
   }]);
 }
 
 async function loadProvider(provider) {
-  if (provider.enabled === false) return parseListed({ ...provider, message: provider.message || 'Disabled in catalog.' });
-  if (provider.sourceType === 'statuspage') return parseStatuspage(provider);
-  if (provider.sourceType === 'rss') return parseRss(provider);
-  if (provider.sourceType === 'google-cloud-json' || provider.sourceType === 'slack') return parseJson(provider);
-  if (provider.sourceType === 'html-limited' || provider.sourceType === 'okta-html') return parseHtml(provider);
-  return parseListed(provider);
+  if (provider.enabled === false) return parseLimitedSource({ ...provider, message: provider.message || 'Disabled in catalog.' }, provider.message || 'Disabled in catalog.');
+  switch (provider.sourceType) {
+    case 'statuspage': return parseStatuspage(provider);
+    case 'rss': return parseRss(provider);
+    case 'google-cloud-incidents': return parseGoogleCloudIncidents(provider);
+    case 'slack-current-status': return parseSlackCurrentStatus(provider);
+    case 'heroku-current-status': return parseHerokuCurrentStatus(provider);
+    case 'limited-microsoft': return parseLimitedMicrosoft(provider);
+    case 'limited-public-page':
+    case 'official-limited':
+    case 'html-limited':
+    case 'okta-html': return parseLimitedPublicPage(provider);
+    default: return parseLimitedSource(provider, `Unsupported source type: ${provider.sourceType || 'unknown'}.`);
+  }
 }
 
 async function mapLimit(items, limit, mapper) {
