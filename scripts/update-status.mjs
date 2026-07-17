@@ -123,6 +123,26 @@ function parseDateMs(value) {
   return Number.isNaN(ms) ? 0 : ms;
 }
 
+function statuspageUpdateTimestamp(update) {
+  for (const field of ['updated_at', 'created_at', 'display_at']) {
+    const timestamp = parseDateMs(update?.[field]);
+    if (timestamp) return timestamp;
+  }
+  return 0;
+}
+
+function newestStatuspageUpdate(updates) {
+  if (!Array.isArray(updates) || !updates.length) return {};
+
+  const parseableUpdates = updates
+    .map(update => ({ update, timestamp: statuspageUpdateTimestamp(update) }))
+    .filter(entry => entry.timestamp);
+
+  if (!parseableUpdates.length) return updates.at(-1) || {};
+
+  parseableUpdates.sort((a, b) => b.timestamp - a.timestamp);
+  return parseableUpdates[0].update || {};
+}
 
 function normalizeIncidentTitle(value) {
   return cleanText(value)
@@ -181,10 +201,10 @@ async function parseStatuspage(provider) {
     const data = JSON.parse(result.body);
     const items = Array.isArray(data.incidents) ? data.incidents : [];
     const incidents = items.map(item => {
-      const update = item.incident_updates?.[0] || item.incident_updates?.at?.(-1) || {};
+      const update = newestStatuspageUpdate(item.incident_updates);
       const note = update.body || item.impact || item.status || '';
       const color = colorFromText(`${item.impact || ''} ${item.status || ''} ${note}`);
-      return incident(provider, item.name, note, 'Statuspage API', item.shortlink || item.url || provider.url, item.updated_at || item.created_at, item.status, color);
+      return incident(provider, item.name, note, 'Statuspage API', item.shortlink || item.url || provider.url, update.updated_at || update.created_at || update.display_at || item.updated_at || item.created_at, item.status, color);
     }).filter(activeIncident);
     if (incidents.length) {
       const worst = incidents.reduce((current, item) => severityRank[item.color] > severityRank[current] ? item.color : current, 'amber');
