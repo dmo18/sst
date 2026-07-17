@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(new URL('..', import.meta.url).pathname);
 const catalogPath = path.join(root, 'config', 'providers.json');
@@ -86,7 +87,7 @@ async function fetchSource(provider, accept = '*/*') {
     const response = await fetch(provider.url, {
       signal: controller.signal,
       redirect: 'follow',
-      headers: { accept, 'user-agent': 'msp-status-hud/2.1.1' }
+      headers: { accept, 'user-agent': 'msp-status-hud/2.1.4' }
     });
     const body = await response.text();
     const contentType = response.headers.get('content-type') || 'unknown';
@@ -666,3 +667,4 @@ const payload = {
 
 writeJson(publicStatusPath, payload);
 console.log(`Generated status for ${providerStatuses.length} providers and ${incidents.length} active incidents.`);
+if (process.argv[1] === fileURLToPath(import.meta.url)) process.exit(0);
