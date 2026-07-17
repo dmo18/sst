@@ -246,8 +246,97 @@ async function parseHerokuCurrentStatus(provider) {
   }
 }
 
+
+const microsoftGraphRequiredMessage = 'Unauthenticated public Microsoft status data is insufficient for reliable Microsoft 365 and Entra ID service-health detail; tenant-authenticated Microsoft Graph service communications auth is required.';
+
+function microsoftKeywordPattern(provider) {
+  if (provider.id === 'entra') {
+    return /\b(entra|azure\s+ad|aad|identity|sign-?in|single\s+sign|\bsso\b|mfa|multi-?factor|token|authenticat|authorization|conditional\s+access|identity\s+protection)\b/i;
+  }
+
+  return /\b(microsoft\s*365|m365|office\s*365|exchange|outlook|teams|sharepoint|one\s*drive|onedrive|intune|defender|power\s+(?:platform|apps|automate|bi)|copilot|service\s+health|admin\s+center|office\b)\b/i;
+}
+
+function collectMicrosoftRecords(value, records = []) {
+  if (!value || typeof value !== 'object') return records;
+  if (Array.isArray(value)) {
+    for (const item of value) collectMicrosoftRecords(item, records);
+    return records;
+  }
+
+  const keys = Object.keys(value);
+  const hasIncidentShape = keys.some(key => /title|name|service|workload|feature|id|incident|advisory|message|status|state|impact|classification/i.test(key));
+  if (hasIncidentShape) records.push(value);
+
+  for (const key of keys) {
+    const child = value[key];
+    if (child && typeof child === 'object') collectMicrosoftRecords(child, records);
+  }
+  return records;
+}
+
+function microsoftField(item, names) {
+  for (const name of names) {
+    const value = item?.[name];
+    if (typeof value === 'string' && value.trim()) return value;
+    if (Array.isArray(value) && value.length) return value.map(entry => typeof entry === 'string' ? entry : (entry?.name || entry?.displayName || entry?.title || '')).filter(Boolean).join(', ');
+    if (value && typeof value === 'object') {
+      const nested = value.displayName || value.name || value.title || value.value || value.text;
+      if (typeof nested === 'string' && nested.trim()) return nested;
+    }
+  }
+  return '';
+}
+
+function microsoftIncidentFromRecord(provider, item) {
+  const title = microsoftField(item, ['title', 'name', 'displayName', 'serviceName', 'workloadDisplayName', 'featureName', 'incidentTitle', 'advisoryTitle', 'messageTitle', 'id']) || 'Microsoft service advisory';
+  const note = microsoftField(item, ['description', 'summary', 'message', 'impactDescription', 'impact', 'latestMessage', 'lastMessage', 'details', 'body', 'status']) || title;
+  const status = microsoftField(item, ['status', 'state', 'classification', 'incidentStatus', 'eventStatus', 'healthStatus']);
+  const service = microsoftField(item, ['service', 'serviceName', 'workload', 'workloadDisplayName', 'feature', 'featureName', 'affectedServices', 'affectedWorkloads']);
+  const text = `${title} ${note} ${status} ${service}`;
+  const relevant = microsoftKeywordPattern(provider).test(text);
+  const color = colorFromText(`${status} ${note} ${title}`);
+  const time = microsoftField(item, ['lastUpdatedTime', 'lastModifiedDateTime', 'updatedDateTime', 'updated_at', 'modified', 'startTime', 'startDateTime', 'createdDateTime']);
+  const url = microsoftField(item, ['url', 'link', 'serviceUrl', 'portalUrl']);
+  const candidate = incident(provider, service ? `${service}: ${title}` : title, note, 'Microsoft public status API', url || provider.url, time, status, color);
+  return relevant && activeIncident(candidate) ? candidate : null;
+}
+
 async function parseLimitedMicrosoft(provider) {
-  return parseLimitedSource(provider, 'Microsoft service health is tenant-scoped; this public endpoint does not provide complete account-specific Microsoft 365 or Entra incident detail.');
+  const result = await fetchSource(provider, 'application/json, text/json, */*');
+  const logs = [result.log];
+  const finish = (status, color, ok, message, incidents = []) => {
+    logs.push({
+      timestamp: result.log.timestamp,
+      completed_at: new Date().toISOString(),
+      duration_ms: 0,
+      url: provider.url,
+      source_type: provider.sourceType || 'limited-microsoft',
+      ok,
+      status: 'parser result',
+      message: incidents.length ? `Parsed ${incidents.length} active Microsoft advisory record${incidents.length === 1 ? '' : 's'}.` : message
+    });
+    return providerStatus(provider, status, color, ok, message, logs, incidents);
+  };
+
+  if (!result.ok) {
+    return finish('Limited official source', 'blue', false, `${result.log.error || result.log.message}. ${microsoftGraphRequiredMessage}`);
+  }
+
+  try {
+    const data = JSON.parse(result.body);
+    const records = collectMicrosoftRecords(data);
+    const incidents = records.map(item => microsoftIncidentFromRecord(provider, item)).filter(Boolean);
+    const unique = [...new Map(incidents.map(item => [`${item.title}|${item.rawTime}|${item.status}`, item])).values()].slice(0, 12);
+    if (unique.length) {
+      const worst = unique.reduce((current, item) => severityRank[item.color] > severityRank[current] ? item.color : current, 'amber');
+      return finish(`${unique.length} active Microsoft advisory${unique.length === 1 ? '' : 'ies'}`, worst, true, '', unique);
+    }
+
+    return finish('Limited official source', 'blue', true, microsoftGraphRequiredMessage);
+  } catch (error) {
+    return finish('Limited official source', 'blue', false, `Microsoft public status parser could not read unauthenticated service-health data: ${error?.message || error}. ${microsoftGraphRequiredMessage}`);
+  }
 }
 
 async function parseLimitedPublicPage(provider) {
