@@ -3,6 +3,7 @@ import path from 'node:path';
 
 const root = path.resolve(new URL('..', import.meta.url).pathname);
 const catalogPath = path.join(root, 'config', 'providers.json');
+const expectedProviderCount = 90;
 const allowedSourceTypes = new Set([
   'statuspage',
   'rss',
@@ -30,6 +31,10 @@ const categories = new Set();
 if (!Array.isArray(catalog)) {
   errors.push('Provider catalog must be an array.');
 } else {
+  if (catalog.length !== expectedProviderCount) {
+    errors.push(`Expected ${expectedProviderCount} providers, found ${catalog.length}.`);
+  }
+
   for (const [index, provider] of catalog.entries()) {
     const context = provider?.id || provider?.name || `index ${index}`;
     if (!provider || typeof provider !== 'object') {
