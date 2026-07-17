@@ -639,11 +639,19 @@ async function mapLimit(items, limit, mapper) {
 }
 
 const catalog = readJson(catalogPath);
-const providersById = new Map(catalog.map(provider => [provider.id, provider]));
-const providers = [...providersById.values()];
+if (!Array.isArray(catalog)) throw new Error('Provider catalog must be an array.');
+
+const providerIds = new Set();
+for (const provider of catalog) {
+  if (providerIds.has(provider.id)) throw new Error(`Duplicate provider id found before fetching: ${provider.id}`);
+  providerIds.add(provider.id);
+}
+
+const providers = catalog;
 const results = await mapLimit(providers, concurrency, safeLoadProvider);
 const incidents = results.flatMap(result => result.incidents || []).sort((a, b) => (severityRank[b.color] - severityRank[a.color]) || ((b.priority || 0) - (a.priority || 0)));
 const providerStatuses = results.map(({ incidents: _incidents, ...rest }) => rest).sort((a, b) => (severityRank[b.color] - severityRank[a.color]) || ((b.priority || 0) - (a.priority || 0)) || a.name.localeCompare(b.name));
+if (providerStatuses.length !== catalog.length) throw new Error(`Generation error: expected ${catalog.length} provider statuses but generated ${providerStatuses.length}.`);
 const overall = incidents.reduce((current, item) => severityRank[item.color] > severityRank[current] ? item.color : current, 'green');
 const payload = {
   generated_at: new Date().toISOString(),
