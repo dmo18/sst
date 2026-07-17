@@ -6,6 +6,6 @@ function run(command, args) {
 }
 
 run('node', ['scripts/validate-providers.mjs']);
-await import('./update-status.mjs');
+run('node', ['scripts/update-status.mjs']);
 run('npx', ['tsc', '--noEmit']);
 run('npx', ['vite', 'build']);

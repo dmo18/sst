@@ -7,8 +7,8 @@ Live site: https://dmo18.github.io/sst/
 ## Version
 
 ```text
-App: v2.1.3
-Package: 2.1.3
+App: v2.1.4
+Package: 2.1.4
 ```
 
 ## Maintainer directions

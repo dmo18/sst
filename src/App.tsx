@@ -4,7 +4,7 @@ import { IssueConsole } from './IssueConsole';
 import { buildIssueConsoleModel } from './statusViewModel';
 import type { ProviderConfig, StatusPayload } from './types';
 
-const APP_VERSION = 'v2.1.3';
+const APP_VERSION = 'v2.1.4';
 const CATALOG = providerCatalog as ProviderConfig[];
 
 type LoadState = { data: StatusPayload; error?: string };

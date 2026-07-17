@@ -1,5 +1,8 @@
 import fs from 'node:fs';
+import http from 'node:http';
+import https from 'node:https';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(new URL('..', import.meta.url).pathname);
 const catalogPath = path.join(root, 'config', 'providers.json');
@@ -77,26 +80,56 @@ function makeLog(provider, startedAt, startedMs, status, ok, message, error = ''
   };
 }
 
+function requestSource(url, headers, redirectCount = 0) {
+  return new Promise((resolve, reject) => {
+    const parsedUrl = new URL(url);
+    const transport = parsedUrl.protocol === 'http:' ? http : https;
+    const request = transport.request(parsedUrl, {
+      method: 'GET',
+      headers,
+      agent: false,
+      timeout: timeoutMs
+    }, response => {
+      const location = response.headers.location;
+      if ([301, 302, 303, 307, 308].includes(response.statusCode || 0) && location && redirectCount < 5) {
+        response.resume();
+        response.on('end', () => {
+          requestSource(new URL(location, parsedUrl).toString(), headers, redirectCount + 1).then(resolve, reject);
+        });
+        return;
+      }
+
+      response.setEncoding('utf8');
+      let body = '';
+      response.on('data', chunk => {
+        body += chunk;
+      });
+      response.on('end', () => {
+        resolve({
+          ok: (response.statusCode || 0) >= 200 && (response.statusCode || 0) < 300,
+          status: response.statusCode || 0,
+          statusText: response.statusMessage || '',
+          contentType: response.headers['content-type'] || 'unknown',
+          body
+        });
+      });
+    });
+    request.on('timeout', () => request.destroy(new Error(`Request timed out after ${timeoutMs} ms`)));
+    request.on('error', reject);
+    request.end();
+  });
+}
+
 async function fetchSource(provider, accept = '*/*') {
   const startedAt = new Date().toISOString();
   const startedMs = Date.now();
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const response = await fetch(provider.url, {
-      signal: controller.signal,
-      redirect: 'follow',
-      headers: { accept, 'user-agent': 'msp-status-hud/2.1.1' }
-    });
-    const body = await response.text();
-    const contentType = response.headers.get('content-type') || 'unknown';
-    const log = makeLog(provider, startedAt, startedMs, `HTTP ${response.status}`, response.ok, `${response.statusText || 'OK'}; content-type=${contentType}; bytes=${body.length}`);
-    return { ok: response.ok, status: response.status, body, log };
+    const response = await requestSource(provider.url, { accept, 'user-agent': 'msp-status-hud/2.1.4', connection: 'close' });
+    const log = makeLog(provider, startedAt, startedMs, `HTTP ${response.status}`, response.ok, `${response.statusText || 'OK'}; content-type=${response.contentType}; bytes=${response.body.length}`);
+    return { ok: response.ok, status: response.status, body: response.body, log };
   } catch (error) {
     const log = makeLog(provider, startedAt, startedMs, 'fetch failed', false, 'Fetch failed before a readable response was returned.', String(error?.message || error));
     return { ok: false, status: 0, body: '', log };
-  } finally {
-    clearTimeout(timeout);
   }
 }
 
@@ -636,33 +669,43 @@ async function mapLimit(items, limit, mapper) {
   return results;
 }
 
-const catalog = readJson(catalogPath);
-if (!Array.isArray(catalog)) throw new Error('Provider catalog must be an array.');
+export async function generateStatus() {
+  const catalog = readJson(catalogPath);
+  if (!Array.isArray(catalog)) throw new Error('Provider catalog must be an array.');
 
-const providerIds = new Set();
-for (const provider of catalog) {
-  if (providerIds.has(provider.id)) throw new Error(`Duplicate provider id found before fetching: ${provider.id}`);
-  providerIds.add(provider.id);
+  const providerIds = new Set();
+  for (const provider of catalog) {
+    if (providerIds.has(provider.id)) throw new Error(`Duplicate provider id found before fetching: ${provider.id}`);
+    providerIds.add(provider.id);
+  }
+
+  const providers = catalog;
+  const results = await mapLimit(providers, concurrency, safeLoadProvider);
+  const incidents = results.flatMap(result => result.incidents || []).sort((a, b) => (severityRank[b.color] - severityRank[a.color]) || ((b.priority || 0) - (a.priority || 0)));
+  const providerStatuses = results.map(({ incidents: _incidents, ...rest }) => rest).sort((a, b) => (severityRank[b.color] - severityRank[a.color]) || ((b.priority || 0) - (a.priority || 0)) || a.name.localeCompare(b.name));
+  if (providerStatuses.length !== catalog.length) throw new Error(`Generation error: expected ${catalog.length} provider statuses but generated ${providerStatuses.length}.`);
+  const overall = incidents.reduce((current, item) => severityRank[item.color] > severityRank[current] ? item.color : current, 'green');
+  const payload = {
+    generated_at: new Date().toISOString(),
+    summary: {
+      overall,
+      active_incident_count: incidents.length,
+      providers_ok: providerStatuses.filter(provider => provider.ok).length,
+      providers_total: providerStatuses.length
+    },
+    providers: providerStatuses,
+    incidents,
+    history: incidents.slice(0, 50).map(item => `${item.provider}: ${item.title}`)
+  };
+
+  writeJson(publicStatusPath, payload);
+  console.log(`Generated status for ${providerStatuses.length} providers and ${incidents.length} active incidents.`);
 }
 
-const providers = catalog;
-const results = await mapLimit(providers, concurrency, safeLoadProvider);
-const incidents = results.flatMap(result => result.incidents || []).sort((a, b) => (severityRank[b.color] - severityRank[a.color]) || ((b.priority || 0) - (a.priority || 0)));
-const providerStatuses = results.map(({ incidents: _incidents, ...rest }) => rest).sort((a, b) => (severityRank[b.color] - severityRank[a.color]) || ((b.priority || 0) - (a.priority || 0)) || a.name.localeCompare(b.name));
-if (providerStatuses.length !== catalog.length) throw new Error(`Generation error: expected ${catalog.length} provider statuses but generated ${providerStatuses.length}.`);
-const overall = incidents.reduce((current, item) => severityRank[item.color] > severityRank[current] ? item.color : current, 'green');
-const payload = {
-  generated_at: new Date().toISOString(),
-  summary: {
-    overall,
-    active_incident_count: incidents.length,
-    providers_ok: providerStatuses.filter(provider => provider.ok).length,
-    providers_total: providerStatuses.length
-  },
-  providers: providerStatuses,
-  incidents,
-  history: incidents.slice(0, 50).map(item => `${item.provider}: ${item.title}`)
-};
-
-writeJson(publicStatusPath, payload);
-console.log(`Generated status for ${providerStatuses.length} providers and ${incidents.length} active incidents.`);
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  await generateStatus();
+  // Some hosted runners can leave uncancelable DNS lookups alive after timed-out
+  // vendor fetches. At this point every provider has a result and status.json is
+  // written, so the CLI can terminate successfully without affecting build data.
+  process.exit(0);
+}
