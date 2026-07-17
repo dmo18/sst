@@ -8,6 +8,7 @@ export interface ProviderDownloadLog {
   source_type?: string;
   ok?: boolean;
   status?: string;
+  parser_result?: string;
   message?: string;
   error?: string;
 }
@@ -22,6 +23,7 @@ export interface ProviderConfig {
   url: string;
   message?: string;
   services?: string[];
+  maxAgeHours?: number;
 }
 
 export interface ProviderStatus {

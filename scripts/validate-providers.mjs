@@ -3,6 +3,7 @@ import path from 'node:path';
 
 const root = path.resolve(new URL('..', import.meta.url).pathname);
 const catalogPath = path.join(root, 'config', 'providers.json');
+const expectedProviderCount = 90;
 const allowedSourceTypes = new Set([
   'statuspage',
   'rss',
@@ -30,6 +31,7 @@ const categories = new Set();
 if (!Array.isArray(catalog)) {
   errors.push('Provider catalog must be an array.');
 } else {
+  if (catalog.length !== expectedProviderCount) errors.push(`Provider catalog must contain exactly ${expectedProviderCount} providers; found ${catalog.length}.`);
   for (const [index, provider] of catalog.entries()) {
     const context = provider?.id || provider?.name || `index ${index}`;
     if (!provider || typeof provider !== 'object') {
@@ -43,6 +45,7 @@ if (!Array.isArray(catalog)) {
     if (!provider.sourceType || typeof provider.sourceType !== 'string') errors.push(fail('Provider sourceType is required.', context));
     if (typeof provider.enabled !== 'undefined' && typeof provider.enabled !== 'boolean') errors.push(fail('enabled must be a boolean when present.', context));
     if (typeof provider.priority !== 'undefined' && typeof provider.priority !== 'number') errors.push(fail('priority must be a number when present.', context));
+    if (typeof provider.maxAgeHours !== 'undefined' && (typeof provider.maxAgeHours !== 'number' || provider.maxAgeHours <= 0)) errors.push(fail('maxAgeHours must be a positive number when present.', context));
     if (provider.services && (!Array.isArray(provider.services) || provider.services.some(service => typeof service !== 'string'))) errors.push(fail('services must be an array of strings when present.', context));
     if (provider.id) {
       if (ids.has(provider.id)) errors.push(fail('Duplicate provider id.', provider.id));

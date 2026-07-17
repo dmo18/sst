@@ -4,7 +4,6 @@ import path from 'node:path';
 const root = path.resolve(new URL('..', import.meta.url).pathname);
 const catalogPath = path.join(root, 'config', 'providers.json');
 const publicStatusPath = path.join(root, 'public', 'status.json');
-const rootStatusPath = path.join(root, 'status.json');
 const timeoutMs = 12000;
 const concurrency = 12;
 const severityRank = { red: 4, amber: 3, blue: 2, green: 1 };
@@ -64,7 +63,7 @@ function providerStatus(provider, status, color, ok, message, logs, incidents = 
   };
 }
 
-function makeLog(provider, startedAt, startedMs, status, ok, message, error = '') {
+function makeLog(provider, startedAt, startedMs, status, ok, message, error = '', parserResult = 'fetch completed') {
   return {
     timestamp: startedAt,
     completed_at: new Date().toISOString(),
@@ -73,9 +72,15 @@ function makeLog(provider, startedAt, startedMs, status, ok, message, error = ''
     source_type: provider.sourceType || 'unknown',
     ok,
     status,
+    parser_result: parserResult,
     message,
     error
   };
+}
+
+function setParserResult(logs, parserResult) {
+  for (const log of logs) log.parser_result = parserResult;
+  return logs;
 }
 
 async function fetchSource(provider, accept = '*/*') {
@@ -94,7 +99,7 @@ async function fetchSource(provider, accept = '*/*') {
     const log = makeLog(provider, startedAt, startedMs, `HTTP ${response.status}`, response.ok, `${response.statusText || 'OK'}; content-type=${contentType}; bytes=${body.length}`);
     return { ok: response.ok, status: response.status, body, log };
   } catch (error) {
-    const log = makeLog(provider, startedAt, startedMs, 'fetch failed', false, 'Fetch failed before a readable response was returned.', String(error?.message || error));
+    const log = makeLog(provider, startedAt, startedMs, 'fetch failed', false, 'Fetch failed before a readable response was returned.', String(error?.message || error), 'fetch failed');
     return { ok: false, status: 0, body: '', log };
   } finally {
     clearTimeout(timeout);
@@ -131,10 +136,20 @@ function activeIncident(item) {
   return item.color !== 'green';
 }
 
-function recentIncident(item, maxAgeDays = 14) {
+function recentIncident(item, maxAgeHours = 336) {
   const ms = parseDateMs(item.rawTime);
-  if (!ms) return true;
-  return Date.now() - ms <= maxAgeDays * 24 * 60 * 60 * 1000;
+  if (!ms) return /(?:active|outage|degrad|disruption|unavailable|elevated|investigating|identified|monitoring)/i.test(`${item.title} ${item.note} ${item.status}`);
+  return Date.now() - ms <= maxAgeHours * 60 * 60 * 1000;
+}
+
+function dedupeIncidents(items) {
+  const seen = new Set();
+  return items.filter(item => {
+    const key = `${item.providerId}:${item.title}`.toLowerCase().replace(/\s+/g, ' ').trim();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 function noisyIncident(item) {
@@ -157,6 +172,7 @@ async function parseStatuspage(provider) {
       const color = colorFromText(`${item.impact || ''} ${item.status || ''} ${note}`);
       return incident(provider, item.name, note, 'Statuspage API', item.shortlink || item.url || provider.url, item.updated_at || item.created_at, item.status, color);
     }).filter(activeIncident);
+    setParserResult(logs, incidents.length ? 'active incidents parsed' : 'no active incidents');
     if (incidents.length) {
       const worst = incidents.reduce((current, item) => severityRank[item.color] > severityRank[current] ? item.color : current, 'amber');
       return providerStatus(provider, `${incidents.length} active issue${incidents.length === 1 ? '' : 's'}`, worst, true, '', logs, incidents);
@@ -172,13 +188,16 @@ async function parseRss(provider) {
   const result = await fetchSource(provider, 'application/rss+xml, application/xml, text/xml, */*');
   const logs = [result.log];
   if (!result.ok) return providerStatus(provider, `Source unavailable: HTTP ${result.status || 'failed'}`, 'blue', false, result.log.error || result.log.message, logs);
-  const items = [...result.body.matchAll(/<item>([\s\S]*?)<\/item>/gi)].map(match => {
+  const parsedItems = [...result.body.matchAll(/<item>([\s\S]*?)<\/item>/gi)].map(match => {
     const block = match[1];
     const title = cleanText((/<title><!\[CDATA\[([\s\S]*?)\]\]><\/title>/i.exec(block) || /<title>([\s\S]*?)<\/title>/i.exec(block) || [])[1]);
     const note = cleanText((/<description><!\[CDATA\[([\s\S]*?)\]\]><\/description>/i.exec(block) || /<description>([\s\S]*?)<\/description>/i.exec(block) || [])[1]);
     const time = cleanText((/<pubDate>([\s\S]*?)<\/pubDate>/i.exec(block) || [])[1]);
     return incident(provider, title, note, 'RSS', provider.url, time, '', colorFromText(`${title} ${note}`));
-  }).filter(item => activeIncident(item) && recentIncident(item, provider.id === 'aws' ? 7 : 14) && !noisyIncident(item)).slice(0, provider.id === 'aws' ? 6 : 10);
+  });
+  const maxAgeHours = Number.isFinite(provider.maxAgeHours) ? provider.maxAgeHours : (provider.id === 'aws' ? 72 : 336);
+  const items = dedupeIncidents(parsedItems.filter(item => activeIncident(item) && recentIncident(item, maxAgeHours) && !noisyIncident(item))).slice(0, provider.id === 'aws' ? 6 : 10);
+  setParserResult(logs, items.length ? 'active incidents parsed' : 'no active incidents');
   const worst = items.reduce((current, item) => severityRank[item.color] > severityRank[current] ? item.color : current, 'amber');
   return providerStatus(provider, items.length ? `${items.length} recent active RSS event${items.length === 1 ? '' : 's'}` : 'No active RSS events', items.length ? worst : 'green', true, '', logs, items);
 }
@@ -197,7 +216,8 @@ async function parseGoogleCloudIncidents(provider) {
       const status = item.status || item.state || item.incident_state || '';
       const color = colorFromText(`${item.severity || ''} ${item.status_impact || ''} ${status} ${note}`);
       return incident(provider, item.external_desc || item.service_name || item.id || 'Google Cloud incident', note, 'Google Cloud incidents JSON', item.uri || provider.url, update.when || item.modified || item.begin, status, color);
-    }).filter(item => activeIncident(item) && recentIncident(item, 21));
+    }).filter(item => activeIncident(item) && recentIncident(item, 504));
+    setParserResult(logs, incidents.length ? 'active incidents parsed' : 'no active incidents');
     if (incidents.length) {
       const worst = incidents.reduce((current, item) => severityRank[item.color] > severityRank[current] ? item.color : current, 'amber');
       return providerStatus(provider, `${incidents.length} active Google Cloud incident${incidents.length === 1 ? '' : 's'}`, worst, true, '', logs, incidents.slice(0, 10));
@@ -220,6 +240,7 @@ async function parseSlackCurrentStatus(provider) {
       const color = colorFromText(`${item.type || ''} ${item.status || ''} ${note}`);
       return incident(provider, item.title || item.id || 'Slack incident', note, 'Slack current status API', item.url || provider.url, item.date_updated || item.date_created, item.status, color);
     }).filter(activeIncident);
+    setParserResult(logs, incidents.length ? 'active incidents parsed' : 'no active incidents');
     if (incidents.length) {
       const worst = incidents.reduce((current, item) => severityRank[item.color] > severityRank[current] ? item.color : current, 'amber');
       return providerStatus(provider, `${incidents.length} active Slack incident${incidents.length === 1 ? '' : 's'}`, worst, true, '', logs, incidents);
@@ -239,6 +260,7 @@ async function parseHerokuCurrentStatus(provider) {
     const data = JSON.parse(result.body);
     const statusText = [data.status?.Production, data.status?.Development, data.status?.production, data.status?.development].filter(Boolean).join('; ') || data.status || 'Heroku current status reachable';
     const color = colorFromText(statusText);
+    setParserResult(logs, color === 'green' ? 'no active incidents' : 'active status parsed');
     const incidents = color === 'green' ? [] : [incident(provider, 'Heroku current status', statusText, 'Heroku current status API', provider.url, data.updated_at || data.updatedAt, statusText, color)];
     return providerStatus(provider, incidents.length ? 'Heroku current status reports issues' : 'Heroku reports no active incidents', color, true, '', logs, incidents);
   } catch (error) {
@@ -247,7 +269,12 @@ async function parseHerokuCurrentStatus(provider) {
 }
 
 async function parseLimitedMicrosoft(provider) {
-  return parseLimitedSource(provider, 'Microsoft service health is tenant-scoped; this public endpoint does not provide complete account-specific Microsoft 365 or Entra incident detail.');
+  const result = await fetchSource(provider, 'application/json, text/plain, */*');
+  const logs = setParserResult([result.log], 'limited official source');
+  const detail = result.ok
+    ? 'Microsoft public status endpoint was reachable, but reliable Microsoft 365 and Entra service health is tenant-scoped and requires authenticated Microsoft Graph service communications for complete incident detail.'
+    : `Microsoft public status endpoint could not be read (${result.log.status}); reliable Microsoft 365 and Entra service health remains tenant-scoped and requires authenticated Microsoft Graph service communications.`;
+  return providerStatus(provider, 'Limited official source', 'blue', result.ok, detail, logs);
 }
 
 async function parseLimitedPublicPage(provider) {
@@ -264,13 +291,15 @@ async function parseLimitedSource(provider, message) {
     source_type: provider.sourceType || 'limited',
     ok: true,
     status: 'limited source',
+    parser_result: 'limited official source',
     message
   }]);
 }
 
 async function loadProvider(provider) {
-  if (provider.enabled === false) return parseLimitedSource({ ...provider, message: provider.message || 'Disabled in catalog.' }, provider.message || 'Disabled in catalog.');
-  switch (provider.sourceType) {
+  try {
+    if (provider.enabled === false) return parseLimitedSource({ ...provider, message: provider.message || 'Disabled in catalog.' }, provider.message || 'Disabled in catalog.');
+    switch (provider.sourceType) {
     case 'statuspage': return parseStatuspage(provider);
     case 'rss': return parseRss(provider);
     case 'google-cloud-incidents': return parseGoogleCloudIncidents(provider);
@@ -281,7 +310,22 @@ async function loadProvider(provider) {
     case 'official-limited':
     case 'html-limited':
     case 'okta-html': return parseLimitedPublicPage(provider);
-    default: return parseLimitedSource(provider, `Unsupported source type: ${provider.sourceType || 'unknown'}.`);
+      default: return parseLimitedSource(provider, `Unsupported source type: ${provider.sourceType || 'unknown'}.`);
+    }
+  } catch (error) {
+    const now = new Date().toISOString();
+    return providerStatus(provider, 'Parser failed', 'blue', false, `Unhandled provider parser failure: ${error?.message || error}`, [{
+      timestamp: now,
+      completed_at: now,
+      duration_ms: 0,
+      url: provider.url,
+      source_type: provider.sourceType || 'unknown',
+      ok: false,
+      status: 'parser exception',
+      parser_result: 'parser failed',
+      message: 'Unhandled provider parser failure.',
+      error: String(error?.message || error)
+    }]);
   }
 }
 
@@ -318,5 +362,8 @@ const payload = {
 };
 
 writeJson(publicStatusPath, payload);
-writeJson(rootStatusPath, payload);
 console.log(`Generated status for ${providerStatuses.length} providers and ${incidents.length} active incidents.`);
+
+if (process.argv[1] && path.resolve(process.argv[1]) === new URL(import.meta.url).pathname) {
+  process.exit(0);
+}
