@@ -8,13 +8,19 @@ const allowedSourceTypes = new Set([
   'statuspage',
   'rss',
   'google-cloud-incidents',
+  'google-workspace-incidents',
+  'salesforce-active-incidents',
   'slack-current-status',
   'heroku-current-status',
-  'okta-html',
-  'html-limited',
+  'connectwise-html',
+  'backblaze-html',
+  'quickbooks-html',
+  'limited-official',
   'limited-public-page',
   'official-limited',
-  'limited-microsoft'
+  'limited-microsoft',
+  'html-limited',
+  'okta-html'
 ]);
 
 function fail(message, context) {
