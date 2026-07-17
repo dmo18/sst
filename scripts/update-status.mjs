@@ -250,6 +250,106 @@ async function parseGoogleCloudIncidents(provider) {
   }
 }
 
+async function parseGoogleWorkspaceIncidents(provider) {
+  const result = await fetchSource(provider, 'application/json');
+  const logs = [result.log];
+  if (!result.ok) return providerStatus(provider, `Source unavailable: HTTP ${result.status || 'failed'}`, 'blue', false, result.log.error || result.log.message, logs);
+  try {
+    const data = JSON.parse(result.body);
+    const items = Array.isArray(data) ? data : (Array.isArray(data.incidents) ? data.incidents : []);
+    const incidents = items.map(item => {
+      const updates = Array.isArray(item.updates) ? item.updates : [];
+      const update = updates.at(-1) || updates[0] || {};
+      const note = update.message || update.text || item.description || item.summary || item.service_name || '';
+      const status = item.status || item.state || update.status || '';
+      const color = colorFromText(`${item.severity || ''} ${status} ${note}`);
+      return incident(provider, item.summary || item.service_name || item.id || 'Google Workspace incident', note, 'Google Workspace incidents JSON', item.uri || provider.url, update.when || item.modified || item.begin, status, color);
+    }).filter(item => activeIncident(item) && recentIncident(item, 21));
+    if (incidents.length) {
+      const worst = incidents.reduce((current, item) => severityRank[item.color] > severityRank[current] ? item.color : current, 'amber');
+      return providerStatus(provider, `${incidents.length} active Google Workspace incident${incidents.length === 1 ? '' : 's'}`, worst, true, '', logs, incidents.slice(0, 10));
+    }
+    return providerStatus(provider, 'No active Google Workspace incidents', 'green', true, '', logs);
+  } catch (error) {
+    return providerStatus(provider, 'Parser failed', 'blue', false, `Google Workspace incidents parser failed: ${error?.message || error}`, logs);
+  }
+}
+
+async function parseSalesforceActiveIncidents(provider) {
+  const result = await fetchSource(provider, 'application/json');
+  const logs = [result.log];
+  if (!result.ok) return providerStatus(provider, `Source unavailable: HTTP ${result.status || 'failed'}`, 'blue', false, result.log.error || result.log.message, logs);
+  try {
+    const data = JSON.parse(result.body);
+    const items = Array.isArray(data) ? data : (Array.isArray(data.incidents) ? data.incidents : []);
+    const incidents = items.map(item => {
+      const update = item.incidentEvents?.at?.(-1) || item.incidentEvents?.[0] || {};
+      const impacts = Array.isArray(item.incidentImpacts) ? item.incidentImpacts.map(impact => impact.type || impact.name).filter(Boolean).join(', ') : '';
+      const note = update.message || item.message || item.additionalInformation || impacts || item.status || '';
+      const color = colorFromText(`${item.severity || ''} ${item.status || ''} ${impacts} ${note}`);
+      return incident(provider, item.subject || item.name || item.id || 'Salesforce incident', note, 'Salesforce Trust API', item.externalUrl || provider.url, update.createdAt || item.createdAt || item.updatedAt, item.status, color);
+    }).filter(activeIncident);
+    if (incidents.length) {
+      const worst = incidents.reduce((current, item) => severityRank[item.color] > severityRank[current] ? item.color : current, 'amber');
+      return providerStatus(provider, `${incidents.length} active Salesforce Trust incident${incidents.length === 1 ? '' : 's'}`, worst, true, 'Salesforce Trust incident data is global; instance-specific status still requires an instance, domain, POD, or MID search.', logs, incidents.slice(0, 10));
+    }
+    return providerStatus(provider, 'No active Salesforce Trust incidents', 'green', true, 'Salesforce Trust incident data is global; instance-specific status still requires an instance, domain, POD, or MID search.', logs);
+  } catch (error) {
+    return providerStatus(provider, 'Parser failed', 'blue', false, `Salesforce Trust API parser failed: ${error?.message || error}`, logs);
+  }
+}
+
+async function parseStableHtmlStatus(provider, options) {
+  const result = await fetchSource(provider, 'text/html, */*');
+  const logs = [result.log];
+  if (!result.ok) return providerStatus(provider, `Source unavailable: HTTP ${result.status || 'failed'}`, 'blue', false, result.log.error || result.log.message, logs);
+  const text = cleanText(result.body);
+  if (options.blocked?.some(pattern => pattern.test(text))) {
+    return providerStatus(provider, 'Limited official source', 'blue', true, options.blockedMessage, logs);
+  }
+  const problem = options.problem?.find(pattern => pattern.test(text));
+  if (problem) {
+    const title = options.issueTitle || `${provider.name} status page reports an issue`;
+    const color = colorFromText(problem.source || title);
+    return providerStatus(provider, title, color === 'green' ? 'amber' : color, true, '', logs, [
+      incident(provider, title, options.issueNote || 'Official status page contains a stable issue indicator.', options.sourceName || 'Official HTML status page', provider.url, '', '', color === 'green' ? 'amber' : color)
+    ]);
+  }
+  const healthy = options.healthy?.find(pattern => pattern.test(text));
+  if (healthy) return providerStatus(provider, options.healthyStatus || `${provider.name} reports no active incidents`, 'green', true, '', logs);
+  return providerStatus(provider, 'Limited official source', 'blue', true, options.unknownMessage || 'Official status page did not expose a stable unauthenticated machine-readable status indicator.', logs);
+}
+
+async function parseConnectWiseHtml(provider) {
+  return parseStableHtmlStatus(provider, {
+    sourceName: 'ConnectWise status HTML',
+    healthy: [/Welcome to the ConnectWise status page/i, /Operational/i],
+    problem: [/Degraded Performance|Partial Outage|Major Outage|Service Disruption|Identified|Investigating/i],
+    healthyStatus: 'ConnectWise status page reports operational services',
+    issueTitle: 'ConnectWise status page reports a service issue'
+  });
+}
+
+async function parseBackblazeHtml(provider) {
+  return parseStableHtmlStatus(provider, {
+    sourceName: 'Backblaze status HTML',
+    healthy: [/Status page/i],
+    problem: [/Degraded|Outage|Disruption|Incident|Maintenance in progress/i],
+    healthyStatus: 'Backblaze public status page is reachable but exposes limited status text',
+    unknownMessage: 'Backblaze public status page exposes only limited official HTML status text.'
+  });
+}
+
+async function parseQuickBooksHtml(provider) {
+  return parseStableHtmlStatus(provider, {
+    sourceName: 'Intuit QuickBooks status HTML',
+    healthy: [/All Systems Working/i],
+    problem: [/Things are slower than normal|Minor Interruption of service|Major Interruption of service/i],
+    healthyStatus: 'QuickBooks status page reports all systems working',
+    issueTitle: 'QuickBooks status page reports a service issue'
+  });
+}
+
 async function parseSlackCurrentStatus(provider) {
   const result = await fetchSource(provider, 'application/json');
   const logs = [result.log];
@@ -470,9 +570,15 @@ async function loadProvider(provider) {
     case 'statuspage': return parseStatuspage(provider);
     case 'rss': return parseRss(provider);
     case 'google-cloud-incidents': return parseGoogleCloudIncidents(provider);
+    case 'google-workspace-incidents': return parseGoogleWorkspaceIncidents(provider);
+    case 'salesforce-active-incidents': return parseSalesforceActiveIncidents(provider);
     case 'slack-current-status': return parseSlackCurrentStatus(provider);
     case 'heroku-current-status': return parseHerokuCurrentStatus(provider);
+    case 'connectwise-html': return parseConnectWiseHtml(provider);
+    case 'backblaze-html': return parseBackblazeHtml(provider);
+    case 'quickbooks-html': return parseQuickBooksHtml(provider);
     case 'limited-microsoft': return parseLimitedMicrosoft(provider);
+    case 'limited-official':
     case 'limited-public-page':
     case 'official-limited':
     case 'html-limited':
