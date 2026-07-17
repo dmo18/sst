@@ -342,10 +342,9 @@ async function parseStableHtmlStatus(provider, options) {
 async function parseConnectWiseHtml(provider) {
   return parseStableHtmlStatus(provider, {
     sourceName: 'ConnectWise status HTML',
-    healthy: [/Welcome to the ConnectWise status page/i, /Operational/i],
     problem: [/Degraded Performance|Partial Outage|Major Outage|Service Disruption|Identified|Investigating/i],
-    healthyStatus: 'ConnectWise status page reports operational services',
-    issueTitle: 'ConnectWise status page reports a service issue'
+    issueTitle: 'ConnectWise status page reports a service issue',
+    unknownMessage: 'ConnectWise official public status page is reachable, but it does not expose a stable machine-readable unauthenticated overall status; status remains limited rather than green.'
   });
 }
 
