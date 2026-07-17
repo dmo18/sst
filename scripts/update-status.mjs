@@ -124,6 +124,36 @@ function parseDateMs(value) {
   return Number.isNaN(ms) ? 0 : ms;
 }
 
+
+function normalizeIncidentTitle(value) {
+  return cleanText(value)
+    .toLowerCase()
+    .replace(/\b(?:update|resolved|monitoring|investigating|identified|completed|scheduled|maintenance)\b/g, ' ')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function clearActiveRssIncident(item) {
+  const text = `${item.title} ${item.note} ${item.status}`.toLowerCase();
+  if (/(?:outage|unavailable|down|degrad|disruption|elevated|latency|error|fail(?:ure|ing)?|incident|service impact|intermittent|impaired)/.test(text)) return true;
+  if (/(?:investigat|monitor|identified|mitigat|partial|major|critical|minor) issue/.test(text)) return true;
+  return false;
+}
+
+function inactiveRssIncident(item) {
+  const text = `${item.title} ${item.note} ${item.status}`.toLowerCase();
+  if (/(?:resolved|completed|postmortem|closed|fixed|restored|recovered|remediated|cancelled)/.test(text)) return true;
+  if (/(?:informational|history|historical|scheduled maintenance|planned maintenance|maintenance window|lifecycle|end[ -]?of[ -]?life|end[ -]?of[ -]?support|deprecation|deprecated)/.test(text)) return true;
+  return false;
+}
+
+function recentRssIncident(item, maxAgeHours) {
+  const ms = parseDateMs(item.rawTime);
+  if (!ms) return clearActiveRssIncident(item);
+  return Date.now() - ms <= maxAgeHours * 60 * 60 * 1000;
+}
+
 function activeIncident(item) {
   const text = `${item.title} ${item.note} ${item.status}`.toLowerCase();
   if (/resolved|completed|postmortem|closed|fixed/.test(text)) return false;
@@ -172,13 +202,25 @@ async function parseRss(provider) {
   const result = await fetchSource(provider, 'application/rss+xml, application/xml, text/xml, */*');
   const logs = [result.log];
   if (!result.ok) return providerStatus(provider, `Source unavailable: HTTP ${result.status || 'failed'}`, 'blue', false, result.log.error || result.log.message, logs);
+
+  const maxAgeHours = Number.isFinite(Number(provider.maxAgeHours)) && Number(provider.maxAgeHours) > 0 ? Number(provider.maxAgeHours) : 72;
+  const seen = new Set();
   const items = [...result.body.matchAll(/<item>([\s\S]*?)<\/item>/gi)].map(match => {
     const block = match[1];
     const title = cleanText((/<title><!\[CDATA\[([\s\S]*?)\]\]><\/title>/i.exec(block) || /<title>([\s\S]*?)<\/title>/i.exec(block) || [])[1]);
     const note = cleanText((/<description><!\[CDATA\[([\s\S]*?)\]\]><\/description>/i.exec(block) || /<description>([\s\S]*?)<\/description>/i.exec(block) || [])[1]);
-    const time = cleanText((/<pubDate>([\s\S]*?)<\/pubDate>/i.exec(block) || [])[1]);
+    const time = cleanText((/<pubDate><!\[CDATA\[([\s\S]*?)\]\]><\/pubDate>/i.exec(block) || /<pubDate>([\s\S]*?)<\/pubDate>/i.exec(block) || [])[1]);
     return incident(provider, title, note, 'RSS', provider.url, time, '', colorFromText(`${title} ${note}`));
-  }).filter(item => activeIncident(item) && recentIncident(item, provider.id === 'aws' ? 7 : 14) && !noisyIncident(item)).slice(0, provider.id === 'aws' ? 6 : 10);
+  }).filter(item => {
+    const key = `${provider.id}:${normalizeIncidentTitle(item.title)}`;
+    if (!normalizeIncidentTitle(item.title) || seen.has(key)) return false;
+    if (inactiveRssIncident(item) || noisyIncident(item)) return false;
+    if (!recentRssIncident(item, maxAgeHours)) return false;
+    if (!activeIncident(item)) return false;
+    seen.add(key);
+    return true;
+  }).slice(0, provider.id === 'aws' ? 6 : 10);
+
   const worst = items.reduce((current, item) => severityRank[item.color] > severityRank[current] ? item.color : current, 'amber');
   return providerStatus(provider, items.length ? `${items.length} recent active RSS event${items.length === 1 ? '' : 's'}` : 'No active RSS events', items.length ? worst : 'green', true, '', logs, items);
 }
