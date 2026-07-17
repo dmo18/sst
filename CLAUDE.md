@@ -24,7 +24,7 @@ config/providers.json       single provider catalog
 scripts/validate-providers.mjs catalog validator
 scripts/update-status.mjs   official source fetcher
 scripts/build.mjs           release build wrapper
-public/status.json          generated during build
+public/status.json          generated during build and not committed
 src/App.tsx                 React app with catalog fallback
 src/statusViewModel.ts      merges catalog and generated status
 src/IssueConsole.tsx        incident and diagnostics UI
@@ -71,7 +71,7 @@ npm run build
 npm test
 ```
 
-`npm run build` validates providers, generates status data, checks TypeScript, and builds the Vite artifact.
+`npm run build` validates providers, generates public/status.json without committing it, checks TypeScript, and builds the Vite artifact.
 
 ## Deployment
 
