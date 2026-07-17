@@ -183,6 +183,49 @@ async function parseRss(provider) {
   return providerStatus(provider, items.length ? `${items.length} recent active RSS event${items.length === 1 ? '' : 's'}` : 'No active RSS events', items.length ? worst : 'green', true, '', logs, items);
 }
 
+function asArray(value) {
+  if (!value) return [];
+  if (Array.isArray(value)) return value;
+  return [value];
+}
+
+function joinNames(values) {
+  return asArray(values).map(value => {
+    if (!value) return '';
+    if (typeof value === 'string') return value;
+    return value.title || value.name || value.service_name || value.id || value.product_name || '';
+  }).filter(Boolean).join(', ');
+}
+
+function googleCloudIncidentUrl(item, provider) {
+  const uri = item.uri || item.url || item.incident_url || item.link || '';
+  if (/^https?:\/\//i.test(uri)) return uri;
+  if (uri) return `https://status.cloud.google.com${uri.startsWith('/') ? '' : '/'}${uri}`;
+  const id = item.id || item.number || item.incident_number;
+  return id ? `https://status.cloud.google.com/incidents/${id}` : provider.url;
+}
+
+function googleCloudActive(item) {
+  const statusText = `${item.status || ''} ${item.state || ''} ${item.lifecycle || ''} ${item.stage || ''} ${item.type || ''}`.toLowerCase();
+  if (item.end || item.ended || item.resolved || item.closed || item.completed || item.is_historical || item.historical) return false;
+  if (/resolved|closed|completed|historical|postmortem|ended|fixed/.test(statusText)) return false;
+  return true;
+}
+
+function googleCloudCustomerImpacting(item, title, note, affected, impact) {
+  const text = `${title} ${note} ${affected} ${impact} ${item.status || ''} ${item.severity || ''}`.toLowerCase();
+  if (/maintenance|planned|informational|information|announcement/.test(text) && !/outage|degrad|disruption|unavailable|latency|error|elevated|impact|incident/.test(text)) return false;
+  return /outage|degrad|disruption|unavailable|latency|error|elevated|impact|incident|affected|service disruption|service outage|medium|high|critical|major|minor/.test(text);
+}
+
+function googleCloudColor(impact, severity, note) {
+  const text = `${impact || ''} ${severity || ''} ${note || ''}`.toLowerCase();
+  if (/critical|high|severe|major|outage|unavailable|service outage/.test(text)) return 'red';
+  if (/medium|minor|degrad|partial|warning|investigat|monitor|issue|disruption|error|elevated|latency|delayed|intermittent|impact|service disruption/.test(text)) return 'amber';
+  const color = colorFromText(text);
+  return color === 'blue' ? 'amber' : color;
+}
+
 async function parseGoogleCloudIncidents(provider) {
   const result = await fetchSource(provider, 'application/json');
   const logs = [result.log];
@@ -191,13 +234,19 @@ async function parseGoogleCloudIncidents(provider) {
     const data = JSON.parse(result.body);
     const items = Array.isArray(data) ? data : (Array.isArray(data.incidents) ? data.incidents : []);
     const incidents = items.map(item => {
-      const updates = Array.isArray(item.updates) ? item.updates : [];
-      const update = updates.at(-1) || updates[0] || {};
-      const note = update.text || item.external_desc || item.description || item.service_name || item.status_impact || '';
-      const status = item.status || item.state || item.incident_state || '';
-      const color = colorFromText(`${item.severity || ''} ${item.status_impact || ''} ${status} ${note}`);
-      return incident(provider, item.external_desc || item.service_name || item.id || 'Google Cloud incident', note, 'Google Cloud incidents JSON', item.uri || provider.url, update.when || item.modified || item.begin, status, color);
-    }).filter(item => activeIncident(item) && recentIncident(item, 21));
+      const updates = asArray(item.updates || item.incident_updates).sort((a, b) => parseDateMs(a.when || a.created || a.created_at || a.update_time) - parseDateMs(b.when || b.created || b.created_at || b.update_time));
+      const update = updates.at(-1) || item.most_recent_update || item.latest_update || {};
+      const title = item.title || item.name || item.external_desc || item.description || item.id || 'Google Cloud incident';
+      const affected = joinNames(item.affected_products || item.products || item.services || item.currently_affected_products || update.affected_products || update.products || update.services);
+      const impact = item.impact || item.severity || item.status_impact || item.impact_severity || update.status || update.impact || '';
+      const noteParts = [update.text || update.body || update.message || item.summary || item.description || item.external_desc, affected && `Affected: ${affected}`, impact && `Impact: ${impact}`].filter(Boolean);
+      const note = noteParts.join(' ');
+      const status = item.status || item.state || item.lifecycle || update.status || '';
+      const time = update.when || update.created || update.created_at || update.update_time || item.update_time || item.updated_at || item.modified || item.begin || item.created || item.created_at;
+      const color = googleCloudColor(impact, item.severity, note);
+      return { raw: item, parsed: incident(provider, title, note, 'Google Cloud incidents JSON', googleCloudIncidentUrl(item, provider), time, status, color), title, note, affected, impact };
+    }).filter(({ raw, parsed, title, note, affected, impact }) => googleCloudActive(raw) && googleCloudCustomerImpacting(raw, title, note, affected, impact) && parsed.color !== 'green')
+      .map(({ parsed }) => parsed);
     if (incidents.length) {
       const worst = incidents.reduce((current, item) => severityRank[item.color] > severityRank[current] ? item.color : current, 'amber');
       return providerStatus(provider, `${incidents.length} active Google Cloud incident${incidents.length === 1 ? '' : 's'}`, worst, true, '', logs, incidents.slice(0, 10));
@@ -273,7 +322,7 @@ async function loadProvider(provider) {
   switch (provider.sourceType) {
     case 'statuspage': return parseStatuspage(provider);
     case 'rss': return parseRss(provider);
-    case 'google-cloud-incidents': return parseGoogleCloudIncidents(provider);
+    case 'google-cloud-json': return parseGoogleCloudIncidents(provider);
     case 'slack-current-status': return parseSlackCurrentStatus(provider);
     case 'heroku-current-status': return parseHerokuCurrentStatus(provider);
     case 'limited-microsoft': return parseLimitedMicrosoft(provider);

@@ -6,7 +6,7 @@ const catalogPath = path.join(root, 'config', 'providers.json');
 const allowedSourceTypes = new Set([
   'statuspage',
   'rss',
-  'google-cloud-incidents',
+  'google-cloud-json',
   'slack-current-status',
   'heroku-current-status',
   'okta-html',
