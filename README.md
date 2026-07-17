@@ -7,8 +7,8 @@ Live site: https://dmo18.github.io/sst/
 ## Version
 
 ```text
-App: v2.1.1
-Package: 2.1.1
+App: v2.1.2
+Package: 2.1.2
 ```
 
 ## Maintainer directions
@@ -37,9 +37,10 @@ src/App.tsx                  React app with catalog fallback
 
 ```text
 Build validates provider catalog.
-Build generates public/status.json.
+Build generates public/status.json during the build.
+public/status.json is generated and not committed.
 Pages deploys the generated static artifact.
-Browser reads status.json from the deployed site.
+Browser reads status.json from the deployed site artifact.
 Browser does not call vendor status feeds directly.
 Incident view shows active issues only.
 Diagnostics show every configured provider.

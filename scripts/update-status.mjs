@@ -4,7 +4,6 @@ import path from 'node:path';
 const root = path.resolve(new URL('..', import.meta.url).pathname);
 const catalogPath = path.join(root, 'config', 'providers.json');
 const publicStatusPath = path.join(root, 'public', 'status.json');
-const rootStatusPath = path.join(root, 'status.json');
 const timeoutMs = 12000;
 const concurrency = 12;
 const severityRank = { red: 4, amber: 3, blue: 2, green: 1 };
@@ -318,5 +317,4 @@ const payload = {
 };
 
 writeJson(publicStatusPath, payload);
-writeJson(rootStatusPath, payload);
 console.log(`Generated status for ${providerStatuses.length} providers and ${incidents.length} active incidents.`);
