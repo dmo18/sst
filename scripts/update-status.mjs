@@ -273,16 +273,81 @@ async function parseSlackCurrentStatus(provider) {
   }
 }
 
+function herokuStatusColor(value) {
+  const status = String(value || '').trim().toLowerCase();
+  if (status === 'green' || status === 'normal' || status === 'operational') return 'green';
+  if (status === 'yellow' || status === 'amber' || status === 'degraded' || status === 'degradation' || status === 'performance degradation' || status === 'minor') return 'amber';
+  if (status === 'red' || status === 'outage' || status === 'service disruption' || status === 'disruption' || status === 'major') return 'red';
+  return 'blue';
+}
+
+function parseHerokuStatusSystems(data) {
+  if (Array.isArray(data.status)) {
+    return data.status.map(item => {
+      if (!item || typeof item !== 'object') throw new Error('status entries must be objects');
+      const system = item.system || item.name;
+      if (typeof system !== 'string' || typeof item.status !== 'string') throw new Error('status entries must include system and status strings');
+      return { system, status: item.status, color: herokuStatusColor(item.status) };
+    });
+  }
+
+  if (data.status && typeof data.status === 'object') {
+    const systems = [];
+    for (const key of ['Production', 'Development', 'production', 'development']) {
+      if (typeof data.status[key] === 'string') systems.push({ system: key[0].toUpperCase() + key.slice(1).toLowerCase(), status: data.status[key], color: herokuStatusColor(data.status[key]) });
+    }
+    if (systems.length) return systems;
+  }
+
+  throw new Error('status must be an array of system status objects or production/development status fields');
+}
+
+function herokuIncidentActive(item) {
+  const state = String(item?.state || item?.status || '').toLowerCase();
+  if (/resolved|closed|complete|postmortem/.test(state) || item?.resolved === true || item?.resolved_at) return false;
+  const systems = Array.isArray(item?.systems) ? item.systems : [];
+  if (systems.some(system => herokuStatusColor(system?.status) !== 'green')) return true;
+  if (/investigating|identified|monitoring|unresolved|open|active/.test(state)) return true;
+  return false;
+}
+
 async function parseHerokuCurrentStatus(provider) {
   const result = await fetchSource(provider, 'application/json');
   const logs = [result.log];
   if (!result.ok) return providerStatus(provider, `Source unavailable: HTTP ${result.status || 'failed'}`, 'blue', false, result.log.error || result.log.message, logs);
   try {
     const data = JSON.parse(result.body);
-    const statusText = [data.status?.Production, data.status?.Development, data.status?.production, data.status?.development].filter(Boolean).join('; ') || data.status || 'Heroku current status reachable';
-    const color = colorFromText(statusText);
-    const incidents = color === 'green' ? [] : [incident(provider, 'Heroku current status', statusText, 'Heroku current status API', provider.url, data.updated_at || data.updatedAt, statusText, color)];
-    return providerStatus(provider, incidents.length ? 'Heroku current status reports issues' : 'Heroku reports no active incidents', color, true, '', logs, incidents);
+    if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('response must be a JSON object');
+
+    const systems = parseHerokuStatusSystems(data);
+    if (!systems.length) throw new Error('response did not include any platform status entries');
+    const unknown = systems.find(system => system.color === 'blue');
+    if (unknown) throw new Error(`unknown Heroku status value for ${unknown.system}: ${unknown.status}`);
+
+    const active = Array.isArray(data.incidents) ? data.incidents.filter(herokuIncidentActive) : [];
+    if (!Array.isArray(data.incidents)) throw new Error('incidents must be an array');
+
+    const incidents = active.map(item => {
+      const updates = Array.isArray(item.updates) ? item.updates : [];
+      const update = updates[0] || updates.at?.(-1) || {};
+      const affectedSystems = Array.isArray(item.systems) ? item.systems.map(system => `${system.name || 'Heroku'} ${system.status || ''}`.trim()).join(', ') : '';
+      const note = update.contents || affectedSystems || item.state || 'Heroku reports an active incident.';
+      const color = (Array.isArray(item.systems) ? item.systems : []).reduce((current, system) => {
+        const systemColor = herokuStatusColor(system?.status);
+        return severityRank[systemColor] > severityRank[current] ? systemColor : current;
+      }, colorFromText(`${item.title || ''} ${item.state || ''} ${note}`));
+      return incident(provider, item.title || item.id || 'Heroku incident', note, 'Heroku current status API', item.full_url || item.url || item.href || provider.url, update.created_at || item.updated_at || item.created_at, item.state || item.status, color === 'blue' ? 'amber' : color);
+    });
+
+    const platformColor = systems.reduce((current, system) => severityRank[system.color] > severityRank[current] ? system.color : current, 'green');
+    const incidentColor = incidents.reduce((current, item) => severityRank[item.color] > severityRank[current] ? item.color : current, 'green');
+    const color = severityRank[incidentColor] > severityRank[platformColor] ? incidentColor : platformColor;
+    const statusText = systems.map(system => `${system.system}: ${system.status}`).join('; ');
+
+    if (incidents.length) {
+      return providerStatus(provider, `${incidents.length} active Heroku incident${incidents.length === 1 ? '' : 's'} (${statusText})`, color, true, '', logs, incidents);
+    }
+    return providerStatus(provider, color === 'green' ? 'Heroku reports normal service' : `Heroku platform status: ${statusText}`, color, true, '', logs);
   } catch (error) {
     return providerStatus(provider, 'Parser failed', 'blue', false, `Heroku current status parser failed: ${error?.message || error}`, logs);
   }
