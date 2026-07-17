@@ -7,8 +7,8 @@ Live site: https://dmo18.github.io/sst/
 ## Version
 
 ```text
-App: v2.1.1
-Package: 2.1.1
+App: v2.1.2
+Package: 2.1.2
 ```
 
 ## Maintainer directions
@@ -24,25 +24,63 @@ Push and merge automatically when a git remote, branch policy, and credentials a
 ## Architecture
 
 ```text
-config/providers.json        single provider catalog
-scripts/validate-providers.mjs provider catalog validator
-scripts/update-status.mjs    status source fetcher
-scripts/build.mjs            validation, status generation, TypeScript, Vite
-src/App.tsx                  React app with catalog fallback
-.github/workflows/refresh-pages.yml  Pages build and deploy
-.github/workflows/test.yml   pull request build check
+config/providers.json          canonical provider catalog
+scripts/validate-providers.mjs catalog validator
+scripts/update-status.mjs      official-source parser and status generator
+scripts/build.mjs              validation, status generation, TypeScript, Vite
+public/status.json             generated build artifact, ignored by Git
+src/App.tsx                    browser shell that fetches generated status.json
+src/statusViewModel.ts         catalog/status merge for diagnostics
+src/IssueConsole.tsx           active incident and diagnostics UI
 ```
 
-## Contract
+## V2 status-data flow
 
 ```text
-Build validates provider catalog.
-Build generates public/status.json.
-Pages deploys the generated static artifact.
-Browser reads status.json from the deployed site.
-Browser does not call vendor status feeds directly.
-Incident view shows active issues only.
-Diagnostics show every configured provider.
+Build validates the provider catalog.
+Build generates public/status.json before Vite bundles the static site.
+Generated status files are ignored and must not be committed.
+The deployed browser reads only the generated static status.json from the site.
+The deployed browser does not call vendor feeds, vendor APIs, RSS feeds, HTML pages, or other official sources directly.
+```
+
+## UI contract
+
+```text
+Active incident view shows only active impacting incidents.
+Resolved incidents, completed maintenance, lifecycle notices, informational notices, and non-impacting maintenance are filtered out.
+Diagnostics always render every approved provider from the catalog.
+Catalog-only, pending, failed, and limited official sources remain visible in diagnostics.
+Limited official sources are blue and include the precise reason the source is limited.
+```
+
+## Provider parser source types
+
+```text
+statuspage                 official Statuspage summary API
+rss                        official RSS feed with parser max-age filtering
+google-cloud-incidents     official Google Cloud incidents JSON
+slack-current-status       official Slack current status API
+heroku-current-status      official Heroku current status API
+limited-microsoft          official Microsoft source with tenant-scoped limited detail
+limited-public-page        official public page that is account, region, login, location, or bot-filter limited
+official-limited           approved official source that is listed but not reliably machine-readable
+html-limited               approved official HTML source treated as limited when not reliably machine-readable
+okta-html                  approved official Okta HTML source treated as limited when not reliably machine-readable
+```
+
+## Source boundaries
+
+```text
+Use only approved official provider sources from config/providers.json.
+No synthetic monitoring.
+No pings.
+No route checks.
+No DNS tests.
+No third-party outage sites.
+No social scraping.
+No unofficial sources.
+No browser-side vendor feed calls.
 ```
 
 ## Commands
@@ -54,19 +92,6 @@ npm run build
 npm test
 ```
 
-## Provider source types
-
-```text
-statuspage
-rss
-google-cloud-json
-slack
-okta-html
-html-limited
-official-limited
-limited-microsoft
-```
-
 ## Limits
 
 ```text
@@ -74,7 +99,5 @@ No Docker.
 No backend server.
 No database.
 No paid APIs.
-No synthetic monitoring.
-No third party outage scraping.
-Microsoft 365 tenant details require authenticated Graph and are limited in this free public build.
+Microsoft 365 and Entra details require tenant-authenticated Graph/service-health data and are limited in this free public build.
 ```
