@@ -87,7 +87,7 @@ async function fetchSource(provider, accept = '*/*') {
     const response = await fetch(provider.url, {
       signal: controller.signal,
       redirect: 'follow',
-      headers: { accept, 'user-agent': 'msp-status-hud/2.0' }
+      headers: { accept, 'user-agent': 'msp-status-hud/2.1.1' }
     });
     const body = await response.text();
     const contentType = response.headers.get('content-type') || 'unknown';
