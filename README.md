@@ -7,8 +7,8 @@ Live site: https://dmo18.github.io/sst/
 ## Version
 
 ```text
-App: v2.1.2
-Package: 2.1.2
+App: v2.1.3
+Package: 2.1.3
 ```
 
 ## Maintainer directions
@@ -44,6 +44,9 @@ Browser reads status.json from the deployed site artifact.
 Browser does not call vendor status feeds directly.
 Incident view shows active issues only.
 Diagnostics show every configured provider.
+Exactly 90 approved providers are configured.
+Limited providers render blue with reasons.
+No synthetic or unofficial outage scraping is used.
 ```
 
 ## Commands
@@ -60,12 +63,20 @@ npm test
 ```text
 statuspage
 rss
-google-cloud-json
-slack
-okta-html
-html-limited
+google-cloud-incidents
+google-workspace-incidents
+salesforce-active-incidents
+slack-current-status
+heroku-current-status
+connectwise-html
+backblaze-html
+quickbooks-html
+limited-official
+limited-public-page
 official-limited
 limited-microsoft
+html-limited
+okta-html
 ```
 
 ## Limits
@@ -76,6 +87,7 @@ No backend server.
 No database.
 No paid APIs.
 No synthetic monitoring.
+No synthetic or unofficial outage scraping.
 No third party outage scraping.
 Microsoft 365 tenant details require authenticated Graph and are limited in this free public build.
 ```
