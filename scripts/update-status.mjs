@@ -359,10 +359,11 @@ async function parseBackblazeHtml(provider) {
 async function parseQuickBooksHtml(provider) {
   return parseStableHtmlStatus(provider, {
     sourceName: 'Intuit QuickBooks status HTML',
-    healthy: [/All Systems Working/i],
+    healthy: [/\bAll Systems Working\b/],
     problem: [/Things are slower than normal|Minor Interruption of service|Major Interruption of service/i],
     healthyStatus: 'QuickBooks status page reports all systems working',
-    issueTitle: 'QuickBooks status page reports a service issue'
+    issueTitle: 'QuickBooks status page reports a service issue',
+    unknownMessage: 'QuickBooks official public status page is reachable, but this build does not have a stable machine-readable unauthenticated operational signal; status remains limited rather than green.'
   });
 }
 
