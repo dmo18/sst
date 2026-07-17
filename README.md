@@ -7,8 +7,18 @@ Live site: https://dmo18.github.io/sst/
 ## Version
 
 ```text
-App: v2.1.0
-Package: 2.1.0
+App: v2.1.1
+Package: 2.1.1
+```
+
+## Maintainer directions
+
+```text
+Bump both package and displayed app versions with every repository change.
+Keep README.md, package.json, and src/App.tsx versions in sync.
+Commit every completed change on the current branch.
+Prepare pull request metadata after each commit.
+Push and merge automatically when a git remote, branch policy, and credentials are available; otherwise report that repository configuration blocks push/merge.
 ```
 
 ## Architecture
