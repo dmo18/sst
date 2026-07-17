@@ -92,7 +92,7 @@ async function fetchSource(provider, accept = '*/*') {
     const response = await fetch(provider.url, {
       signal: controller.signal,
       redirect: 'follow',
-      headers: { accept, 'user-agent': 'msp-status-hud/2.1.1' }
+      headers: { accept, 'user-agent': 'msp-status-hud/2.1.3' }
     });
     const body = await response.text();
     const contentType = response.headers.get('content-type') || 'unknown';
@@ -180,6 +180,7 @@ async function parseStatuspage(provider) {
     const statusText = data.status?.description || 'All Systems Operational';
     return providerStatus(provider, statusText, colorFromText(`${data.status?.indicator || ''} ${statusText}`), true, '', logs);
   } catch (error) {
+    setParserResult(logs, 'parser failed');
     return providerStatus(provider, 'Parser failed', 'blue', false, `Statuspage parser failed: ${error?.message || error}`, logs);
   }
 }
@@ -224,6 +225,7 @@ async function parseGoogleCloudIncidents(provider) {
     }
     return providerStatus(provider, 'No active Google Cloud incidents', 'green', true, '', logs);
   } catch (error) {
+    setParserResult(logs, 'parser failed');
     return providerStatus(provider, 'Parser failed', 'blue', false, `Google Cloud incidents parser failed: ${error?.message || error}`, logs);
   }
 }
@@ -248,6 +250,7 @@ async function parseSlackCurrentStatus(provider) {
     const status = data.status || 'ok';
     return providerStatus(provider, status === 'ok' ? 'Slack reports no active incidents' : `Slack status: ${status}`, colorFromText(status), true, '', logs);
   } catch (error) {
+    setParserResult(logs, 'parser failed');
     return providerStatus(provider, 'Parser failed', 'blue', false, `Slack current status parser failed: ${error?.message || error}`, logs);
   }
 }
@@ -264,6 +267,7 @@ async function parseHerokuCurrentStatus(provider) {
     const incidents = color === 'green' ? [] : [incident(provider, 'Heroku current status', statusText, 'Heroku current status API', provider.url, data.updated_at || data.updatedAt, statusText, color)];
     return providerStatus(provider, incidents.length ? 'Heroku current status reports issues' : 'Heroku reports no active incidents', color, true, '', logs, incidents);
   } catch (error) {
+    setParserResult(logs, 'parser failed');
     return providerStatus(provider, 'Parser failed', 'blue', false, `Heroku current status parser failed: ${error?.message || error}`, logs);
   }
 }
