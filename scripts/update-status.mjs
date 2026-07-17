@@ -606,6 +606,26 @@ async function loadProvider(provider) {
   }
 }
 
+async function safeLoadProvider(provider) {
+  try {
+    return await loadProvider(provider);
+  } catch (error) {
+    const now = new Date().toISOString();
+    const message = error?.message || String(error);
+    const log = {
+      timestamp: now,
+      completed_at: now,
+      duration_ms: 0,
+      url: provider.url,
+      source_type: provider.sourceType || 'unknown',
+      ok: false,
+      status: 'parser failed',
+      message
+    };
+    return providerStatus(provider, 'Parser failed', 'blue', false, message, [log]);
+  }
+}
+
 async function mapLimit(items, limit, mapper) {
   const results = new Array(items.length);
   let index = 0;
@@ -621,7 +641,7 @@ async function mapLimit(items, limit, mapper) {
 const catalog = readJson(catalogPath);
 const providersById = new Map(catalog.map(provider => [provider.id, provider]));
 const providers = [...providersById.values()];
-const results = await mapLimit(providers, concurrency, loadProvider);
+const results = await mapLimit(providers, concurrency, safeLoadProvider);
 const incidents = results.flatMap(result => result.incidents || []).sort((a, b) => (severityRank[b.color] - severityRank[a.color]) || ((b.priority || 0) - (a.priority || 0)));
 const providerStatuses = results.map(({ incidents: _incidents, ...rest }) => rest).sort((a, b) => (severityRank[b.color] - severityRank[a.color]) || ((b.priority || 0) - (a.priority || 0)) || a.name.localeCompare(b.name));
 const overall = incidents.reduce((current, item) => severityRank[item.color] > severityRank[current] ? item.color : current, 'green');
