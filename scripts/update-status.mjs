@@ -269,19 +269,37 @@ async function parseLimitedSource(provider, message) {
 }
 
 async function loadProvider(provider) {
-  if (provider.enabled === false) return parseLimitedSource({ ...provider, message: provider.message || 'Disabled in catalog.' }, provider.message || 'Disabled in catalog.');
-  switch (provider.sourceType) {
-    case 'statuspage': return parseStatuspage(provider);
-    case 'rss': return parseRss(provider);
-    case 'google-cloud-incidents': return parseGoogleCloudIncidents(provider);
-    case 'slack-current-status': return parseSlackCurrentStatus(provider);
-    case 'heroku-current-status': return parseHerokuCurrentStatus(provider);
-    case 'limited-microsoft': return parseLimitedMicrosoft(provider);
-    case 'limited-public-page':
-    case 'official-limited':
-    case 'html-limited':
-    case 'okta-html': return parseLimitedPublicPage(provider);
-    default: return parseLimitedSource(provider, `Unsupported source type: ${provider.sourceType || 'unknown'}.`);
+  const startedAt = new Date().toISOString();
+  const startedMs = Date.now();
+  try {
+    if (provider.enabled === false) return parseLimitedSource({ ...provider, message: provider.message || 'Disabled in catalog.' }, provider.message || 'Disabled in catalog.');
+    switch (provider.sourceType) {
+      case 'statuspage': return parseStatuspage(provider);
+      case 'rss': return parseRss(provider);
+      case 'google-cloud-incidents': return parseGoogleCloudIncidents(provider);
+      case 'slack-current-status': return parseSlackCurrentStatus(provider);
+      case 'heroku-current-status': return parseHerokuCurrentStatus(provider);
+      case 'limited-microsoft': return parseLimitedMicrosoft(provider);
+      case 'limited-public-page':
+      case 'official-limited':
+      case 'html-limited':
+      case 'okta-html': return parseLimitedPublicPage(provider);
+      default: return parseLimitedSource(provider, `Unsupported source type: ${provider.sourceType || 'unknown'}.`);
+    }
+  } catch (error) {
+    const errorText = String(error?.stack || error?.message || error);
+    return providerStatus(provider, 'Parser failed unexpectedly', 'blue', false, errorText, [{
+      timestamp: startedAt,
+      completed_at: new Date().toISOString(),
+      duration_ms: Date.now() - startedMs,
+      url: provider.url,
+      source_type: provider.sourceType || 'unknown',
+      ok: false,
+      status: 'parser exception',
+      parser_result: null,
+      message: 'Unhandled parser exception; provider status synthesized for diagnostics.',
+      error: errorText
+    }]);
   }
 }
 
