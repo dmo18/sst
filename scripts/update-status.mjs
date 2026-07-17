@@ -352,10 +352,8 @@ async function parseConnectWiseHtml(provider) {
 async function parseBackblazeHtml(provider) {
   return parseStableHtmlStatus(provider, {
     sourceName: 'Backblaze status HTML',
-    healthy: [/Status page/i],
     problem: [/Degraded|Outage|Disruption|Incident|Maintenance in progress/i],
-    healthyStatus: 'Backblaze public status page is reachable but exposes limited status text',
-    unknownMessage: 'Backblaze public status page exposes only limited official HTML status text.'
+    unknownMessage: 'Backblaze official public status page is reachable, but this build does not have a stable machine-readable unauthenticated operational signal; status remains limited rather than green.'
   });
 }
 
