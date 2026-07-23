@@ -29,6 +29,10 @@ function hueFor(value: string): number {
   return Math.abs(hash) % 360;
 }
 
+function assetBaseUrl(): string {
+  return import.meta.env?.BASE_URL ?? '/';
+}
+
 export function generatedProviderIcon(providerId: string, providerName: string): string {
   const label = initials(providerName || providerId);
   const hue = hueFor(providerId || providerName);
@@ -39,7 +43,7 @@ export function generatedProviderIcon(providerId: string, providerName: string):
 export function providerIconSrc(providerId: string, providerName: string): string {
   const branded = brandedLogoFiles[providerId];
   return branded
-    ? `${import.meta.env.BASE_URL}assets/logos/${branded}`
+    ? `${assetBaseUrl()}assets/logos/${branded}`
     : generatedProviderIcon(providerId, providerName);
 }
 
