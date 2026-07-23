@@ -1,6 +1,6 @@
 {
   "name": "msp-status-hud",
-  "version": "2.1.4",
+  "version": "2.1.5",
   "private": true,
   "description": "GitHub Pages MSP status aggregator with catalog-backed diagnostics.",
   "type": "module",
@@ -10,7 +10,10 @@
     "preview": "vite preview --host 0.0.0.0",
     "update-status": "node scripts/update-status.mjs",
     "validate-providers": "node scripts/validate-providers.mjs",
-    "test": "npm run build"
+    "test": "node --test --experimental-strip-types src/__tests__/*.test.ts scripts/__tests__/*.test.js",
+    "test:watch": "node --test --watch --experimental-strip-types src/__tests__/*.test.ts scripts/__tests__/*.test.js",
+    "typecheck": "tsc --noEmit",
+    "build:app": "vite build"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^4.3.4",
@@ -25,6 +28,6 @@
     "vite": "^6.0.0"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   }
 }

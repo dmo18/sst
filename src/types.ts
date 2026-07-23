@@ -55,6 +55,7 @@ export interface Incident {
 }
 
 export interface StatusPayload {
+  schema_version: 1;
   generated_at: string;
   summary: {
     overall: StatusColor;
@@ -66,3 +67,9 @@ export interface StatusPayload {
   incidents: Incident[];
   history: string[];
 }
+
+export type DataLifecycle =
+  | { phase: 'loading'; data: null; failure: null }
+  | { phase: 'ready' | 'refreshing'; data: StatusPayload; failure: null }
+  | { phase: 'stale'; data: StatusPayload; failure: string }
+  | { phase: 'error'; data: null; failure: string };

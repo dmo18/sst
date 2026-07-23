@@ -2,10 +2,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const root = path.resolve(new URL('..', import.meta.url).pathname);
+const root = fileURLToPath(new URL('..', import.meta.url));
 const catalogPath = path.join(root, 'config', 'providers.json');
 const publicStatusPath = path.join(root, 'public', 'status.json');
+const packageVersion = readJson(path.join(root, 'package.json')).version;
 const timeoutMs = 12000;
+const maxResponseBytes = 2 * 1024 * 1024;
 const concurrency = 12;
 const severityRank = { red: 4, amber: 3, blue: 2, green: 1 };
 
@@ -15,7 +17,9 @@ function readJson(filePath) {
 
 function writeJson(filePath, data) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, `${JSON.stringify(data, null, 2)}\n`);
+  const temporaryPath = `${filePath}.${process.pid}.tmp`;
+  fs.writeFileSync(temporaryPath, `${JSON.stringify(data, null, 2)}\n`);
+  fs.renameSync(temporaryPath, filePath);
 }
 
 function cleanText(value) {
@@ -31,7 +35,7 @@ function cleanText(value) {
     .trim();
 }
 
-function colorFromText(value) {
+export function colorFromText(value) {
   const text = String(value || '').toLowerCase();
   if (/critical|major|outage|unavailable|down|severe/.test(text)) return 'red';
   if (/minor|degrad|partial|warning|investigat|monitor|issue|disruption|error|elevated|latency|delayed|intermittent/.test(text)) return 'amber';
@@ -78,18 +82,19 @@ function makeLog(provider, startedAt, startedMs, status, ok, message, error = ''
   };
 }
 
-async function fetchSource(provider, accept = '*/*') {
+export async function fetchSource(provider, accept = '*/*', fetchImpl = fetch) {
   const startedAt = new Date().toISOString();
   const startedMs = Date.now();
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const response = await fetch(provider.url, {
+    const response = await fetchImpl(provider.url, {
       signal: controller.signal,
       redirect: 'follow',
-      headers: { accept, 'user-agent': 'msp-status-hud/2.1.4' }
+      headers: { accept, 'user-agent': `msp-status-hud/${packageVersion}` }
     });
     const body = await response.text();
+    if (new TextEncoder().encode(body).byteLength > maxResponseBytes) throw new Error(`Response exceeded ${maxResponseBytes} bytes`);
     const contentType = response.headers.get('content-type') || 'unknown';
     const log = makeLog(provider, startedAt, startedMs, `HTTP ${response.status}`, response.ok, `${response.statusText || 'OK'}; content-type=${contentType}; bytes=${body.length}`);
     return { ok: response.ok, status: response.status, body, log };
@@ -132,7 +137,7 @@ function statuspageUpdateTimestamp(update) {
   return 0;
 }
 
-function newestStatuspageUpdate(updates) {
+export function newestStatuspageUpdate(updates) {
   if (!Array.isArray(updates) || !updates.length) return {};
 
   const parseableUpdates = updates
@@ -168,13 +173,13 @@ function inactiveRssIncident(item) {
   return false;
 }
 
-function recentRssIncident(item, maxAgeHours) {
+export function recentRssIncident(item, maxAgeHours) {
   const ms = parseDateMs(item.rawTime);
   if (!ms) return clearActiveRssIncident(item);
   return Date.now() - ms <= maxAgeHours * 60 * 60 * 1000;
 }
 
-function activeIncident(item) {
+export function activeIncident(item) {
   const text = `${item.title} ${item.note} ${item.status}`.toLowerCase();
   if (/resolved|completed|postmortem|closed|fixed/.test(text)) return false;
   if (/scheduled|maintenance|planned|announcement|informational|deprecation/.test(text) && !/outage|degrad|disruption|error|latency|incident/.test(text)) return false;
@@ -193,7 +198,7 @@ function noisyIncident(item) {
     && !/(?:outage|degrad|disruption|error|latency|unavailable|elevated|incident)/.test(text);
 }
 
-async function parseStatuspage(provider) {
+export async function parseStatuspage(provider) {
   const result = await fetchSource(provider, 'application/json');
   const logs = [result.log];
   if (!result.ok) return providerStatus(provider, `Source unavailable: HTTP ${result.status || 'failed'}`, 'blue', false, result.log.error || result.log.message, logs);
@@ -218,7 +223,7 @@ async function parseStatuspage(provider) {
   }
 }
 
-async function parseRss(provider) {
+export async function parseRss(provider) {
   const result = await fetchSource(provider, 'application/rss+xml, application/xml, text/xml, */*');
   const logs = [result.log];
   if (!result.ok) return providerStatus(provider, `Source unavailable: HTTP ${result.status || 'failed'}`, 'blue', false, result.log.error || result.log.message, logs);
@@ -527,7 +532,7 @@ function microsoftIncidentFromRecord(provider, item) {
   return relevant && activeIncident(candidate) ? candidate : null;
 }
 
-async function parseLimitedMicrosoft(provider) {
+export async function parseLimitedMicrosoft(provider) {
   const result = await fetchSource(provider, 'application/json, text/json, */*');
   const logs = [result.log];
   const finish = (status, color, ok, message, incidents = []) => {
@@ -605,7 +610,7 @@ async function loadProvider(provider) {
   }
 }
 
-async function safeLoadProvider(provider) {
+export async function safeLoadProvider(provider) {
   try {
     return await loadProvider(provider);
   } catch (error) {
@@ -637,34 +642,43 @@ async function mapLimit(items, limit, mapper) {
   return results;
 }
 
-const catalog = readJson(catalogPath);
-if (!Array.isArray(catalog)) throw new Error('Provider catalog must be an array.');
+export async function generateStatus() {
+  const catalog = readJson(catalogPath);
+  if (!Array.isArray(catalog)) throw new Error('Provider catalog must be an array.');
 
-const providerIds = new Set();
-for (const provider of catalog) {
-  if (providerIds.has(provider.id)) throw new Error(`Duplicate provider id found before fetching: ${provider.id}`);
-  providerIds.add(provider.id);
+  const providerIds = new Set();
+  for (const provider of catalog) {
+    if (providerIds.has(provider.id)) throw new Error(`Duplicate provider id found before fetching: ${provider.id}`);
+    providerIds.add(provider.id);
+  }
+
+  const providers = catalog;
+  const results = await mapLimit(providers, concurrency, safeLoadProvider);
+  const incidents = results.flatMap(result => result.incidents || []).sort((a, b) => (severityRank[b.color] - severityRank[a.color]) || ((b.priority || 0) - (a.priority || 0)));
+  const providerStatuses = results.map(({ incidents: _incidents, ...rest }) => rest).sort((a, b) => (severityRank[b.color] - severityRank[a.color]) || ((b.priority || 0) - (a.priority || 0)) || a.name.localeCompare(b.name));
+  if (providerStatuses.length !== catalog.length) throw new Error(`Generation error: expected ${catalog.length} provider statuses but generated ${providerStatuses.length}.`);
+  const overall = incidents.reduce((current, item) => severityRank[item.color] > severityRank[current] ? item.color : current, 'green');
+  const payload = {
+    schema_version: 1,
+    generated_at: new Date().toISOString(),
+    summary: {
+      overall,
+      active_incident_count: incidents.length,
+      providers_ok: providerStatuses.filter(provider => provider.ok).length,
+      providers_total: providerStatuses.length
+    },
+    providers: providerStatuses,
+    incidents,
+    history: incidents.slice(0, 50).map(item => `${item.provider}: ${item.title}`)
+  };
+
+  if (payload.providers.length !== catalog.length || payload.summary.active_incident_count !== payload.incidents.length || !payload.providers.every(provider => providerIds.has(provider.id))) throw new Error('Generated payload failed consistency validation.');
+  writeJson(publicStatusPath, payload);
+  console.log(`Generated status for ${providerStatuses.length} providers and ${incidents.length} active incidents.`);
+
 }
 
-const providers = catalog;
-const results = await mapLimit(providers, concurrency, safeLoadProvider);
-const incidents = results.flatMap(result => result.incidents || []).sort((a, b) => (severityRank[b.color] - severityRank[a.color]) || ((b.priority || 0) - (a.priority || 0)));
-const providerStatuses = results.map(({ incidents: _incidents, ...rest }) => rest).sort((a, b) => (severityRank[b.color] - severityRank[a.color]) || ((b.priority || 0) - (a.priority || 0)) || a.name.localeCompare(b.name));
-if (providerStatuses.length !== catalog.length) throw new Error(`Generation error: expected ${catalog.length} provider statuses but generated ${providerStatuses.length}.`);
-const overall = incidents.reduce((current, item) => severityRank[item.color] > severityRank[current] ? item.color : current, 'green');
-const payload = {
-  generated_at: new Date().toISOString(),
-  summary: {
-    overall,
-    active_incident_count: incidents.length,
-    providers_ok: providerStatuses.filter(provider => provider.ok).length,
-    providers_total: providerStatuses.length
-  },
-  providers: providerStatuses,
-  incidents,
-  history: incidents.slice(0, 50).map(item => `${item.provider}: ${item.title}`)
-};
-
-writeJson(publicStatusPath, payload);
-console.log(`Generated status for ${providerStatuses.length} providers and ${incidents.length} active incidents.`);
-if (process.argv[1] === fileURLToPath(import.meta.url)) process.exit(0);
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  await generateStatus();
+  process.exit(0);
+}

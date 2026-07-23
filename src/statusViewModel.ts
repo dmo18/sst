@@ -30,6 +30,8 @@ export interface DiagnosticSource {
   checkedAt: string;
   sourceType: string;
   downloadLog: ProviderDownloadLog[];
+  priority: number;
+  dataState: 'available' | 'limited' | 'unavailable' | 'pending' | 'disabled';
 }
 
 export interface DiagnosticSummary {
@@ -107,7 +109,7 @@ function catalogFallback(provider: ProviderConfig, generatedAt: string): Provide
     status: provider.enabled === false ? 'Disabled in provider catalog' : 'Pending source refresh',
     color: 'blue',
     message: provider.message || 'Provider exists in the canonical catalog but is not present in the latest generated status payload yet.',
-    ok: provider.enabled !== false,
+    ok: false,
     source: provider.url,
     priority: provider.priority ?? 0,
     checked_at: generatedAt,
@@ -118,7 +120,7 @@ function catalogFallback(provider: ProviderConfig, generatedAt: string): Provide
       duration_ms: 0,
       url: provider.url,
       source_type: provider.sourceType || 'unknown',
-      ok: provider.enabled !== false,
+      ok: false,
       status: 'catalog only',
       message: 'Waiting for the next v2 Pages build to fetch this provider.'
     }]
@@ -139,13 +141,18 @@ function toDiagnostic(provider: ProviderStatus, generatedAt: string): Diagnostic
     ok: provider.ok,
     checkedAt: provider.checked_at || generatedAt,
     sourceType: provider.source_type || 'unknown',
-    downloadLog: downloadLog.length ? downloadLog : fallbackDownloadLog(provider, generatedAt)
+    downloadLog: downloadLog.length ? downloadLog : fallbackDownloadLog(provider, generatedAt),
+    priority: provider.priority ?? 0,
+    dataState: provider.status.startsWith('Disabled') ? 'disabled' : provider.status.startsWith('Pending') ? 'pending' : !provider.ok ? 'unavailable' : provider.color === 'blue' ? 'limited' : 'available'
   };
 }
 
 function mergeCatalog(payload: StatusPayload, catalog: ProviderConfig[] = []): ProviderStatus[] {
   const byId = new Map<string, ProviderStatus>();
-  for (const provider of payload.providers) byId.set(provider.id, provider);
+  for (const provider of payload.providers) {
+    if (byId.has(provider.id)) throw new Error(`Duplicate provider id in status payload: ${provider.id}`);
+    byId.set(provider.id, provider);
+  }
   for (const provider of catalog) {
     if (!byId.has(provider.id)) byId.set(provider.id, catalogFallback(provider, payload.generated_at));
   }
