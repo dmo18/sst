@@ -7,7 +7,15 @@
     "enabled": true,
     "sourceType": "limited-microsoft",
     "url": "https://status.cloud.microsoft/api/",
-    "message": "Public Microsoft status data is limited; reliable service health requires authenticated tenant Microsoft Graph service communications."
+    "message": "Public Microsoft status data is limited; reliable service health requires authenticated tenant Microsoft Graph service communications.",
+    "criticality": "high",
+    "tags": [
+      "cloud",
+      "email",
+      "communications"
+    ],
+    "client_impact": "May affect Microsoft cloud access, email, collaboration, and endpoint administration.",
+    "technician_action": "Review Microsoft admin center service health and correlate affected client tenants."
   },
   {
     "id": "entra",
@@ -17,7 +25,15 @@
     "enabled": true,
     "sourceType": "limited-microsoft",
     "url": "https://status.cloud.microsoft/api/",
-    "message": "Public Microsoft status data is limited; reliable service health requires authenticated tenant Microsoft Graph service communications."
+    "message": "Public Microsoft status data is limited; reliable service health requires authenticated tenant Microsoft Graph service communications.",
+    "criticality": "high",
+    "tags": [
+      "identity",
+      "cloud",
+      "security"
+    ],
+    "client_impact": "May affect sign-in, MFA, conditional access, and Microsoft cloud access.",
+    "technician_action": "Check tenant service health and test authentication for affected client environments."
   },
   {
     "id": "aws",
@@ -26,7 +42,14 @@
     "priority": 82,
     "enabled": true,
     "sourceType": "rss",
-    "url": "https://status.aws.amazon.com/rss/all.rss"
+    "url": "https://status.aws.amazon.com/rss/all.rss",
+    "criticality": "high",
+    "tags": [
+      "cloud",
+      "backup"
+    ],
+    "client_impact": "May affect workloads, backups, and hosted client services in reported regions.",
+    "technician_action": "Identify affected regions and services before initiating failover procedures."
   },
   {
     "id": "cloudflare",
@@ -35,7 +58,15 @@
     "priority": 95,
     "enabled": true,
     "sourceType": "statuspage",
-    "url": "https://www.cloudflarestatus.com/api/v2/summary.json"
+    "url": "https://www.cloudflarestatus.com/api/v2/summary.json",
+    "criticality": "high",
+    "tags": [
+      "connectivity",
+      "dns",
+      "security"
+    ],
+    "client_impact": "May affect DNS resolution, application reachability, and protected web services.",
+    "technician_action": "Check client DNS and edge paths before changing local infrastructure."
   },
   {
     "id": "google-workspace",
@@ -44,7 +75,15 @@
     "priority": 82,
     "enabled": true,
     "sourceType": "google-workspace-incidents",
-    "url": "https://www.google.com/appsstatus/dashboard/incidents.json"
+    "url": "https://www.google.com/appsstatus/dashboard/incidents.json",
+    "criticality": "high",
+    "tags": [
+      "cloud",
+      "email",
+      "communications"
+    ],
+    "client_impact": "May affect mail, collaboration, storage, or administrative access.",
+    "technician_action": "Review the Google Workspace status dashboard and correlate client tickets."
   },
   {
     "id": "google-cloud",
@@ -80,7 +119,13 @@
     "priority": 88,
     "enabled": true,
     "sourceType": "statuspage",
-    "url": "https://status.sentinelone.com/api/v2/summary.json"
+    "url": "https://status.sentinelone.com/api/v2/summary.json",
+    "criticality": "high",
+    "tags": [
+      "security"
+    ],
+    "client_impact": "May affect endpoint protection visibility and security operations.",
+    "technician_action": "Review the management console and avoid weakening endpoint policy without confirmation."
   },
   {
     "id": "sophos",
@@ -98,7 +143,15 @@
     "priority": 88,
     "enabled": true,
     "sourceType": "statuspage",
-    "url": "https://status.dnsfilter.com/api/v2/summary.json"
+    "url": "https://status.dnsfilter.com/api/v2/summary.json",
+    "criticality": "high",
+    "tags": [
+      "dns",
+      "security",
+      "connectivity"
+    ],
+    "client_impact": "May affect DNS filtering and client internet access.",
+    "technician_action": "Verify resolver reachability and review affected policies before using a temporary fallback."
   },
   {
     "id": "connectwise",
@@ -107,7 +160,15 @@
     "priority": 90,
     "enabled": true,
     "sourceType": "connectwise-html",
-    "url": "https://status.connectwise.com/"
+    "url": "https://status.connectwise.com/",
+    "criticality": "high",
+    "tags": [
+      "msp",
+      "psa",
+      "rmm"
+    ],
+    "client_impact": "May affect MSP ticketing, automation, or remote-management workflows.",
+    "technician_action": "Use documented continuity procedures and monitor the official source."
   },
   {
     "id": "halopsa",
@@ -126,7 +187,14 @@
     "priority": 90,
     "enabled": true,
     "sourceType": "statuspage",
-    "url": "https://status.ninjaone.com/api/v2/summary.json"
+    "url": "https://status.ninjaone.com/api/v2/summary.json",
+    "criticality": "high",
+    "tags": [
+      "msp",
+      "rmm"
+    ],
+    "client_impact": "May affect endpoint monitoring, automation, and remote access.",
+    "technician_action": "Confirm agent check-ins and use approved alternate support paths if required."
   },
   {
     "id": "meraki",
@@ -162,7 +230,14 @@
     "priority": 86,
     "enabled": true,
     "sourceType": "statuspage",
-    "url": "https://status.okta.com/api/v2/summary.json"
+    "url": "https://status.okta.com/api/v2/summary.json",
+    "criticality": "high",
+    "tags": [
+      "identity",
+      "security"
+    ],
+    "client_impact": "May affect authentication and access to integrated applications.",
+    "technician_action": "Test sign-in paths and follow approved identity continuity procedures."
   },
   {
     "id": "quad9",

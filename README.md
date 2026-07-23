@@ -1,57 +1,58 @@
-# MSP Status Dashboard
+# MSP Service Heads-Up Console
 
-A static, official-source-only service-status dashboard for MSP operations teams. The live GitHub Pages site is **https://dmo18.github.io/sst/**.
+A static, official-source-only service-status intelligence and early-warning dashboard for MSP technicians. The live site is **https://dmo18.github.io/sst/**. It answers what needs attention, which official sources can be trusted, what changed, and what cautious client communication may be appropriate—without a backend, database, credentials, paid API, browser-side vendor calls, or unofficial outage scraping.
 
-## How it works
+## Operational workflow
 
-`config/providers.json` is the canonical 90-provider catalog. During deployment, `scripts/update-status.mjs` fetches official APIs, feeds, or explicitly limited official pages with timeouts and bounded concurrency, normalizes the results, validates them, and atomically generates uncommitted `public/status.json`. Vite bundles the React UI; the browser only polls that deployed JSON and never calls vendors.
+The first view is a technician briefing: critical/action items, new and resolved incidents, new source gaps, coverage, and separate service/source conclusions. Active major and degraded incidents follow, then recent changes and provider diagnostics. **Operator mode** provides search, combined filters, history, attempt logs, impact/action guidance, official links, and locally generated copyable communication drafts. **Wallboard mode** persists locally and enlarges the high-attention/changed subset for shared displays without auto-scroll or animation.
+
+Drafts are explicitly labeled, avoid asserting client impact, contain no unsupported estimates, and require technician review. Search covers provider, category, tags, service names, incident titles, and details. Filters include attention, recent change, incident, unavailable/limited source, criticality, operational state, and MSP-relevant domains.
+
+## Health contract and no-false-green guarantee
+
+Schema v2 gives every provider two machine-readable states:
+
+- `service_state`: `operational`, `degraded`, `major`, or `unknown`.
+- `source_state`: `available`, `limited`, `unavailable`, `disabled`, `pending`, or `stale`.
+
+Presentation text and colors never determine these states. Source success alone is not operational confirmation; limited sources remain unknown. Fetch/parser/content-type/size failures are source failures, never vendor incidents. Disabled providers are excluded from enabled coverage and health counts. The generator reconciles every aggregate before atomic publication, and the browser independently validates the complete payload. Therefore absent/incomplete data cannot produce a green conclusion. Coverage is available enabled sources divided by enabled providers; confirmed-operational coverage is separately reported.
+
+Attention (`critical`, `action`, `watch`, `informational`) expresses technician priority, not incident severity. Critical generally means a major/high-impact incident; action means confirmed degradation or an important source loss; watch covers gaps/recovery; informational covers stable confirmations.
+
+## Change detection and metadata
+
+The Pages build optionally downloads the last deployed, validated snapshot. Comparison identifies new/escalated/de-escalated/resolved incidents, service degradation/recovery, and unavailable/limited source transitions. Initial generation creates no mass event; retrieval failure does not fail the build; history is bounded to 100 entries and generated JSON is never committed.
+
+The 90-provider catalog supports optional `criticality`, `tags`, `services`, `client_impact`, and `technician_action`. High-value identity, cloud, security, DNS, RMM/PSA, email, and connectivity entries receive specific guidance rather than generic filler. `scripts/validate-providers.mjs` validates types, concise guidance, URLs, unique IDs, source types, and counts.
+
+## Static architecture and commands
 
 ```text
-providers.json -> validate-providers -> update-status -> public/status.json
-package.json ------------------------------------------> Vite/React -> dist -> Pages
+config/providers.json -> validation -> bounded official retrieval -> validated public/status.json
+package.json + React/Vite + status.json -> dist -> GitHub Pages
+browser -> deployed status.json only
 ```
 
-Provider **service health** is separate from **source health**. Red means a major active incident; amber means degraded service; green means an official source confirmed operational; blue means limited, unknown, pending, disabled, unavailable, or unparseable data. Blue is never counted as confirmed healthy. An empty incident view is shown only after valid data loads. Refresh failures preserve and visibly mark the last successful data stale.
-
-## Requirements and commands
-
-Node.js 22+ and npm are required.
+Node 22+ is required.
 
 ```bash
-npm ci                       # reproducible install
-npm run dev                  # local Vite server
-npm run validate-providers  # validate the 90-provider catalog
-npm test                     # deterministic Node unit tests
-npm run test:watch           # watch tests
-npm run typecheck            # strict TypeScript checks
-npm run update-status        # fetch live official sources
-npm run build                # validate, fetch live data, typecheck, build
-npm run build:app            # deterministic Vite-only build (used on PRs)
-npm run preview              # serve dist locally
+npm ci
+npm run validate-providers
+npm test                    # deterministic mocks; no live vendors
+npm run typecheck
+npm run build:app           # deterministic Vite build
+npm run update-status       # one live official-source generation
+npm run build               # validate + live generation + typecheck + Vite
+npm run preview
+npm audit --audit-level=high
 ```
 
-Tests use mocked fetch responses and do not contact vendors. Generated `public/status.json`, `dist`, and test reports are ignored and must not be committed.
+Retrieval checks Content-Length, streams up to a configurable 2 MiB limit, validates parser-specific content types, uses a 12-second timeout and at most one bounded retry for transient network/408/429/5xx failures, and rejects incidents over five minutes in the future. Attempt diagnostics include content type. Responses, history, and output are bounded.
 
-## UI semantics
+## CI and deployment
 
-The dashboard provides global and incident counts, last successful generation, manual and once-per-minute automatic refresh (paused while hidden), stale/error/loading announcements, provider search, and severity/category/source-state filters. Every provider has expandable source diagnostics and safe official links. Limited sources remain visible in blue. Disabled sources are excluded from operational counts.
+`.github/workflows/test.yml` runs `npm ci`, provider validation, deterministic tests, typecheck, and `build:app` on pull requests without vendors. The sole Pages workflow triggers on `main`, manual dispatch, and at minutes 17/47. Its **build** job has only `contents: read`, runs checks, one live generation, one Vite build, and uploads `dist`; its dependent **deploy** job alone has `pages: write` and `id-token: write`. One concurrency group prevents overlapping deployments. Vite base `/sst/` is fixed for Pages; `status.json` and logos are copied into `dist`.
 
-## Catalog and parsers
+## Limitations
 
-To add a provider, edit `config/providers.json`, retain the expected count intentionally, run validation and tests, then add a parser only if an existing `sourceType` cannot represent the official source. Each entry requires `id`, `name`, `category`, `url`, and `sourceType`; `priority` is a non-negative integer, `enabled` is boolean, and `services` is an optional string array. Limited source types require a useful `message` explaining the limitation. HTTP(S) URLs only; intentional shared official URLs are reported as warnings.
-
-Parsers live in `scripts/update-status.mjs`. Keep external boundaries defensive, return blue diagnostics for source/parser failures, filter resolved/maintenance/old events, and add mocked fixtures/tests. Supported implementations are Statuspage, RSS, Google Cloud/Workspace, Salesforce, Slack, Heroku, stable official HTML, Microsoft limited public data, and limited official pages.
-
-## Deployment
-
-`.github/workflows/refresh-pages.yml` is the sole Pages workflow. Pushes to `main`, manual dispatches, and the twice-hourly schedule (`17,47 * * * *`) install with `npm ci`, validate, test, typecheck, fetch live status once, build once, upload `dist`, and deploy once. `.github/workflows/test.yml` performs deterministic PR checks without live vendor requests. Configure **Settings → Pages → Source → GitHub Actions**. Vite's `/sst/` base matches the `dmo18/sst` repository path.
-
-## Version and releases
-
-`package.json` is the single version source. The lockfile follows npm tooling; the UI imports package metadata and the fetcher reads it for its user agent. Release checklist: run all validation commands, review generated diagnostics without committing them, update `CHANGELOG.md`, increment the patch once, verify the diff, commit, and let the Pages workflow deploy `main`.
-
-## Limitations and troubleshooting
-
-Only public official information is represented; localized/account-specific outages may not be public. Microsoft 365 and Entra tenant service health requires authenticated Microsoft Graph and deliberately remains limited here—this static public product does not accept credentials. A reachable feed does not prove service health. If data is unavailable, inspect expandable fetch/parser logs and the Pages Actions run; validate catalog URLs/source types locally. If the site 404s, verify Pages uses GitHub Actions and the repository remains named `sst`.
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for change standards and [docs/repository-report.md](docs/repository-report.md) for the concise architecture reference.
+Official public status may omit account-, tenant-, region-, or address-specific effects. Microsoft 365 and Entra ID details require tenant-authenticated Microsoft Graph service communications; this public static application intentionally accepts no credentials and labels unauthenticated Microsoft coverage limited. A provider source outage is not evidence of a vendor outage. See [the repository report](docs/repository-report.md) and [contribution guide](CONTRIBUTING.md).
