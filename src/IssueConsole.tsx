@@ -1,36 +1,239 @@
 import { useEffect, useMemo, useState } from 'react';
-import { logoSrc } from './logos';
-import { filterDiagnostics, wallboardSubset, type DiagnosticSource, type IssueBrief, type IssueConsoleModel } from './statusViewModel';
+import type { SyntheticEvent } from 'react';
+import { providerIconFallback, providerIconSrc } from './logos';
+import {
+  filterDiagnostics,
+  wallboardSubset,
+  type DiagnosticSource,
+  type IssueBrief,
+  type IssueConsoleModel
+} from './statusViewModel';
 import type { DataLifecycle } from './types';
-const timeLabel = (v?: string) => v && !Number.isNaN(Date.parse(v)) ? new Date(v).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : 'unknown';
-function CopyDraft({ draft }: {
-    draft: string;
-}) { const [copied, setCopied] = useState(false); return <button onClick={async () => { await navigator.clipboard.writeText(draft); setCopied(true); window.setTimeout(() => setCopied(false), 2000); }}>{copied ? 'Draft copied' : 'Copy client draft'}</button>; }
-function IncidentCard({ item, wallboard }: {
-    item: IssueBrief;
-    wallboard: boolean;
-}) { return <article className={`incident-card ${item.service_state}`}><header><b>{item.provider}</b><span>{item.label} · {item.attention} attention</span></header><h3>{item.title}</h3><p>{item.note}</p><dl><div><dt>Affected service</dt><dd>{item.affected_service || 'Not specified'}</dd></div><div><dt>First detected</dt><dd>{timeLabel(item.first_detected)}</dd></div><div><dt>Latest update</dt><dd>{timeLabel(item.latest_update)}</dd></div></dl>{!wallboard && <><p><b>MSP impact:</b> {item.client_impact || 'Review affected client environments before confirming impact.'}</p><p><b>Technician action:</b> {item.technician_action || 'Monitor the official source and correlate with client tickets.'}</p><details><summary>Client communication draft</summary><p>{item.clientDraft}</p><CopyDraft draft={item.clientDraft}/></details></>}<a href={item.url} target="_blank" rel="noopener noreferrer">Official incident source ↗</a></article>; }
-function Diagnostic({ x }: {
-    x: DiagnosticSource;
-}) { return <details className="diagnostic-card"><summary><img className="provider-logo" src={logoSrc(x.id)} alt=""/><span><b>{x.provider}</b><small>{x.category}</small></span><strong>{x.serviceState} · source {x.sourceState} · {x.attention}</strong></summary><div className="diagnostic-detail"><p>{x.status}</p><p>{x.message}</p>{x.clientImpact && <p><b>MSP impact:</b> {x.clientImpact}</p>}{x.technicianAction && <p><b>Action:</b> {x.technicianAction}</p>}<a href={x.source} target="_blank" rel="noopener noreferrer">Official source ↗</a>{x.downloadLog.map((l, i) => <div className="download-log" key={i}>Attempt {l.attempt || 1}: {l.status}; {l.content_type || 'content type unavailable'}; {l.error || l.message}</div>)}</div></details>; }
+
+function timeLabel(value?: string): string {
+  return value && !Number.isNaN(Date.parse(value))
+    ? new Date(value).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })
+    : 'unknown';
+}
+
+function ProviderIcon({ id, name, size = 36 }: { id: string; name: string; size?: number }): JSX.Element {
+  const fallback = providerIconFallback(id, name);
+  const handleError = (event: SyntheticEvent<HTMLImageElement>) => {
+    if (event.currentTarget.src !== fallback) event.currentTarget.src = fallback;
+  };
+
+  return (
+    <img
+      className="provider-logo"
+      src={providerIconSrc(id, name)}
+      alt=""
+      width={size}
+      height={size}
+      loading="lazy"
+      decoding="async"
+      onError={handleError}
+    />
+  );
+}
+
+function CopyDraft({ draft }: { draft: string }): JSX.Element {
+  const [copied, setCopied] = useState(false);
+
+  return (
+    <button
+      onClick={async () => {
+        await navigator.clipboard.writeText(draft);
+        setCopied(true);
+        window.setTimeout(() => setCopied(false), 2000);
+      }}
+      aria-live="polite"
+    >
+      {copied ? 'Draft copied' : 'Copy client draft'}
+    </button>
+  );
+}
+
+function IncidentCard({ item, wallboard }: { item: IssueBrief; wallboard: boolean }): JSX.Element {
+  return (
+    <article className={`incident-card ${item.service_state}`}>
+      <header>
+        <div className="provider-identity">
+          <ProviderIcon id={item.providerId} name={item.provider} size={42} />
+          <b>{item.provider}</b>
+        </div>
+        <span>{item.label} · {item.attention} attention</span>
+      </header>
+      <h3>{item.title}</h3>
+      <p>{item.note}</p>
+      <dl>
+        <div><dt>Affected service</dt><dd>{item.affected_service || 'Not specified'}</dd></div>
+        <div><dt>First detected</dt><dd>{timeLabel(item.first_detected)}</dd></div>
+        <div><dt>Latest update</dt><dd>{timeLabel(item.latest_update)}</dd></div>
+      </dl>
+      {!wallboard && (
+        <>
+          <p><b>MSP impact:</b> {item.client_impact || 'Review affected client environments before confirming impact.'}</p>
+          <p><b>Technician action:</b> {item.technician_action || 'Monitor the official source and correlate with client tickets.'}</p>
+          <details>
+            <summary>Client communication draft</summary>
+            <p>{item.clientDraft}</p>
+            <CopyDraft draft={item.clientDraft} />
+          </details>
+        </>
+      )}
+      <a href={item.url} target="_blank" rel="noopener noreferrer">Official incident source ↗</a>
+    </article>
+  );
+}
+
+function Diagnostic({ source }: { source: DiagnosticSource }): JSX.Element {
+  return (
+    <details className="diagnostic-card">
+      <summary>
+        <ProviderIcon id={source.id} name={source.provider} />
+        <span><b>{source.provider}</b><small>{source.category}</small></span>
+        <strong>{source.serviceState} · source {source.sourceState} · {source.attention}</strong>
+      </summary>
+      <div className="diagnostic-detail">
+        <p>{source.status}</p>
+        <p>{source.message}</p>
+        {source.clientImpact && <p><b>MSP impact:</b> {source.clientImpact}</p>}
+        {source.technicianAction && <p><b>Action:</b> {source.technicianAction}</p>}
+        <a href={source.source} target="_blank" rel="noopener noreferrer">Official source ↗</a>
+        {source.downloadLog.map((log, index) => (
+          <div className="download-log" key={`${source.id}-${index}`}>
+            Attempt {log.attempt || 1}: {log.status}; {log.content_type || 'content type unavailable'}; {log.error || log.message}
+          </div>
+        ))}
+      </div>
+    </details>
+  );
+}
+
 export function IssueConsole({ model, lifecycle, onRefresh }: {
-    model: IssueConsoleModel | null;
-    lifecycle: DataLifecycle;
-    onRefresh: () => void;
-}) {
-    const [query, setQuery] = useState('');
-    const [filter, setFilter] = useState('all');
-    const [hidden, setHidden] = useState(document.hidden);
-    const [mode, setMode] = useState(() => localStorage.getItem('sst-view') === 'wallboard' ? 'wallboard' : 'operator');
-    useEffect(() => localStorage.setItem('sst-view', mode), [mode]);
-    useEffect(() => { const update = () => setHidden(document.hidden); document.addEventListener('visibilitychange', update); return () => document.removeEventListener('visibilitychange', update); }, []);
-    const filtered = useMemo(() => model ? filterDiagnostics(model.diagnostics, query, filter === 'all' ? [] : [filter]) : [], [model, query, filter]);
-    const shown = model && mode === 'wallboard' ? wallboardSubset({ ...model, diagnostics: filtered }) : filtered;
-    return <>
-    <header className="product-header"><div><p className="eyebrow">MSP operations intelligence</p><h1>Service Heads-Up Console</h1><p className="current-time">Last refresh: {timeLabel(model?.generatedAt)}</p></div><div className="header-actions"><button aria-pressed={mode === 'wallboard'} onClick={() => setMode(mode === 'operator' ? 'wallboard' : 'operator')}>{mode === 'operator' ? 'Wallboard mode' : 'Operator mode'}</button><button onClick={onRefresh} disabled={lifecycle.phase === 'refreshing'}>{lifecycle.phase === 'refreshing' ? 'Refreshing…' : 'Refresh now'}</button></div></header>
-    <div className={`data-banner ${lifecycle.phase}`} role="status" aria-live="polite">{lifecycle.phase === 'loading' ? 'Loading official status data…' : lifecycle.phase === 'error' ? `Load failed; no health conclusion is available. ${lifecycle.failure}` : lifecycle.phase === 'stale' ? `Stale data retained after refresh failure. ${lifecycle.failure}` : lifecycle.phase === 'refreshing' ? 'Refresh in progress; last valid data remains visible.' : hidden ? 'Automatic refresh paused while tab is hidden.' : 'Refreshes automatically once per minute.'}</div>
-        {model ? <><section className="briefing" aria-labelledby="briefing-title"><h2 id="briefing-title">Technician briefing</h2><div className="summary-grid"><div><span>Require attention</span><b>{model.attentionCount}</b></div><div><span>New incidents</span><b>{model.newIncidentCount}</b></div><div><span>Recently resolved</span><b>{model.resolvedCount}</b></div><div><span>New source gaps</span><b>{model.newUnavailableCount}</b></div><div><span>Provider coverage</span><b>{model.summary.coverage_percent}%</b></div><div><span>Confirmed operational</span><b>{model.summary.confirmed_operational_count}</b></div><div><span>Limited / unavailable</span><b>{model.summary.limited_count + model.summary.unavailable_count}</b></div><div><span>Service / source</span><b className="state-pair">{model.summary.service_overall} / {model.summary.source_overall}</b></div></div><p>No-incident conclusions apply only to {model.summary.confirmed_operational_count} confirmed sources, never unchecked providers.</p></section>
-        <section className="incidents"><h2>Active incident briefing</h2>{model.briefs.length ? model.briefs.map(x => <IncidentCard key={x.id} item={x} wallboard={mode === 'wallboard'}/>) : <p className="empty-filter">No active incidents. Coverage is {model.summary.coverage_percent}%; limited and unavailable sources remain unknown.</p>}</section>
-        {mode === 'operator' && <section className="changes"><h2>Recent changes</h2>{model.history.length ? <ul>{model.history.slice(0, 20).map(x => <li key={x.id}><b>{x.provider}</b> — {x.title} <small>({x.type.replaceAll('_', ' ')})</small></li>)}</ul> : <p>No comparison snapshot was available; initial generation is not treated as a mass change.</p>}</section>}
-        <section className="diag-panel"><header><div><h2>Provider diagnostics</h2><p>Search names, categories, tags, services, and incident details.</p></div><em>{shown?.length || 0} of {model.diagnostics.length}</em></header>{mode === 'operator' && <div className="filters"><label>Search<input type="search" value={query} onChange={e => setQuery(e.target.value)}/></label><label>Operational filter<select value={filter} onChange={e => setFilter(e.target.value)}><option value="all">All providers</option><option value="attention">Requires attention</option><option value="changed">Changed recently</option><option value="incident">Active incident</option><option value="unavailable">Source unavailable</option><option value="limited">Limited source</option><option value="high">High criticality</option><option value="identity">Identity</option><option value="cloud">Cloud</option><option value="security">Security</option><option value="backup">Backup</option><option value="connectivity">Connectivity</option><option value="communications">Communications</option><option value="msp">MSP platform</option><option value="operational">Confirmed operational</option></select></label></div>}<div>{shown?.map(x => <Diagnostic key={x.id} x={x}/>)}{!shown?.length && <p className="empty-filter">No providers match this view.</p>}</div></section></> : <section className="unavailable"><h2>Status intelligence unavailable</h2><p>No provider is reported operational until a complete valid payload loads.</p></section>}</>;
+  model: IssueConsoleModel | null;
+  lifecycle: DataLifecycle;
+  onRefresh: () => void;
+}): JSX.Element {
+  const [query, setQuery] = useState('');
+  const [filter, setFilter] = useState('all');
+  const [hidden, setHidden] = useState(document.hidden);
+  const [mode, setMode] = useState(() => localStorage.getItem('sst-view') === 'wallboard' ? 'wallboard' : 'operator');
+
+  useEffect(() => localStorage.setItem('sst-view', mode), [mode]);
+  useEffect(() => {
+    const update = () => setHidden(document.hidden);
+    document.addEventListener('visibilitychange', update);
+    return () => document.removeEventListener('visibilitychange', update);
+  }, []);
+
+  const filtered = useMemo(
+    () => model ? filterDiagnostics(model.diagnostics, query, filter === 'all' ? [] : [filter]) : [],
+    [model, query, filter]
+  );
+  const shown = model && mode === 'wallboard' ? wallboardSubset({ ...model, diagnostics: filtered }) : filtered;
+
+  return (
+    <>
+      <header className="product-header">
+        <div>
+          <p className="eyebrow">MSP operations intelligence</p>
+          <h1>Service Heads-Up Console</h1>
+          <p className="current-time">Last refresh: {timeLabel(model?.generatedAt)}</p>
+        </div>
+        <div className="header-actions">
+          <button aria-pressed={mode === 'wallboard'} onClick={() => setMode(mode === 'operator' ? 'wallboard' : 'operator')}>
+            {mode === 'operator' ? 'Wallboard mode' : 'Operator mode'}
+          </button>
+          <button onClick={onRefresh} disabled={lifecycle.phase === 'refreshing'}>
+            {lifecycle.phase === 'refreshing' ? 'Refreshing…' : 'Refresh now'}
+          </button>
+        </div>
+      </header>
+
+      <div className={`data-banner ${lifecycle.phase}`} role="status" aria-live="polite">
+        {lifecycle.phase === 'loading'
+          ? 'Loading official status data…'
+          : lifecycle.phase === 'error'
+            ? `Load failed; no health conclusion is available. ${lifecycle.failure}`
+            : lifecycle.phase === 'stale'
+              ? `Stale data retained after refresh failure. ${lifecycle.failure}`
+              : lifecycle.phase === 'refreshing'
+                ? 'Refresh in progress; last valid data remains visible.'
+                : hidden
+                  ? 'Automatic refresh paused while tab is hidden.'
+                  : 'Refreshes automatically once per minute.'}
+      </div>
+
+      {model ? (
+        <>
+          <section className="briefing" aria-labelledby="briefing-title">
+            <h2 id="briefing-title">Technician briefing</h2>
+            <div className="summary-grid">
+              <div><span>Require attention</span><b>{model.attentionCount}</b></div>
+              <div><span>New incidents</span><b>{model.newIncidentCount}</b></div>
+              <div><span>Recently resolved</span><b>{model.resolvedCount}</b></div>
+              <div><span>New source gaps</span><b>{model.newUnavailableCount}</b></div>
+              <div><span>Provider coverage</span><b>{model.summary.coverage_percent}%</b></div>
+              <div><span>Confirmed operational</span><b>{model.summary.confirmed_operational_count}</b></div>
+              <div><span>Limited / unavailable</span><b>{model.summary.limited_count + model.summary.unavailable_count}</b></div>
+              <div><span>Service / source</span><b className="state-pair">{model.summary.service_overall} / {model.summary.source_overall}</b></div>
+            </div>
+            <p>No-incident conclusions apply only to {model.summary.confirmed_operational_count} confirmed sources, never unchecked providers.</p>
+          </section>
+
+          <section className="incidents">
+            <h2>Active incident briefing</h2>
+            {model.briefs.length
+              ? model.briefs.map(item => <IncidentCard key={item.id} item={item} wallboard={mode === 'wallboard'} />)
+              : <p className="empty-filter">No active incidents. Coverage is {model.summary.coverage_percent}%; limited and unavailable sources remain unknown.</p>}
+          </section>
+
+          {mode === 'operator' && (
+            <section className="changes">
+              <h2>Recent changes</h2>
+              {model.history.length
+                ? <ul>{model.history.slice(0, 20).map(change => <li key={change.id}><b>{change.provider}</b> — {change.title} <small>({change.type.replaceAll('_', ' ')})</small></li>)}</ul>
+                : <p>No comparison snapshot was available; initial generation is not treated as a mass change.</p>}
+            </section>
+          )}
+
+          <section className="diag-panel">
+            <header>
+              <div><h2>Provider diagnostics</h2><p>Search names, categories, tags, services, and incident details.</p></div>
+              <em>{shown?.length || 0} of {model.diagnostics.length}</em>
+            </header>
+            {mode === 'operator' && (
+              <div className="filters">
+                <label>Search<input type="search" value={query} onChange={event => setQuery(event.target.value)} /></label>
+                <label>
+                  Operational filter
+                  <select value={filter} onChange={event => setFilter(event.target.value)}>
+                    <option value="all">All providers</option>
+                    <option value="attention">Requires attention</option>
+                    <option value="changed">Changed recently</option>
+                    <option value="incident">Active incident</option>
+                    <option value="unavailable">Source unavailable</option>
+                    <option value="limited">Limited source</option>
+                    <option value="high">High criticality</option>
+                    <option value="identity">Identity</option>
+                    <option value="cloud">Cloud</option>
+                    <option value="security">Security</option>
+                    <option value="backup">Backup</option>
+                    <option value="connectivity">Connectivity</option>
+                    <option value="communications">Communications</option>
+                    <option value="msp">MSP platform</option>
+                    <option value="operational">Confirmed operational</option>
+                  </select>
+                </label>
+              </div>
+            )}
+            <div>{shown?.map(source => <Diagnostic key={source.id} source={source} />)}{!shown?.length && <p className="empty-filter">No providers match this view.</p>}</div>
+          </section>
+        </>
+      ) : (
+        <section className="unavailable"><h2>Status intelligence unavailable</h2><p>No provider is reported operational until a complete valid payload loads.</p></section>
+      )}
+    </>
+  );
 }

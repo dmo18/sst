@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Added complete provider identification across incident and diagnostic views.
+- Preserved bundled brand marks and generated deterministic local monogram icons for every remaining provider.
+- Added safe image fallbacks, responsive icon layout, and deterministic icon tests without external runtime requests.
+
 ## 2.1.6 - 2026-07-23
 
 - Separated explicit service, source, and technician-attention states with reconciled schema-v2 summaries and comprehensive validation.
