@@ -12,5 +12,5 @@ const logoFiles: Record<string, string> = {
 };
 
 export function logoSrc(providerId: string): string {
-  return `assets/logos/${logoFiles[providerId] ?? 'provider.svg'}`;
+  return `${import.meta.env.BASE_URL}assets/logos/${logoFiles[providerId] ?? 'provider.svg'}`;
 }

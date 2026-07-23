@@ -1,1 +1,818 @@
-[{"id":"microsoft365","name":"Microsoft 365","category":"Cloud Services","priority":130,"enabled":true,"sourceType":"limited-microsoft","url":"https://status.cloud.microsoft/api/"},{"id":"entra","name":"Entra ID","category":"Identity","priority":125,"enabled":true,"sourceType":"limited-microsoft","url":"https://status.cloud.microsoft/api/"},{"id":"aws","name":"AWS","category":"Cloud Services","priority":82,"enabled":true,"sourceType":"rss","url":"https://status.aws.amazon.com/rss/all.rss"},{"id":"cloudflare","name":"Cloudflare","category":"Cloud Services","priority":95,"enabled":true,"sourceType":"statuspage","url":"https://www.cloudflarestatus.com/api/v2/summary.json"},{"id":"google-workspace","name":"Google Workspace","category":"Cloud Services","priority":82,"enabled":true,"sourceType":"google-workspace-incidents","url":"https://www.google.com/appsstatus/dashboard/incidents.json"},{"id":"google-cloud","name":"Google Cloud","category":"Cloud Services","priority":65,"enabled":true,"sourceType":"google-cloud-incidents","url":"https://status.cloud.google.com/incidents.json"},{"id":"openai","name":"OpenAI","category":"AI","priority":70,"enabled":true,"sourceType":"statuspage","url":"https://status.openai.com/api/v2/summary.json"},{"id":"anthropic","name":"Anthropic","category":"AI","priority":62,"enabled":true,"sourceType":"statuspage","url":"https://status.claude.com/api/v2/summary.json"},{"id":"sentinelone","name":"SentinelOne","category":"Security","priority":88,"enabled":true,"sourceType":"statuspage","url":"https://status.sentinelone.com/api/v2/summary.json"},{"id":"sophos","name":"Sophos","category":"Security","priority":84,"enabled":true,"sourceType":"statuspage","url":"https://status.sophos.com/api/v2/summary.json"},{"id":"dnsfilter","name":"DNSFilter","category":"Security","priority":88,"enabled":true,"sourceType":"statuspage","url":"https://status.dnsfilter.com/api/v2/summary.json"},{"id":"connectwise","name":"ConnectWise","category":"MSP Platforms","priority":90,"enabled":true,"sourceType":"connectwise-html","url":"https://status.connectwise.com/"},{"id":"halopsa","name":"HaloPSA","category":"MSP Platforms","priority":88,"enabled":true,"sourceType":"limited-official","url":"https://status.haloservicesolutions.com/","message":"Official Halo status page is protected or bot-filtered in GitHub Actions; status is limited to the public page URL."},{"id":"ninjaone","name":"NinjaOne","category":"MSP Platforms","priority":90,"enabled":true,"sourceType":"statuspage","url":"https://status.ninjaone.com/api/v2/summary.json"},{"id":"meraki","name":"Cisco Meraki","category":"Networking","priority":84,"enabled":true,"sourceType":"statuspage","url":"https://status.meraki.net/api/v2/summary.json"},{"id":"ubiquiti","name":"Ubiquiti","category":"Networking","priority":80,"enabled":true,"sourceType":"statuspage","url":"https://status.ui.com/api/v2/summary.json"},{"id":"digitalocean","name":"DigitalOcean","category":"Cloud Services","priority":58,"enabled":true,"sourceType":"statuspage","url":"https://status.digitalocean.com/api/v2/summary.json"},{"id":"okta","name":"Okta","category":"Identity","priority":86,"enabled":true,"sourceType":"statuspage","url":"https://status.okta.com/api/v2/summary.json"},{"id":"quad9","name":"Quad9","category":"DNS and Internet","priority":68,"enabled":true,"sourceType":"statuspage","url":"https://status.quad9.net/api/v2/summary.json"},{"id":"att","name":"AT&T","category":"ISPs and Backbone","priority":55,"enabled":true,"sourceType":"limited-official","url":"https://www.att.com/outages/","message":"Official AT&T outage status requires a customer service address, account, or location to determine impact."},{"id":"cox","name":"Cox","category":"ISPs and Backbone","priority":53,"enabled":true,"sourceType":"limited-official","url":"https://www.cox.com/residential/support/outages.html","message":"Official Cox outage status requires a service address, ZIP code, or account identity to determine impact."},{"id":"comcast-business","name":"Comcast Business","category":"ISPs and Backbone","priority":55,"enabled":true,"sourceType":"limited-official","url":"https://business.comcast.com/status/","message":"Official Comcast Business status requires customer account identity or sign-in to determine impact."},{"id":"lumen","name":"Lumen","category":"ISPs and Backbone","priority":52,"enabled":true,"sourceType":"statuspage","url":"https://lumen.statuspage.io/api/v2/summary.json"},{"id":"dropbox","name":"Dropbox","category":"Storage","priority":52,"enabled":true,"sourceType":"statuspage","url":"https://status.dropbox.com/api/v2/summary.json"},{"id":"box","name":"Box","category":"Storage","priority":52,"enabled":true,"sourceType":"statuspage","url":"https://status.box.com/api/v2/summary.json"},{"id":"wasabi","name":"Wasabi","category":"Storage","priority":58,"enabled":true,"sourceType":"statuspage","url":"https://status.wasabi.com/api/v2/summary.json"},{"id":"backblaze","name":"Backblaze","category":"Storage","priority":58,"enabled":true,"sourceType":"backblaze-html","url":"https://status.backblaze.com/"},{"id":"slack","name":"Slack","category":"Collaboration","priority":72,"enabled":true,"sourceType":"slack-current-status","url":"https://status.slack.com/api/v2.0.0/current"},{"id":"zoom","name":"Zoom","category":"Collaboration","priority":72,"enabled":true,"sourceType":"statuspage","url":"https://www.zoomstatus.com/api/v2/summary.json"},{"id":"1password","name":"1Password","category":"Identity / Access","priority":86,"enabled":true,"sourceType":"statuspage","url":"https://status.1password.com/api/v2/summary.json"},{"id":"duo","name":"Duo","category":"Identity / Access","priority":86,"enabled":true,"sourceType":"statuspage","url":"https://status.duo.com/api/v2/summary.json"},{"id":"jumpcloud","name":"JumpCloud","category":"Identity / Access","priority":78,"enabled":true,"sourceType":"statuspage","url":"https://status.jumpcloud.com/api/v2/summary.json"},{"id":"auth0","name":"Auth0","category":"Identity / Access","priority":78,"enabled":true,"sourceType":"statuspage","url":"https://status.auth0.com/api/v2/summary.json"},{"id":"onelogin","name":"OneLogin","category":"Identity / Access","priority":78,"enabled":true,"sourceType":"statuspage","url":"https://status.onelogin.com/api/v2/summary.json"},{"id":"bitwarden","name":"Bitwarden","category":"Identity / Access","priority":78,"enabled":true,"sourceType":"statuspage","url":"https://status.bitwarden.com/api/v2/summary.json"},{"id":"keeper","name":"Keeper","category":"Identity / Access","priority":78,"enabled":true,"sourceType":"statuspage","url":"https://status.keeper.io/api/v2/summary.json"},{"id":"lastpass","name":"LastPass","category":"Identity / Access","priority":78,"enabled":true,"sourceType":"statuspage","url":"https://status.lastpass.com/api/v2/summary.json"},{"id":"jamf","name":"Jamf","category":"MDM / Apple","priority":60,"enabled":true,"sourceType":"statuspage","url":"https://status.jamf.com/api/v2/summary.json"},{"id":"addigy","name":"Addigy","category":"MDM / Apple","priority":60,"enabled":true,"sourceType":"statuspage","url":"https://status.addigy.com/api/v2/summary.json"},{"id":"atera","name":"Atera","category":"MSP Platforms","priority":78,"enabled":true,"sourceType":"statuspage","url":"https://status.atera.com/api/v2/summary.json"},{"id":"syncro","name":"Syncro","category":"MSP Platforms","priority":78,"enabled":true,"sourceType":"statuspage","url":"https://status.syncromsp.com/api/v2/summary.json"},{"id":"kaseya","name":"Kaseya","category":"MSP Platforms","priority":86,"enabled":true,"sourceType":"statuspage","url":"https://status.kaseya.com/api/v2/summary.json"},{"id":"datto","name":"Datto","category":"MSP Platforms","priority":86,"enabled":true,"sourceType":"statuspage","url":"https://status.datto.com/api/v2/summary.json"},{"id":"n-able","name":"N-able","category":"MSP Platforms","priority":86,"enabled":true,"sourceType":"statuspage","url":"https://status.n-able.com/api/v2/summary.json"},{"id":"superops","name":"SuperOps","category":"MSP Platforms","priority":78,"enabled":true,"sourceType":"statuspage","url":"https://status.superops.com/api/v2/summary.json"},{"id":"crowdstrike","name":"CrowdStrike","category":"Security","priority":86,"enabled":true,"sourceType":"statuspage","url":"https://status.crowdstrike.com/api/v2/summary.json"},{"id":"huntress","name":"Huntress","category":"Security","priority":86,"enabled":true,"sourceType":"statuspage","url":"https://status.huntress.com/api/v2/summary.json"},{"id":"malwarebytes","name":"Malwarebytes","category":"Security","priority":78,"enabled":true,"sourceType":"statuspage","url":"https://status.malwarebytes.com/api/v2/summary.json"},{"id":"bitdefender-gravityzone","name":"Bitdefender GravityZone","category":"Security","priority":78,"enabled":true,"sourceType":"statuspage","url":"https://status.bitdefender.com/api/v2/summary.json"},{"id":"eset","name":"ESET","category":"Security","priority":78,"enabled":true,"sourceType":"statuspage","url":"https://status.eset.com/api/v2/summary.json"},{"id":"fortinet","name":"Fortinet","category":"Security","priority":78,"enabled":true,"sourceType":"statuspage","url":"https://status.fortinet.com/api/v2/summary.json"},{"id":"cisco-umbrella","name":"Cisco Umbrella","category":"Security / DNS","priority":78,"enabled":true,"sourceType":"statuspage","url":"https://status.umbrella.com/api/v2/summary.json"},{"id":"proofpoint","name":"Proofpoint","category":"Security / Email","priority":78,"enabled":true,"sourceType":"statuspage","url":"https://status.proofpoint.com/api/v2/summary.json"},{"id":"mimecast","name":"Mimecast","category":"Security / Email","priority":78,"enabled":true,"sourceType":"statuspage","url":"https://status.mimecast.com/api/v2/summary.json"},{"id":"barracuda","name":"Barracuda","category":"Security / Email","priority":78,"enabled":true,"sourceType":"statuspage","url":"https://status.barracuda.com/api/v2/summary.json"},{"id":"knowbe4","name":"KnowBe4","category":"Security Training","priority":60,"enabled":true,"sourceType":"statuspage","url":"https://status.knowbe4.com/api/v2/summary.json"},{"id":"acronis","name":"Acronis","category":"Backup","priority":78,"enabled":true,"sourceType":"statuspage","url":"https://status.acronis.com/api/v2/summary.json"},{"id":"veeam-cloud-services","name":"Veeam Cloud Services","category":"Backup","priority":78,"enabled":true,"sourceType":"statuspage","url":"https://status.veeam.com/api/v2/summary.json"},{"id":"crashplan","name":"CrashPlan","category":"Backup","priority":78,"enabled":true,"sourceType":"statuspage","url":"https://status.crashplan.com/api/v2/summary.json"},{"id":"cove-data-protection","name":"Cove Data Protection","category":"Backup","priority":78,"enabled":true,"sourceType":"statuspage","url":"https://status.covedataprotection.com/api/v2/summary.json"},{"id":"sharefile","name":"ShareFile","category":"File Sharing","priority":60,"enabled":true,"sourceType":"statuspage","url":"https://status.sharefile.com/api/v2/summary.json"},{"id":"ultradns","name":"UltraDNS","category":"DNS","priority":60,"enabled":true,"sourceType":"statuspage","url":"https://status.ultradns.com/api/v2/summary.json"},{"id":"godaddy","name":"GoDaddy","category":"Registrar / DNS","priority":60,"enabled":true,"sourceType":"statuspage","url":"https://status.godaddy.com/api/v2/summary.json"},{"id":"namecheap","name":"Namecheap","category":"Registrar / DNS","priority":60,"enabled":true,"sourceType":"statuspage","url":"https://status.namecheap.com/api/v2/summary.json"},{"id":"linode","name":"Linode","category":"Edge / Hosting","priority":60,"enabled":true,"sourceType":"statuspage","url":"https://status.linode.com/api/v2/summary.json"},{"id":"vultr","name":"Vultr","category":"Edge / Hosting","priority":60,"enabled":true,"sourceType":"statuspage","url":"https://status.vultr.com/api/v2/summary.json"},{"id":"heroku","name":"Heroku","category":"Edge / Hosting","priority":60,"enabled":true,"sourceType":"heroku-current-status","url":"https://status.heroku.com/api/v4/current-status"},{"id":"vercel","name":"Vercel","category":"Edge / Hosting","priority":60,"enabled":true,"sourceType":"statuspage","url":"https://status.vercel.com/api/v2/summary.json"},{"id":"ringcentral","name":"RingCentral","category":"VoIP","priority":86,"enabled":true,"sourceType":"statuspage","url":"https://status.ringcentral.com/api/v2/summary.json"},{"id":"8x8","name":"8x8","category":"VoIP","priority":60,"enabled":true,"sourceType":"statuspage","url":"https://status.8x8.com/api/v2/summary.json"},{"id":"nextiva","name":"Nextiva","category":"VoIP","priority":60,"enabled":true,"sourceType":"statuspage","url":"https://status.nextiva.com/api/v2/summary.json"},{"id":"intermedia","name":"Intermedia","category":"VoIP","priority":60,"enabled":true,"sourceType":"statuspage","url":"https://status.intermedia.net/api/v2/summary.json"},{"id":"twilio","name":"Twilio","category":"Messaging API","priority":86,"enabled":true,"sourceType":"statuspage","url":"https://status.twilio.com/api/v2/summary.json"},{"id":"discord","name":"Discord","category":"Communications","priority":60,"enabled":true,"sourceType":"statuspage","url":"https://discordstatus.com/api/v2/summary.json"},{"id":"docker","name":"Docker","category":"DevOps","priority":60,"enabled":true,"sourceType":"statuspage","url":"https://status.docker.com/api/v2/summary.json"},{"id":"elastic-cloud","name":"Elastic Cloud","category":"Search / Observability","priority":60,"enabled":true,"sourceType":"statuspage","url":"https://status.elastic.co/api/v2/summary.json"},{"id":"salesforce","name":"Salesforce","category":"CRM","priority":60,"enabled":true,"sourceType":"salesforce-active-incidents","url":"https://api.status.salesforce.com/v1/incidents/active"},{"id":"hubspot","name":"HubSpot","category":"CRM","priority":60,"enabled":true,"sourceType":"statuspage","url":"https://status.hubspot.com/api/v2/summary.json"},{"id":"zendesk","name":"Zendesk","category":"Support","priority":60,"enabled":true,"sourceType":"statuspage","url":"https://status.zendesk.com/api/v2/summary.json"},{"id":"intercom","name":"Intercom","category":"Support","priority":60,"enabled":true,"sourceType":"statuspage","url":"https://status.intercom.com/api/v2/summary.json"},{"id":"notion","name":"Notion","category":"Productivity","priority":60,"enabled":true,"sourceType":"statuspage","url":"https://status.notion.so/api/v2/summary.json"},{"id":"asana","name":"Asana","category":"Productivity","priority":60,"enabled":true,"sourceType":"statuspage","url":"https://status.asana.com/api/v2/summary.json"},{"id":"monday-com","name":"monday.com","category":"Productivity","priority":60,"enabled":true,"sourceType":"statuspage","url":"https://status.monday.com/api/v2/summary.json"},{"id":"docusign","name":"DocuSign","category":"E-signature","priority":60,"enabled":true,"sourceType":"statuspage","url":"https://status.docusign.com/api/v2/summary.json"},{"id":"quickbooks-online","name":"QuickBooks Online","category":"Accounting","priority":60,"enabled":true,"sourceType":"quickbooks-html","url":"https://status.quickbooks.intuit.com/"},{"id":"xero","name":"Xero","category":"Accounting","priority":60,"enabled":true,"sourceType":"statuspage","url":"https://status.xero.com/api/v2/summary.json"},{"id":"shopify","name":"Shopify","category":"E-commerce","priority":60,"enabled":true,"sourceType":"statuspage","url":"https://www.shopifystatus.com/api/v2/summary.json"},{"id":"stripe","name":"Stripe","category":"Payments","priority":60,"enabled":true,"sourceType":"statuspage","url":"https://status.stripe.com/api/v2/summary.json"},{"id":"paypal","name":"PayPal","category":"Payments","priority":60,"enabled":true,"sourceType":"statuspage","url":"https://www.paypal-status.com/api/v2/summary.json"},{"id":"square","name":"Square","category":"Payments","priority":60,"enabled":true,"sourceType":"statuspage","url":"https://www.issquareup.com/api/v2/summary.json"}]
+[
+  {
+    "id": "microsoft365",
+    "name": "Microsoft 365",
+    "category": "Cloud Services",
+    "priority": 130,
+    "enabled": true,
+    "sourceType": "limited-microsoft",
+    "url": "https://status.cloud.microsoft/api/",
+    "message": "Public Microsoft status data is limited; reliable service health requires authenticated tenant Microsoft Graph service communications."
+  },
+  {
+    "id": "entra",
+    "name": "Entra ID",
+    "category": "Identity",
+    "priority": 125,
+    "enabled": true,
+    "sourceType": "limited-microsoft",
+    "url": "https://status.cloud.microsoft/api/",
+    "message": "Public Microsoft status data is limited; reliable service health requires authenticated tenant Microsoft Graph service communications."
+  },
+  {
+    "id": "aws",
+    "name": "AWS",
+    "category": "Cloud Services",
+    "priority": 82,
+    "enabled": true,
+    "sourceType": "rss",
+    "url": "https://status.aws.amazon.com/rss/all.rss"
+  },
+  {
+    "id": "cloudflare",
+    "name": "Cloudflare",
+    "category": "Cloud Services",
+    "priority": 95,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://www.cloudflarestatus.com/api/v2/summary.json"
+  },
+  {
+    "id": "google-workspace",
+    "name": "Google Workspace",
+    "category": "Cloud Services",
+    "priority": 82,
+    "enabled": true,
+    "sourceType": "google-workspace-incidents",
+    "url": "https://www.google.com/appsstatus/dashboard/incidents.json"
+  },
+  {
+    "id": "google-cloud",
+    "name": "Google Cloud",
+    "category": "Cloud Services",
+    "priority": 65,
+    "enabled": true,
+    "sourceType": "google-cloud-incidents",
+    "url": "https://status.cloud.google.com/incidents.json"
+  },
+  {
+    "id": "openai",
+    "name": "OpenAI",
+    "category": "AI",
+    "priority": 70,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.openai.com/api/v2/summary.json"
+  },
+  {
+    "id": "anthropic",
+    "name": "Anthropic",
+    "category": "AI",
+    "priority": 62,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.claude.com/api/v2/summary.json"
+  },
+  {
+    "id": "sentinelone",
+    "name": "SentinelOne",
+    "category": "Security",
+    "priority": 88,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.sentinelone.com/api/v2/summary.json"
+  },
+  {
+    "id": "sophos",
+    "name": "Sophos",
+    "category": "Security",
+    "priority": 84,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.sophos.com/api/v2/summary.json"
+  },
+  {
+    "id": "dnsfilter",
+    "name": "DNSFilter",
+    "category": "Security",
+    "priority": 88,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.dnsfilter.com/api/v2/summary.json"
+  },
+  {
+    "id": "connectwise",
+    "name": "ConnectWise",
+    "category": "MSP Platforms",
+    "priority": 90,
+    "enabled": true,
+    "sourceType": "connectwise-html",
+    "url": "https://status.connectwise.com/"
+  },
+  {
+    "id": "halopsa",
+    "name": "HaloPSA",
+    "category": "MSP Platforms",
+    "priority": 88,
+    "enabled": true,
+    "sourceType": "limited-official",
+    "url": "https://status.haloservicesolutions.com/",
+    "message": "Official Halo status page is protected or bot-filtered in GitHub Actions; status is limited to the public page URL."
+  },
+  {
+    "id": "ninjaone",
+    "name": "NinjaOne",
+    "category": "MSP Platforms",
+    "priority": 90,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.ninjaone.com/api/v2/summary.json"
+  },
+  {
+    "id": "meraki",
+    "name": "Cisco Meraki",
+    "category": "Networking",
+    "priority": 84,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.meraki.net/api/v2/summary.json"
+  },
+  {
+    "id": "ubiquiti",
+    "name": "Ubiquiti",
+    "category": "Networking",
+    "priority": 80,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.ui.com/api/v2/summary.json"
+  },
+  {
+    "id": "digitalocean",
+    "name": "DigitalOcean",
+    "category": "Cloud Services",
+    "priority": 58,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.digitalocean.com/api/v2/summary.json"
+  },
+  {
+    "id": "okta",
+    "name": "Okta",
+    "category": "Identity",
+    "priority": 86,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.okta.com/api/v2/summary.json"
+  },
+  {
+    "id": "quad9",
+    "name": "Quad9",
+    "category": "DNS and Internet",
+    "priority": 68,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.quad9.net/api/v2/summary.json"
+  },
+  {
+    "id": "att",
+    "name": "AT&T",
+    "category": "ISPs and Backbone",
+    "priority": 55,
+    "enabled": true,
+    "sourceType": "limited-official",
+    "url": "https://www.att.com/outages/",
+    "message": "Official AT&T outage status requires a customer service address, account, or location to determine impact."
+  },
+  {
+    "id": "cox",
+    "name": "Cox",
+    "category": "ISPs and Backbone",
+    "priority": 53,
+    "enabled": true,
+    "sourceType": "limited-official",
+    "url": "https://www.cox.com/residential/support/outages.html",
+    "message": "Official Cox outage status requires a service address, ZIP code, or account identity to determine impact."
+  },
+  {
+    "id": "comcast-business",
+    "name": "Comcast Business",
+    "category": "ISPs and Backbone",
+    "priority": 55,
+    "enabled": true,
+    "sourceType": "limited-official",
+    "url": "https://business.comcast.com/status/",
+    "message": "Official Comcast Business status requires customer account identity or sign-in to determine impact."
+  },
+  {
+    "id": "lumen",
+    "name": "Lumen",
+    "category": "ISPs and Backbone",
+    "priority": 52,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://lumen.statuspage.io/api/v2/summary.json"
+  },
+  {
+    "id": "dropbox",
+    "name": "Dropbox",
+    "category": "Storage",
+    "priority": 52,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.dropbox.com/api/v2/summary.json"
+  },
+  {
+    "id": "box",
+    "name": "Box",
+    "category": "Storage",
+    "priority": 52,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.box.com/api/v2/summary.json"
+  },
+  {
+    "id": "wasabi",
+    "name": "Wasabi",
+    "category": "Storage",
+    "priority": 58,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.wasabi.com/api/v2/summary.json"
+  },
+  {
+    "id": "backblaze",
+    "name": "Backblaze",
+    "category": "Storage",
+    "priority": 58,
+    "enabled": true,
+    "sourceType": "backblaze-html",
+    "url": "https://status.backblaze.com/"
+  },
+  {
+    "id": "slack",
+    "name": "Slack",
+    "category": "Collaboration",
+    "priority": 72,
+    "enabled": true,
+    "sourceType": "slack-current-status",
+    "url": "https://status.slack.com/api/v2.0.0/current"
+  },
+  {
+    "id": "zoom",
+    "name": "Zoom",
+    "category": "Collaboration",
+    "priority": 72,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://www.zoomstatus.com/api/v2/summary.json"
+  },
+  {
+    "id": "1password",
+    "name": "1Password",
+    "category": "Identity / Access",
+    "priority": 86,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.1password.com/api/v2/summary.json"
+  },
+  {
+    "id": "duo",
+    "name": "Duo",
+    "category": "Identity / Access",
+    "priority": 86,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.duo.com/api/v2/summary.json"
+  },
+  {
+    "id": "jumpcloud",
+    "name": "JumpCloud",
+    "category": "Identity / Access",
+    "priority": 78,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.jumpcloud.com/api/v2/summary.json"
+  },
+  {
+    "id": "auth0",
+    "name": "Auth0",
+    "category": "Identity / Access",
+    "priority": 78,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.auth0.com/api/v2/summary.json"
+  },
+  {
+    "id": "onelogin",
+    "name": "OneLogin",
+    "category": "Identity / Access",
+    "priority": 78,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.onelogin.com/api/v2/summary.json"
+  },
+  {
+    "id": "bitwarden",
+    "name": "Bitwarden",
+    "category": "Identity / Access",
+    "priority": 78,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.bitwarden.com/api/v2/summary.json"
+  },
+  {
+    "id": "keeper",
+    "name": "Keeper",
+    "category": "Identity / Access",
+    "priority": 78,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.keeper.io/api/v2/summary.json"
+  },
+  {
+    "id": "lastpass",
+    "name": "LastPass",
+    "category": "Identity / Access",
+    "priority": 78,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.lastpass.com/api/v2/summary.json"
+  },
+  {
+    "id": "jamf",
+    "name": "Jamf",
+    "category": "MDM / Apple",
+    "priority": 60,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.jamf.com/api/v2/summary.json"
+  },
+  {
+    "id": "addigy",
+    "name": "Addigy",
+    "category": "MDM / Apple",
+    "priority": 60,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.addigy.com/api/v2/summary.json"
+  },
+  {
+    "id": "atera",
+    "name": "Atera",
+    "category": "MSP Platforms",
+    "priority": 78,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.atera.com/api/v2/summary.json"
+  },
+  {
+    "id": "syncro",
+    "name": "Syncro",
+    "category": "MSP Platforms",
+    "priority": 78,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.syncromsp.com/api/v2/summary.json"
+  },
+  {
+    "id": "kaseya",
+    "name": "Kaseya",
+    "category": "MSP Platforms",
+    "priority": 86,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.kaseya.com/api/v2/summary.json"
+  },
+  {
+    "id": "datto",
+    "name": "Datto",
+    "category": "MSP Platforms",
+    "priority": 86,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.datto.com/api/v2/summary.json"
+  },
+  {
+    "id": "n-able",
+    "name": "N-able",
+    "category": "MSP Platforms",
+    "priority": 86,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.n-able.com/api/v2/summary.json"
+  },
+  {
+    "id": "superops",
+    "name": "SuperOps",
+    "category": "MSP Platforms",
+    "priority": 78,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.superops.com/api/v2/summary.json"
+  },
+  {
+    "id": "crowdstrike",
+    "name": "CrowdStrike",
+    "category": "Security",
+    "priority": 86,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.crowdstrike.com/api/v2/summary.json"
+  },
+  {
+    "id": "huntress",
+    "name": "Huntress",
+    "category": "Security",
+    "priority": 86,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.huntress.com/api/v2/summary.json"
+  },
+  {
+    "id": "malwarebytes",
+    "name": "Malwarebytes",
+    "category": "Security",
+    "priority": 78,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.malwarebytes.com/api/v2/summary.json"
+  },
+  {
+    "id": "bitdefender-gravityzone",
+    "name": "Bitdefender GravityZone",
+    "category": "Security",
+    "priority": 78,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.bitdefender.com/api/v2/summary.json"
+  },
+  {
+    "id": "eset",
+    "name": "ESET",
+    "category": "Security",
+    "priority": 78,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.eset.com/api/v2/summary.json"
+  },
+  {
+    "id": "fortinet",
+    "name": "Fortinet",
+    "category": "Security",
+    "priority": 78,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.fortinet.com/api/v2/summary.json"
+  },
+  {
+    "id": "cisco-umbrella",
+    "name": "Cisco Umbrella",
+    "category": "Security / DNS",
+    "priority": 78,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.umbrella.com/api/v2/summary.json"
+  },
+  {
+    "id": "proofpoint",
+    "name": "Proofpoint",
+    "category": "Security / Email",
+    "priority": 78,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.proofpoint.com/api/v2/summary.json"
+  },
+  {
+    "id": "mimecast",
+    "name": "Mimecast",
+    "category": "Security / Email",
+    "priority": 78,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.mimecast.com/api/v2/summary.json"
+  },
+  {
+    "id": "barracuda",
+    "name": "Barracuda",
+    "category": "Security / Email",
+    "priority": 78,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.barracuda.com/api/v2/summary.json"
+  },
+  {
+    "id": "knowbe4",
+    "name": "KnowBe4",
+    "category": "Security Training",
+    "priority": 60,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.knowbe4.com/api/v2/summary.json"
+  },
+  {
+    "id": "acronis",
+    "name": "Acronis",
+    "category": "Backup",
+    "priority": 78,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.acronis.com/api/v2/summary.json"
+  },
+  {
+    "id": "veeam-cloud-services",
+    "name": "Veeam Cloud Services",
+    "category": "Backup",
+    "priority": 78,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.veeam.com/api/v2/summary.json"
+  },
+  {
+    "id": "crashplan",
+    "name": "CrashPlan",
+    "category": "Backup",
+    "priority": 78,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.crashplan.com/api/v2/summary.json"
+  },
+  {
+    "id": "cove-data-protection",
+    "name": "Cove Data Protection",
+    "category": "Backup",
+    "priority": 78,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.covedataprotection.com/api/v2/summary.json"
+  },
+  {
+    "id": "sharefile",
+    "name": "ShareFile",
+    "category": "File Sharing",
+    "priority": 60,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.sharefile.com/api/v2/summary.json"
+  },
+  {
+    "id": "ultradns",
+    "name": "UltraDNS",
+    "category": "DNS",
+    "priority": 60,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.ultradns.com/api/v2/summary.json"
+  },
+  {
+    "id": "godaddy",
+    "name": "GoDaddy",
+    "category": "Registrar / DNS",
+    "priority": 60,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.godaddy.com/api/v2/summary.json"
+  },
+  {
+    "id": "namecheap",
+    "name": "Namecheap",
+    "category": "Registrar / DNS",
+    "priority": 60,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.namecheap.com/api/v2/summary.json"
+  },
+  {
+    "id": "linode",
+    "name": "Linode",
+    "category": "Edge / Hosting",
+    "priority": 60,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.linode.com/api/v2/summary.json"
+  },
+  {
+    "id": "vultr",
+    "name": "Vultr",
+    "category": "Edge / Hosting",
+    "priority": 60,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.vultr.com/api/v2/summary.json"
+  },
+  {
+    "id": "heroku",
+    "name": "Heroku",
+    "category": "Edge / Hosting",
+    "priority": 60,
+    "enabled": true,
+    "sourceType": "heroku-current-status",
+    "url": "https://status.heroku.com/api/v4/current-status"
+  },
+  {
+    "id": "vercel",
+    "name": "Vercel",
+    "category": "Edge / Hosting",
+    "priority": 60,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.vercel.com/api/v2/summary.json"
+  },
+  {
+    "id": "ringcentral",
+    "name": "RingCentral",
+    "category": "VoIP",
+    "priority": 86,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.ringcentral.com/api/v2/summary.json"
+  },
+  {
+    "id": "8x8",
+    "name": "8x8",
+    "category": "VoIP",
+    "priority": 60,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.8x8.com/api/v2/summary.json"
+  },
+  {
+    "id": "nextiva",
+    "name": "Nextiva",
+    "category": "VoIP",
+    "priority": 60,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.nextiva.com/api/v2/summary.json"
+  },
+  {
+    "id": "intermedia",
+    "name": "Intermedia",
+    "category": "VoIP",
+    "priority": 60,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.intermedia.net/api/v2/summary.json"
+  },
+  {
+    "id": "twilio",
+    "name": "Twilio",
+    "category": "Messaging API",
+    "priority": 86,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.twilio.com/api/v2/summary.json"
+  },
+  {
+    "id": "discord",
+    "name": "Discord",
+    "category": "Communications",
+    "priority": 60,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://discordstatus.com/api/v2/summary.json"
+  },
+  {
+    "id": "docker",
+    "name": "Docker",
+    "category": "DevOps",
+    "priority": 60,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.docker.com/api/v2/summary.json"
+  },
+  {
+    "id": "elastic-cloud",
+    "name": "Elastic Cloud",
+    "category": "Search / Observability",
+    "priority": 60,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.elastic.co/api/v2/summary.json"
+  },
+  {
+    "id": "salesforce",
+    "name": "Salesforce",
+    "category": "CRM",
+    "priority": 60,
+    "enabled": true,
+    "sourceType": "salesforce-active-incidents",
+    "url": "https://api.status.salesforce.com/v1/incidents/active"
+  },
+  {
+    "id": "hubspot",
+    "name": "HubSpot",
+    "category": "CRM",
+    "priority": 60,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.hubspot.com/api/v2/summary.json"
+  },
+  {
+    "id": "zendesk",
+    "name": "Zendesk",
+    "category": "Support",
+    "priority": 60,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.zendesk.com/api/v2/summary.json"
+  },
+  {
+    "id": "intercom",
+    "name": "Intercom",
+    "category": "Support",
+    "priority": 60,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.intercom.com/api/v2/summary.json"
+  },
+  {
+    "id": "notion",
+    "name": "Notion",
+    "category": "Productivity",
+    "priority": 60,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.notion.so/api/v2/summary.json"
+  },
+  {
+    "id": "asana",
+    "name": "Asana",
+    "category": "Productivity",
+    "priority": 60,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.asana.com/api/v2/summary.json"
+  },
+  {
+    "id": "monday-com",
+    "name": "monday.com",
+    "category": "Productivity",
+    "priority": 60,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.monday.com/api/v2/summary.json"
+  },
+  {
+    "id": "docusign",
+    "name": "DocuSign",
+    "category": "E-signature",
+    "priority": 60,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.docusign.com/api/v2/summary.json"
+  },
+  {
+    "id": "quickbooks-online",
+    "name": "QuickBooks Online",
+    "category": "Accounting",
+    "priority": 60,
+    "enabled": true,
+    "sourceType": "quickbooks-html",
+    "url": "https://status.quickbooks.intuit.com/"
+  },
+  {
+    "id": "xero",
+    "name": "Xero",
+    "category": "Accounting",
+    "priority": 60,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.xero.com/api/v2/summary.json"
+  },
+  {
+    "id": "shopify",
+    "name": "Shopify",
+    "category": "E-commerce",
+    "priority": 60,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://www.shopifystatus.com/api/v2/summary.json"
+  },
+  {
+    "id": "stripe",
+    "name": "Stripe",
+    "category": "Payments",
+    "priority": 60,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.stripe.com/api/v2/summary.json"
+  },
+  {
+    "id": "paypal",
+    "name": "PayPal",
+    "category": "Payments",
+    "priority": 60,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://www.paypal-status.com/api/v2/summary.json"
+  },
+  {
+    "id": "square",
+    "name": "Square",
+    "category": "Payments",
+    "priority": 60,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://www.issquareup.com/api/v2/summary.json"
+  }
+]
