@@ -1,12 +1,14 @@
 # MSP Service Heads-Up Console
 
-A static, official-source-only service-status intelligence and early-warning dashboard for MSP technicians. The live site is **https://dmo18.github.io/sst/**. It answers what needs attention, which official sources can be trusted, what changed, and what cautious client communication may be appropriate—without a backend, database, credentials, paid API, browser-side vendor calls, or unofficial outage scraping.
+A static, official-source-only service-status intelligence and early-warning dashboard for MSP technicians. The live site is **https://dmo18.github.io/sst/**. It answers what needs attention, which official sources can be trusted, what changed, and what cautious client communication may be appropriate without a backend, database, credentials, paid API, browser-side vendor calls, or unofficial outage scraping.
 
 ## Operational workflow
 
 The first view is a technician briefing: critical/action items, new and resolved incidents, new source gaps, coverage, and separate service/source conclusions. Active major and degraded incidents follow, then recent changes and provider diagnostics. **Operator mode** provides search, combined filters, history, attempt logs, impact/action guidance, official links, and locally generated copyable communication drafts. **Wallboard mode** persists locally and enlarges the high-attention/changed subset for shared displays without auto-scroll or animation.
 
 Drafts are explicitly labeled, avoid asserting client impact, contain no unsupported estimates, and require technician review. Search covers provider, category, tags, service names, incident titles, and details. Filters include attention, recent change, incident, unavailable/limited source, criticality, operational state, and MSP-relevant domains.
+
+Provider identification uses bundled brand marks where the repository has an approved asset. Every remaining provider receives a deterministic local monogram icon derived from its name and ID. Icons appear in incident and diagnostic views, require no external image request, and fall back safely if a bundled asset cannot load.
 
 ## Health contract and no-false-green guarantee
 
