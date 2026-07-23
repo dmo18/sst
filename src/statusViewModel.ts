@@ -1,192 +1,62 @@
-import type { Incident, ProviderConfig, ProviderDownloadLog, ProviderStatus, StatusColor, StatusPayload } from './types';
-
-const severityRank: Record<StatusColor, number> = { red: 4, amber: 3, blue: 2, green: 1 };
-
-export interface IssueBrief {
-  id: string;
-  provider: string;
-  category: string;
-  severity: StatusColor;
-  label: string;
-  title: string;
-  detail: string;
-  status: string;
-  time: string;
-  source: string;
-  url: string;
-  priority: number;
+import type { AttentionLevel, Incident, ProviderConfig, ProviderDownloadLog, ProviderStatus, ServiceState, SourceState, StatusChange, StatusPayload } from './types';
+const serviceRank: Record<ServiceState, number> = { major: 4, degraded: 3, unknown: 2, operational: 1 };
+const attentionRank: Record<AttentionLevel, number> = { critical: 4, action: 3, watch: 2, informational: 1 };
+export interface IssueBrief extends Incident {
+    label: string;
+    clientDraft: string;
 }
-
 export interface DiagnosticSource {
-  id: string;
-  provider: string;
-  category: string;
-  severity: StatusColor;
-  label: string;
-  status: string;
-  message: string;
-  source: string;
-  ok: boolean;
-  checkedAt: string;
-  sourceType: string;
-  downloadLog: ProviderDownloadLog[];
-  priority: number;
-  dataState: 'available' | 'limited' | 'unavailable' | 'pending' | 'disabled';
+    id: string;
+    provider: string;
+    category: string;
+    serviceState: ServiceState;
+    sourceState: SourceState;
+    attention: AttentionLevel;
+    status: string;
+    message: string;
+    source: string;
+    ok: boolean;
+    checkedAt: string;
+    sourceType: string;
+    downloadLog: ProviderDownloadLog[];
+    priority: number;
+    criticality: string;
+    tags: string[];
+    services: string[];
+    clientImpact: string;
+    technicianAction: string;
+    searchText: string;
+    changed: boolean;
 }
-
-export interface DiagnosticSummary {
-  okCount: number;
-  failedCount: number;
-  limitedCount: number;
-  greenCount: number;
-  amberCount: number;
-  redCount: number;
-  blueCount: number;
-  categoryCount: number;
-}
-
 export interface IssueConsoleModel {
-  version: string;
-  generatedAt: string;
-  incidentCount: number;
-  affectedCount: number;
-  lead?: IssueBrief;
-  briefs: IssueBrief[];
-  affected: DiagnosticSource[];
-  diagnostics: DiagnosticSource[];
-  summary: DiagnosticSummary;
+    version: string;
+    generatedAt: string;
+    incidentCount: number;
+    affectedCount: number;
+    briefs: IssueBrief[];
+    diagnostics: DiagnosticSource[];
+    changes: StatusChange[];
+    history: StatusChange[];
+    summary: StatusPayload['summary'];
+    attentionCount: number;
+    newIncidentCount: number;
+    resolvedCount: number;
+    newUnavailableCount: number;
 }
-
-export function labelForSeverity(color: StatusColor): string {
-  if (color === 'red') return 'major';
-  if (color === 'amber') return 'degraded';
-  if (color === 'green') return 'ok';
-  return 'limited';
-}
-
-function sortIncident(a: Incident, b: Incident): number {
-  return (severityRank[b.color] - severityRank[a.color]) || (b.priority - a.priority) || String(b.rawTime ?? '').localeCompare(String(a.rawTime ?? ''));
-}
-
-function sortProvider(a: ProviderStatus, b: ProviderStatus): number {
-  return (severityRank[b.color] - severityRank[a.color]) || ((b.priority ?? 0) - (a.priority ?? 0)) || a.name.localeCompare(b.name);
-}
-
-function toBrief(incident: Incident): IssueBrief {
-  return {
-    id: `${incident.providerId}-${incident.title}`,
-    provider: incident.provider,
-    category: incident.category,
-    severity: incident.color,
-    label: labelForSeverity(incident.color),
-    title: incident.title,
-    detail: incident.note,
-    status: incident.status || labelForSeverity(incident.color),
-    time: incident.time,
-    source: incident.source,
-    url: incident.url,
-    priority: incident.priority
-  };
-}
-
-function fallbackDownloadLog(provider: ProviderStatus, generatedAt: string): ProviderDownloadLog[] {
-  return [{
-    timestamp: provider.checked_at || generatedAt,
-    completed_at: provider.checked_at || generatedAt,
-    url: provider.source,
-    source_type: provider.source_type || 'unknown',
-    ok: provider.ok,
-    status: provider.status,
-    message: provider.message || 'Per-source download timing was not recorded by this status payload.'
-  }];
-}
-
-function catalogFallback(provider: ProviderConfig, generatedAt: string): ProviderStatus {
-  return {
-    id: provider.id,
-    name: provider.name,
-    category: provider.category,
-    status: provider.enabled === false ? 'Disabled in provider catalog' : 'Pending source refresh',
-    color: 'blue',
-    message: provider.message || 'Provider exists in the canonical catalog but is not present in the latest generated status payload yet.',
-    ok: false,
-    source: provider.url,
-    priority: provider.priority ?? 0,
-    checked_at: generatedAt,
-    source_type: provider.sourceType || 'unknown',
-    download_log: [{
-      timestamp: generatedAt,
-      completed_at: generatedAt,
-      duration_ms: 0,
-      url: provider.url,
-      source_type: provider.sourceType || 'unknown',
-      ok: false,
-      status: 'catalog only',
-      message: 'Waiting for the next v2 Pages build to fetch this provider.'
-    }]
-  };
-}
-
-function toDiagnostic(provider: ProviderStatus, generatedAt: string): DiagnosticSource {
-  const downloadLog = provider.download_log ?? [];
-  return {
-    id: provider.id,
-    provider: provider.name,
-    category: provider.category,
-    severity: provider.color,
-    label: labelForSeverity(provider.color),
-    status: provider.status,
-    message: provider.message || '',
-    source: provider.source,
-    ok: provider.ok,
-    checkedAt: provider.checked_at || generatedAt,
-    sourceType: provider.source_type || 'unknown',
-    downloadLog: downloadLog.length ? downloadLog : fallbackDownloadLog(provider, generatedAt),
-    priority: provider.priority ?? 0,
-    dataState: provider.status.startsWith('Disabled') ? 'disabled' : provider.status.startsWith('Pending') ? 'pending' : !provider.ok ? 'unavailable' : provider.color === 'blue' ? 'limited' : 'available'
-  };
-}
-
-function mergeCatalog(payload: StatusPayload, catalog: ProviderConfig[] = []): ProviderStatus[] {
-  const byId = new Map<string, ProviderStatus>();
-  for (const provider of payload.providers) {
-    if (byId.has(provider.id)) throw new Error(`Duplicate provider id in status payload: ${provider.id}`);
-    byId.set(provider.id, provider);
-  }
-  for (const provider of catalog) {
-    if (!byId.has(provider.id)) byId.set(provider.id, catalogFallback(provider, payload.generated_at));
-  }
-  return [...byId.values()];
-}
-
-function summarize(diagnostics: DiagnosticSource[]): DiagnosticSummary {
-  const categories = new Set(diagnostics.map(source => source.category));
-  return {
-    okCount: diagnostics.filter(source => source.ok).length,
-    failedCount: diagnostics.filter(source => !source.ok).length,
-    limitedCount: diagnostics.filter(source => source.severity === 'blue').length,
-    greenCount: diagnostics.filter(source => source.severity === 'green').length,
-    amberCount: diagnostics.filter(source => source.severity === 'amber').length,
-    redCount: diagnostics.filter(source => source.severity === 'red').length,
-    blueCount: diagnostics.filter(source => source.severity === 'blue').length,
-    categoryCount: categories.size
-  };
-}
-
+export function clientCommunicationDraft(i: Incident): string { const symptom = i.note ? ` The vendor reports: ${i.note.replace(/\s+/g, ' ').slice(0, 220)}` : ''; return `DRAFT — We are monitoring a reported service issue affecting ${i.provider}.${symptom} Some users may experience disruption to ${i.affected_service || 'the affected service'}. Our team is monitoring official updates and will provide further information as it becomes available. Client impact has not been confirmed unless separately communicated.`; }
+function catalogFallback(p: ProviderConfig, at: string): ProviderStatus { return { id: p.id, name: p.name, category: p.category, status: p.enabled === false ? 'Disabled in provider catalog' : 'Pending source refresh', color: 'blue', service_state: 'unknown', source_state: p.enabled === false ? 'disabled' : 'pending', attention: 'watch', message: p.message || 'Waiting for generated status.', ok: false, source: p.url, priority: p.priority || 0, criticality: p.criticality, tags: p.tags || [], services: p.services || [], client_impact: p.client_impact, technician_action: p.technician_action, checked_at: at, source_type: p.sourceType, download_log: [] }; }
+function merge(payload: StatusPayload, catalog: ProviderConfig[]) { const map = new Map<string, ProviderStatus>(); for (const p of payload.providers) {
+    if (map.has(p.id))
+        throw new Error(`Duplicate provider id in status payload: ${p.id}`);
+    map.set(p.id, p);
+} for (const p of catalog)
+    if (!map.has(p.id))
+        map.set(p.id, catalogFallback(p, payload.generated_at)); return [...map.values()]; }
+export function filterDiagnostics(items: DiagnosticSource[], query: string, filters: string[]): DiagnosticSource[] { const q = query.trim().toLowerCase(); return items.filter(x => (!q || x.searchText.includes(q)) && filters.every(f => f === 'attention' ? x.attention !== 'informational' : f === 'changed' ? x.changed : f === 'incident' ? ['major', 'degraded'].includes(x.serviceState) : f === 'high' ? x.criticality === 'high' : f === 'operational' ? x.serviceState === 'operational' : f === x.sourceState || f === x.serviceState || x.tags.includes(f) || x.category.toLowerCase().includes(f))); }
 export function buildIssueConsoleModel(payload: StatusPayload, version: string, catalog: ProviderConfig[] = []): IssueConsoleModel {
-  const briefs = [...payload.incidents].sort(sortIncident).map(toBrief);
-  const diagnostics = mergeCatalog(payload, catalog).sort(sortProvider).map(provider => toDiagnostic(provider, payload.generated_at));
-  const affected = diagnostics.filter(source => source.severity === 'red' || source.severity === 'amber');
-
-  return {
-    version,
-    generatedAt: payload.generated_at,
-    incidentCount: briefs.length,
-    affectedCount: affected.length,
-    lead: briefs[0],
-    briefs,
-    affected,
-    diagnostics,
-    summary: summarize(diagnostics)
-  };
+    const changed = new Set(payload.changes.map(c => c.provider_id));
+    const diagnostics = merge(payload, catalog).map(p => ({ id: p.id, provider: p.name, category: p.category, serviceState: p.service_state, sourceState: p.source_state, attention: p.attention, status: p.status, message: p.message || '', source: p.source, ok: p.ok, checkedAt: p.checked_at || payload.generated_at, sourceType: p.source_type || 'unknown', downloadLog: p.download_log || [], priority: p.priority, criticality: p.criticality || 'medium', tags: (p.tags || []).map(x => x.toLowerCase()), services: p.services || [], clientImpact: p.client_impact || '', technicianAction: p.technician_action || '', searchText: `${p.name} ${p.category} ${(p.tags || []).join(' ')} ${(p.services || []).join(' ')} ${payload.incidents.filter(i => i.providerId === p.id).map(i => `${i.title} ${i.note}`).join(' ')}`.toLowerCase(), changed: changed.has(p.id) })).sort((a, b) => attentionRank[b.attention] - attentionRank[a.attention] || serviceRank[b.serviceState] - serviceRank[a.serviceState] || Number(b.changed) - Number(a.changed) || b.priority - a.priority || a.provider.localeCompare(b.provider));
+    const briefs = [...payload.incidents].sort((a, b) => attentionRank[b.attention] - attentionRank[a.attention] || serviceRank[b.service_state] - serviceRank[a.service_state] || b.priority - a.priority).map(i => ({ ...i, label: i.service_state === 'major' ? 'Major incident' : 'Degraded service', clientDraft: clientCommunicationDraft(i) }));
+    return { version, generatedAt: payload.generated_at, incidentCount: briefs.length, affectedCount: payload.summary.affected_provider_count, briefs, diagnostics, changes: payload.changes, history: payload.history, summary: payload.summary, attentionCount: diagnostics.filter(x => ['critical', 'action'].includes(x.attention)).length, newIncidentCount: payload.changes.filter(x => x.type === 'incident_new').length, resolvedCount: payload.changes.filter(x => x.type === 'incident_resolved').length, newUnavailableCount: payload.changes.filter(x => x.type === 'source_unavailable').length };
 }
+export function wallboardSubset(model: IssueConsoleModel) { return model.diagnostics.filter(x => x.attention !== 'informational' || x.changed); }
