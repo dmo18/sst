@@ -18,6 +18,8 @@ export function payloadValidationErrors(value: unknown): string[] {
         e.push('unsupported schema_version');
     if (typeof p.generated_at !== 'string' || !Number.isFinite(Date.parse(p.generated_at)))
         e.push('invalid generated_at');
+    else if (Date.parse(p.generated_at) > Date.now() + 300000)
+        e.push('generated_at is materially in the future');
     if (!Array.isArray(p.providers))
         e.push('providers must be an array');
     if (!Array.isArray(p.incidents))
