@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { SyntheticEvent } from 'react';
-import { providerIconFallback, providerIconSrc } from './logos';
+import { ProviderIcon } from './providerIcon';
 import {
   filterDiagnostics,
   wallboardSubset,
@@ -16,25 +15,6 @@ function timeLabel(value?: string): string {
     : 'unknown';
 }
 
-function ProviderIcon({ id, name, size = 36 }: { id: string; name: string; size?: number }): JSX.Element {
-  const fallback = providerIconFallback(id, name);
-  const handleError = (event: SyntheticEvent<HTMLImageElement>) => {
-    if (event.currentTarget.src !== fallback) event.currentTarget.src = fallback;
-  };
-
-  return (
-    <img
-      className="provider-logo"
-      src={providerIconSrc(id, name)}
-      alt=""
-      width={size}
-      height={size}
-      loading="lazy"
-      decoding="async"
-      onError={handleError}
-    />
-  );
-}
 
 function CopyDraft({ draft }: { draft: string }): JSX.Element {
   const [copied, setCopied] = useState(false);
@@ -58,7 +38,7 @@ function IncidentCard({ item, wallboard }: { item: IssueBrief; wallboard: boolea
     <article className={`incident-card ${item.service_state}`}>
       <header>
         <div className="provider-identity">
-          <ProviderIcon id={item.providerId} name={item.provider} size={42} />
+          <ProviderIcon id={item.providerId} name={item.provider} />
           <b>{item.provider}</b>
         </div>
         <span>{item.label} · {item.attention} attention</span>

@@ -5,3 +5,4 @@ const p: any = { schema_version: 2, generated_at: '2026-01-01T00:00:00Z', summar
 test('complete payload validates', () => assert.equal(isStatusPayload(p), true));
 test('duplicate provider, bad URL and summary mismatch reject', () => { const x = structuredClone(p); x.providers.push({ ...x.providers[0], source: 'javascript:x' }); assert.ok(payloadValidationErrors(x).length >= 3); });
 test('limited source cannot be counted operational by reconciliation', () => { const x = structuredClone(p); x.providers[0].service_state = 'unknown'; x.providers[0].source_state = 'limited'; assert.equal(isStatusPayload(x), false); });
+test('materially future generated_at is rejected', () => { const x = structuredClone(p); x.generated_at = new Date(Date.now() + 3600000).toISOString(); assert.deepEqual(payloadValidationErrors(x), ['generated_at is materially in the future']); });

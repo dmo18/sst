@@ -4,7 +4,7 @@ import packageMetadata from '../package.json';
 import { dataLifecycleReducer, initialDataLifecycle } from './dataLifecycle';
 import { IssueConsole } from './IssueConsole';
 import { buildIssueConsoleModel } from './statusViewModel';
-import { isStatusPayload } from './payloadValidation';
+import { payloadValidationErrors } from './payloadValidation';
 import { RequestOwnership } from './requestOwnership';
 import type { ProviderConfig, StatusPayload } from './types';
 const CATALOG = providerCatalog as ProviderConfig[];
@@ -14,9 +14,12 @@ async function fetchStatus(signal: AbortSignal): Promise<StatusPayload> {
     if (!response.ok)
         throw new Error(`status.json returned HTTP ${response.status}`);
     const data: unknown = await response.json();
-    if (!isStatusPayload(data))
-        throw new Error('status.json has an invalid or unsupported payload');
-    return data;
+    const errors = payloadValidationErrors(data);
+    if (errors.length) {
+        console.error('status.json validation failed:', errors);
+        throw new Error(`status.json has an invalid or unsupported payload (${errors.join('; ')})`);
+    }
+    return data as StatusPayload;
 }
 export function App(): JSX.Element {
     const [state, dispatch] = useReducer(dataLifecycleReducer, initialDataLifecycle);
