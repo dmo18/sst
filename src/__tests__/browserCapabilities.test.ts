@@ -1,0 +1,3 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {fullscreenSupported,wakeLockSupported} from '../browserCapabilities.ts';
+test('fullscreen capability detection is graceful',()=>{assert.equal(fullscreenSupported({documentElement:{requestFullscreen(){}},exitFullscreen(){}} as unknown as Document),true);assert.equal(fullscreenSupported({documentElement:{}} as unknown as Document),false)});
+test('wake lock capability detection is graceful',()=>{assert.equal(wakeLockSupported({wakeLock:{request(){}}} as unknown as Navigator),true);assert.equal(wakeLockSupported({} as Navigator),false)});

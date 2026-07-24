@@ -1,0 +1,7 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { isStatusPayload, payloadValidationErrors } from '../payloadValidation.ts';
+const p: any = { schema_version: 2, generated_at: '2026-01-01T00:00:00Z', summary: { service_overall: 'operational', source_overall: 'available', active_incident_count: 0, affected_provider_count: 0, confirmed_operational_count: 1, degraded_count: 0, major_count: 0, unknown_count: 0, limited_count: 0, unavailable_count: 0, disabled_count: 0, pending_count: 0, stale_count: 0, provider_total: 1, enabled_provider_count: 1, coverage_percent: 100, confirmed_operational_percent: 100 }, providers: [{ id: 'a', name: 'A', category: 'C', status: 'ok', color: 'green', service_state: 'operational', source_state: 'available', attention: 'informational', ok: true, source: 'https://a.test', priority: 1 }], incidents: [], changes: [], history: [] };
+test('complete payload validates', () => assert.equal(isStatusPayload(p), true));
+test('duplicate provider, bad URL and summary mismatch reject', () => { const x = structuredClone(p); x.providers.push({ ...x.providers[0], source: 'javascript:x' }); assert.ok(payloadValidationErrors(x).length >= 3); });
+test('limited source cannot be counted operational by reconciliation', () => { const x = structuredClone(p); x.providers[0].service_state = 'unknown'; x.providers[0].source_state = 'limited'; assert.equal(isStatusPayload(x), false); });

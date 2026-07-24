@@ -1,0 +1,4 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {isStatusPayload} from '../payloadValidation.ts';import {representativeFixtures,statusFixture} from './fixtures/statusFixtures.ts';
+test('representative 90-provider payload fixtures reconcile',()=>{for(const kind of ['operational','mixed','major','multiple-major','degraded','all-unavailable'] as const){const fixture=statusFixture(kind);assert.equal(fixture.providers.length,90);assert.equal(isStatusPayload(fixture),true,kind)}});
+
+test('named wallboard fixtures cover final display states',()=>{assert.equal(Object.keys(representativeFixtures).length,13);assert.equal(representativeFixtures.ninetyProviderGrid.providers.length,90);assert.match(representativeFixtures.longContentAndMissingBrand.providers[89].name,/Exceptionally Long/)});
