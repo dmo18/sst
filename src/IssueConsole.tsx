@@ -1,7 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ProviderIcon } from './providerIcon';
-import { Wallboard } from './Wallboard';
-import { parseWallboardSettings } from './wallboard';
 import {
   filterDiagnostics,
   type DiagnosticSource,
