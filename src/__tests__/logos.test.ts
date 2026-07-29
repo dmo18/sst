@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { generatedProviderIcon, hasBrandedProviderIcon, providerIconSrc } from '../logos.ts';
+import { generatedProviderIcon, hasBrandedProviderIcon, providerIconFallback, providerIconSrc } from '../logos.ts';
 
 test('known providers use bundled branded assets', () => {
   assert.equal(hasBrandedProviderIcon('microsoft365'), true);
@@ -25,4 +25,8 @@ test('generated icons differ between providers', () => {
 test('multi-word provider names use readable initials', () => {
   const icon = decodeURIComponent(generatedProviderIcon('google-workspace', 'Google Workspace'));
   assert.match(icon, />GW<\/text>/);
+});
+
+test('icon fallback is always a local generated data URL', () => {
+  assert.equal(providerIconFallback('microsoft365', 'Microsoft 365'), generatedProviderIcon('microsoft365', 'Microsoft 365'));
 });

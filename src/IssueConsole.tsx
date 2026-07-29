@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { SyntheticEvent } from 'react';
-import { providerIconFallback, providerIconSrc } from './logos';
+import { ProviderIcon } from './providerIcon';
+import { Wallboard } from './Wallboard';
+import { parseWallboardSettings } from './wallboard';
 import {
   filterDiagnostics,
-  wallboardSubset,
   type DiagnosticSource,
   type IssueBrief,
   type IssueConsoleModel
@@ -16,25 +16,6 @@ function timeLabel(value?: string): string {
     : 'unknown';
 }
 
-function ProviderIcon({ id, name, size = 36 }: { id: string; name: string; size?: number }): JSX.Element {
-  const fallback = providerIconFallback(id, name);
-  const handleError = (event: SyntheticEvent<HTMLImageElement>) => {
-    if (event.currentTarget.src !== fallback) event.currentTarget.src = fallback;
-  };
-
-  return (
-    <img
-      className="provider-logo"
-      src={providerIconSrc(id, name)}
-      alt=""
-      width={size}
-      height={size}
-      loading="lazy"
-      decoding="async"
-      onError={handleError}
-    />
-  );
-}
 
 function CopyDraft({ draft }: { draft: string }): JSX.Element {
   const [copied, setCopied] = useState(false);
@@ -58,7 +39,7 @@ function IncidentCard({ item, wallboard }: { item: IssueBrief; wallboard: boolea
     <article className={`incident-card ${item.service_state}`}>
       <header>
         <div className="provider-identity">
-          <ProviderIcon id={item.providerId} name={item.provider} size={42} />
+          <ProviderIcon id={item.providerId} name={item.provider} />
           <b>{item.provider}</b>
         </div>
         <span>{item.label} · {item.attention} attention</span>
@@ -118,7 +99,10 @@ export function IssueConsole({ model, lifecycle, onRefresh }: {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('all');
   const [hidden, setHidden] = useState(document.hidden);
-  const [mode, setMode] = useState(() => localStorage.getItem('sst-view') === 'wallboard' ? 'wallboard' : 'operator');
+  const settings = useMemo(() => parseWallboardSettings(location.search), []);
+  const [mode, setMode] = useState(() => new URLSearchParams(location.search).has('view')
+    ? settings.view
+    : localStorage.getItem('sst-view') === 'wallboard' ? 'wallboard' : 'operator');
 
   useEffect(() => localStorage.setItem('sst-view', mode), [mode]);
   useEffect(() => {
@@ -131,7 +115,9 @@ export function IssueConsole({ model, lifecycle, onRefresh }: {
     () => model ? filterDiagnostics(model.diagnostics, query, filter === 'all' ? [] : [filter]) : [],
     [model, query, filter]
   );
-  const shown = model && mode === 'wallboard' ? wallboardSubset({ ...model, diagnostics: filtered }) : filtered;
+  const shown = filtered;
+
+  if (mode === 'wallboard') return <Wallboard model={model} lifecycle={lifecycle} settings={settings} onOperator={() => setMode('operator')} />;
 
   return (
     <>
@@ -142,8 +128,8 @@ export function IssueConsole({ model, lifecycle, onRefresh }: {
           <p className="current-time">Last refresh: {timeLabel(model?.generatedAt)}</p>
         </div>
         <div className="header-actions">
-          <button aria-pressed={mode === 'wallboard'} onClick={() => setMode(mode === 'operator' ? 'wallboard' : 'operator')}>
-            {mode === 'operator' ? 'Wallboard mode' : 'Operator mode'}
+          <button aria-pressed={false} onClick={() => setMode('wallboard')}>
+            Wallboard mode
           </button>
           <button onClick={onRefresh} disabled={lifecycle.phase === 'refreshing'}>
             {lifecycle.phase === 'refreshing' ? 'Refreshing…' : 'Refresh now'}
@@ -185,11 +171,11 @@ export function IssueConsole({ model, lifecycle, onRefresh }: {
           <section className="incidents">
             <h2>Active incident briefing</h2>
             {model.briefs.length
-              ? model.briefs.map(item => <IncidentCard key={item.id} item={item} wallboard={mode === 'wallboard'} />)
+              ? model.briefs.map(item => <IncidentCard key={item.id} item={item} wallboard={false} />)
               : <p className="empty-filter">No active incidents. Coverage is {model.summary.coverage_percent}%; limited and unavailable sources remain unknown.</p>}
           </section>
 
-          {mode === 'operator' && (
+          {(
             <section className="changes">
               <h2>Recent changes</h2>
               {model.history.length
@@ -203,7 +189,7 @@ export function IssueConsole({ model, lifecycle, onRefresh }: {
               <div><h2>Provider diagnostics</h2><p>Search names, categories, tags, services, and incident details.</p></div>
               <em>{shown?.length || 0} of {model.diagnostics.length}</em>
             </header>
-            {mode === 'operator' && (
+            {(
               <div className="filters">
                 <label>Search<input type="search" value={query} onChange={event => setQuery(event.target.value)} /></label>
                 <label>
