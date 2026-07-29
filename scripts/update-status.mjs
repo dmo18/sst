@@ -49,6 +49,15 @@ function shortTime(value) {
         return String(value).slice(0, 16);
     return date.toISOString().slice(5, 16).replace('T', ' ');
 }
+export function safeIncidentUrl(value, fallback) {
+    try {
+        const url = new URL(String(value || ''), fallback);
+        if (url.protocol === 'http:' || url.protocol === 'https:')
+            return url.href;
+    }
+    catch { }
+    return fallback;
+}
 function providerStatus(provider, status, color, ok, message, logs, incidents = [], sourceState) {
     const serviceState = color === 'red' ? 'major' : color === 'amber' ? 'degraded' : color === 'green' ? 'operational' : 'unknown';
     const source_state = sourceState || (provider.enabled === false ? 'disabled' : !ok ? 'unavailable' : color === 'blue' ? 'limited' : 'available');
@@ -188,7 +197,7 @@ function incident(provider, title, note, source, url, time, status, color) {
         title: cleanTitle,
         note: cleanText(note || 'No incident detail was returned by the source.'),
         source,
-        url: url || provider.url,
+        url: safeIncidentUrl(url, provider.url),
         time: shortTime(time),
         rawTime: time || '',
         status: status || '',
@@ -790,9 +799,17 @@ export function validatePayload(payload) { const errors = []; const ids = new Se
     if (incidentIds.has(i.id))
         errors.push(`duplicate incident ${i.id}`);
     incidentIds.add(i.id);
+    try {
+        if (!['http:', 'https:'].includes(new URL(i.url).protocol))
+            errors.push(`invalid incident URL ${i.id}`);
+    }
+    catch {
+        errors.push(`invalid incident URL ${i.id}`);
+    }
     if (i.rawTime && Date.parse(i.rawTime) > Date.now() + 300000)
         errors.push(`future incident ${i.id}`);
-} const expected = summarizeProviders(payload.providers, payload.incidents); for (const [key, value] of Object.entries(expected))
+} if (!Array.isArray(payload.changes) || !Array.isArray(payload.history))
+    errors.push('changes and history must be arrays'); const expected = summarizeProviders(payload.providers, payload.incidents); for (const [key, value] of Object.entries(expected))
     if (payload.summary[key] !== value)
         errors.push(`summary mismatch ${key}`); if (payload.schema_version !== 2 || !Number.isFinite(Date.parse(payload.generated_at)))
     errors.push('invalid schema metadata'); if (errors.length)

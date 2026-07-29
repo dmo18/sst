@@ -4,7 +4,9 @@ A static, official-source-only service-status intelligence and early-warning das
 
 ## Operational workflow
 
-The first view is a technician briefing: critical/action items, new and resolved incidents, new source gaps, coverage, and separate service/source conclusions. Active major and degraded incidents follow, then recent changes and provider diagnostics. **Operator mode** provides search, combined filters, history, attempt logs, impact/action guidance, official links, and locally generated copyable communication drafts. **Wallboard mode** persists locally and enlarges the high-attention/changed subset for shared displays without auto-scroll or animation.
+The first view is a technician briefing: critical/action items, new and resolved incidents, new source gaps, coverage, and separate service/source conclusions. Active major and degraded incidents follow, then recent changes and provider diagnostics. **Operator mode** provides search, combined filters, history, attempt logs, impact/action guidance, official links, and locally generated copyable communication drafts. **Wallboard mode** is a full-viewport, non-scrolling TV display with Heads Up, All Providers, and Source Health screens. It includes a local clock, generated/check times, explicit 40/60-minute stale warnings, paginated provider grids, fullscreen and optional Wake Lock controls, and reduced-motion-aware rotation. Every provider remains reachable without continuous scrolling.
+
+Wallboard startup is URL-controlled: `?view=wallboard&screen=heads-up`, `screen=providers`, or `screen=sources`; `density=comfortable|compact` selects grid density and `rotate=SECONDS` enables bounded screen/page rotation. A zero rotation value disables rotation. Operator mode can be selected explicitly with `?view=operator`.
 
 Drafts are explicitly labeled, avoid asserting client impact, contain no unsupported estimates, and require technician review. Search covers provider, category, tags, service names, incident titles, and details. Filters include attention, recent change, incident, unavailable/limited source, criticality, operational state, and MSP-relevant domains.
 
