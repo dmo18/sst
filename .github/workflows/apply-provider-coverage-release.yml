@@ -3,7 +3,7 @@ name: Apply provider coverage release
 on:
   push:
     branches:
-      - agent/provider-coverage-100
+      - main
 
 permissions:
   contents: write
@@ -15,7 +15,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: agent/provider-coverage-100
+          ref: main
           fetch-depth: 0
 
       - uses: actions/setup-node@v4
@@ -66,8 +66,9 @@ jobs:
         shell: bash
         run: |
           rm .github/workflows/apply-provider-coverage-release.yml
+          rm .github/provider-coverage-release-trigger
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add package.json package-lock.json scripts/ensure-valid-status.mjs scripts/__tests__/ensure-valid-status.test.js src/types.ts src/payloadValidation.ts src/__tests__/payloadValidation.test.ts src/__tests__/lifecycle.test.ts .github/workflows/refresh-pages.yml .github/workflows/apply-provider-coverage-release.yml
+          git add package.json package-lock.json scripts/ensure-valid-status.mjs scripts/__tests__/ensure-valid-status.test.js src/types.ts src/payloadValidation.ts src/__tests__/payloadValidation.test.ts src/__tests__/lifecycle.test.ts .github/workflows/refresh-pages.yml .github/workflows/apply-provider-coverage-release.yml .github/provider-coverage-release-trigger
           git commit -m "Release 2.2.0 with complete provider coverage"
-          git push origin HEAD:agent/provider-coverage-100
+          git push origin HEAD:main
