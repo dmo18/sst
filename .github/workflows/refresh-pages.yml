@@ -41,6 +41,8 @@ jobs:
           const valid = Number(summary.valid_status_count);
           const invalid = Number(summary.invalid_status_count);
           const percent = Number(summary.valid_status_percent);
+          const coverage = Number(summary.coverage_percent);
+          const liveSourceCoverage = Number(summary.live_source_coverage_percent);
           const unavailable = Number(summary.unavailable_count);
           const invalidProviders = (payload.providers || []).filter(provider =>
             ['unavailable', 'pending', 'disabled'].includes(provider.source_state)
@@ -51,12 +53,14 @@ jobs:
           if (valid !== total) throw new Error(`valid_status_count ${valid} does not equal provider_total ${total}`);
           if (invalid !== 0) throw new Error(`invalid_status_count must be zero, received ${invalid}`);
           if (percent !== 100) throw new Error(`valid_status_percent must be 100, received ${percent}`);
+          if (coverage !== 100) throw new Error(`coverage_percent must be 100, received ${coverage}`);
+          if (!Number.isFinite(liveSourceCoverage) || liveSourceCoverage < 0 || liveSourceCoverage > 100) throw new Error(`live_source_coverage_percent is invalid: ${liveSourceCoverage}`);
           if (unavailable !== 0) throw new Error(`unavailable_count must be zero, received ${unavailable}`);
           if (invalidProviders.length) throw new Error(`Invalid provider status data: ${invalidProviders.map(provider => provider.id).join(', ')}`);
 
-          const description = `${valid}/${total} valid; ${invalid} invalid; ${percent}%`;
+          const description = `${valid}/${total} valid; ${invalid} invalid; ${coverage}% coverage`;
           fs.appendFileSync(process.env.GITHUB_OUTPUT, `description=${description}\n`);
-          console.log(`Status data acceptance passed: ${description}; ${unavailable} unavailable.`);
+          console.log(`Status data acceptance passed: ${description}; ${liveSourceCoverage}% live source coverage; ${unavailable} unavailable.`);
           NODE
       - run: npm run build:app
       - uses: actions/configure-pages@v5
