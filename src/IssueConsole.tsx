@@ -9,10 +9,63 @@ import {
 import type { DataLifecycle } from './types';
 import { parseWallboardSettings, type WallboardSettings } from './wallboard';
 
+const EASTERN_TIME_ZONE = 'America/New_York';
+
+type IncidentGroup = {
+  providerId: string;
+  provider: string;
+  category: string;
+  newestMs: number;
+  items: IssueBrief[];
+};
+
+function parseTime(value?: string): number {
+  if (!value) return 0;
+  const ms = Date.parse(value);
+  return Number.isFinite(ms) ? ms : 0;
+}
+
+function incidentSortTime(item: IssueBrief): number {
+  return Math.max(parseTime(item.latest_update), parseTime(item.first_detected), parseTime(item.rawTime), parseTime(item.time));
+}
+
 function timeLabel(value?: string): string {
-  return value && !Number.isNaN(Date.parse(value))
-    ? new Date(value).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })
-    : 'unknown';
+  if (!value || Number.isNaN(Date.parse(value))) return 'unknown';
+  const formatted = new Intl.DateTimeFormat('en-US', {
+    timeZone: EASTERN_TIME_ZONE,
+    month: 'short',
+    day: '2-digit',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true
+  }).format(new Date(value));
+  return `${formatted} EST`;
+}
+
+function affectedService(item: IssueBrief): string {
+  return item.affected_service || item.category || item.provider;
+}
+
+function groupIncidents(items: IssueBrief[]): IncidentGroup[] {
+  const groups = new Map<string, IncidentGroup>();
+  for (const item of items) {
+    const key = item.providerId || item.provider;
+    const group = groups.get(key) || {
+      providerId: key,
+      provider: item.provider,
+      category: item.category,
+      newestMs: 0,
+      items: []
+    };
+    const itemMs = incidentSortTime(item);
+    group.newestMs = Math.max(group.newestMs, itemMs);
+    group.items.push(item);
+    groups.set(key, group);
+  }
+  return [...groups.values()]
+    .map(group => ({ ...group, items: group.items.sort((a, b) => incidentSortTime(b) - incidentSortTime(a)) }))
+    .sort((a, b) => b.newestMs - a.newestMs || a.provider.localeCompare(b.provider));
 }
 
 function modeHref(params: Record<string, string>): string {
@@ -92,9 +145,9 @@ function IncidentCard({ item, wallboard }: { item: IssueBrief; wallboard: boolea
       <h3>{item.title}</h3>
       <p>{item.note}</p>
       <dl>
-        <div><dt>Affected service</dt><dd>{item.affected_service || 'Not specified'}</dd></div>
-        <div><dt>First detected</dt><dd>{timeLabel(item.first_detected)}</dd></div>
-        <div><dt>Latest update</dt><dd>{timeLabel(item.latest_update)}</dd></div>
+        <div><dt>Affected service</dt><dd>{affectedService(item)}</dd></div>
+        <div><dt>First detected</dt><dd>{timeLabel(item.first_detected || item.rawTime || item.time)}</dd></div>
+        <div><dt>Latest update</dt><dd>{timeLabel(item.latest_update || item.rawTime || item.time)}</dd></div>
       </dl>
       {!wallboard && (
         <>
@@ -112,9 +165,24 @@ function IncidentCard({ item, wallboard }: { item: IssueBrief; wallboard: boolea
   );
 }
 
+function IncidentGroupCard({ group }: { group: IncidentGroup }): JSX.Element {
+  return (
+    <article className="incident-source-group">
+      <header>
+        <div className="provider-identity">
+          <ProviderIcon id={group.providerId} name={group.provider} />
+          <div><h3>{group.provider}</h3><p>{group.category}</p></div>
+        </div>
+        <span>{group.items.length} active update{group.items.length === 1 ? '' : 's'} · newest {timeLabel(group.items[0]?.latest_update || group.items[0]?.rawTime || group.items[0]?.time)}</span>
+      </header>
+      {group.items.map(item => <IncidentCard key={item.id} item={item} wallboard={false} />)}
+    </article>
+  );
+}
+
 function Diagnostic({ source }: { source: DiagnosticSource }): JSX.Element {
   return (
-    <details className="diagnostic-card">
+    <details className={`diagnostic-card source-${source.sourceState}`}>
       <summary>
         <ProviderIcon id={source.id} name={source.provider} />
         <span><b>{source.provider}</b><small>{source.category}</small></span>
@@ -123,12 +191,13 @@ function Diagnostic({ source }: { source: DiagnosticSource }): JSX.Element {
       <div className="diagnostic-detail">
         <p>{source.status}</p>
         <p>{source.message}</p>
+        <p><b>Status captured:</b> {source.ok ? `yes, ${timeLabel(source.checkedAt)}` : `no, last attempt ${timeLabel(source.checkedAt)}`}</p>
         {source.clientImpact && <p><b>MSP impact:</b> {source.clientImpact}</p>}
         {source.technicianAction && <p><b>Action:</b> {source.technicianAction}</p>}
         <a href={source.source} target="_blank" rel="noopener noreferrer">Official source ↗</a>
         {source.downloadLog.map((log, index) => (
           <div className="download-log" key={`${source.id}-${index}`}>
-            Attempt {log.attempt || 1}: {log.status}; {log.content_type || 'content type unavailable'}; {log.error || log.message}
+            Attempt {log.attempt || 1}: {log.status}; {log.content_type || 'content type unavailable'}; {log.error || log.message}; completed {timeLabel(log.completed_at)}
           </div>
         ))}
       </div>
@@ -147,6 +216,7 @@ function Wallboard({ model, lifecycle, settings, onOperator }: {
   const attention = diagnostics.filter(source => source.attention !== 'informational');
   const sourceGaps = diagnostics.filter(source => source.sourceState === 'limited' || source.sourceState === 'unavailable');
   const primary = settings.screen === 'sources' ? sourceGaps : settings.screen === 'providers' ? attention : diagnostics;
+  const incidentGroups = groupIncidents(incidents);
 
   return (
     <section className={`wallboard ${settings.screen} ${settings.density}`}>
@@ -166,14 +236,14 @@ function Wallboard({ model, lifecycle, settings, onOperator }: {
         <div><span>Coverage</span><b>{model?.summary.coverage_percent ?? 0}%</b></div>
       </section>
 
-      {settings.screen === 'heads-up' && incidents.length ? (
+      {settings.screen === 'heads-up' && incidentGroups.length ? (
         <div className="wallboard-incidents">
-          {incidents.slice(0, 6).map(item => <IncidentCard key={item.id} item={item} wallboard />)}
+          {incidentGroups.slice(0, 6).flatMap(group => group.items.slice(0, 2)).map(item => <IncidentCard key={item.id} item={item} wallboard />)}
         </div>
       ) : (
         <div className="wallboard-grid">
           {primary.slice(0, 24).map(source => (
-            <article className={`wallboard-provider ${source.serviceState}`} key={source.id}>
+            <article className={`wallboard-provider ${source.serviceState} source-${source.sourceState}`} key={source.id}>
               <ProviderIcon id={source.id} name={source.provider} />
               <b>{source.provider}</b>
               <span>{source.serviceState} / {source.sourceState}</span>
@@ -211,6 +281,7 @@ export function IssueConsole({ model, lifecycle, onRefresh }: {
     [model, query, filter]
   );
   const shown = filtered;
+  const incidentGroups = useMemo(() => model ? groupIncidents(model.briefs) : [], [model]);
 
   if (mode === 'wallboard') return <Wallboard model={model} lifecycle={lifecycle} settings={settings} onOperator={() => setMode('operator')} />;
 
@@ -265,21 +336,21 @@ export function IssueConsole({ model, lifecycle, onRefresh }: {
 
           <section className="incidents">
             <h2>Active incident briefing</h2>
-            {model.briefs.length
-              ? model.briefs.map(item => <IncidentCard key={item.id} item={item} wallboard={false} />)
+            {incidentGroups.length
+              ? incidentGroups.map(group => <IncidentGroupCard key={group.providerId} group={group} />)
               : <p className="empty-filter">No active incidents. Coverage is {model.summary.coverage_percent}%; limited and unavailable sources remain unknown.</p>}
           </section>
 
           <section className="changes">
             <h2>Recent changes</h2>
             {model.history.length
-              ? <ul>{model.history.slice(0, 20).map(change => <li key={change.id}><b>{change.provider}</b> — {change.title} <small>({change.type.replaceAll('_', ' ')})</small></li>)}</ul>
+              ? <ul>{model.history.slice(0, 20).map(change => <li key={change.id}><time>{timeLabel(change.detected_at)}</time> <b>{change.provider}</b> - {change.title} <small>({change.type.replaceAll('_', ' ')})</small></li>)}</ul>
               : <p>No comparison snapshot was available; initial generation is not treated as a mass change.</p>}
           </section>
 
           <section className="diag-panel">
             <header>
-              <div><h2>Provider diagnostics</h2><p>Search names, categories, tags, services, and incident details.</p></div>
+              <div><h2>Provider diagnostics</h2><p>Rows are color coded by source capture state, not by vendor outage severity.</p></div>
               <em>{shown.length} of {model.diagnostics.length}</em>
             </header>
             <div className="filters">
