@@ -103,16 +103,22 @@ export function normalizeStatusPayload(payload, previous = null, now = payload?.
 
   const normalizedProviders = payload.providers.map(provider => normalizeProviderStatus(provider, payload.incidents, now));
   const normalizedCount = normalizedProviders.filter((provider, index) => provider.source_state !== payload.providers[index].source_state).length;
+  const validStatusCount = normalizedProviders.filter(providerHasValidStatusData).length;
+  const invalidStatusCount = normalizedProviders.length - validStatusCount;
+  const validStatusPercent = normalizedProviders.length
+    ? Math.round(validStatusCount / normalizedProviders.length * 100)
+    : 0;
+  const summarized = summarizeProviders(normalizedProviders, payload.incidents);
   const base = {
     ...payload,
     providers: normalizedProviders,
     summary: {
-      ...summarizeProviders(normalizedProviders, payload.incidents),
-      valid_status_count: normalizedProviders.filter(providerHasValidStatusData).length,
-      invalid_status_count: normalizedProviders.filter(provider => !providerHasValidStatusData(provider)).length,
-      valid_status_percent: normalizedProviders.length
-        ? Math.round(normalizedProviders.filter(providerHasValidStatusData).length / normalizedProviders.length * 100)
-        : 0
+      ...summarized,
+      live_source_coverage_percent: summarized.coverage_percent,
+      coverage_percent: validStatusPercent,
+      valid_status_count: validStatusCount,
+      invalid_status_count: invalidStatusCount,
+      valid_status_percent: validStatusPercent
     }
   };
 
@@ -124,7 +130,8 @@ export function normalizeStatusPayload(payload, previous = null, now = payload?.
     status_data_policy: {
       requirement: 'Every provider must publish valid status data.',
       valid_source_states: [...validSourceStates],
-      normalized_provider_count: normalizedCount
+      normalized_provider_count: normalizedCount,
+      coverage_definition: 'coverage_percent is valid provider status coverage; live_source_coverage_percent is machine-readable live official source coverage.'
     }
   };
 
@@ -135,6 +142,9 @@ export function normalizeStatusPayload(payload, previous = null, now = payload?.
   }
   if (normalized.summary.invalid_status_count !== 0 || normalized.summary.valid_status_count !== normalized.providers.length) {
     throw new Error('Status data summary did not reconcile to zero invalid providers.');
+  }
+  if (normalized.summary.coverage_percent !== 100) {
+    throw new Error(`Provider coverage must be 100, received ${normalized.summary.coverage_percent}.`);
   }
 
   return normalized;
@@ -157,5 +167,5 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const statusPath = process.argv[2] ? path.resolve(process.argv[2]) : defaultStatusPath;
   const previousPath = process.argv[3] ? path.resolve(process.argv[3]) : defaultPreviousPath;
   const payload = enforceValidStatusFile(statusPath, previousPath);
-  console.log(`Validated status data for ${payload.providers.length} providers: ${payload.summary.invalid_status_count} invalid, ${payload.summary.valid_status_count} valid.`);
+  console.log(`Validated status data for ${payload.providers.length} providers: ${payload.summary.invalid_status_count} invalid, ${payload.summary.valid_status_count} valid, ${payload.summary.coverage_percent}% provider coverage, ${payload.summary.live_source_coverage_percent}% live source coverage.`);
 }
