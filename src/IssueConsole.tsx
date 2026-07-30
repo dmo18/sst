@@ -7,13 +7,13 @@ import {
   type IssueConsoleModel
 } from './statusViewModel';
 import type { DataLifecycle } from './types';
+import { parseWallboardSettings, type WallboardSettings } from './wallboard';
 
 function timeLabel(value?: string): string {
   return value && !Number.isNaN(Date.parse(value))
     ? new Date(value).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })
     : 'unknown';
 }
-
 
 function CopyDraft({ draft }: { draft: string }): JSX.Element {
   const [copied, setCopied] = useState(false);
@@ -86,6 +86,55 @@ function Diagnostic({ source }: { source: DiagnosticSource }): JSX.Element {
         ))}
       </div>
     </details>
+  );
+}
+
+function Wallboard({ model, lifecycle, settings, onOperator }: {
+  model: IssueConsoleModel | null;
+  lifecycle: DataLifecycle;
+  settings: WallboardSettings;
+  onOperator: () => void;
+}): JSX.Element {
+  const incidents = model?.briefs ?? [];
+  const diagnostics = model?.diagnostics ?? [];
+  const attention = diagnostics.filter(source => source.attention !== 'none');
+  const sourceGaps = diagnostics.filter(source => source.sourceState === 'limited' || source.sourceState === 'unavailable');
+  const primary = settings.screen === 'sources' ? sourceGaps : settings.screen === 'providers' ? attention : diagnostics;
+
+  return (
+    <section className={`wallboard ${settings.screen} ${settings.density}`}>
+      <header className="wallboard-header">
+        <div>
+          <p className="eyebrow">MSP wallboard</p>
+          <h1>Service Heads-Up Console</h1>
+          <p>{lifecycle.phase === 'ready' ? `Updated ${timeLabel(model?.generatedAt)}` : lifecycle.phase}</p>
+        </div>
+        <button onClick={onOperator}>Operator view</button>
+      </header>
+
+      <section className="wallboard-metrics">
+        <div><span>Providers</span><b>{diagnostics.length}</b></div>
+        <div><span>Attention</span><b>{attention.length}</b></div>
+        <div><span>Incidents</span><b>{incidents.length}</b></div>
+        <div><span>Coverage</span><b>{model?.summary.coverage_percent ?? 0}%</b></div>
+      </section>
+
+      {settings.screen === 'heads-up' && incidents.length ? (
+        <div className="wallboard-incidents">
+          {incidents.slice(0, 6).map(item => <IncidentCard key={item.id} item={item} wallboard />)}
+        </div>
+      ) : (
+        <div className="wallboard-grid">
+          {primary.slice(0, 24).map(source => (
+            <article className={`wallboard-provider ${source.serviceState}`} key={source.id}>
+              <ProviderIcon id={source.id} name={source.provider} />
+              <b>{source.provider}</b>
+              <span>{source.serviceState} / {source.sourceState}</span>
+            </article>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -173,46 +222,42 @@ export function IssueConsole({ model, lifecycle, onRefresh }: {
               : <p className="empty-filter">No active incidents. Coverage is {model.summary.coverage_percent}%; limited and unavailable sources remain unknown.</p>}
           </section>
 
-          {(
-            <section className="changes">
-              <h2>Recent changes</h2>
-              {model.history.length
-                ? <ul>{model.history.slice(0, 20).map(change => <li key={change.id}><b>{change.provider}</b> — {change.title} <small>({change.type.replaceAll('_', ' ')})</small></li>)}</ul>
-                : <p>No comparison snapshot was available; initial generation is not treated as a mass change.</p>}
-            </section>
-          )}
+          <section className="changes">
+            <h2>Recent changes</h2>
+            {model.history.length
+              ? <ul>{model.history.slice(0, 20).map(change => <li key={change.id}><b>{change.provider}</b> — {change.title} <small>({change.type.replaceAll('_', ' ')})</small></li>)}</ul>
+              : <p>No comparison snapshot was available; initial generation is not treated as a mass change.</p>}
+          </section>
 
           <section className="diag-panel">
             <header>
               <div><h2>Provider diagnostics</h2><p>Search names, categories, tags, services, and incident details.</p></div>
-              <em>{shown?.length || 0} of {model.diagnostics.length}</em>
+              <em>{shown.length} of {model.diagnostics.length}</em>
             </header>
-            {(
-              <div className="filters">
-                <label>Search<input type="search" value={query} onChange={event => setQuery(event.target.value)} /></label>
-                <label>
-                  Operational filter
-                  <select value={filter} onChange={event => setFilter(event.target.value)}>
-                    <option value="all">All providers</option>
-                    <option value="attention">Requires attention</option>
-                    <option value="changed">Changed recently</option>
-                    <option value="incident">Active incident</option>
-                    <option value="unavailable">Source unavailable</option>
-                    <option value="limited">Limited source</option>
-                    <option value="high">High criticality</option>
-                    <option value="identity">Identity</option>
-                    <option value="cloud">Cloud</option>
-                    <option value="security">Security</option>
-                    <option value="backup">Backup</option>
-                    <option value="connectivity">Connectivity</option>
-                    <option value="communications">Communications</option>
-                    <option value="msp">MSP platform</option>
-                    <option value="operational">Confirmed operational</option>
-                  </select>
-                </label>
-              </div>
-            )}
-            <div>{shown?.map(source => <Diagnostic key={source.id} source={source} />)}{!shown?.length && <p className="empty-filter">No providers match this view.</p>}</div>
+            <div className="filters">
+              <label>Search<input type="search" value={query} onChange={event => setQuery(event.target.value)} /></label>
+              <label>
+                Operational filter
+                <select value={filter} onChange={event => setFilter(event.target.value)}>
+                  <option value="all">All providers</option>
+                  <option value="attention">Requires attention</option>
+                  <option value="changed">Changed recently</option>
+                  <option value="incident">Active incident</option>
+                  <option value="unavailable">Source unavailable</option>
+                  <option value="limited">Limited source</option>
+                  <option value="high">High criticality</option>
+                  <option value="identity">Identity</option>
+                  <option value="cloud">Cloud</option>
+                  <option value="security">Security</option>
+                  <option value="backup">Backup</option>
+                  <option value="connectivity">Connectivity</option>
+                  <option value="communications">Communications</option>
+                  <option value="msp">MSP platform</option>
+                  <option value="operational">Confirmed operational</option>
+                </select>
+              </label>
+            </div>
+            <div>{shown.map(source => <Diagnostic key={source.id} source={source} />)}{!shown.length && <p className="empty-filter">No providers match this view.</p>}</div>
           </section>
         </>
       ) : (
