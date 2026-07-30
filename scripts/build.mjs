@@ -7,6 +7,7 @@ function run(command, args) {
 
 run('node', ['scripts/validate-providers.mjs']);
 run('node', ['scripts/update-status.mjs']);
+run('node', ['scripts/ensure-valid-status.mjs']);
 run('npx', ['tsc', '--noEmit']);
 run('npx', ['vite', 'build']);
 process.exit(0);
