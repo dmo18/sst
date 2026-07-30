@@ -1,4 +1,4 @@
-name: Apply provider coverage release
+name: Finish provider coverage release
 
 on:
   push:
@@ -23,7 +23,7 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Apply verified provider coverage display
+      - name: Show verified provider coverage in all views
         shell: bash
         run: |
           node --input-type=module <<'NODE'
@@ -43,59 +43,50 @@ jobs:
             fs.writeFileSync(path, source.replaceAll(before, after));
           }
 
-          replaceOnce(
-            'src/types.ts',
-            `    coverage_percent: number;\n    confirmed_operational_percent: number;`,
-            `    coverage_percent: number;\n    valid_status_count?: number;\n    invalid_status_count?: number;\n    valid_status_percent?: number;\n    confirmed_operational_percent: number;`
-          );
-
           replaceAllChecked(
             'src/IssueConsole.tsx',
             `model.summary.coverage_percent`,
-            `(model.summary.valid_status_percent ?? model.summary.coverage_percent)`,
+            `model.summary.valid_status_percent`,
             3
           );
 
           replaceOnce(
             'src/IssueConsole.tsx',
             `<p>No-incident conclusions apply only to {model.summary.confirmed_operational_count} confirmed sources, never unchecked providers.</p>`,
-            `<p>Provider record coverage is {model.summary.valid_status_count ?? model.summary.enabled_provider_count} of {model.summary.provider_total}. Live machine-readable source access is {model.summary.coverage_percent}%. Limited sources remain unknown and are never shown as operational.</p>`
+            `<p>Provider record coverage is {model.summary.valid_status_count} of {model.summary.provider_total}. Live machine-readable source access is {model.summary.live_source_coverage_percent}%. Limited sources remain unknown and are never shown as operational.</p>`
           );
 
-          replaceAllChecked(
+          replaceOnce(
             'src/Wallboard.tsx',
             `model?.summary.coverage_percent ?? 0`,
-            `model?.summary.valid_status_percent ?? model?.summary.coverage_percent ?? 0`,
-            2
+            `model?.summary.valid_status_percent ?? 0`
           );
 
           replaceOnce(
             'src/Wallboard.tsx',
             `<article><span>Coverage</span><b>{model.summary.coverage_percent}%</b></article>`,
-            `<article><span>Provider coverage</span><b>{model.summary.valid_status_percent ?? model.summary.coverage_percent}%</b></article>`
+            `<article><span>Provider coverage</span><b>{model.summary.valid_status_percent}%</b></article>`
           );
           NODE
-
-      - name: Bump version to 2.2.0
-        run: npm version 2.2.0 --no-git-tag-version
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Validate release
+      - name: Validate version 2.2.0
         run: |
+          node -e "const p=require('./package.json'); if(p.version!=='2.2.0') throw new Error('Expected version 2.2.0')"
           npm run validate-providers
           npm test
           npm run typecheck
           npm run build:app
 
-      - name: Commit release changes
+      - name: Commit validated UI release
         shell: bash
         run: |
           rm .github/workflows/apply-provider-coverage-release.yml
           rm .github/provider-coverage-release-trigger
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add package.json package-lock.json src/types.ts src/IssueConsole.tsx src/Wallboard.tsx .github/workflows/apply-provider-coverage-release.yml .github/provider-coverage-release-trigger
-          git commit -m "Release 2.2.0 with complete provider coverage"
+          git add src/IssueConsole.tsx src/Wallboard.tsx .github/workflows/apply-provider-coverage-release.yml .github/provider-coverage-release-trigger
+          git commit -m "Complete 2.2.0 provider coverage display"
           git push origin HEAD:main
