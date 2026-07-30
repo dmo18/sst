@@ -52,6 +52,8 @@ export interface ProviderStatus {
     checked_at?: string;
     source_type?: string;
     download_log?: ProviderDownloadLog[];
+    status_data_valid?: boolean;
+    status_data_basis?: 'live-official' | 'last-known-official' | 'limited-official' | 'limited-fallback';
 }
 export interface Incident {
     id: string;
@@ -102,6 +104,10 @@ export interface StatusSummary {
     provider_total: number;
     enabled_provider_count: number;
     coverage_percent: number;
+    live_source_coverage_percent: number;
+    valid_status_count: number;
+    invalid_status_count: number;
+    valid_status_percent: number;
     confirmed_operational_percent: number;
 }
 export interface StatusPayload {
