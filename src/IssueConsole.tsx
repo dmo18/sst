@@ -44,7 +44,7 @@ function timeLabel(value?: string): string {
 }
 
 function affectedService(item: IssueBrief): string {
-  return item.affected_service || item.category || item.provider;
+  return item.affectedServiceLabel || item.affected_service || item.category || item.provider;
 }
 
 function groupIncidents(items: IssueBrief[]): IncidentGroup[] {
@@ -151,8 +151,11 @@ function IncidentCard({ item, wallboard }: { item: IssueBrief; wallboard: boolea
       </dl>
       {!wallboard && (
         <>
-          <p><b>MSP impact:</b> {item.client_impact || 'Review affected client environments before confirming impact.'}</p>
-          <p><b>Technician action:</b> {item.technician_action || 'Monitor the official source and correlate with client tickets.'}</p>
+          <div className="incident-action-grid">
+            <p><b>Operator priority:</b> {item.operatorPriority}</p>
+            <p><b>MSP impact:</b> {item.mspImpact}</p>
+            <p><b>Technician action:</b> {item.technicianAction}</p>
+          </div>
           <details>
             <summary>Client communication draft</summary>
             <p>{item.clientDraft}</p>
