@@ -97,7 +97,7 @@ function Wallboard({ model, lifecycle, settings, onOperator }: {
 }): JSX.Element {
   const incidents = model?.briefs ?? [];
   const diagnostics = model?.diagnostics ?? [];
-  const attention = diagnostics.filter(source => source.attention !== 'none');
+  const attention = diagnostics.filter(source => source.attention !== 'informational');
   const sourceGaps = diagnostics.filter(source => source.sourceState === 'limited' || source.sourceState === 'unavailable');
   const primary = settings.screen === 'sources' ? sourceGaps : settings.screen === 'providers' ? attention : diagnostics;
 
