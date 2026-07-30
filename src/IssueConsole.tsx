@@ -165,10 +165,10 @@ function IncidentCard({ item, wallboard }: { item: IssueBrief; wallboard: boolea
   );
 }
 
-function IncidentGroupCard({ group, defaultOpen }: { group: IncidentGroup; defaultOpen: boolean }): JSX.Element {
+function IncidentGroupCard({ group, forceOpen }: { group: IncidentGroup; forceOpen: boolean }): JSX.Element {
   const newest = group.items[0]?.latest_update || group.items[0]?.rawTime || group.items[0]?.time;
   return (
-    <details className="incident-source-group" defaultOpen={defaultOpen}>
+    <details className="incident-source-group" {...(forceOpen ? { open: true } : {})}>
       <summary title={`Show or hide ${group.provider} updates`}>
         <div className="provider-identity">
           <ProviderIcon id={group.providerId} name={group.provider} />
@@ -351,13 +351,13 @@ export function IssueConsole({ model, lifecycle, onRefresh }: {
                 <p>Click any provider row to expand or shrink that source. Use the control to shrink or max all provider groups.</p>
               </div>
               {incidentGroups.length > 0 && (
-                <button type="button" onClick={() => setAllIncidentGroups(!incidentGroupsExpanded)}>
+                <button type="button" aria-pressed={incidentGroupsExpanded} onClick={() => setAllIncidentGroups(!incidentGroupsExpanded)}>
                   {incidentGroupsExpanded ? 'Shrink all' : 'Max all'}
                 </button>
               )}
             </div>
             {incidentGroups.length
-              ? incidentGroups.map(group => <IncidentGroupCard key={`${group.providerId}-${incidentGroupToggleNonce}`} group={group} defaultOpen={incidentGroupsExpanded} />)
+              ? incidentGroups.map(group => <IncidentGroupCard key={`${group.providerId}-${incidentGroupToggleNonce}`} group={group} forceOpen={incidentGroupsExpanded} />)
               : <p className="empty-filter">No active incidents. Coverage is {model.summary.coverage_percent}%; limited and unavailable sources remain unknown.</p>}
           </section>
 
