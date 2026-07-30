@@ -166,24 +166,27 @@ function IncidentCard({ item, wallboard }: { item: IssueBrief; wallboard: boolea
 }
 
 function IncidentGroupCard({ group }: { group: IncidentGroup }): JSX.Element {
+  const newest = group.items[0]?.latest_update || group.items[0]?.rawTime || group.items[0]?.time;
   return (
-    <article className="incident-source-group">
-      <header>
+    <details className="incident-source-group" open>
+      <summary title={`Show or hide ${group.provider} updates`}>
         <div className="provider-identity">
           <ProviderIcon id={group.providerId} name={group.provider} />
           <div><h3>{group.provider}</h3><p>{group.category}</p></div>
         </div>
-        <span>{group.items.length} active update{group.items.length === 1 ? '' : 's'} · newest {timeLabel(group.items[0]?.latest_update || group.items[0]?.rawTime || group.items[0]?.time)}</span>
-      </header>
-      {group.items.map(item => <IncidentCard key={item.id} item={item} wallboard={false} />)}
-    </article>
+        <span>{group.items.length} active update{group.items.length === 1 ? '' : 's'} · newest {timeLabel(newest)}</span>
+      </summary>
+      <div className="incident-source-body">
+        {group.items.map(item => <IncidentCard key={item.id} item={item} wallboard={false} />)}
+      </div>
+    </details>
   );
 }
 
 function Diagnostic({ source }: { source: DiagnosticSource }): JSX.Element {
   return (
     <details className={`diagnostic-card source-${source.sourceState}`}>
-      <summary>
+      <summary title={`Show or hide ${source.provider} diagnostics`}>
         <ProviderIcon id={source.id} name={source.provider} />
         <span><b>{source.provider}</b><small>{source.category}</small></span>
         <strong>{source.serviceState} · source {source.sourceState} · {source.attention}</strong>
@@ -350,7 +353,7 @@ export function IssueConsole({ model, lifecycle, onRefresh }: {
 
           <section className="diag-panel">
             <header>
-              <div><h2>Provider diagnostics</h2><p>Rows are color coded by source capture state, not by vendor outage severity.</p></div>
+              <div><h2>Provider diagnostics</h2><p>Rows are color coded by source capture state, not by vendor outage severity. Click any provider row to expand or shrink details.</p></div>
               <em>{shown.length} of {model.diagnostics.length}</em>
             </header>
             <div className="filters">
