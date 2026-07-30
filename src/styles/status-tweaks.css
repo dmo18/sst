@@ -6,6 +6,29 @@
   overflow: hidden;
 }
 
+.section-title-row {
+  align-items: flex-start;
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.section-title-row h2,
+.section-title-row p {
+  margin: 0;
+}
+
+.section-title-row p {
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+.section-title-row button {
+  flex: 0 0 auto;
+  min-width: 7.5rem;
+}
+
 .incident-source-group > summary {
   display: flex;
   align-items: center;
@@ -130,6 +153,14 @@
 }
 
 @media (max-width: 700px) {
+  .section-title-row {
+    display: grid;
+  }
+
+  .section-title-row button {
+    width: 100%;
+  }
+
   .incident-source-group > summary {
     align-items: flex-start;
     flex-direction: column;
