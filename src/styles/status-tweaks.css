@@ -2,19 +2,46 @@
   border: 1px solid var(--line);
   border-radius: 12px;
   background: rgba(17, 25, 35, .72);
-  padding: 14px;
   margin: 14px 0;
+  overflow: hidden;
 }
 
-.incident-source-group > header {
+.incident-source-group > summary {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   color: var(--muted);
+  padding: 14px;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.incident-source-group > summary::-webkit-details-marker {
+  display: none;
+}
+
+.incident-source-group > summary:after {
+  content: '+';
+  border: 1px solid #435267;
+  border-radius: 999px;
+  color: var(--text);
+  display: grid;
+  flex: 0 0 auto;
+  font-weight: 900;
+  height: 1.65rem;
+  line-height: 1;
+  place-items: center;
+  width: 1.65rem;
+}
+
+.incident-source-group[open] > summary:after {
+  content: '-';
+}
+
+.incident-source-group[open] > summary {
   border-bottom: 1px solid var(--line);
-  padding-bottom: 10px;
-  margin-bottom: 10px;
 }
 
 .incident-source-group h3,
@@ -22,9 +49,28 @@
   margin: 0;
 }
 
-.incident-source-group > header span {
+.incident-source-group > summary span {
   font-size: .85rem;
   white-space: nowrap;
+}
+
+.incident-source-body {
+  padding: 0 14px 14px;
+}
+
+.diagnostic-card > summary {
+  cursor: pointer;
+  user-select: none;
+}
+
+.diagnostic-card > summary b,
+.diagnostic-card > summary .provider-logo {
+  pointer-events: none;
+}
+
+.diagnostic-card > summary:hover,
+.incident-source-group > summary:hover {
+  background: rgba(148, 163, 184, .08);
 }
 
 .changes time {
@@ -84,12 +130,17 @@
 }
 
 @media (max-width: 700px) {
-  .incident-source-group > header {
+  .incident-source-group > summary {
     align-items: flex-start;
     flex-direction: column;
   }
 
-  .incident-source-group > header span {
+  .incident-source-group > summary:after {
+    position: absolute;
+    right: 18px;
+  }
+
+  .incident-source-group > summary span {
     white-space: normal;
   }
 
