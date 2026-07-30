@@ -55,6 +55,8 @@ test('unreadable sources become explicit valid limited records', () => {
   assert.equal(normalized.summary.invalid_status_count, 0);
   assert.equal(normalized.summary.valid_status_count, 1);
   assert.equal(normalized.summary.valid_status_percent, 100);
+  assert.equal(normalized.summary.coverage_percent, 100);
+  assert.equal(normalized.summary.live_source_coverage_percent, 0);
   assert.equal(normalized.changes[0].type, 'source_limited');
 });
 
@@ -66,6 +68,8 @@ test('available official data remains available and valid', () => {
   assert.equal(item.service_state, 'operational');
   assert.equal(item.status_data_basis, 'live-official');
   assert.equal(normalized.summary.invalid_status_count, 0);
+  assert.equal(normalized.summary.coverage_percent, 100);
+  assert.equal(normalized.summary.live_source_coverage_percent, 100);
 });
 
 test('disabled catalog sources fail the all-sources-valid requirement', () => {
