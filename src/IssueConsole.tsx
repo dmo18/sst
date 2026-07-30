@@ -15,6 +15,53 @@ function timeLabel(value?: string): string {
     : 'unknown';
 }
 
+function modeHref(params: Record<string, string>): string {
+  const query = new URLSearchParams(params);
+  const suffix = query.toString();
+  return `${location.pathname}${suffix ? `?${suffix}` : ''}`;
+}
+
+function PageFooter({ model, lifecycle }: { model: IssueConsoleModel | null; lifecycle: DataLifecycle }): JSX.Element {
+  return (
+    <footer className="page-footer">
+      <div>
+        <span>Platform version</span>
+        <b>{model?.version || 'loading'}</b>
+      </div>
+      <div>
+        <span>Last updated</span>
+        <b>{timeLabel(model?.generatedAt)}</b>
+      </div>
+      <div>
+        <span>Data state</span>
+        <b>{lifecycle.phase}</b>
+      </div>
+      <details className="mode-helper">
+        <summary>Modes and options</summary>
+        <div>
+          <p>Use these links to switch views or pin a wallboard layout.</p>
+          <nav>
+            <a href={modeHref({})}>Operator console</a>
+            <a href={modeHref({ view: 'wallboard', screen: 'heads-up' })}>Wallboard heads-up</a>
+            <a href={modeHref({ view: 'wallboard', screen: 'providers' })}>Wallboard providers</a>
+            <a href={modeHref({ view: 'wallboard', screen: 'sources' })}>Wallboard sources</a>
+            <a href={modeHref({ view: 'wallboard', screen: 'providers', density: 'compact' })}>Compact providers</a>
+            <a href={modeHref({ view: 'wallboard', screen: 'providers', rotate: '30' })}>Rotate every 30 seconds</a>
+          </nav>
+          <dl>
+            <div><dt>Operator console</dt><dd>Full triage view with briefing, incidents, changes, search, filters, and diagnostics.</dd></div>
+            <div><dt>Wallboard heads-up</dt><dd>Large display mode focused on active incidents and high-level status.</dd></div>
+            <div><dt>Wallboard providers</dt><dd>Provider tile view for service state and source state at a glance.</dd></div>
+            <div><dt>Wallboard sources</dt><dd>Focuses on limited and unavailable provider sources.</dd></div>
+            <div><dt>density=compact</dt><dd>Fits more provider tiles on large displays.</dd></div>
+            <div><dt>rotate=30</dt><dd>Enables wallboard rotation every 30 seconds where supported.</dd></div>
+          </dl>
+        </div>
+      </details>
+    </footer>
+  );
+}
+
 function CopyDraft({ draft }: { draft: string }): JSX.Element {
   const [copied, setCopied] = useState(false);
 
@@ -134,6 +181,7 @@ function Wallboard({ model, lifecycle, settings, onOperator }: {
           ))}
         </div>
       )}
+      <PageFooter model={model} lifecycle={lifecycle} />
     </section>
   );
 }
@@ -263,6 +311,7 @@ export function IssueConsole({ model, lifecycle, onRefresh }: {
       ) : (
         <section className="unavailable"><h2>Status intelligence unavailable</h2><p>No provider is reported operational until a complete valid payload loads.</p></section>
       )}
+      <PageFooter model={model} lifecycle={lifecycle} />
     </>
   );
 }
