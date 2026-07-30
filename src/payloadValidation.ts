@@ -79,7 +79,7 @@ export function payloadValidationErrors(value: unknown): string[] {
             e.push('invalid summary service_overall');
         if (!sources.has(String(s.source_overall)))
             e.push('invalid summary source_overall');
-        const numeric = ['active_incident_count', 'affected_provider_count', 'confirmed_operational_count', 'degraded_count', 'major_count', 'unknown_count', 'limited_count', 'unavailable_count', 'disabled_count', 'pending_count', 'stale_count', 'provider_total', 'enabled_provider_count', 'coverage_percent', 'confirmed_operational_percent'];
+        const numeric = ['active_incident_count', 'affected_provider_count', 'confirmed_operational_count', 'degraded_count', 'major_count', 'unknown_count', 'limited_count', 'unavailable_count', 'disabled_count', 'pending_count', 'stale_count', 'provider_total', 'enabled_provider_count', 'coverage_percent', 'live_source_coverage_percent', 'valid_status_count', 'invalid_status_count', 'valid_status_percent', 'confirmed_operational_percent'];
         for (const k of numeric)
             if (!Number.isFinite(s[k]) || Number(s[k]) < 0)
                 e.push(`invalid summary ${k}`);
@@ -96,9 +96,11 @@ export function payloadValidationErrors(value: unknown): string[] {
             e.push('source counts do not reconcile');
         const enabled = providers.filter(x => x.source_state !== 'disabled');
         const available = count('source_state', 'available');
-        const expectedCoverage = enabled.length ? Math.round(available / enabled.length * 100) : 0;
+        const validStatusCount = providers.filter(x => x.status_data_valid === true || ['available', 'limited', 'stale'].includes(String(x.source_state))).length;
+        const expectedCoverage = providers.length ? Math.round(validStatusCount / providers.length * 100) : 0;
+        const expectedLiveSourceCoverage = enabled.length ? Math.round(available / enabled.length * 100) : 0;
         const expectedOperational = enabled.length ? Math.round(count('service_state', 'operational') / enabled.length * 100) : 0;
-        if (s.enabled_provider_count !== enabled.length || s.coverage_percent !== expectedCoverage || s.confirmed_operational_percent !== expectedOperational)
+        if (s.enabled_provider_count !== enabled.length || s.coverage_percent !== expectedCoverage || s.live_source_coverage_percent !== expectedLiveSourceCoverage || s.valid_status_count !== validStatusCount || s.invalid_status_count !== providers.length - validStatusCount || s.valid_status_percent !== expectedCoverage || s.confirmed_operational_percent !== expectedOperational)
             e.push('coverage counts do not reconcile');
     }
     return e;
