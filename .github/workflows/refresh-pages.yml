@@ -14,6 +14,8 @@ jobs:
       contents: read
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    outputs:
+      status_description: ${{ steps.verify-status.outputs.description }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -27,6 +29,35 @@ jobs:
       - name: Retrieve prior snapshot (optional)
         run: curl --fail --silent --show-error --max-time 10 https://dmo18.github.io/sst/status.json -o public/previous-status.json || true
       - run: npm run update-status
+      - name: Verify zero invalid status sources
+        id: verify-status
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+
+          const payload = JSON.parse(fs.readFileSync('public/status.json', 'utf8'));
+          const summary = payload.summary || {};
+          const total = Number(summary.provider_total);
+          const valid = Number(summary.valid_status_count);
+          const invalid = Number(summary.invalid_status_count);
+          const percent = Number(summary.valid_status_percent);
+          const unavailable = Number(summary.unavailable_count);
+          const invalidProviders = (payload.providers || []).filter(provider =>
+            ['unavailable', 'pending', 'disabled'].includes(provider.source_state)
+            || provider.status_data_valid !== true
+          );
+
+          if (!Number.isFinite(total) || total <= 0) throw new Error('provider_total is invalid');
+          if (valid !== total) throw new Error(`valid_status_count ${valid} does not equal provider_total ${total}`);
+          if (invalid !== 0) throw new Error(`invalid_status_count must be zero, received ${invalid}`);
+          if (percent !== 100) throw new Error(`valid_status_percent must be 100, received ${percent}`);
+          if (unavailable !== 0) throw new Error(`unavailable_count must be zero, received ${unavailable}`);
+          if (invalidProviders.length) throw new Error(`Invalid provider status data: ${invalidProviders.map(provider => provider.id).join(', ')}`);
+
+          const description = `${valid}/${total} valid; ${invalid} invalid; ${percent}%`;
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `description=${description}\n`);
+          console.log(`Status data acceptance passed: ${description}; ${unavailable} unavailable.`);
+          NODE
       - run: npm run build:app
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
@@ -39,9 +70,36 @@ jobs:
     permissions:
       pages: write
       id-token: write
+      statuses: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+      - name: Publish deployed status data verification
+        env:
+          GH_TOKEN: ${{ github.token }}
+          STATUS_DESCRIPTION: ${{ needs.build.outputs.status_description }}
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          node --input-type=module <<'NODE'
+          const endpoint = `https://api.github.com/repos/${process.env.GITHUB_REPOSITORY}/statuses/${process.env.GITHUB_SHA}`;
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              accept: 'application/vnd.github+json',
+              authorization: `Bearer ${process.env.GH_TOKEN}`,
+              'content-type': 'application/json',
+              'x-github-api-version': '2022-11-28'
+            },
+            body: JSON.stringify({
+              state: 'success',
+              context: 'status-data/validity',
+              description: process.env.STATUS_DESCRIPTION,
+              target_url: `${process.env.PAGE_URL.replace(/\/?$/, '/')}status.json`
+            })
+          });
+          if (!response.ok) throw new Error(`Status publication failed: HTTP ${response.status} ${await response.text()}`);
+          console.log(`Published status-data/validity: ${process.env.STATUS_DESCRIPTION}`);
+          NODE
