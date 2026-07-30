@@ -22,7 +22,7 @@ const allowedSourceTypes = new Set([
     'html-limited',
     'okta-html'
 ]);
-const limitedSourceTypes = new Set(['limited-official', 'limited-public-page', 'official-limited', 'limited-microsoft', 'html-limited', 'okta-html']);
+const limitedSourceTypes = new Set(['limited-official', 'limited-public-page', 'official-limited', 'html-limited', 'okta-html']);
 function fail(message, context) {
     const suffix = context ? ` (${context})` : '';
     return `${message}${suffix}`;
