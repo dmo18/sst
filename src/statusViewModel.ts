@@ -229,7 +229,7 @@ export function clientCommunicationDraft(i: Incident, provider?: ProviderStatus)
   const service = affectedServiceLabel(i);
   const severity = i.service_state === 'major' ? 'major service issue' : 'service degradation';
   const symptom = clean(i.note).slice(0, 220);
-  return `DRAFT: We are monitoring a ${severity} affecting ${i.provider} ${service}. ${symptom ? `The vendor reports: ${symptom}. ` : ''}${impact} We are validating client impact before making account-specific claims and will update as the vendor publishes recovery details.`;
+  return `DRAFT: We are monitoring a ${severity} affecting ${i.provider} ${service}. ${symptom ? `The vendor reports: ${symptom}. ` : ''}${impact} Client impact has not been confirmed unless separately communicated. We will update as the vendor publishes recovery details.`;
 }
 
 function catalogFallback(p: ProviderConfig, at: string): ProviderStatus {
