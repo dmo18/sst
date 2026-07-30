@@ -109,19 +109,27 @@ export function normalizeStatusPayload(payload, previous = null, now = payload?.
     ? Math.round(validStatusCount / normalizedProviders.length * 100)
     : 0;
   const summarized = summarizeProviders(normalizedProviders, payload.incidents);
-  const base = {
+  const validatedBase = {
     ...payload,
     providers: normalizedProviders,
     summary: {
       ...summarized,
-      live_source_coverage_percent: summarized.coverage_percent,
-      coverage_percent: validStatusPercent,
       valid_status_count: validStatusCount,
       invalid_status_count: invalidStatusCount,
       valid_status_percent: validStatusPercent
     }
   };
 
+  validatePayload(validatedBase);
+
+  const base = {
+    ...validatedBase,
+    summary: {
+      ...validatedBase.summary,
+      live_source_coverage_percent: summarized.coverage_percent,
+      coverage_percent: validStatusPercent
+    }
+  };
   const changes = compareSnapshots(validPrevious, base, now);
   const normalized = {
     ...base,
@@ -135,7 +143,6 @@ export function normalizeStatusPayload(payload, previous = null, now = payload?.
     }
   };
 
-  validatePayload(normalized);
   const invalid = normalized.providers.filter(provider => !providerHasValidStatusData(provider));
   if (invalid.length) {
     throw new Error(`Status data requirement failed for: ${invalid.map(provider => provider.id).join(', ')}`);
