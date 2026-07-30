@@ -1,0 +1,331 @@
+/* Responsive operator and active wallboard layout hardening. */
+html,
+body,
+#root {
+  width: 100%;
+  max-width: 100%;
+}
+
+body {
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.app-frame {
+  min-width: 0;
+}
+
+/* IssueConsole currently renders these wallboard class names. */
+.wallboard-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.wallboard-header h1,
+.wallboard-header p {
+  margin: 0;
+}
+
+.wallboard-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.wallboard-metrics > div {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card);
+  padding: clamp(10px, 1vw, 18px);
+}
+
+.wallboard-metrics span {
+  display: block;
+  color: var(--muted);
+  font-size: .78rem;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+.wallboard-metrics b {
+  display: block;
+  font-size: clamp(1.5rem, 3vw, 3.5rem);
+  line-height: 1.05;
+  overflow-wrap: anywhere;
+}
+
+.wallboard-incidents,
+.wallboard-grid {
+  min-height: 0;
+  overflow: auto;
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  padding: 0 2px 5.5rem;
+  scrollbar-gutter: stable;
+}
+
+.wallboard-incidents {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.wallboard-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.wallboard-provider {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-left: 5px solid var(--blue);
+  border-radius: 9px;
+  background: var(--card);
+  padding: 12px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px 10px;
+}
+
+.wallboard-provider.major {
+  border-left-color: var(--red);
+}
+
+.wallboard-provider.degraded {
+  border-left-color: var(--amber);
+}
+
+.wallboard-provider.operational {
+  border-left-color: var(--green);
+}
+
+.wallboard-provider .provider-logo {
+  grid-row: 1 / 3;
+  width: 38px;
+  height: 38px;
+}
+
+.wallboard-provider b,
+.wallboard-provider span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.wallboard-provider span {
+  color: var(--muted);
+  text-transform: capitalize;
+}
+
+@media (max-width: 700px) {
+  body {
+    touch-action: pan-y;
+  }
+
+  .app-frame {
+    width: 100%;
+    padding: max(10px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
+    gap: 14px;
+  }
+
+  .product-header,
+  .diag-panel > header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .product-header h1 {
+    font-size: clamp(1.65rem, 9vw, 2.4rem);
+    line-height: 1.05;
+  }
+
+  .header-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .header-actions button,
+  button,
+  input,
+  select {
+    min-height: 44px;
+  }
+
+  .header-actions button {
+    width: 100%;
+    white-space: normal;
+  }
+
+  .briefing,
+  .incidents,
+  .changes {
+    padding: 14px;
+  }
+
+  .summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .summary-grid div {
+    min-width: 0;
+    padding: 13px;
+  }
+
+  .summary-grid b {
+    font-size: clamp(1.35rem, 8vw, 2rem);
+    overflow-wrap: anywhere;
+  }
+
+  .diagnostic-card summary {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .diagnostic-card strong {
+    grid-column: 2;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .diagnostic-detail {
+    padding: 0 14px 16px;
+  }
+
+  .changes ul {
+    margin: 0;
+    padding-left: 1.1rem;
+  }
+
+  .changes li {
+    overflow-wrap: anywhere;
+  }
+
+  .page-footer {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .wallboard {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100dvh;
+    min-height: 100dvh;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+    touch-action: pan-y;
+    display: block;
+    padding: calc(8px + env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+  }
+
+  .wallboard-header {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+    margin: -8px -8px 10px;
+    padding: 10px 8px;
+    border-bottom: 1px solid var(--line);
+    background: rgba(6, 9, 13, .96);
+    backdrop-filter: blur(10px);
+  }
+
+  .wallboard-header h1 {
+    font-size: clamp(1.45rem, 8vw, 2.2rem);
+    line-height: 1.05;
+  }
+
+  .wallboard-header button {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .wallboard-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-bottom: 10px;
+  }
+
+  .wallboard-metrics > div {
+    padding: 11px;
+  }
+
+  .wallboard-incidents,
+  .wallboard-grid {
+    grid-template-columns: minmax(0, 1fr);
+    overflow: visible;
+    max-height: none;
+    padding: 0 0 10px;
+    scrollbar-gutter: auto;
+  }
+
+  .wallboard-provider {
+    min-height: 72px;
+  }
+
+  .wallboard .incident-card {
+    margin: 0;
+    font-size: 1rem;
+  }
+
+  .wallboard .page-footer {
+    position: static;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-top: 12px;
+  }
+
+  .wallboard .mode-helper {
+    grid-column: 1 / -1;
+  }
+
+  .wallboard .mode-helper > div {
+    position: fixed;
+    left: 8px;
+    right: 8px;
+    bottom: max(8px, env(safe-area-inset-bottom));
+    width: auto;
+    max-height: 70dvh;
+  }
+}
+
+@media (max-width: 440px) {
+  .header-actions,
+  .summary-grid,
+  .filters,
+  .page-footer,
+  .wallboard-metrics,
+  .wallboard .page-footer {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .incidents,
+  .briefing,
+  .changes {
+    border-radius: 9px;
+    padding: 12px;
+  }
+
+  .incident-card,
+  .lead-brief {
+    padding: 12px;
+  }
+
+  .diagnostic-card summary {
+    gap: 8px;
+    padding: 12px 10px;
+  }
+
+  .mode-helper > div {
+    left: 8px;
+    right: 8px;
+    width: auto;
+  }
+}
