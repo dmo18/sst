@@ -81,6 +81,28 @@
   padding: 0 14px 14px;
 }
 
+.incident-action-grid {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0;
+}
+
+.incident-action-grid p {
+  border: 1px solid rgba(67, 82, 103, .8);
+  border-radius: 8px;
+  background: rgba(8, 12, 17, .58);
+  margin: 0;
+  padding: 10px 12px;
+}
+
+.incident-action-grid p:first-child {
+  border-color: rgba(56, 189, 248, .55);
+}
+
+.incident-action-grid b {
+  color: var(--text);
+}
+
 .diagnostic-card > summary {
   cursor: pointer;
   user-select: none;
