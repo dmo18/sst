@@ -19,13 +19,14 @@ jobs:
         run: |
           node scripts/apply-incident-detail-fix.mjs
           node scripts/apply-incident-detail-followup.mjs
+          node scripts/apply-incident-live-fix.mjs
       - name: Commit generated repair
         run: |
           if ! git diff --quiet; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add CHANGELOG.md package.json package-lock.json scripts/incident-detail-repairs.mjs scripts/public-source-repairs.mjs scripts/update-public-status.mjs scripts/__tests__/update-public-status.test.js
-            git commit -m "Harden real incident details"
+            git commit -m "Fix live incident source handling"
             git push origin HEAD:${{ github.head_ref }}
           fi
       - run: npm ci
