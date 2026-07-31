@@ -93,12 +93,6 @@ const publicOverrides = {
   }
 };
 
-const limitedProviderMessages = {
-  att: 'AT&T public outage status requires a service address, account, or location. No free unauthenticated national service-health source is available.',
-  cox: 'Cox public outage status requires a service address, ZIP code, or account. No free unauthenticated national service-health source is available.',
-  'comcast-business': 'Comcast Business public outage status requires customer account or location context. No free unauthenticated national service-health source is available.'
-};
-
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
 }
@@ -241,9 +235,6 @@ export function publicPageUrl(value) {
 
 export function resolvePublicSource(provider) {
   if (publicOverrides[provider.id]) return { ...publicOverrides[provider.id] };
-  if (limitedProviderMessages[provider.id]) {
-    return { mode: 'limited', url: provider.url, sourceName: 'Official account or location-specific outage page' };
-  }
   if (provider.sourceType === 'rss') {
     return { mode: 'feed', url: provider.url, sourceName: `${provider.name} public RSS`, maxAgeHours: provider.maxAgeHours || 168, confirmHealthyFromFeed: true };
   }
@@ -463,7 +454,7 @@ async function parsePublicHtml(provider, source) {
 }
 
 function limitedStatus(provider, source) {
-  const message = limitedProviderMessages[provider.id] || provider.message || 'The official public source requires account, tenant, address, location, or interactive access.';
+  const message = provider.message || 'The official public source requires account, tenant, address, location, or interactive access.';
   return providerStatus(provider, source, 'Limited official source', 'blue', false, message, [logEntry(source, false, 'limited source', message)], [], 'limited');
 }
 

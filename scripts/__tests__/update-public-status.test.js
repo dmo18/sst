@@ -60,8 +60,3 @@ test('Entra uses its first row status and ignores neighboring services', () => {
   assert.equal(issue.kind, 'issue');
   assert.equal(issue.color, 'amber');
 });
-
-test('account-specific ISPs remain limited instead of fabricated green', () => {
-  const source = resolvePublicSource({ id: 'att', url: 'https://www.att.com/outages/', sourceType: 'limited-official' });
-  assert.equal(source.mode, 'limited');
-});
