@@ -19,6 +19,7 @@ test('statuspage API URLs resolve to public pages and feeds', () => {
   const source = resolvePublicSource(provider);
   assert.equal(publicPageUrl(provider.url), 'https://status.vendor.example/');
   assert.equal(source.mode, 'status-html');
+  assert.equal(source.confirmHealthyFromFeed, undefined);
   assert.deepEqual(source.feedCandidates, [
     'https://status.vendor.example/history.rss',
     'https://status.vendor.example/history.atom'
@@ -30,6 +31,7 @@ test('Microsoft 365 uses the free official public RSS feed', () => {
   assert.equal(source.mode, 'feed');
   assert.equal(source.url, 'https://status.cloud.microsoft/api/feed/mac');
   assert.equal(source.allowEmpty, true);
+  assert.equal(source.confirmHealthyFromFeed, true);
 });
 
 test('feed parser keeps active incidents and rejects resolved history', () => {
@@ -52,8 +54,8 @@ test('feed discovery resolves relative RSS and Atom links', () => {
   ]);
 });
 
-test('Entra public status row reports good and warning states', () => {
-  assert.equal(entraConclusion('Identity Microsoft Entra ID (formerly Azure AD) Good').kind, 'healthy');
+test('Entra uses its first row status and ignores neighboring services', () => {
+  assert.equal(entraConclusion('Identity Microsoft Entra ID (formerly Azure AD) Good Enterprise State Roaming Warning').kind, 'healthy');
   const issue = entraConclusion('Identity Microsoft Entra ID (formerly Azure AD) Warning Current Impact');
   assert.equal(issue.kind, 'issue');
   assert.equal(issue.color, 'amber');
