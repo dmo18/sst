@@ -9,6 +9,7 @@ import {
   publicPageUrl,
   resolvePublicSource
 } from '../update-public-status.mjs';
+import { additionalPublicOverrides, providerSpecificConclusion } from '../public-source-repairs.mjs';
 
 const response = (body, status = 200, type = 'text/html') => new Response(body, {
   status,
@@ -109,4 +110,60 @@ test('Entra feed ignores unrelated Azure incidents', async () => {
   assert.equal(result.source_state, 'available');
   assert.equal(result.incidents.length, 1);
   assert.match(result.incidents[0].title, /Entra ID/);
+});
+
+
+test('verified public source overrides use free first-party pages', () => {
+  for (const id of ['ringcentral', 'sophos', 'bitdefender-gravityzone', 'bitwarden', 'cove-data-protection', 'crashplan', 'fortinet', 'keeper', 'malwarebytes', 'superops', 'syncro', 'salesforce', 'zendesk', 'backblaze']) {
+    const source = additionalPublicOverrides[id];
+    assert.ok(source);
+    assert.equal(source.mode, 'status-html');
+    assert.match(source.url, /^https:\/\//);
+  }
+});
+
+test('provider-specific status conclusions prefer current health over historical text', () => {
+  assert.equal(providerSpecificConclusion({ id: 'sophos', name: 'Sophos' }, '<main>All systems normal</main>').kind, 'healthy');
+  assert.equal(providerSpecificConclusion({ id: 'bitdefender-gravityzone', name: 'Bitdefender GravityZone' }, '<main>All systems are go!</main>').kind, 'healthy');
+  assert.equal(providerSpecificConclusion({ id: 'bitwarden', name: 'Bitwarden' }, '<main>Operating Normally</main>').kind, 'healthy');
+  assert.equal(providerSpecificConclusion({ id: 'crashplan', name: 'CrashPlan' }, '<main>All Systems Operational</main>').kind, 'healthy');
+  assert.equal(providerSpecificConclusion({ id: 'superops', name: 'SuperOps' }, '<main>All services are online</main>').kind, 'healthy');
+  assert.equal(providerSpecificConclusion({ id: 'syncro', name: 'Syncro' }, '<main>Operating Normally</main>').kind, 'healthy');
+  assert.equal(providerSpecificConclusion({ id: 'zendesk', name: 'Zendesk' }, '<main>No incidents with Zendesk</main>').kind, 'healthy');
+  assert.equal(providerSpecificConclusion({ id: 'backblaze', name: 'Backblaze' }, '<main>All systems operational. Nothing to report.</main>').kind, 'healthy');
+});
+
+test('RingCentral active incident overrides its general healthy legend', () => {
+  const conclusion = providerSpecificConclusion(
+    { id: 'ringcentral', name: 'RingCentral' },
+    '<main>No issues are being reported A portion of customers may be experiencing inbound call failures Incident status updates</main>'
+  );
+  assert.equal(conclusion.kind, 'issue');
+  assert.equal(conclusion.color, 'amber');
+});
+
+test('Cove conclusion filters unrelated N-able incidents', () => {
+  const healthy = providerSpecificConclusion(
+    { id: 'cove-data-protection', name: 'Cove Data Protection' },
+    '<main>Active Incidents N-able Adlumin XDR Investigating Resolved Incidents Cove Data Protection restored</main>'
+  );
+  assert.equal(healthy.kind, 'healthy');
+  const issue = providerSpecificConclusion(
+    { id: 'cove-data-protection', name: 'Cove Data Protection' },
+    '<main>Active Incidents N-able Cove Data Protection EMEA Performance Issue Investigating Resolved Incidents</main>'
+  );
+  assert.equal(issue.kind, 'issue');
+});
+
+test('Salesforce ignores informational messages but captures service degradation', () => {
+  const healthy = providerSpecificConclusion(
+    { id: 'salesforce', name: 'Salesforce' },
+    '<main>Current Status ID Subject Instances Services Status Security Advisory Informational Message Ongoing Recently Viewed Instances</main>'
+  );
+  assert.equal(healthy.kind, 'healthy');
+  const issue = providerSpecificConclusion(
+    { id: 'salesforce', name: 'Salesforce' },
+    '<main>Current Status ID Subject Instances Services Status Feature Degradation AP52 Core Service Ongoing Recently Viewed Instances</main>'
+  );
+  assert.equal(issue.kind, 'issue');
 });
