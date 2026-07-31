@@ -290,7 +290,7 @@ export function parseFeedEntries(xml) {
 }
 
 function issueText(value) {
-  return /\b(outage|unavailable|down|degrad|disruption|service impact|incident|intermittent|latency|elevated errors?|fail(?:ure|ing)?|partial outage|major outage|critical|investigat|identified|monitoring)\b/i.test(value);
+  return /\b(outage|unavailable|down|degrad(?:ed|ation|ing)?|disruption|service impact|incident|intermittent|latency|elevated errors?|fail(?:ure|ures|ing|ed)?|partial outage|major outage|critical|investigat(?:e|ed|ing|ion)?|identified|monitoring)\b/i.test(value);
 }
 
 function resolvedText(value) {
