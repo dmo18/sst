@@ -1,0 +1,113 @@
+name: Temporary source repair application
+on:
+  pull_request:
+permissions:
+  contents: write
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Apply removals and source repairs
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+
+          const removeIds = new Set([
+            'acronis',
+            'onelogin',
+            'veeam-cloud-services',
+            'quad9',
+            'heroku',
+            'intercom',
+            'namecheap',
+            'square'
+          ]);
+
+          const catalogPath = 'config/providers.json';
+          const catalog = JSON.parse(fs.readFileSync(catalogPath, 'utf8'));
+          const retained = catalog.filter(provider => !removeIds.has(provider.id));
+          const removed = catalog.filter(provider => removeIds.has(provider.id));
+          if (removed.length !== 8) throw new Error(`Expected to remove 8 providers, removed ${removed.length}: ${removed.map(item => item.id).join(', ')}`);
+          if (retained.length !== 79) throw new Error(`Expected 79 providers after removal, found ${retained.length}`);
+          fs.writeFileSync(catalogPath, `${JSON.stringify(retained, null, 2)}\n`);
+
+          const replaceOnce = (source, before, after, label) => {
+            const count = source.split(before).length - 1;
+            if (count !== 1) throw new Error(`${label}: expected one match, found ${count}`);
+            return source.replace(before, after);
+          };
+
+          const validatorPath = 'scripts/validate-providers.mjs';
+          let validator = fs.readFileSync(validatorPath, 'utf8');
+          validator = replaceOnce(validator, 'const expectedProviderCount = 87;', 'const expectedProviderCount = 79;', 'provider count');
+          fs.writeFileSync(validatorPath, validator);
+
+          const packagePath = 'package.json';
+          const packageJson = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
+          if (packageJson.version !== '2.3.5') throw new Error(`Expected package version 2.3.5, found ${packageJson.version}`);
+          packageJson.version = '2.3.6';
+          fs.writeFileSync(packagePath, `${JSON.stringify(packageJson, null, 2)}\n`);
+
+          const sourcePath = 'scripts/update-public-status.mjs';
+          let source = fs.readFileSync(sourcePath, 'utf8');
+          source = replaceOnce(
+            source,
+            "import {\n  activeIncident,\n  colorFromText,\n  compareSnapshots,\n  fetchSource,\n  safeIncidentUrl,\n  summarizeProviders,\n  validatePayload\n} from './update-status.mjs';",
+            "import {\n  activeIncident,\n  colorFromText,\n  compareSnapshots,\n  fetchSource,\n  safeIncidentUrl,\n  summarizeProviders,\n  validatePayload\n} from './update-status.mjs';\nimport { additionalPublicOverrides, providerSpecificConclusion, renderPublicPage } from './public-source-repairs.mjs';",
+            'source repair import'
+          );
+          source = replaceOnce(
+            source,
+            "  heroku: {\n    mode: 'status-html',\n    url: 'https://status.heroku.com/',\n    sourceName: 'Heroku public status page'\n  }\n};",
+            "};\n\nObject.assign(publicOverrides, additionalPublicOverrides);",
+            'remove Heroku override and apply repairs'
+          );
+          source = replaceOnce(
+            source,
+            "function htmlIssueConclusion(provider, source, html) {\n  const current = currentHtmlSection(html);",
+            "function htmlIssueConclusion(provider, source, html) {\n  const specific = providerSpecificConclusion(provider, html);\n  if (specific) return specific;\n  const current = currentHtmlSection(html);",
+            'provider-specific conclusion'
+          );
+          source = replaceOnce(
+            source,
+            "  const conclusion = htmlIssueConclusion(provider, source, result.body);\n  const feedResult = await tryFeedCandidates(provider, source, result.body, logs);",
+            "  let pageBody = result.body;\n  let conclusion = htmlIssueConclusion(provider, source, pageBody);\n  if (conclusion.kind === 'limited' && source.render === true) {\n    const rendered = renderPublicPage(source);\n    logs.push(rendered.log);\n    if (rendered.ok) {\n      pageBody = rendered.body;\n      conclusion = htmlIssueConclusion(provider, source, pageBody);\n    }\n  }\n  const feedResult = await tryFeedCandidates(provider, source, pageBody, logs);",
+            'rendered public page fallback'
+          );
+          fs.writeFileSync(sourcePath, source);
+
+          const testPath = 'scripts/__tests__/update-public-status.test.js';
+          let tests = fs.readFileSync(testPath, 'utf8');
+          tests = replaceOnce(
+            tests,
+            "} from '../update-public-status.mjs';",
+            "} from '../update-public-status.mjs';\nimport { additionalPublicOverrides, providerSpecificConclusion } from '../public-source-repairs.mjs';",
+            'test source repair import'
+          );
+          tests += `\n\ntest('verified public source overrides use free first-party pages', () => {\n  for (const id of ['ringcentral', 'sophos', 'bitdefender-gravityzone', 'bitwarden', 'cove-data-protection', 'crashplan', 'fortinet', 'keeper', 'malwarebytes', 'superops', 'syncro', 'salesforce', 'zendesk', 'backblaze']) {\n    const source = additionalPublicOverrides[id];\n    assert.ok(source);\n    assert.equal(source.mode, 'status-html');\n    assert.match(source.url, /^https:\\/\\//);\n  }\n});\n\ntest('provider-specific status conclusions prefer current health over historical text', () => {\n  assert.equal(providerSpecificConclusion({ id: 'sophos', name: 'Sophos' }, '<main>All systems normal</main>').kind, 'healthy');\n  assert.equal(providerSpecificConclusion({ id: 'bitdefender-gravityzone', name: 'Bitdefender GravityZone' }, '<main>All systems are go!</main>').kind, 'healthy');\n  assert.equal(providerSpecificConclusion({ id: 'bitwarden', name: 'Bitwarden' }, '<main>Operating Normally</main>').kind, 'healthy');\n  assert.equal(providerSpecificConclusion({ id: 'crashplan', name: 'CrashPlan' }, '<main>All Systems Operational</main>').kind, 'healthy');\n  assert.equal(providerSpecificConclusion({ id: 'superops', name: 'SuperOps' }, '<main>All services are online</main>').kind, 'healthy');\n  assert.equal(providerSpecificConclusion({ id: 'syncro', name: 'Syncro' }, '<main>Operating Normally</main>').kind, 'healthy');\n  assert.equal(providerSpecificConclusion({ id: 'zendesk', name: 'Zendesk' }, '<main>No incidents with Zendesk</main>').kind, 'healthy');\n  assert.equal(providerSpecificConclusion({ id: 'backblaze', name: 'Backblaze' }, '<main>All systems operational. Nothing to report.</main>').kind, 'healthy');\n});\n\ntest('RingCentral active incident overrides its general healthy legend', () => {\n  const conclusion = providerSpecificConclusion(\n    { id: 'ringcentral', name: 'RingCentral' },\n    '<main>No issues are being reported A portion of customers may be experiencing inbound call failures Incident status updates</main>'\n  );\n  assert.equal(conclusion.kind, 'issue');\n  assert.equal(conclusion.color, 'amber');\n});\n\ntest('Cove conclusion filters unrelated N-able incidents', () => {\n  const healthy = providerSpecificConclusion(\n    { id: 'cove-data-protection', name: 'Cove Data Protection' },\n    '<main>Active Incidents N-able Adlumin XDR Investigating Resolved Incidents Cove Data Protection restored</main>'\n  );\n  assert.equal(healthy.kind, 'healthy');\n  const issue = providerSpecificConclusion(\n    { id: 'cove-data-protection', name: 'Cove Data Protection' },\n    '<main>Active Incidents N-able Cove Data Protection EMEA Performance Issue Investigating Resolved Incidents</main>'\n  );\n  assert.equal(issue.kind, 'issue');\n});\n\ntest('Salesforce ignores informational messages but captures service degradation', () => {\n  const healthy = providerSpecificConclusion(\n    { id: 'salesforce', name: 'Salesforce' },\n    '<main>Current Status ID Subject Instances Services Status Security Advisory Informational Message Ongoing Recently Viewed Instances</main>'\n  );\n  assert.equal(healthy.kind, 'healthy');\n  const issue = providerSpecificConclusion(\n    { id: 'salesforce', name: 'Salesforce' },\n    '<main>Current Status ID Subject Instances Services Status Feature Degradation AP52 Core Service Ongoing Recently Viewed Instances</main>'\n  );\n  assert.equal(issue.kind, 'issue');\n});\n`;
+          fs.writeFileSync(testPath, tests);
+          NODE
+      - name: Synchronize lockfile
+        run: npm install --package-lock-only --ignore-scripts
+      - name: Validate transformed files
+        run: |
+          node -e "const p=require('./package.json');const l=require('./package-lock.json');if(p.version!=='2.3.6'||l.version!=='2.3.6'||l.packages[''].version!=='2.3.6')throw new Error('version mismatch')"
+          npm run validate-providers
+          npm test
+      - name: Commit source repairs
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add config/providers.json scripts/validate-providers.mjs scripts/update-public-status.mjs scripts/public-source-repairs.mjs scripts/__tests__/update-public-status.test.js package.json package-lock.json
+          git commit -m "Remove eight providers and repair public sources"
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
