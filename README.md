@@ -61,7 +61,7 @@ Retrieval checks Content-Length, streams up to a configurable 2 MiB limit, valid
 
 ## CI and deployment
 
-`.github/workflows/test.yml` runs `npm ci`, provider validation, deterministic tests, typecheck, and `build:app` on pull requests without vendors. The sole Pages workflow triggers on `main`, manual dispatch, and at minutes 7, 19, 31, 43, and 55. Its **build** job has only `contents: read`, runs catalog validation, one live generation, payload checks, and one Vite build; its dependent **deploy** job alone has `pages: write` and `id-token: write`. One concurrency group prevents overlapping deployments. Vite base `/sst/` is fixed for Pages; `status.json` and logos are copied into `dist`.
+`.github/workflows/test.yml` runs `npm ci`, provider validation, deterministic tests, typecheck, and `build:app` on pull requests without vendors. The sole Pages workflow triggers on `main`, manual dispatch, and at minutes 7, 19, 31, 43, and 55. Its **build** job has only `contents: read`, runs catalog validation, one live generation, both server and browser payload validation, and one Vite build. Its dependent **deploy** job alone has `pages: write` and `id-token: write`; after publication it fetches the deployed HTML, JavaScript, CSS, and status payload and renders the live page in headless Chrome. The deployment success marker is written only after those production smoke checks pass. One concurrency group prevents overlapping deployments. Vite base `/sst/` is fixed for Pages; `status.json` and logos are copied into `dist`.
 
 ## External source research and adoption policy
 

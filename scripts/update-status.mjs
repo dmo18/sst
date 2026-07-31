@@ -783,37 +783,81 @@ export function compareSnapshots(previous, current, now = new Date().toISOString
     }
     return changes;
 }
-export function validatePayload(payload) { const errors = []; const ids = new Set(); for (const p of payload.providers) {
-    if (ids.has(p.id))
-        errors.push(`duplicate provider ${p.id}`);
-    ids.add(p.id);
-    if (!['operational', 'degraded', 'major', 'unknown'].includes(p.service_state))
-        errors.push(`invalid service state ${p.id}`);
-    if (!['available', 'limited', 'unavailable', 'disabled', 'pending', 'stale'].includes(p.source_state))
-        errors.push(`invalid source state ${p.id}`);
-    if (typeof p.ok !== 'boolean' || !Number.isFinite(p.priority) || !/^https?:/.test(p.source))
-        errors.push(`invalid provider ${p.id}`);
-} const incidentIds = new Set(); for (const i of payload.incidents) {
-    if (!ids.has(i.providerId))
-        errors.push(`unknown incident provider ${i.providerId}`);
-    if (incidentIds.has(i.id))
-        errors.push(`duplicate incident ${i.id}`);
-    incidentIds.add(i.id);
-    try {
-        if (!['http:', 'https:'].includes(new URL(i.url).protocol))
-            errors.push(`invalid incident URL ${i.id}`);
+export function validatePayload(payload) {
+    const errors = [];
+    if (!payload || typeof payload !== 'object')
+        throw new Error('Generated payload validation failed: payload must be an object');
+    const providers = Array.isArray(payload.providers) ? payload.providers : [];
+    const incidents = Array.isArray(payload.incidents) ? payload.incidents : [];
+    const maintenance = Array.isArray(payload.maintenance) ? payload.maintenance : [];
+    if (!Array.isArray(payload.providers))
+        errors.push('providers must be an array');
+    if (!Array.isArray(payload.incidents))
+        errors.push('incidents must be an array');
+    if (payload.maintenance !== undefined && !Array.isArray(payload.maintenance))
+        errors.push('maintenance must be an array');
+    const ids = new Set();
+    for (const provider of providers) {
+        if (ids.has(provider.id))
+            errors.push(`duplicate provider ${provider.id}`);
+        ids.add(provider.id);
+        if (!['operational', 'degraded', 'major', 'unknown'].includes(provider.service_state))
+            errors.push(`invalid service state ${provider.id}`);
+        if (!['available', 'limited', 'unavailable', 'disabled', 'pending', 'stale'].includes(provider.source_state))
+            errors.push(`invalid source state ${provider.id}`);
+        if (typeof provider.ok !== 'boolean' || !Number.isFinite(provider.priority) || !/^https?:/.test(provider.source))
+            errors.push(`invalid provider ${provider.id}`);
     }
-    catch {
-        errors.push(`invalid incident URL ${i.id}`);
+    const incidentIds = new Set();
+    for (const incident of incidents) {
+        if (!ids.has(incident.providerId))
+            errors.push(`unknown incident provider ${incident.providerId}`);
+        if (incidentIds.has(incident.id))
+            errors.push(`duplicate incident ${incident.id}`);
+        incidentIds.add(incident.id);
+        try {
+            if (!['http:', 'https:'].includes(new URL(incident.url).protocol))
+                errors.push(`invalid incident URL ${incident.id}`);
+        }
+        catch {
+            errors.push(`invalid incident URL ${incident.id}`);
+        }
+        if (incident.rawTime && Date.parse(incident.rawTime) > Date.now() + 300000)
+            errors.push(`future incident ${incident.id}`);
     }
-    if (i.rawTime && Date.parse(i.rawTime) > Date.now() + 300000)
-        errors.push(`future incident ${i.id}`);
-} if (!Array.isArray(payload.changes) || !Array.isArray(payload.history))
-    errors.push('changes and history must be arrays'); const expected = summarizeProviders(payload.providers, payload.incidents); for (const [key, value] of Object.entries(expected))
-    if (payload.summary[key] !== value)
-        errors.push(`summary mismatch ${key}`); if (payload.schema_version !== 2 || !Number.isFinite(Date.parse(payload.generated_at)))
-    errors.push('invalid schema metadata'); if (errors.length)
-    throw new Error(`Generated payload validation failed: ${errors.join('; ')}`); return true; }
+    const maintenanceIds = new Set();
+    for (const item of maintenance) {
+        if (!ids.has(item.providerId))
+            errors.push(`unknown maintenance provider ${item.providerId}`);
+        if (!item.id || maintenanceIds.has(item.id))
+            errors.push(`duplicate maintenance ${item.id || 'missing'}`);
+        maintenanceIds.add(item.id);
+        try {
+            if (!['http:', 'https:'].includes(new URL(item.url).protocol))
+                errors.push(`invalid maintenance URL ${item.id}`);
+        }
+        catch {
+            errors.push(`invalid maintenance URL ${item.id}`);
+        }
+        if (!['scheduled', 'in_progress', 'completed', 'unknown'].includes(item.status))
+            errors.push(`invalid maintenance state ${item.id}`);
+        for (const field of ['starts_at', 'ends_at', 'announced_at', 'latest_update']) {
+            if (item[field] && !Number.isFinite(Date.parse(item[field])))
+                errors.push(`invalid maintenance ${field} ${item.id}`);
+        }
+    }
+    if (!Array.isArray(payload.changes) || !Array.isArray(payload.history))
+        errors.push('changes and history must be arrays');
+    const expected = summarizeProviders(providers, incidents);
+    for (const [key, value] of Object.entries(expected))
+        if (payload.summary?.[key] !== value)
+            errors.push(`summary mismatch ${key}`);
+    if (payload.schema_version !== 2 || !Number.isFinite(Date.parse(payload.generated_at)))
+        errors.push('invalid schema metadata');
+    if (errors.length)
+        throw new Error(`Generated payload validation failed: ${errors.join('; ')}`);
+    return true;
+}
 export async function generateStatus() {
     const catalog = readJson(catalogPath);
     if (!Array.isArray(catalog))
