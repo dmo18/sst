@@ -1,0 +1,26 @@
+{
+  "excludedProviderIds": [
+    "datto"
+  ],
+  "providerOverrides": {
+    "kaseya": {
+      "criticality": "high",
+      "tags": [
+        "msp",
+        "psa",
+        "rmm",
+        "backup"
+      ],
+      "services": [
+        "Autotask PSA",
+        "Datto RMM",
+        "Datto BCDR",
+        "Datto SaaS Protection",
+        "Kaseya VSA",
+        "Kaseya BMS"
+      ],
+      "client_impact": "May affect Autotask PSA, Datto, Kaseya RMM, backup, or MSP operations.",
+      "technician_action": "Confirm the affected US product and region on the Kaseya status page before changing local systems."
+    }
+  }
+}

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
 import providerCatalog from '../config/providers.json';
+import providerConsolidation from '../config/provider-consolidation.json';
 import packageMetadata from '../package.json';
 import { dataLifecycleReducer, initialDataLifecycle } from './dataLifecycle';
 import { IssueConsole } from './IssueConsole';
@@ -7,8 +8,19 @@ import { buildIssueConsoleModel } from './statusViewModel';
 import { payloadValidationErrors } from './payloadValidation';
 import { RequestOwnership } from './requestOwnership';
 import type { ProviderConfig, StatusPayload } from './types';
-const CATALOG = providerCatalog as ProviderConfig[];
+
+type ProviderConsolidation = {
+    excludedProviderIds: string[];
+    providerOverrides: Record<string, Partial<ProviderConfig>>;
+};
+
+const CONSOLIDATION = providerConsolidation as ProviderConsolidation;
+const EXCLUDED_PROVIDER_IDS = new Set(CONSOLIDATION.excludedProviderIds);
+const CATALOG = (providerCatalog as ProviderConfig[])
+    .filter(provider => !EXCLUDED_PROVIDER_IDS.has(provider.id))
+    .map(provider => ({ ...provider, ...(CONSOLIDATION.providerOverrides[provider.id] || {}) }));
 const REFRESH_MS = 60000;
+
 async function fetchStatus(signal: AbortSignal): Promise<StatusPayload> {
     const response = await fetch(`${import.meta.env.BASE_URL}status.json?ts=${Date.now()}`, { cache: 'no-store', signal });
     if (!response.ok)
@@ -21,6 +33,7 @@ async function fetchStatus(signal: AbortSignal): Promise<StatusPayload> {
     }
     return data as StatusPayload;
 }
+
 export function App(): JSX.Element {
     const [state, dispatch] = useReducer(dataLifecycleReducer, initialDataLifecycle);
     const ownership = useRef(new RequestOwnership());

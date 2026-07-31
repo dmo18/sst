@@ -10,10 +10,16 @@ import {
   summarizeProviders,
   validatePayload
 } from './update-status.mjs';
-import { additionalPublicOverrides, providerSpecificConclusion, renderPublicPage } from './public-source-repairs.mjs';
+import {
+  additionalPublicOverrides,
+  isUsRelevantIncident,
+  providerSpecificConclusion,
+  renderPublicPage
+} from './public-source-repairs.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const catalogPath = path.join(root, 'config', 'providers.json');
+const consolidationPath = path.join(root, 'config', 'provider-consolidation.json');
 const publicStatusPath = path.join(root, 'public', 'status.json');
 const previousStatusPath = path.join(root, 'public', 'previous-status.json');
 const concurrency = 10;
@@ -89,7 +95,7 @@ const publicOverrides = {
     mode: 'status-html',
     url: 'https://status.salesforce.com/current',
     sourceName: 'Salesforce Trust public status page'
-  },
+  }
 };
 
 Object.assign(publicOverrides, additionalPublicOverrides);
@@ -103,6 +109,14 @@ function writeJson(filePath, data) {
   const temporaryPath = `${filePath}.${process.pid}.tmp`;
   fs.writeFileSync(temporaryPath, `${JSON.stringify(data, null, 2)}\n`);
   fs.renameSync(temporaryPath, filePath);
+}
+
+export function canonicalizeProviderCatalog(catalog, consolidation = readJson(consolidationPath)) {
+  const excluded = new Set(consolidation?.excludedProviderIds || []);
+  const overrides = consolidation?.providerOverrides || {};
+  return catalog
+    .filter(provider => !excluded.has(provider.id))
+    .map(provider => ({ ...provider, ...(overrides[provider.id] || {}) }));
 }
 
 export function decodeEntities(value) {
@@ -144,9 +158,36 @@ function shortTime(value) {
   return date.toISOString().slice(5, 16).replace('T', ' ');
 }
 
-function makeIncident(provider, source, title, note, url, time = '', status = '', color = 'amber') {
+function affectedServiceForIncident(provider, title, note) {
+  if (provider.id !== 'kaseya') return (provider.services || []).join(', ');
+  const text = `${title || ''} ${note || ''}`;
+  const mappings = [
+    [/\bautotask\b/i, 'Autotask PSA'],
+    [/\bdatto rmm\b|\brmm\b/i, 'Datto RMM'],
+    [/\bsaas protection\b|\bbackupify\b/i, 'Datto SaaS Protection'],
+    [/\bbcdr\b|\bbusiness continuity\b|\bcontinuity\b/i, 'Datto BCDR'],
+    [/\bkaseya vsa\b|\bvsa\b/i, 'Kaseya VSA'],
+    [/\bkaseya bms\b|\bbms\b/i, 'Kaseya BMS']
+  ];
+  const matches = mappings.filter(([pattern]) => pattern.test(text)).map(([, name]) => name);
+  return matches.length ? [...new Set(matches)].join(', ') : (provider.services || []).join(', ');
+}
+
+function makeIncident(
+  provider,
+  source,
+  title,
+  note,
+  url,
+  firstDetected = '',
+  status = '',
+  color = 'amber',
+  latestUpdate = '',
+  affectedService = ''
+) {
   const cleanTitle = cleanText(title || 'Service incident');
   const serviceState = color === 'red' ? 'major' : 'degraded';
+  const finalLatestUpdate = latestUpdate || firstDetected || '';
   return {
     id: `${provider.id}:${normalizeIncidentTitle(cleanTitle) || cleanTitle.toLowerCase()}`,
     providerId: provider.id,
@@ -156,18 +197,18 @@ function makeIncident(provider, source, title, note, url, time = '', status = ''
     note: cleanText(note || 'The official public source reports a service issue.'),
     source: source.sourceName || source.mode,
     url: safeIncidentUrl(url, source.url),
-    time: shortTime(time),
-    rawTime: time || '',
+    time: shortTime(finalLatestUpdate),
+    rawTime: finalLatestUpdate,
     status: status || '',
     color,
     service_state: serviceState,
     attention: serviceState === 'major' ? 'critical' : 'action',
     priority: provider.priority || 0,
-    first_detected: time || '',
-    latest_update: time || '',
+    first_detected: firstDetected || finalLatestUpdate,
+    latest_update: finalLatestUpdate,
     client_impact: provider.client_impact,
     technician_action: provider.technician_action,
-    affected_service: (provider.services || []).join(', ')
+    affected_service: affectedService || affectedServiceForIncident(provider, cleanTitle, note)
   };
 }
 
@@ -329,6 +370,39 @@ export function activeFeedEntries(entries, maxAgeHours = 168, now = Date.now()) 
   });
 }
 
+export function scopeFeedEntries(entries, source = {}) {
+  if (source.regionScope === 'global') return entries;
+  return entries.filter(item => isUsRelevantIncident(`${item.title || ''} ${item.note || ''} ${item.status || ''}`));
+}
+
+export function dedupeIncidentEntries(entries) {
+  const records = new Map();
+  for (const item of entries) {
+    const titleKey = normalizeIncidentTitle(item.title) || cleanText(item.title).toLowerCase();
+    const urlKey = cleanText(item.url || '').replace(/[?#].*$/, '');
+    const key = `${titleKey}|${urlKey}`;
+    const current = records.get(key);
+    if (!current) {
+      records.set(key, { ...item, firstTime: item.time || '' });
+      continue;
+    }
+    const currentMs = Date.parse(current.time || '');
+    const itemMs = Date.parse(item.time || '');
+    const firstCandidates = [current.firstTime, current.time, item.time]
+      .filter(Boolean)
+      .map(value => ({ value, ms: Date.parse(value) }))
+      .filter(entry => Number.isFinite(entry.ms))
+      .sort((a, b) => a.ms - b.ms);
+    const firstTime = firstCandidates[0]?.value || current.firstTime || current.time || item.time || '';
+    if (Number.isFinite(itemMs) && (!Number.isFinite(currentMs) || itemMs >= currentMs)) {
+      records.set(key, { ...current, ...item, firstTime });
+    } else {
+      records.set(key, { ...current, firstTime });
+    }
+  }
+  return [...records.values()];
+}
+
 function feedAvailableWithoutHealthConclusion(provider, source, logs) {
   return providerStatus(
     provider,
@@ -364,10 +438,21 @@ async function parsePublicFeed(provider, source) {
   const relevantEntries = source.includePattern
     ? entries.filter(item => source.includePattern.test(`${item.title} ${item.note} ${item.status}`))
     : entries;
-  const active = activeFeedEntries(relevantEntries, source.maxAgeHours || 168);
+  const scopedEntries = scopeFeedEntries(relevantEntries, source);
+  const active = dedupeIncidentEntries(activeFeedEntries(scopedEntries, source.maxAgeHours || 168));
   const incidents = active.slice(0, 12).map(item => {
     const text = `${item.title} ${item.note} ${item.status}`;
-    return makeIncident(provider, source, item.title, item.note, item.url || source.pageUrl || source.url, item.time, item.status, itemColor(text));
+    return makeIncident(
+      provider,
+      source,
+      item.title,
+      item.note,
+      item.url || source.pageUrl || source.url,
+      item.firstTime || item.time,
+      item.status,
+      itemColor(text),
+      item.time
+    );
   });
   if (incidents.length) {
     const worst = incidents.reduce((current, item) => severityRank[item.color] > severityRank[current] ? item.color : current, 'amber');
@@ -468,6 +553,21 @@ async function tryFeedCandidates(provider, source, html, pageLogs) {
   return null;
 }
 
+function structuredIncidents(provider, source, conclusion) {
+  return (conclusion.incidents || []).slice(0, 12).map(item => makeIncident(
+    provider,
+    source,
+    item.title,
+    item.note,
+    item.url || source.url,
+    item.firstDetected || '',
+    item.status || 'active',
+    item.color || 'amber',
+    item.latestUpdate || item.firstDetected || '',
+    item.affectedService || ''
+  ));
+}
+
 async function parsePublicHtml(provider, source) {
   const requestProvider = { ...provider, url: source.url, sourceType: source.mode };
   const result = await fetchSource(requestProvider, 'text/html, text/plain, */*');
@@ -489,8 +589,26 @@ async function parsePublicHtml(provider, source) {
   }
   const feedResult = await tryFeedCandidates(provider, source, pageBody, logs);
   if (feedResult?.incidents?.length) return feedResult;
+  if (conclusion.kind === 'issues') {
+    const incidents = structuredIncidents(provider, source, conclusion);
+    if (incidents.length) {
+      const worst = incidents.reduce((current, item) => severityRank[item.color] > severityRank[current] ? item.color : current, 'amber');
+      return providerStatus(provider, source, `${incidents.length} active US public incident${incidents.length === 1 ? '' : 's'}`, worst, true, '', logs, incidents);
+    }
+  }
   if (conclusion.kind === 'issue') {
-    const incident = makeIncident(provider, source, conclusion.title, conclusion.note, source.url, '', 'active', conclusion.color);
+    const incident = makeIncident(
+      provider,
+      source,
+      conclusion.title,
+      conclusion.note,
+      source.url,
+      conclusion.firstDetected || '',
+      conclusion.status || 'active',
+      conclusion.color,
+      conclusion.latestUpdate || conclusion.firstDetected || '',
+      conclusion.affectedService || ''
+    );
     return providerStatus(provider, source, conclusion.title, conclusion.color, true, '', logs, [incident]);
   }
   if (conclusion.kind === 'healthy') {
@@ -530,8 +648,9 @@ async function mapLimit(items, limit, mapper) {
 }
 
 export async function generatePublicStatus() {
-  const catalog = readJson(catalogPath);
-  if (!Array.isArray(catalog)) throw new Error('Provider catalog must be an array.');
+  const rawCatalog = readJson(catalogPath);
+  if (!Array.isArray(rawCatalog)) throw new Error('Provider catalog must be an array.');
+  const catalog = canonicalizeProviderCatalog(rawCatalog);
   const ids = new Set();
   for (const provider of catalog) {
     if (ids.has(provider.id)) throw new Error(`Duplicate provider id: ${provider.id}`);
