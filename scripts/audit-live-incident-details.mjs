@@ -1,9 +1,31 @@
-import fs from 'node:fs';
+import { loadPublicProvider } from './update-public-status.mjs';
 import { isEditorialIncidentEntry, isGenericIncidentTitle, isIncidentUsRelevant } from './incident-detail-repairs.mjs';
 
-const payload = JSON.parse(fs.readFileSync(new URL('../public/status.json', import.meta.url), 'utf8'));
-const incidents = Array.isArray(payload.incidents) ? payload.incidents : [];
+const targets = [
+  { id: 'cloudflare', name: 'Cloudflare', category: 'Cloud Services', priority: 95, sourceType: 'statuspage', url: 'https://www.cloudflarestatus.com/api/v2/summary.json' },
+  { id: 'docker', name: 'Docker', category: 'DevOps', priority: 60, sourceType: 'statuspage', url: 'https://status.docker.com/api/v2/summary.json' },
+  { id: 'cisco-umbrella', name: 'Cisco Umbrella', category: 'Security / DNS', priority: 78, sourceType: 'statuspage', url: 'https://status.umbrella.com/api/v2/summary.json' },
+  { id: 'n-able', name: 'N-able', category: 'MSP Platforms', priority: 86, sourceType: 'statuspage', url: 'https://status.n-able.com/api/v2/summary.json' },
+  { id: 'cove-data-protection', name: 'Cove Data Protection', category: 'Backup', priority: 78, sourceType: 'statuspage', url: 'https://status.covedataprotection.com/api/v2/summary.json' }
+];
+
+function withTimeout(promise, provider, timeoutMs = 90000) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(`${provider} live source timed out after ${timeoutMs}ms`)), timeoutMs))
+  ]);
+}
+
+const results = await Promise.all(targets.map(provider => withTimeout(loadPublicProvider(provider), provider.name)));
+const incidents = results.flatMap(result => result.incidents || []);
 const failures = [];
+
+for (const result of results) {
+  if (result.source_state !== 'available') failures.push(`${result.name}: source state ${result.source_state}: ${result.message || result.status}`);
+  if (['n-able', 'cove-data-protection'].includes(result.id) && !/^https:\/\/uptime\.n-able\.com\//i.test(result.source || '')) {
+    failures.push(`${result.name}: wrong operational source: ${result.source}`);
+  }
+}
 
 for (const incident of incidents) {
   if (isGenericIncidentTitle(incident.title)) failures.push(`${incident.provider}: generic title: ${incident.title}`);
@@ -26,24 +48,23 @@ for (const incident of incidents) {
   }
 }
 
-const selected = incidents
-  .filter(item => ['cloudflare', 'docker', 'cisco-umbrella', 'n-able', 'cove-data-protection'].includes(item.providerId))
-  .map(item => ({
-    provider: item.provider,
-    title: item.title,
-    status: item.status,
-    affected_service: item.affected_service,
-    first_detected: item.first_detected,
-    latest_update: item.latest_update,
-    note: String(item.note || '').slice(0, 240)
-  }));
-
 console.log(JSON.stringify({
-  generated_at: payload.generated_at,
-  provider_count: payload.providers?.length,
-  incident_count: incidents.length,
-  selected
+  providers: results.map(result => ({
+    id: result.id,
+    service_state: result.service_state,
+    source_state: result.source_state,
+    source: result.source,
+    status: result.status,
+    incidents: (result.incidents || []).map(item => ({
+      title: item.title,
+      status: item.status,
+      affected_service: item.affected_service,
+      first_detected: item.first_detected,
+      latest_update: item.latest_update,
+      note: String(item.note || '').slice(0, 240)
+    }))
+  }))
 }, null, 2));
 
 if (failures.length) throw new Error(`Live incident audit failed:\n${failures.join('\n')}`);
-console.log('Live incident detail audit passed.');
+console.log('Targeted live incident detail audit passed.');
