@@ -4,10 +4,16 @@ import {
   activeFeedEntries,
   discoverFeedUrls,
   entraConclusion,
+  loadPublicProvider,
   parseFeedEntries,
   publicPageUrl,
   resolvePublicSource
 } from '../update-public-status.mjs';
+
+const response = (body, status = 200, type = 'text/html') => new Response(body, {
+  status,
+  headers: { 'content-type': type }
+});
 
 test('statuspage API URLs resolve to public pages and feeds', () => {
   const provider = {
@@ -32,6 +38,14 @@ test('Microsoft 365 uses the free official public RSS feed', () => {
   assert.equal(source.url, 'https://status.cloud.microsoft/api/feed/mac');
   assert.equal(source.allowEmpty, true);
   assert.equal(source.confirmHealthyFromFeed, true);
+});
+
+test('Entra uses the free Azure public RSS feed with identity filtering', () => {
+  const source = resolvePublicSource({ id: 'entra', url: 'https://invalid.example', sourceType: 'limited-microsoft' });
+  assert.equal(source.mode, 'feed');
+  assert.equal(source.url, 'https://rssfeed.azure.status.microsoft/en-us/status/feed/');
+  assert.equal(source.includePattern.test('Microsoft Entra ID authentication issue'), true);
+  assert.equal(source.includePattern.test('Azure Storage issue'), false);
 });
 
 test('feed parser keeps active incidents and rejects resolved history', () => {
@@ -59,4 +73,40 @@ test('Entra uses its first row status and ignores neighboring services', () => {
   const issue = entraConclusion('Identity Microsoft Entra ID (formerly Azure AD) Warning Current Impact');
   assert.equal(issue.kind, 'issue');
   assert.equal(issue.color, 'amber');
+});
+
+test('readable generic history feed is live without false operational status', async () => {
+  globalThis.fetch = async url => String(url).endsWith('/history.rss')
+    ? response('<?xml version="1.0"?><rss><channel><item><title>Incident resolved</title><description>Service restored</description><pubDate>Thu, 30 Jul 2026 22:00:00 GMT</pubDate></item></channel></rss>', 200, 'application/rss+xml')
+    : response('Forbidden', 403, 'text/html');
+  const result = await loadPublicProvider({
+    id: 'vendor',
+    name: 'Vendor',
+    category: 'Cloud',
+    priority: 50,
+    sourceType: 'statuspage',
+    url: 'https://status.vendor.example/api/v2/summary.json'
+  });
+  assert.equal(result.source_state, 'available');
+  assert.equal(result.service_state, 'unknown');
+  assert.equal(result.ok, true);
+  assert.match(result.message, /does not confirm current component health/);
+});
+
+test('Entra feed ignores unrelated Azure incidents', async () => {
+  globalThis.fetch = async () => response(`<?xml version="1.0"?><rss><channel>
+    <item><title>Azure Storage outage</title><description>Investigating</description><pubDate>Thu, 30 Jul 2026 23:00:00 GMT</pubDate></item>
+    <item><title>Microsoft Entra ID authentication degradation</title><description>Investigating sign-in failures</description><pubDate>Thu, 30 Jul 2026 23:00:00 GMT</pubDate></item>
+  </channel></rss>`, 200, 'application/rss+xml');
+  const result = await loadPublicProvider({
+    id: 'entra',
+    name: 'Entra ID',
+    category: 'Identity',
+    priority: 125,
+    sourceType: 'limited-microsoft',
+    url: 'https://status.cloud.microsoft/api/'
+  });
+  assert.equal(result.source_state, 'available');
+  assert.equal(result.incidents.length, 1);
+  assert.match(result.incidents[0].title, /Entra ID/);
 });
