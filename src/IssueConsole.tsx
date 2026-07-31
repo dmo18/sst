@@ -190,6 +190,7 @@ function IncidentCard({ item, wallboard }: { item: IssueBrief; wallboard: boolea
       <p>{item.note}</p>
       <dl>
         <div><dt>Affected service</dt><dd>{affectedService(item)}</dd></div>
+        <div><dt>Incident stage</dt><dd>{item.status || 'active'}</dd></div>
         <div><dt>First detected</dt><dd>{timeLabel(item.first_detected || item.rawTime || item.time)}</dd></div>
         <div><dt>Latest update</dt><dd>{timeLabel(item.latest_update || item.rawTime || item.time)}</dd></div>
       </dl>
@@ -242,6 +243,7 @@ function Diagnostic({ source }: { source: DiagnosticSource }): JSX.Element {
         <p>{source.status}</p>
         <p>{source.message}</p>
         <p><b>Status captured:</b> {source.ok ? `yes, ${timeLabel(source.checkedAt)}` : `no, last attempt ${timeLabel(source.checkedAt)}`}</p>
+        <p><b>Source adapter:</b> {source.sourceType.replaceAll('-', ' ')}</p>
         {source.clientImpact && <p><b>MSP impact:</b> {source.clientImpact}</p>}
         {source.technicianAction && <p><b>Action:</b> {source.technicianAction}</p>}
         <a href={source.source} target="_blank" rel="noopener noreferrer">Official source ↗</a>
