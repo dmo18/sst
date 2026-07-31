@@ -1,0 +1,34 @@
+name: Temporary source parser correction
+on:
+  pull_request:
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+      - name: Broaden incident stem matching
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const path = 'scripts/update-public-status.mjs';
+          const source = fs.readFileSync(path, 'utf8');
+          const before = `  return /\\b(outage|unavailable|down|degrad|disruption|service impact|incident|intermittent|latency|elevated errors?|fail(?:ure|ing)?|partial outage|major outage|critical|investigat|identified|monitoring)\\b/i.test(value);`;
+          const after = `  return /\\b(outage|unavailable|down|degrad(?:ed|ation|ing)?|disruption|service impact|incident|intermittent|latency|elevated errors?|fail(?:ure|ures|ing|ed)?|partial outage|major outage|critical|investigat(?:e|ed|ing|ion)?|identified|monitoring)\\b/i.test(value);`;
+          const occurrences = source.split(before).length - 1;
+          if (occurrences !== 1) throw new Error(`Expected one incident matcher, found ${occurrences}`);
+          fs.writeFileSync(path, source.replace(before, after));
+          NODE
+      - name: Commit parser correction
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add scripts/update-public-status.mjs
+          git commit -m "Broaden public feed incident matching"
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
