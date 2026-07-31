@@ -18,3 +18,14 @@ jobs:
       - run: npm test
       - run: npm run typecheck
       - run: npm run build:app
+      - name: Inspect deployed production payload and assets
+        run: node --experimental-strip-types scripts/production-smoke.mjs
+      - name: Render deployed production page in headless Chrome
+        run: |
+          BROWSER="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
+          test -n "$BROWSER"
+          "$BROWSER" --headless=new --disable-gpu --no-sandbox --virtual-time-budget=12000 --dump-dom https://dmo18.github.io/sst/ > /tmp/live-dom.html
+          echo "DOM_BYTES $(wc -c < /tmp/live-dom.html)"
+          grep -Eo 'Load failed[^<]*|Status intelligence unavailable|Service Heads-Up Console|Technician briefing|Provider diagnostics and evidence' /tmp/live-dom.html | head -30 || true
+          grep -q 'Technician briefing' /tmp/live-dom.html
+          grep -q 'Provider diagnostics and evidence' /tmp/live-dom.html
