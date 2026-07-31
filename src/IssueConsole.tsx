@@ -74,6 +74,68 @@ function modeHref(params: Record<string, string>): string {
   return `${location.pathname}${suffix ? `?${suffix}` : ''}`;
 }
 
+function SiteGuidePanel(): JSX.Element {
+  return (
+    <div className="site-guide-panel">
+      <header className="site-guide-intro">
+        <p className="eyebrow">Site guide</p>
+        <h2>What this dashboard shows</h2>
+        <p>A free, public-source status console for MSP triage. It uses vendor status pages and feeds only. It does not use paid services, logins, tenant data, or customer telemetry.</p>
+      </header>
+
+      <div className="site-guide-grid">
+        <section>
+          <h3>Regional scope: US first</h3>
+          <p>Regional filtering applies to incident notices, not the provider list.</p>
+          <ul>
+            <li><b>Shown:</b> US, North America, global, worldwide, mixed-region incidents that include the US, and notices with no region stated.</li>
+            <li><b>Hidden by default:</b> incidents explicitly limited to the UK, EU, EMEA, APAC, or another non-US region.</li>
+            <li>Global and region-unspecified incidents stay visible to avoid missing broad critical events.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3>Status meanings</h3>
+          <dl className="status-guide">
+            <div className="status-green"><dt>Green</dt><dd>The current public source confirms operational service.</dd></div>
+            <div className="status-amber"><dt>Amber</dt><dd>The source reports degradation or another active issue.</dd></div>
+            <div className="status-red"><dt>Red</dt><dd>The source reports a major or critical outage.</dd></div>
+            <div className="status-blue"><dt>Blue</dt><dd>Health is unknown, limited, stale, or unavailable. Blue is not proof of an outage.</dd></div>
+          </dl>
+          <p>Service state and source state are separate. A readable source may still be unable to confirm operational health.</p>
+        </section>
+
+        <section>
+          <h3>Data and refresh</h3>
+          <ul>
+            <li>The browser checks for a newer payload once per minute.</li>
+            <li>GitHub normally regenerates the payload about every 12 minutes, but scheduled runs are best effort.</li>
+            <li>Coverage means a source was readable. It does not mean that percentage of providers is operational.</li>
+            <li>Verify the official source before client-wide action or communication.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3>Views and options</h3>
+          <nav className="site-guide-modes">
+            <a href={modeHref({})}>Operator console</a>
+            <a href={modeHref({ view: 'wallboard', screen: 'heads-up' })}>Wallboard heads-up</a>
+            <a href={modeHref({ view: 'wallboard', screen: 'providers' })}>Wallboard providers</a>
+            <a href={modeHref({ view: 'wallboard', screen: 'sources' })}>Wallboard sources</a>
+            <a href={modeHref({ view: 'wallboard', screen: 'providers', density: 'compact' })}>Compact providers</a>
+            <a href={modeHref({ view: 'wallboard', screen: 'providers', rotate: '30' })}>Rotate every 30 seconds</a>
+          </nav>
+        </section>
+      </div>
+
+      <footer className="site-guide-links">
+        <a href="https://github.com/dmo18/sst/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer">Release changelog ↗</a>
+        <a href="https://github.com/dmo18/sst" target="_blank" rel="noopener noreferrer">Project source ↗</a>
+      </footer>
+    </div>
+  );
+}
+
 function PageFooter({ model, lifecycle }: { model: IssueConsoleModel | null; lifecycle: DataLifecycle }): JSX.Element {
   return (
     <footer className="page-footer">
@@ -90,26 +152,8 @@ function PageFooter({ model, lifecycle }: { model: IssueConsoleModel | null; lif
         <b>{lifecycle.phase}</b>
       </div>
       <details className="mode-helper">
-        <summary>Modes and options</summary>
-        <div>
-          <p>Use these links to switch views or pin a wallboard layout.</p>
-          <nav>
-            <a href={modeHref({})}>Operator console</a>
-            <a href={modeHref({ view: 'wallboard', screen: 'heads-up' })}>Wallboard heads-up</a>
-            <a href={modeHref({ view: 'wallboard', screen: 'providers' })}>Wallboard providers</a>
-            <a href={modeHref({ view: 'wallboard', screen: 'sources' })}>Wallboard sources</a>
-            <a href={modeHref({ view: 'wallboard', screen: 'providers', density: 'compact' })}>Compact providers</a>
-            <a href={modeHref({ view: 'wallboard', screen: 'providers', rotate: '30' })}>Rotate every 30 seconds</a>
-          </nav>
-          <dl>
-            <div><dt>Operator console</dt><dd>Full triage view with briefing, incidents, changes, search, filters, and diagnostics.</dd></div>
-            <div><dt>Wallboard heads-up</dt><dd>Large display mode focused on active incidents and high-level status.</dd></div>
-            <div><dt>Wallboard providers</dt><dd>Provider tile view for service state and source state at a glance.</dd></div>
-            <div><dt>Wallboard sources</dt><dd>Focuses on limited and unavailable provider sources.</dd></div>
-            <div><dt>density=compact</dt><dd>Fits more provider tiles on large displays.</dd></div>
-            <div><dt>rotate=30</dt><dd>Enables wallboard rotation every 30 seconds where supported.</dd></div>
-          </dl>
-        </div>
+        <summary>Site guide and options</summary>
+        <SiteGuidePanel />
       </details>
     </footer>
   );
