@@ -5,6 +5,7 @@ import './styles/app.css';
 import './styles/status-tweaks.css';
 import './styles/mobile.css';
 import './styles/site-guide.css';
+import './styles/intelligence.css';
 
 createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>

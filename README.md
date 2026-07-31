@@ -23,9 +23,15 @@ Presentation text and colors never determine these states. Source success alone 
 
 Attention (`critical`, `action`, `watch`, `informational`) expresses technician priority, not incident severity. Critical generally means a major/high-impact incident; action means confirmed degradation or an important source loss; watch covers gaps/recovery; informational covers stable confirmations.
 
+## Source intelligence and maintenance
+
+Every provider now records an evidence tier and confidence level independently of service health. Supported structured sources also publish component state, bounded incident and maintenance timelines, parser version, structural schema fingerprint, last successful retrieval, consecutive failures, and last semantic change. Schema drift and repeated failures become explicit source-intelligence events rather than vendor outages.
+
+Planned maintenance is a separate record class with start/end times, lifecycle state, affected services, official links, and update history. Routine maintenance does not inflate incident counts; emergency work or maintenance that escalates to current customer impact remains an active incident. Lifecycle history retains 200 bounded records.
+
 ## Change detection and metadata
 
-The Pages build optionally downloads the last deployed, validated snapshot. Comparison identifies new/escalated/de-escalated/resolved incidents, service degradation/recovery, and unavailable/limited source transitions. Initial generation creates no mass event; retrieval failure does not fail the build; history is bounded to 100 entries and generated JSON is never committed.
+The Pages build optionally downloads the last deployed, validated snapshot. Comparison identifies new/escalated/de-escalated/resolved incidents, service degradation/recovery, and unavailable/limited source transitions. Initial generation creates no mass event; retrieval failure does not fail the build; history is bounded to 200 entries and generated JSON is never committed.
 
 The canonical 78-provider catalog supports optional `criticality`, `tags`, `services`, `client_impact`, and `technician_action`. High-value identity, cloud, security, DNS, RMM/PSA, email, and connectivity entries receive specific guidance rather than generic filler. `scripts/validate-providers.mjs` validates types, concise guidance, URLs, unique IDs, source types, and counts.
 

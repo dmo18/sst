@@ -12,11 +12,18 @@ import {
 } from './update-status.mjs';
 import {
   additionalPublicOverrides,
-  isUsRelevantIncident,
   providerSpecificConclusion,
   renderPublicPage
 } from './public-source-repairs.mjs';
 import { isEditorialIncidentEntry, isGenericIncidentTitle, isIncidentUsRelevant } from './incident-detail-repairs.mjs';
+import {
+  enrichProviderHistory,
+  maintenanceIsRelevant,
+  normalizeMaintenanceState,
+  schemaFingerprint,
+  sourceEvidence,
+  sourceIntelligenceChanges
+} from './source-intelligence.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const catalogPath = path.join(root, 'config', 'providers.json');
@@ -159,6 +166,18 @@ function shortTime(value) {
   return date.toISOString().slice(5, 16).replace('T', ' ');
 }
 
+function boundedTimeline(values) {
+  return (Array.isArray(values) ? values : [])
+    .map(value => ({
+      status: cleanText(value?.status || ''),
+      note: cleanText(value?.note || value?.body || value?.message || ''),
+      at: value?.at || value?.updated_at || value?.created_at || value?.published_at || ''
+    }))
+    .filter(value => value.status || value.note || value.at)
+    .sort((a, b) => Date.parse(b.at || '') - Date.parse(a.at || ''))
+    .slice(0, 8);
+}
+
 function affectedServiceForIncident(provider, title, note) {
   if (provider.id !== 'kaseya') return (provider.services || []).join(', ');
   const text = `${title || ''} ${note || ''}`;
@@ -174,46 +193,64 @@ function affectedServiceForIncident(provider, title, note) {
   return matches.length ? [...new Set(matches)].join(', ') : (provider.services || []).join(', ');
 }
 
-function makeIncident(
-  provider,
-  source,
-  title,
-  note,
-  url,
-  firstDetected = '',
-  status = '',
-  color = 'amber',
-  latestUpdate = '',
-  affectedService = ''
-) {
-  const cleanTitle = cleanText(title || 'Service incident');
+function makeIncident(provider, source, item) {
+  const title = cleanText(item.title || 'Service incident');
+  const color = item.color === 'red' ? 'red' : 'amber';
   const serviceState = color === 'red' ? 'major' : 'degraded';
-  const finalLatestUpdate = latestUpdate || firstDetected || '';
+  const latestUpdate = item.latestUpdate || item.latest_update || item.firstDetected || item.time || '';
+  const firstDetected = item.firstDetected || item.first_detected || latestUpdate;
+  const vendorId = cleanText(item.id || '');
   return {
-    id: `${provider.id}:${normalizeIncidentTitle(cleanTitle) || cleanTitle.toLowerCase()}`,
+    id: `${provider.id}:${vendorId || normalizeIncidentTitle(title) || title.toLowerCase()}`,
     providerId: provider.id,
     provider: provider.name,
     category: provider.category,
-    title: cleanTitle,
-    note: cleanText(note || 'The official public source reports a service issue.'),
+    title,
+    note: cleanText(item.note || 'The official public source reports a service issue.'),
     source: source.sourceName || source.mode,
-    url: safeIncidentUrl(url, source.url),
-    time: shortTime(finalLatestUpdate),
-    rawTime: finalLatestUpdate,
-    status: status || '',
+    url: safeIncidentUrl(item.url || source.pageUrl || source.url, source.url),
+    time: shortTime(latestUpdate),
+    rawTime: latestUpdate,
+    status: item.status || '',
     color,
     service_state: serviceState,
     attention: serviceState === 'major' ? 'critical' : 'action',
     priority: provider.priority || 0,
-    first_detected: firstDetected || finalLatestUpdate,
-    latest_update: finalLatestUpdate,
+    first_detected: firstDetected,
+    latest_update: latestUpdate,
     client_impact: provider.client_impact,
     technician_action: provider.technician_action,
-    affected_service: affectedService || affectedServiceForIncident(provider, cleanTitle, note)
+    affected_service: item.affectedService || item.affected_service || affectedServiceForIncident(provider, title, item.note),
+    updates: boundedTimeline(item.updates)
   };
 }
 
-function providerStatus(provider, source, status, color, ok, message, logs, incidents = [], sourceState) {
+function makeMaintenance(provider, source, item) {
+  const title = cleanText(item.title || 'Scheduled maintenance');
+  const vendorId = cleanText(item.id || '');
+  const status = normalizeMaintenanceState(item.status || 'scheduled');
+  return {
+    id: `${provider.id}:${vendorId || normalizeIncidentTitle(title) || title.toLowerCase()}:maintenance`,
+    providerId: provider.id,
+    provider: provider.name,
+    category: provider.category,
+    title,
+    note: cleanText(item.note || 'The official source reports planned maintenance.'),
+    source: source.sourceName || source.mode,
+    url: safeIncidentUrl(item.url || source.pageUrl || source.url, source.url),
+    status,
+    starts_at: item.startsAt || item.starts_at || '',
+    ends_at: item.endsAt || item.ends_at || '',
+    announced_at: item.announcedAt || item.announced_at || '',
+    latest_update: item.latestUpdate || item.latest_update || item.announcedAt || '',
+    affected_service: item.affectedService || item.affected_service || (provider.services || []).join(', '),
+    priority: provider.priority || 0,
+    attention: status === 'in_progress' ? 'action' : 'watch',
+    updates: boundedTimeline(item.updates)
+  };
+}
+
+function providerStatus(provider, source, status, color, ok, message, logs, incidents = [], maintenance = [], sourceState, extras = {}) {
   const serviceState = color === 'red' ? 'major' : color === 'amber' ? 'degraded' : color === 'green' ? 'operational' : 'unknown';
   const resolvedSourceState = sourceState || (!ok ? 'unavailable' : color === 'blue' ? 'limited' : 'available');
   const critical = provider.criticality === 'high' || (provider.priority || 0) >= 85;
@@ -249,7 +286,11 @@ function providerStatus(provider, source, status, color, ok, message, logs, inci
     checked_at: new Date().toISOString(),
     source_type: source.mode,
     download_log: logs,
-    incidents
+    incidents,
+    maintenance,
+    component_status: extras.components || [],
+    schema_fingerprint: extras.schemaFingerprint || '',
+    ...sourceEvidence(source.mode, resolvedSourceState, ok)
   };
 }
 
@@ -371,6 +412,17 @@ export function activeFeedEntries(entries, maxAgeHours = 168, now = Date.now()) 
   });
 }
 
+export function maintenanceFeedEntries(entries, maxAgeHours = 720, now = Date.now()) {
+  return entries.filter(item => {
+    const text = `${item.title} ${item.note} ${item.status}`;
+    if (!plannedMaintenanceText(text) || maintenanceEscalationText(text) || resolvedText(text) || isEditorialIncidentEntry(item)) return false;
+    const ms = Date.parse(item.time || '');
+    if (!Number.isFinite(ms)) return true;
+    const age = now - ms;
+    return age >= -300000 && age <= maxAgeHours * 60 * 60 * 1000;
+  });
+}
+
 export function scopeFeedEntries(entries, source = {}) {
   if (source.regionScope === 'global') return entries;
   return entries.filter(item => isIncidentUsRelevant(item));
@@ -395,16 +447,13 @@ export function dedupeIncidentEntries(entries) {
       .filter(entry => Number.isFinite(entry.ms))
       .sort((a, b) => a.ms - b.ms);
     const firstTime = firstCandidates[0]?.value || current.firstTime || current.time || item.time || '';
-    if (Number.isFinite(itemMs) && (!Number.isFinite(currentMs) || itemMs >= currentMs)) {
-      records.set(key, { ...current, ...item, firstTime });
-    } else {
-      records.set(key, { ...current, firstTime });
-    }
+    if (Number.isFinite(itemMs) && (!Number.isFinite(currentMs) || itemMs >= currentMs)) records.set(key, { ...current, ...item, firstTime });
+    else records.set(key, { ...current, firstTime });
   }
   return [...records.values()];
 }
 
-function feedAvailableWithoutHealthConclusion(provider, source, logs) {
+function feedAvailableWithoutHealthConclusion(provider, source, logs, maintenance, fingerprint) {
   return providerStatus(
     provider,
     source,
@@ -414,7 +463,9 @@ function feedAvailableWithoutHealthConclusion(provider, source, logs) {
     'The official incident feed is live and readable, but it does not confirm current component health. No operational conclusion was made.',
     logs,
     [],
-    'available'
+    maintenance,
+    'available',
+    { schemaFingerprint: fingerprint }
   );
 }
 
@@ -422,47 +473,42 @@ async function parsePublicFeed(provider, source) {
   const requestProvider = { ...provider, url: source.url, sourceType: source.mode };
   const result = await fetchSource(requestProvider, 'application/rss+xml, application/atom+xml, application/xml, text/xml, text/plain, */*');
   const logs = result.logs || [result.log];
-  if (!result.ok) {
-    return providerStatus(provider, source, `Source unavailable: HTTP ${result.status || 'failed'}`, 'blue', false, result.log?.error || result.log?.message, logs, [], 'unavailable');
-  }
+  if (!result.ok) return providerStatus(provider, source, `Source unavailable: HTTP ${result.status || 'failed'}`, 'blue', false, result.log?.error || result.log?.message, logs, [], [], 'unavailable');
   const feedDocument = /<(?:rss|feed)\b/i.test(result.body);
+  const fingerprint = schemaFingerprint(result.body, source.mode);
   const entries = parseFeedEntries(result.body);
   if (!entries.length) {
-    if (!feedDocument) {
-      return providerStatus(provider, source, 'Limited official source', 'blue', false, 'The official feed loaded but was not a readable RSS or Atom document, so no service-health conclusion was made.', logs, [], 'limited');
-    }
-    if (source.allowEmpty === true && source.confirmHealthyFromFeed === true) {
-      return providerStatus(provider, source, 'No active incidents in the official public feed', 'green', true, '', logs);
-    }
-    return feedAvailableWithoutHealthConclusion(provider, source, logs);
+    if (!feedDocument) return providerStatus(provider, source, 'Limited official source', 'blue', false, 'The official feed loaded but was not a readable RSS or Atom document, so no service-health conclusion was made.', logs, [], [], 'limited', { schemaFingerprint: fingerprint });
+    if (source.allowEmpty === true && source.confirmHealthyFromFeed === true) return providerStatus(provider, source, 'No active incidents in the official public feed', 'green', true, '', logs, [], [], undefined, { schemaFingerprint: fingerprint });
+    return feedAvailableWithoutHealthConclusion(provider, source, logs, [], fingerprint);
   }
-  const relevantEntries = source.includePattern
-    ? entries.filter(item => source.includePattern.test(`${item.title} ${item.note} ${item.status}`))
-    : entries;
+  const relevantEntries = source.includePattern ? entries.filter(item => source.includePattern.test(`${item.title} ${item.note} ${item.status}`)) : entries;
   const scopedEntries = scopeFeedEntries(relevantEntries, source);
   const active = dedupeIncidentEntries(activeFeedEntries(scopedEntries, source.maxAgeHours || 168));
-  const incidents = active.slice(0, 12).map(item => {
-    const text = `${item.title} ${item.note} ${item.status}`;
-    return makeIncident(
-      provider,
-      source,
-      item.title,
-      item.note,
-      item.url || source.pageUrl || source.url,
-      item.firstTime || item.time,
-      item.status,
-      itemColor(text),
-      item.time
-    );
-  });
+  const planned = dedupeIncidentEntries(maintenanceFeedEntries(scopedEntries, Math.max(source.maxAgeHours || 168, 720)));
+  const incidents = active.slice(0, 12).map(item => makeIncident(provider, source, {
+    ...item,
+    firstDetected: item.firstTime || item.time,
+    latestUpdate: item.time,
+    color: itemColor(`${item.title} ${item.note} ${item.status}`),
+    url: item.url || source.pageUrl || source.url,
+    updates: [{ status: item.status, note: item.note, at: item.time }]
+  }));
+  const maintenance = planned.slice(0, 12).map(item => makeMaintenance(provider, source, {
+    ...item,
+    status: /in[_ -]?progress/i.test(item.status || item.note || '') ? 'in_progress' : 'scheduled',
+    startsAt: item.time,
+    announcedAt: item.time,
+    latestUpdate: item.time,
+    url: item.url || source.pageUrl || source.url,
+    updates: [{ status: item.status, note: item.note, at: item.time }]
+  })).filter(item => maintenanceIsRelevant(item));
   if (incidents.length) {
     const worst = incidents.reduce((current, item) => severityRank[item.color] > severityRank[current] ? item.color : current, 'amber');
-    return providerStatus(provider, source, `${incidents.length} active public incident${incidents.length === 1 ? '' : 's'}`, worst, true, '', logs, incidents);
+    return providerStatus(provider, source, `${incidents.length} active public incident${incidents.length === 1 ? '' : 's'}`, worst, true, '', logs, incidents, maintenance, undefined, { schemaFingerprint: fingerprint });
   }
-  if (source.confirmHealthyFromFeed === true) {
-    return providerStatus(provider, source, 'No active incidents in the official public feed', 'green', true, '', logs);
-  }
-  return feedAvailableWithoutHealthConclusion(provider, source, logs);
+  if (source.confirmHealthyFromFeed === true) return providerStatus(provider, source, 'No active incidents in the official public feed', 'green', true, '', logs, [], maintenance, undefined, { schemaFingerprint: fingerprint });
+  return feedAvailableWithoutHealthConclusion(provider, source, logs, maintenance, fingerprint);
 }
 
 function currentHtmlSection(html) {
@@ -495,32 +541,21 @@ function htmlIssueConclusion(provider, source, html) {
   if (specific) return specific;
   const current = currentHtmlSection(html);
   const lower = current.toLowerCase();
-  if (/cloudflare|attention required|verify you are human|captcha|access denied|enable javascript to run this app/.test(lower) && current.length < 4000) {
-    return { kind: 'limited', message: 'The official page returned a bot challenge or JavaScript shell without readable service status.' };
-  }
+  if (/cloudflare|attention required|verify you are human|captcha|access denied|enable javascript to run this app/.test(lower) && current.length < 4000) return { kind: 'limited', message: 'The official page returned a bot challenge or JavaScript shell without readable service status.' };
   if (provider.id === 'entra') return entraConclusion(current);
-
   const activeCount = /\b([1-9]\d*)\s+active incidents?\b/i.exec(current);
-  if (activeCount) {
-    return { kind: 'issue', color: 'amber', title: `${provider.name} public status page reports an active issue`, note: `${activeCount[1]} active incidents` };
-  }
-
+  if (activeCount) return { kind: 'issue', color: 'amber', title: `${provider.name} public status page reports an active issue`, note: `${activeCount[1]} active incidents` };
   const healthy = /\b(all systems operational|all systems working|all services operational|all services are operational|no active incidents|0 active incidents|no incidents reported|everything is operating normally)\b/i.exec(current);
   if (healthy) return { kind: 'healthy', status: cleanText(healthy[0]) };
-
   const issuePattern = /\b(major outage|partial outage|degraded performance|service disruption|service degradation|critical incident|active incident|investigating an issue|identified an issue|monitoring an issue)\b/i;
   const issue = issuePattern.exec(current);
   if (issue) {
     const text = issue[0];
-    const color = /major|critical|outage/i.test(text) && !/partial/i.test(text) ? 'red' : 'amber';
-    return { kind: 'issue', color, title: `${provider.name} public status page reports an active issue`, note: text };
+    return { kind: 'issue', color: /major|critical|outage/i.test(text) && !/partial/i.test(text) ? 'red' : 'amber', title: `${provider.name} public status page reports an active issue`, note: text };
   }
-
   const operationalMatches = current.match(/\bOperational\b/gi) || [];
   const problemMatches = current.match(/\b(Major Outage|Partial Outage|Degraded Performance|Service Disruption)\b/gi) || [];
-  if (operationalMatches.length >= 2 && problemMatches.length === 0) {
-    return { kind: 'healthy', status: `${provider.name} components report operational` };
-  }
+  if (operationalMatches.length >= 2 && problemMatches.length === 0) return { kind: 'healthy', status: `${provider.name} components report operational` };
   return { kind: 'limited', message: 'The official page loaded but did not expose a stable readable current health conclusion.' };
 }
 
@@ -530,20 +565,15 @@ export function entraConclusion(text) {
   const row = text.slice(marker.index, marker.index + 500);
   const tail = text.slice(marker.index + marker[0].length, marker.index + marker[0].length + 180);
   const firstStatus = /\b(Good|Information|Warning|Critical|Major|Outage|Degraded|Not available|N\/A)\b/i.exec(tail)?.[1]?.toLowerCase();
-  if (firstStatus && /critical|major|outage/.test(firstStatus)) {
-    return { kind: 'issue', color: 'red', title: 'Microsoft Entra ID public status reports a critical issue', note: cleanText(row).slice(0, 500) };
-  }
-  if (firstStatus && /warning|degraded|information/.test(firstStatus)) {
-    return { kind: 'issue', color: 'amber', title: 'Microsoft Entra ID public status reports an issue', note: cleanText(row).slice(0, 500) };
-  }
+  if (firstStatus && /critical|major|outage/.test(firstStatus)) return { kind: 'issue', color: 'red', title: 'Microsoft Entra ID public status reports a critical issue', note: cleanText(row).slice(0, 500) };
+  if (firstStatus && /warning|degraded|information/.test(firstStatus)) return { kind: 'issue', color: 'amber', title: 'Microsoft Entra ID public status reports an issue', note: cleanText(row).slice(0, 500) };
   if (firstStatus === 'good') return { kind: 'healthy', status: 'Microsoft Entra ID public status is Good' };
   return { kind: 'limited', message: 'The Microsoft Entra ID row was found, but its current status could not be determined.' };
 }
 
 async function tryFeedCandidates(provider, source, html, pageLogs) {
   const candidates = [...discoverFeedUrls(html, source.url), ...(source.feedCandidates || [])];
-  const unique = [...new Set(candidates)].slice(0, 4);
-  for (const url of unique) {
+  for (const url of [...new Set(candidates)].slice(0, 4)) {
     const feedSource = { ...source, mode: 'feed', url, pageUrl: source.url, sourceName: `${provider.name} official public feed`, maxAgeHours: 336 };
     const result = await parsePublicFeed(provider, feedSource);
     if (result.source_state === 'available') {
@@ -555,30 +585,19 @@ async function tryFeedCandidates(provider, source, html, pageLogs) {
 }
 
 function structuredIncidents(provider, source, conclusion) {
-  return (conclusion.incidents || []).slice(0, 12).map(item => makeIncident(
-    provider,
-    source,
-    item.title,
-    item.note,
-    item.url || source.url,
-    item.firstDetected || '',
-    item.status || 'active',
-    item.color || 'amber',
-    item.latestUpdate || item.firstDetected || '',
-    item.affectedService || ''
-  ));
+  return (conclusion.incidents || []).slice(0, 12).map(item => makeIncident(provider, source, item));
+}
+
+function structuredMaintenance(provider, source, conclusion) {
+  return (conclusion.maintenance || []).slice(0, 16).map(item => makeMaintenance(provider, source, item)).filter(item => maintenanceIsRelevant(item));
 }
 
 const publicHtmlRequestCache = new Map();
 
 async function fetchPublicHtml(requestProvider, source) {
-  const accept = /-json$/i.test(source.mode)
-    ? 'application/json, text/json, */*'
-    : 'text/html, text/plain, */*';
+  const accept = /-json$/i.test(source.mode) ? 'application/json, text/json, */*' : 'text/html, text/plain, */*';
   const key = `${requestProvider.url}|${accept}`;
-  if (!publicHtmlRequestCache.has(key)) {
-    publicHtmlRequestCache.set(key, fetchSource(requestProvider, accept));
-  }
+  if (!publicHtmlRequestCache.has(key)) publicHtmlRequestCache.set(key, fetchSource(requestProvider, accept));
   return publicHtmlRequestCache.get(key);
 }
 
@@ -589,7 +608,7 @@ async function parsePublicHtml(provider, source) {
   if (!result.ok) {
     const feedResult = await tryFeedCandidates(provider, source, '', logs);
     if (feedResult?.source_state === 'available') return feedResult;
-    return providerStatus(provider, source, `Source unavailable: HTTP ${result.status || 'failed'}`, 'blue', false, result.log?.error || result.log?.message, logs, [], 'unavailable');
+    return providerStatus(provider, source, `Source unavailable: HTTP ${result.status || 'failed'}`, 'blue', false, result.log?.error || result.log?.message, logs, [], [], 'unavailable');
   }
   let pageBody = result.body;
   let conclusion = htmlIssueConclusion(provider, source, pageBody);
@@ -601,53 +620,31 @@ async function parsePublicHtml(provider, source) {
       conclusion = htmlIssueConclusion(provider, source, pageBody);
     }
   }
+  const fingerprint = schemaFingerprint(pageBody, source.mode);
   const feedResult = /-json$/i.test(source.mode) ? null : await tryFeedCandidates(provider, source, pageBody, logs);
   if (feedResult?.incidents?.length) return feedResult;
+  const maintenance = structuredMaintenance(provider, source, conclusion);
+  const extras = { components: conclusion.components || [], schemaFingerprint: fingerprint };
   if (conclusion.kind === 'issues') {
     const incidents = structuredIncidents(provider, source, conclusion);
     if (incidents.length) {
       const worst = incidents.reduce((current, item) => severityRank[item.color] > severityRank[current] ? item.color : current, 'amber');
-      return providerStatus(provider, source, `${incidents.length} active US public incident${incidents.length === 1 ? '' : 's'}`, worst, true, '', logs, incidents);
+      return providerStatus(provider, source, `${incidents.length} active US public incident${incidents.length === 1 ? '' : 's'}`, worst, true, '', logs, incidents, maintenance, undefined, extras);
     }
   }
   if (conclusion.kind === 'issue') {
-    if (isGenericIncidentTitle(conclusion.title)) {
-      return providerStatus(
-        provider,
-        source,
-        'Limited official source',
-        'blue',
-        false,
-        'The page reported an issue state without a specific incident title or details, so no incident was published.',
-        logs,
-        [],
-        'limited'
-      );
-    }
-    const incident = makeIncident(
-      provider,
-      source,
-      conclusion.title,
-      conclusion.note,
-      source.url,
-      conclusion.firstDetected || '',
-      conclusion.status || 'active',
-      conclusion.color,
-      conclusion.latestUpdate || conclusion.firstDetected || '',
-      conclusion.affectedService || ''
-    );
-    return providerStatus(provider, source, conclusion.title, conclusion.color, true, '', logs, [incident]);
+    if (isGenericIncidentTitle(conclusion.title)) return providerStatus(provider, source, 'Limited official source', 'blue', false, 'The page reported an issue state without a specific incident title or details, so no incident was published.', logs, [], maintenance, 'limited', extras);
+    const incident = makeIncident(provider, source, conclusion);
+    return providerStatus(provider, source, conclusion.title, conclusion.color, true, '', logs, [incident], maintenance, undefined, extras);
   }
-  if (conclusion.kind === 'healthy') {
-    return providerStatus(provider, source, conclusion.status || `${provider.name} reports normal service`, 'green', true, '', logs);
-  }
+  if (conclusion.kind === 'healthy') return providerStatus(provider, source, conclusion.status || `${provider.name} reports normal service`, 'green', true, '', logs, [], maintenance, undefined, extras);
   if (feedResult?.source_state === 'available') return feedResult;
-  return providerStatus(provider, source, 'Limited official source', 'blue', false, conclusion.message, logs, [], 'limited');
+  return providerStatus(provider, source, 'Limited official source', 'blue', false, conclusion.message, logs, [], maintenance, 'limited', extras);
 }
 
 function limitedStatus(provider, source) {
   const message = provider.message || 'The official public source requires account, tenant, address, location, or interactive access.';
-  return providerStatus(provider, source, 'Limited official source', 'blue', false, message, [logEntry(source, false, 'limited source', message)], [], 'limited');
+  return providerStatus(provider, source, 'Limited official source', 'blue', false, message, [logEntry(source, false, 'limited source', message)], [], [], 'limited');
 }
 
 export async function loadPublicProvider(provider) {
@@ -658,7 +655,7 @@ export async function loadPublicProvider(provider) {
     return await parsePublicHtml(provider, source);
   } catch (error) {
     const message = error?.message || String(error);
-    return providerStatus(provider, source, 'Parser failed', 'blue', false, message, [logEntry(source, false, 'parser failed', message, message)], [], 'unavailable');
+    return providerStatus(provider, source, 'Parser failed', 'blue', false, message, [logEntry(source, false, 'parser failed', message, message)], [], [], 'unavailable');
   }
 }
 
@@ -683,33 +680,41 @@ export async function generatePublicStatus() {
     if (ids.has(provider.id)) throw new Error(`Duplicate provider id: ${provider.id}`);
     ids.add(provider.id);
   }
-  const results = await mapLimit(catalog, concurrency, loadPublicProvider);
-  const incidents = results.flatMap(result => result.incidents || [])
-    .filter(activeIncident)
-    .sort((a, b) => (severityRank[b.color] - severityRank[a.color]) || ((b.priority || 0) - (a.priority || 0)));
-  const providers = results.map(({ incidents: _incidents, ...provider }) => provider)
-    .sort((a, b) => (severityRank[b.color] - severityRank[a.color]) || ((b.priority || 0) - (a.priority || 0)) || a.name.localeCompare(b.name));
-  const generatedAt = new Date().toISOString();
-  const base = {
-    schema_version: 2,
-    generated_at: generatedAt,
-    summary: summarizeProviders(providers, incidents),
-    providers,
-    incidents
-  };
+
   let previous = null;
   try {
     previous = readJson(previousStatusPath);
     validatePayload(previous);
-  } catch { }
-  const changes = compareSnapshots(previous, base, generatedAt);
-  const payload = { ...base, changes, history: [...changes, ...(previous?.history || [])].slice(0, 100) };
+  } catch {
+    previous = null;
+  }
+
+  const results = await mapLimit(catalog, concurrency, loadPublicProvider);
+  const incidents = results.flatMap(result => result.incidents || [])
+    .filter(activeIncident)
+    .sort((a, b) => (severityRank[b.color] - severityRank[a.color]) || ((b.priority || 0) - (a.priority || 0)));
+  const maintenance = results.flatMap(result => result.maintenance || [])
+    .filter(item => maintenanceIsRelevant(item))
+    .sort((a, b) => Number(b.status === 'in_progress') - Number(a.status === 'in_progress') || (Date.parse(a.starts_at || '') || Number.MAX_SAFE_INTEGER) - (Date.parse(b.starts_at || '') || Number.MAX_SAFE_INTEGER));
+  const generatedAt = new Date().toISOString();
+  const rawProviders = results.map(({ incidents: _incidents, maintenance: _maintenance, ...provider }) => provider);
+  const providers = enrichProviderHistory(rawProviders, previous, incidents, generatedAt)
+    .sort((a, b) => (severityRank[b.color] - severityRank[a.color]) || ((b.priority || 0) - (a.priority || 0)) || a.name.localeCompare(b.name));
+  const base = {
+    schema_version: 2,
+    generated_at: generatedAt,
+    summary: summarizeProviders(providers, incidents, maintenance),
+    providers,
+    incidents,
+    maintenance
+  };
+  const changes = [...compareSnapshots(previous, base, generatedAt), ...sourceIntelligenceChanges(previous, base, generatedAt)]
+    .filter((change, index, all) => all.findIndex(candidate => candidate.id === change.id) === index);
+  const payload = { ...base, changes, history: [...changes, ...(previous?.history || [])].slice(0, 200) };
   validatePayload(payload);
   writeJson(publicStatusPath, payload);
-  console.log(`Generated free public-source status for ${providers.length} providers: ${payload.summary.coverage_percent}% readable live coverage, ${incidents.length} active incidents.`);
+  console.log(`Generated free public-source status for ${providers.length} providers: ${payload.summary.coverage_percent}% live coverage, ${incidents.length} active incidents, ${maintenance.length} maintenance events.`);
   return payload;
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  await generatePublicStatus();
-}
+if (process.argv[1] === fileURLToPath(import.meta.url)) await generatePublicStatus();

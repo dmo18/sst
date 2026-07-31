@@ -1,0 +1,134 @@
+.maintenance-panel {
+  margin-top: 1.25rem;
+}
+
+.maintenance-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 0.9rem;
+}
+
+.maintenance-card {
+  border: 1px solid var(--border, #d6d9df);
+  border-left: 0.35rem solid #7b61a8;
+  border-radius: 0.75rem;
+  background: var(--panel, #fff);
+  padding: 1rem;
+  min-width: 0;
+}
+
+.maintenance-card.in_progress {
+  border-left-color: #b46a00;
+  box-shadow: 0 0 0 1px rgb(180 106 0 / 12%);
+}
+
+.maintenance-card header,
+.maintenance-card .provider-identity {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.maintenance-card header {
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.maintenance-card h3 {
+  margin: 0.65rem 0 0.35rem;
+}
+
+.maintenance-card dl,
+.source-intelligence-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 0.55rem;
+}
+
+.maintenance-card dl > div,
+.source-intelligence-grid > p {
+  border: 1px solid var(--border, #d6d9df);
+  border-radius: 0.55rem;
+  padding: 0.55rem;
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.maintenance-card dt,
+.vendor-timeline time {
+  display: block;
+  font-size: 0.75rem;
+  opacity: 0.72;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.maintenance-card dd {
+  margin: 0.2rem 0 0;
+  overflow-wrap: anywhere;
+}
+
+.confidence-high summary strong { color: #1f7a3d; }
+.confidence-medium summary strong { color: #8a5a00; }
+.confidence-low summary strong,
+.confidence-none summary strong { color: #7a3340; }
+
+.component-status,
+.vendor-timeline {
+  margin: 0.75rem 0;
+  border: 1px solid var(--border, #d6d9df);
+  border-radius: 0.6rem;
+  padding: 0.55rem 0.7rem;
+}
+
+.component-status ul,
+.vendor-timeline ol {
+  margin: 0.55rem 0 0;
+  padding-left: 1.2rem;
+}
+
+.component-status li {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) auto;
+  gap: 0.25rem 0.75rem;
+  align-items: baseline;
+  margin: 0.35rem 0;
+}
+
+.component-status li small {
+  grid-column: 1 / -1;
+  opacity: 0.7;
+}
+
+.vendor-timeline li {
+  margin: 0.55rem 0;
+}
+
+.vendor-timeline b {
+  display: inline-block;
+  margin-left: 0.55rem;
+  text-transform: capitalize;
+}
+
+.vendor-timeline p {
+  margin: 0.15rem 0 0;
+}
+
+.intelligence-summary div:nth-child(6),
+.intelligence-summary div:nth-child(7) {
+  border-color: rgb(31 122 61 / 35%);
+}
+
+.wallboard-provider small {
+  display: block;
+  opacity: 0.72;
+}
+
+@media (max-width: 720px) {
+  .maintenance-grid,
+  .maintenance-card dl,
+  .source-intelligence-grid {
+    grid-template-columns: 1fr;
+  }
+}
