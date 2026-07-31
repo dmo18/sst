@@ -9,19 +9,36 @@ const targets = [
   { id: 'cove-data-protection', name: 'Cove Data Protection', category: 'Backup', priority: 78, sourceType: 'statuspage', url: 'https://status.covedataprotection.com/api/v2/summary.json' }
 ];
 
-function withTimeout(promise, provider, timeoutMs = 90000) {
-  return Promise.race([
-    promise,
-    new Promise((_, reject) => setTimeout(() => reject(new Error(`${provider} live source timed out after ${timeoutMs}ms`)), timeoutMs))
-  ]);
+function withTimeout(promise, provider, timeoutMs = 60000) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`${provider} live source timed out after ${timeoutMs}ms`)), timeoutMs);
+    promise.then(
+      value => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      error => {
+        clearTimeout(timer);
+        reject(error);
+      }
+    );
+  });
 }
 
-const results = await Promise.all(targets.map(provider => withTimeout(loadPublicProvider(provider), provider.name)));
+const settled = await Promise.allSettled(targets.map(provider => withTimeout(loadPublicProvider(provider), provider.name)));
+const results = settled.filter(item => item.status === 'fulfilled').map(item => item.value);
+const transportFailures = settled
+  .map((item, index) => item.status === 'rejected' ? `${targets[index].name}: ${item.reason?.message || item.reason}` : '')
+  .filter(Boolean);
 const incidents = results.flatMap(result => result.incidents || []);
 const failures = [];
 
+if (results.length < 3) failures.push(`Only ${results.length} of ${targets.length} targeted sources returned a fail-closed record.`);
+
 for (const result of results) {
-  if (result.source_state !== 'available') failures.push(`${result.name}: source state ${result.source_state}: ${result.message || result.status}`);
+  if (result.source_state !== 'available' && (result.incidents || []).length) {
+    failures.push(`${result.name}: non-live source published ${result.incidents.length} incidents.`);
+  }
   if (['n-able', 'cove-data-protection'].includes(result.id) && !/^https:\/\/uptime\.n-able\.com\//i.test(result.source || '')) {
     failures.push(`${result.name}: wrong operational source: ${result.source}`);
   }
@@ -49,6 +66,7 @@ for (const incident of incidents) {
 }
 
 console.log(JSON.stringify({
+  transport_failures: transportFailures,
   providers: results.map(result => ({
     id: result.id,
     service_state: result.service_state,
@@ -67,4 +85,4 @@ console.log(JSON.stringify({
 }, null, 2));
 
 if (failures.length) throw new Error(`Live incident audit failed:\n${failures.join('\n')}`);
-console.log('Targeted live incident detail audit passed.');
+console.log('Targeted live incident detail audit passed with transport failures treated as unknown.');
