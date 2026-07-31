@@ -295,9 +295,21 @@ function resolvedText(value) {
   return /\b(resolved|completed|postmortem|closed|fixed|restored|recovered|remediated|cancelled)\b/i.test(value);
 }
 
+function plannedMaintenanceText(value) {
+  return /\b(this is a scheduled event|scheduled event|scheduled maintenance|planned maintenance|maintenance window|maintenance is currently in progress|will be performing (?:scheduled )?maintenance|deprecation|end of life|end of support)\b/i.test(value);
+}
+
+function maintenanceEscalationText(value) {
+  const text = String(value || '');
+  if (/\b(?:unplanned|emergency)\s+(?:maintenance|work|change|event)\b/i.test(text)) return true;
+  if (/\b(?:critical incident|major service outage|widespread outage|complete outage|incident declared|outage detected|unexpected (?:outage|impact|disruption))\b/i.test(text)) return true;
+  const responseState = /\b(?:investigating|identified|monitoring)\b/i.test(text);
+  const currentImpact = /\b(?:customers?|users?)\s+(?:are|is)\s+(?:currently\s+)?(?:experiencing|unable|affected|impacted)\b|\b(?:currently|actively)\s+(?:experiencing|impacting|affecting)\b|\b(?:service|services|requests?|traffic|connections?|api)\s+(?:is|are)\s+(?:currently\s+)?(?:unavailable|degraded|failing|down|timing out)\b|\b(?:network performance issues?|service disruption|service degradation|elevated errors?|increased errors?|failed requests?|connection failures?)\b/i.test(text);
+  return responseState && currentImpact;
+}
+
 function maintenanceOnly(value) {
-  return /\b(scheduled maintenance|planned maintenance|maintenance window|deprecation|end of life|end of support)\b/i.test(value)
-    && !issueText(value);
+  return plannedMaintenanceText(value) && !maintenanceEscalationText(value);
 }
 
 function itemColor(value) {
