@@ -1,0 +1,46 @@
+name: Finalize 2.5.0 release
+on:
+  push:
+    branches: [agent/final-awesome-intelligence-250]
+permissions:
+  contents: write
+jobs:
+  finalize:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/final-awesome-intelligence-250
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Synchronize lockfile and documentation
+        run: |
+          npm install --package-lock-only --ignore-scripts
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const path = 'README.md';
+          let value = fs.readFileSync(path, 'utf8');
+          value = value.replace('history is bounded to 100 entries', 'history is bounded to 200 entries');
+          const marker = '## Change detection and metadata\n';
+          const section = `## Source intelligence and maintenance\n\nEvery provider now records an evidence tier and confidence level independently of service health. Supported structured sources also publish component state, bounded incident and maintenance timelines, parser version, structural schema fingerprint, last successful retrieval, consecutive failures, and last semantic change. Schema drift and repeated failures become explicit source-intelligence events rather than vendor outages.\n\nPlanned maintenance is a separate record class with start/end times, lifecycle state, affected services, official links, and update history. Routine maintenance does not inflate incident counts; emergency work or maintenance that escalates to current customer impact remains an active incident. Lifecycle history retains 200 bounded records.\n\n`;
+          if (!value.includes('## Source intelligence and maintenance')) value = value.replace(marker, `${section}${marker}`);
+          fs.writeFileSync(path, value);
+          NODE
+      - run: npm ci
+      - run: npm run validate-providers
+      - run: npm test
+      - run: npm run typecheck
+      - run: npm run build:app
+      - name: Commit exact validated release
+        run: |
+          rm .github/workflows/finalize-250.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Finalize 2.5.0 source intelligence release"
+          git push origin HEAD:agent/final-awesome-intelligence-250
