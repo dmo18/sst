@@ -1,0 +1,56 @@
+name: Temporary provider source audit
+on:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Synchronize lockfile metadata in runner
+        run: npm install --package-lock-only --ignore-scripts
+      - run: npm ci
+      - name: Generate current provider status
+        run: npm run update-status
+      - name: Write exact source audit
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const payload = JSON.parse(fs.readFileSync('public/status.json', 'utf8'));
+          const group = predicate => payload.providers.filter(predicate).map(provider => ({
+            id: provider.id,
+            name: provider.name,
+            service_state: provider.service_state,
+            source_state: provider.source_state,
+            source_type: provider.source_type,
+            status_data_basis: provider.status_data_basis,
+            status: provider.status,
+            message: provider.message || '',
+            source: provider.source,
+            logs: provider.download_log || []
+          }));
+          const audit = {
+            generated_at: payload.generated_at,
+            summary: payload.summary,
+            live: group(provider => provider.source_state === 'available' && provider.ok === true),
+            limited: group(provider => provider.source_state === 'limited'),
+            stale: group(provider => provider.source_state === 'stale'),
+            fallback: group(provider => provider.status_data_basis === 'limited-fallback'),
+            other_non_live: group(provider => !(provider.source_state === 'available' && provider.ok === true) && provider.source_state !== 'limited' && provider.source_state !== 'stale')
+          };
+          fs.writeFileSync('source-audit.json', `${JSON.stringify(audit, null, 2)}\n`);
+          console.log(JSON.stringify(audit, null, 2));
+          NODE
+      - uses: actions/upload-artifact@v4
+        with:
+          name: source-audit
+          path: |
+            public/status.json
+            source-audit.json
+            package-lock.json
