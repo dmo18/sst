@@ -2,14 +2,22 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   activeFeedEntries,
+  canonicalizeProviderCatalog,
+  dedupeIncidentEntries,
   discoverFeedUrls,
   entraConclusion,
   loadPublicProvider,
   parseFeedEntries,
   publicPageUrl,
-  resolvePublicSource
+  resolvePublicSource,
+  scopeFeedEntries
 } from '../update-public-status.mjs';
-import { additionalPublicOverrides, providerSpecificConclusion } from '../public-source-repairs.mjs';
+import {
+  additionalPublicOverrides,
+  isUsRelevantIncident,
+  parseOktaIncidentRecords,
+  providerSpecificConclusion
+} from '../public-source-repairs.mjs';
 
 const response = (body, status = 200, type = 'text/html') => new Response(body, {
   status,
@@ -112,14 +120,15 @@ test('Entra feed ignores unrelated Azure incidents', async () => {
   assert.match(result.incidents[0].title, /Entra ID/);
 });
 
-
 test('verified public source overrides use free first-party pages', () => {
-  for (const id of ['ringcentral', 'sophos', 'bitdefender-gravityzone', 'bitwarden', 'cove-data-protection', 'crashplan', 'fortinet', 'keeper', 'malwarebytes', 'superops', 'syncro', 'salesforce', 'zendesk', 'backblaze']) {
+  for (const id of ['ringcentral', 'sophos', 'bitdefender-gravityzone', 'bitwarden', 'cove-data-protection', 'crashplan', 'fortinet', 'keeper', 'malwarebytes', 'superops', 'syncro', 'kaseya', 'okta', 'salesforce', 'zendesk', 'backblaze']) {
     const source = additionalPublicOverrides[id];
     assert.ok(source);
     assert.equal(source.mode, 'status-html');
     assert.match(source.url, /^https:\/\//);
   }
+  assert.equal(additionalPublicOverrides.kaseya.regionScope, 'us');
+  assert.equal(additionalPublicOverrides.okta.regionScope, 'us');
 });
 
 test('provider-specific status conclusions prefer current health over historical text', () => {
@@ -168,7 +177,6 @@ test('Salesforce ignores informational messages but captures service degradation
   assert.equal(issue.kind, 'issue');
 });
 
-
 test('scheduled event notices with conditional impact are not incidents', () => {
   const entries = [{
     title: 'THIS IS A SCHEDULED EVENT',
@@ -215,4 +223,127 @@ test('emergency or critical maintenance events remain incidents', () => {
     }
   ];
   assert.equal(activeFeedEntries(entries, 336, Date.parse('2026-07-31T13:00:00Z')).length, 2);
+});
+
+test('provider consolidation absorbs Datto and adds Autotask to Kaseya', () => {
+  const catalog = canonicalizeProviderCatalog([
+    { id: 'kaseya', name: 'Kaseya', services: [] },
+    { id: 'datto', name: 'Datto' },
+    { id: 'other', name: 'Other' }
+  ], {
+    excludedProviderIds: ['datto'],
+    providerOverrides: { kaseya: { services: ['Autotask PSA', 'Datto RMM'] } }
+  });
+  assert.deepEqual(catalog.map(provider => provider.id), ['kaseya', 'other']);
+  assert.deepEqual(catalog[0].services, ['Autotask PSA', 'Datto RMM']);
+});
+
+test('US scope keeps US, global, mixed, and region-unspecified incidents', () => {
+  for (const text of [
+    'Datto RMM US-East service degradation',
+    'Global Kaseya outage affecting all customers',
+    'Autotask incident affecting US and EU cells',
+    'Kaseya login failures under investigation'
+  ]) assert.equal(isUsRelevantIncident(text), true, text);
+});
+
+test('US scope rejects explicit non-US-only incidents', () => {
+  for (const text of [
+    'Autotask UK cell service degradation',
+    'Datto RMM EMEA outage',
+    'Kaseya Australia region disruption',
+    'Okta Canada cell incident',
+    'VSA EU region elevated errors'
+  ]) assert.equal(isUsRelevantIncident(text), false, text);
+  const scoped = scopeFeedEntries([
+    { title: 'US outage', note: 'US-East customers are affected' },
+    { title: 'UK outage', note: 'United Kingdom customers are affected' },
+    { title: 'Global outage', note: 'Worldwide impact' }
+  ]);
+  assert.deepEqual(scoped.map(item => item.title), ['US outage', 'Global outage']);
+});
+
+test('feed updates are deduplicated while preserving first and latest timestamps', () => {
+  const entries = dedupeIncidentEntries([
+    { title: 'Autotask PSA service degradation', note: 'Investigating', url: 'https://status.example/incidents/1', time: '2026-07-31T14:00:00Z' },
+    { title: 'Autotask PSA service degradation update', note: 'Monitoring', url: 'https://status.example/incidents/1', time: '2026-07-31T15:00:00Z' }
+  ]);
+  assert.equal(entries.length, 1);
+  assert.equal(entries[0].firstTime, '2026-07-31T14:00:00Z');
+  assert.equal(entries[0].time, '2026-07-31T15:00:00Z');
+});
+
+test('Kaseya includes Autotask and filters non-US-only feed incidents', async () => {
+  globalThis.fetch = async url => String(url).endsWith('/history.rss')
+    ? response(`<?xml version="1.0"?><rss><channel>
+        <item><title>Autotask PSA UK cell degradation</title><description>United Kingdom customers are affected</description><pubDate>Thu, 31 Jul 2026 14:00:00 GMT</pubDate><guid>https://status.kaseya.com/incidents/uk</guid></item>
+        <item><title>Datto RMM US-East service degradation</title><description>Investigating US customers</description><pubDate>Thu, 31 Jul 2026 14:00:00 GMT</pubDate><guid>https://status.kaseya.com/incidents/us</guid></item>
+        <item><title>Datto RMM US-East service degradation update</title><description>Monitoring US customers</description><pubDate>Thu, 31 Jul 2026 15:00:00 GMT</pubDate><guid>https://status.kaseya.com/incidents/us</guid></item>
+        <item><title>Global Kaseya outage</title><description>Worldwide service impact</description><pubDate>Thu, 31 Jul 2026 15:00:00 GMT</pubDate><guid>https://status.kaseya.com/incidents/global</guid></item>
+      </channel></rss>`, 200, 'application/rss+xml')
+    : response('Forbidden', 403, 'text/html');
+  const result = await loadPublicProvider({
+    id: 'kaseya',
+    name: 'Kaseya',
+    category: 'MSP Platforms',
+    priority: 86,
+    services: ['Autotask PSA', 'Datto RMM'],
+    sourceType: 'statuspage',
+    url: 'https://status.kaseya.com/api/v2/summary.json'
+  });
+  assert.equal(result.incidents.length, 2);
+  assert.equal(result.incidents.some(item => /UK cell/i.test(item.title)), false);
+  const datto = result.incidents.find(item => /Datto RMM/i.test(item.title));
+  assert.equal(datto.affected_service, 'Datto RMM');
+  assert.equal(datto.first_detected, 'Thu, 31 Jul 2026 14:00:00 GMT');
+  assert.equal(datto.latest_update, 'Thu, 31 Jul 2026 15:00:00 GMT');
+});
+
+test('Okta structured public data provides real detection and update times', async () => {
+  const records = [
+    {
+      attributes: { type: 'Incident__c' },
+      Incident_Title__c: 'US sign-in failures',
+      Status__c: 'Investigating',
+      Impacted_Cells__c: 'okta.com:12',
+      Start_Time__c: '2026-07-31T14:05:00.000Z',
+      Last_Updated__c: '2026-07-31T15:10:00.000Z',
+      Log__c: 'US customers are currently experiencing authentication failures.',
+      Okta_Sub_Service__c: 'Authentication'
+    },
+    {
+      attributes: { type: 'Incident__c' },
+      Incident_Title__c: 'EMEA sign-in failures',
+      Status__c: 'Investigating',
+      Impacted_Cells__c: 'okta-emea.com:4',
+      Start_Time__c: '2026-07-31T14:00:00.000Z',
+      Last_Updated__c: '2026-07-31T15:00:00.000Z',
+      Log__c: 'EMEA customers are affected.'
+    },
+    {
+      attributes: { type: 'Incident__c' },
+      Incident_Title__c: 'Resolved US incident',
+      Status__c: 'Resolved',
+      Impacted_Cells__c: 'okta.com:9',
+      Start_Time__c: '2026-07-31T12:00:00.000Z',
+      Last_Updated__c: '2026-07-31T13:00:00.000Z',
+      Log__c: 'Service restored.'
+    }
+  ];
+  const html = `<main>Okta Status</main><script>window.records=${JSON.stringify(records)}</script>`;
+  assert.equal(parseOktaIncidentRecords(html).length, 3);
+  globalThis.fetch = async () => response(html);
+  const result = await loadPublicProvider({
+    id: 'okta',
+    name: 'Okta',
+    category: 'Identity',
+    priority: 86,
+    sourceType: 'statuspage',
+    url: 'https://status.okta.com/api/v2/summary.json'
+  });
+  assert.equal(result.incidents.length, 1);
+  assert.equal(result.incidents[0].title, 'US sign-in failures');
+  assert.equal(result.incidents[0].first_detected, '2026-07-31T14:05:00.000Z');
+  assert.equal(result.incidents[0].latest_update, '2026-07-31T15:10:00.000Z');
+  assert.equal(result.incidents[0].affected_service, 'Authentication');
 });
