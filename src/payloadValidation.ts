@@ -97,10 +97,10 @@ export function payloadValidationErrors(value: unknown): string[] {
         const enabled = providers.filter(x => x.source_state !== 'disabled');
         const available = count('source_state', 'available');
         const validStatusCount = providers.filter(x => x.status_data_valid === true || ['available', 'limited', 'stale'].includes(String(x.source_state))).length;
-        const expectedCoverage = providers.length ? Math.round(validStatusCount / providers.length * 100) : 0;
+        const expectedValidStatusPercent = providers.length ? Math.round(validStatusCount / providers.length * 100) : 0;
         const expectedLiveSourceCoverage = enabled.length ? Math.round(available / enabled.length * 100) : 0;
         const expectedOperational = enabled.length ? Math.round(count('service_state', 'operational') / enabled.length * 100) : 0;
-        if (s.enabled_provider_count !== enabled.length || s.coverage_percent !== expectedCoverage || s.live_source_coverage_percent !== expectedLiveSourceCoverage || s.valid_status_count !== validStatusCount || s.invalid_status_count !== providers.length - validStatusCount || s.valid_status_percent !== expectedCoverage || s.confirmed_operational_percent !== expectedOperational)
+        if (s.enabled_provider_count !== enabled.length || s.coverage_percent !== expectedLiveSourceCoverage || s.live_source_coverage_percent !== expectedLiveSourceCoverage || s.valid_status_count !== validStatusCount || s.invalid_status_count !== providers.length - validStatusCount || s.valid_status_percent !== expectedValidStatusPercent || s.confirmed_operational_percent !== expectedOperational)
             e.push('coverage counts do not reconcile');
     }
     return e;
