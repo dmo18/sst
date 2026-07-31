@@ -18,6 +18,13 @@ import {
   parseOktaIncidentRecords,
   providerSpecificConclusion
 } from '../public-source-repairs.mjs';
+import {
+  isEditorialIncidentEntry,
+  isGenericIncidentTitle,
+  isIncidentUsRelevant,
+  parseNableIncidentRecords,
+  providerIncidentConclusion
+} from '../incident-detail-repairs.mjs';
 
 const response = (body, status = 200, type = 'text/html') => new Response(body, {
   status,
@@ -151,17 +158,31 @@ test('RingCentral active incident overrides its general healthy legend', () => {
   assert.equal(conclusion.color, 'amber');
 });
 
-test('Cove conclusion filters unrelated N-able incidents', () => {
-  const healthy = providerSpecificConclusion(
-    { id: 'cove-data-protection', name: 'Cove Data Protection' },
-    '<main>Active Incidents N-able Adlumin XDR Investigating Resolved Incidents Cove Data Protection restored</main>'
-  );
-  assert.equal(healthy.kind, 'healthy');
-  const issue = providerSpecificConclusion(
-    { id: 'cove-data-protection', name: 'Cove Data Protection' },
-    '<main>Active Incidents N-able Cove Data Protection EMEA Performance Issue Investigating Resolved Incidents</main>'
-  );
-  assert.equal(issue.kind, 'issue');
+test('Cove conclusion filters unrelated and non-US N-able incidents', () => {
+  const fixture = `<main>Active Incidents
+    Active Incident ID: 201377 Start: Jul 25, 2026 13:15:00 UTC End: N/A Severity: Minor Outage Status: Investigating
+    N-able Cove Data Protection EMEA There is an identified issue affecting a storage node in London, UK.
+    Services Impacted Cove Data Protection (Europe) Timeline Update Jul 29, 2026 12:38:35 UTC Hardware replacement is in progress.
+    Active Incident ID: 201250 Start: Jul 15, 2026 15:00:00 UTC End: N/A Severity: Minor Outage Status: Identified
+    N-able N-central (All Regions) Some feature flags may not be functioning as expected.
+    Services Impacted N-central (All Regions) Timeline Update Jul 29, 2026 10:00:00 UTC Engineering is monitoring.
+    Active Incident ID: 201400 Start: Jul 31, 2026 15:00:00 UTC End: N/A Severity: Minor Outage Status: Investigating
+    N-able Cove Data Protection Americas Customers may experience delayed backup jobs in the Americas.
+    Services Impacted Cove Data Protection (Americas) Timeline Update Jul 31, 2026 16:00:00 UTC Mitigation is in progress.
+    Resolved Incidents</main>`;
+  const cove = providerSpecificConclusion({ id: 'cove-data-protection', name: 'Cove Data Protection' }, fixture);
+  assert.equal(cove.kind, 'issues');
+  assert.equal(cove.incidents.length, 1);
+  assert.match(cove.incidents[0].title, /Cove Data Protection Americas/i);
+  assert.doesNotMatch(cove.incidents[0].note, /N-central|London|201250|201377/i);
+  assert.equal(cove.incidents[0].firstDetected, '2026-07-31T15:00:00.000Z');
+  assert.equal(cove.incidents[0].latestUpdate, '2026-07-31T16:00:00.000Z');
+
+  const nable = providerSpecificConclusion({ id: 'n-able', name: 'N-able' }, fixture);
+  assert.equal(nable.kind, 'issues');
+  assert.equal(nable.incidents.length, 1);
+  assert.match(nable.incidents[0].title, /N-central/i);
+  assert.doesNotMatch(nable.incidents[0].note, /Cove Data Protection/i);
 });
 
 test('Salesforce ignores informational messages but captures service degradation', () => {
@@ -346,4 +367,93 @@ test('Okta structured public data provides real detection and update times', asy
   assert.equal(result.incidents[0].first_detected, '2026-07-31T14:05:00.000Z');
   assert.equal(result.incidents[0].latest_update, '2026-07-31T15:10:00.000Z');
   assert.equal(result.incidents[0].affected_service, 'Authentication');
+});
+
+
+test('marketing and release posts are not service incidents', () => {
+  const entry = {
+    title: 'Adlumin Q2 Wrap-Up: Broader Coverage. Faster Investigation. Stronger Partner Operations.',
+    note: 'A quarterly product review covering new detections and workflow improvements.'
+  };
+  assert.equal(isEditorialIncidentEntry(entry), true);
+  assert.equal(activeFeedEntries([{ ...entry, time: 'Thu, 31 Jul 2026 12:00:00 GMT' }], 336, Date.parse('2026-07-31T13:00:00Z')).length, 0);
+});
+
+test('generic incident headings are never published as incident titles', async () => {
+  assert.equal(isGenericIncidentTitle('Active Incident'), true);
+  assert.equal(isGenericIncidentTitle('Cloudflare public status page reports an active issue'), false);
+  globalThis.fetch = async url => String(url).endsWith('/')
+    ? response('<main><h2>Active Incident</h2><p>Partial Outage</p></main>')
+    : response('Not found', 404, 'text/plain');
+  const result = await loadPublicProvider({
+    id: 'vendor',
+    name: 'Vendor',
+    category: 'Cloud',
+    priority: 50,
+    sourceType: 'statuspage',
+    url: 'https://status.vendor.example/api/v2/summary.json'
+  });
+  assert.equal(result.incidents.length, 0);
+  assert.equal(result.service_state, 'unknown');
+});
+
+test('US scope uses the incident title before page boilerplate', () => {
+  assert.equal(isIncidentUsRelevant({
+    title: 'Cisco Secure Access availability issue in Dubai',
+    note: 'Contact Cisco support in the United States for assistance.'
+  }), false);
+  assert.equal(isIncidentUsRelevant({
+    title: 'Cisco Umbrella DNS issue - Global',
+    note: 'Customers may see elevated latency.'
+  }), true);
+  assert.equal(isIncidentUsRelevant({
+    title: 'Cisco Umbrella issue affecting US and EU regions',
+    note: 'Multiple regions are impacted.'
+  }), true);
+});
+
+test('Cloudflare parser publishes actual US incident details and drops international-only events', () => {
+  const fixture = `<main>
+    <h2>Network Performance Issues in Istanbul</h2>
+    <p>Identified - The issue has been identified and a fix is being implemented.</p>
+    <p>Jul 28, 2026 - 10:25 UTC</p>
+    <h2>Workers API errors in US-East</h2>
+    <p>Investigating - US customers are currently experiencing failed Workers API requests.</p>
+    <p>Jul 31, 2026 - 16:20 UTC</p>
+    <h2>PHX scheduled maintenance</h2>
+    <p>In progress - Scheduled maintenance is currently in progress.</p>
+    <p>Jul 31, 2026 - 16:00 UTC</p>
+    <h2>Past Incidents</h2>
+  </main>`;
+  const conclusion = providerIncidentConclusion({ id: 'cloudflare', name: 'Cloudflare' }, fixture);
+  assert.equal(conclusion.kind, 'issues');
+  assert.equal(conclusion.incidents.length, 1);
+  assert.equal(conclusion.incidents[0].title, 'Workers API errors in US-East');
+  assert.match(conclusion.incidents[0].note, /failed Workers API requests/);
+});
+
+test('Docker healthy state wins over navigation text', () => {
+  const conclusion = providerIncidentConclusion(
+    { id: 'docker', name: 'Docker' },
+    '<main><h1>All Systems Operational</h1><nav>Active Incident Status History Report Issue</nav></main>'
+  );
+  assert.equal(conclusion.kind, 'healthy');
+});
+
+test('N-able parser produces bounded records with service and timestamps', () => {
+  const records = parseNableIncidentRecords(`<main>Active Incidents
+    Active Incident ID: 99 Start: Jul 31, 2026 15:00:00 UTC End: N/A Severity: Minor Outage Status: Investigating
+    N-able Cove Data Protection Americas Customers may experience delayed backups.
+    Services Impacted Cove Data Protection (Americas) Timeline Update Jul 31, 2026 16:00:00 UTC Mitigation is in progress.
+    Resolved Incidents</main>`);
+  assert.equal(records.length, 1);
+  assert.match(records[0].title, /Cove Data Protection Americas/);
+  assert.equal(records[0].affectedService, 'Cove Data Protection (Americas)');
+  assert.ok(records[0].note.length < 900);
+});
+
+test('repaired provider sources use official operational dashboards', () => {
+  assert.equal(resolvePublicSource({ id: 'n-able', url: 'https://status.n-able.com/api/v2/summary.json', sourceType: 'statuspage' }).url, 'https://uptime.n-able.com/');
+  assert.equal(resolvePublicSource({ id: 'cisco-umbrella', url: 'https://status.umbrella.com/api/v2/summary.json', sourceType: 'statuspage' }).url, 'https://status.sse.cisco.com/');
+  assert.equal(resolvePublicSource({ id: 'docker', url: 'https://status.docker.com/api/v2/summary.json', sourceType: 'statuspage' }).url, 'https://www.dockerstatus.com/');
 });

@@ -16,6 +16,7 @@ import {
   providerSpecificConclusion,
   renderPublicPage
 } from './public-source-repairs.mjs';
+import { isEditorialIncidentEntry, isGenericIncidentTitle, isIncidentUsRelevant } from './incident-detail-repairs.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const catalogPath = path.join(root, 'config', 'providers.json');
@@ -329,7 +330,7 @@ export function parseFeedEntries(xml) {
 }
 
 function issueText(value) {
-  return /\b(outage|unavailable|down|degrad(?:ed|ation|ing)?|disruption|service impact|incident|intermittent|latency|elevated errors?|fail(?:ure|ures|ing|ed)?|partial outage|major outage|critical|investigat(?:e|ed|ing|ion)?|identified|monitoring)\b/i.test(value);
+  return /\b(outage|unavailable|down|degrad(?:ed|ation|ing)?|disruption|service impact|incident|intermittent|latency|elevated errors?|fail(?:ure|ures|ing|ed)?|partial outage|major outage|critical|investigat(?:e|ed|ing)?|identified|monitoring)\b/i.test(value);
 }
 
 function resolvedText(value) {
@@ -362,7 +363,7 @@ function itemColor(value) {
 export function activeFeedEntries(entries, maxAgeHours = 168, now = Date.now()) {
   return entries.filter(item => {
     const text = `${item.title} ${item.note} ${item.status}`;
-    if (!issueText(text) || resolvedText(text) || maintenanceOnly(text)) return false;
+    if (isEditorialIncidentEntry(item) || isGenericIncidentTitle(item.title) || !issueText(text) || resolvedText(text) || maintenanceOnly(text)) return false;
     const ms = Date.parse(item.time || '');
     if (!Number.isFinite(ms)) return true;
     const age = now - ms;
@@ -372,7 +373,7 @@ export function activeFeedEntries(entries, maxAgeHours = 168, now = Date.now()) 
 
 export function scopeFeedEntries(entries, source = {}) {
   if (source.regionScope === 'global') return entries;
-  return entries.filter(item => isUsRelevantIncident(`${item.title || ''} ${item.note || ''} ${item.status || ''}`));
+  return entries.filter(item => isIncidentUsRelevant(item));
 }
 
 export function dedupeIncidentEntries(entries) {
