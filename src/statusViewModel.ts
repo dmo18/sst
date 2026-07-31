@@ -170,7 +170,7 @@ function operatorPriority(item: Incident, provider?: ProviderStatus): string {
   return 'P3: monitor, correlate tickets, and update as scope changes';
 }
 
-export function clientCommunicationDraft(item: Incident, provider?: ProviderStatus): string {
+export function clientCommunicationDraft(item: Incident, _provider?: ProviderStatus): string {
   const service = affectedServiceLabel(item);
   const severity = item.service_state === 'major' ? 'major service issue' : 'service degradation';
   const vendorNote = clean(item.note).slice(0, 220);
