@@ -163,6 +163,22 @@ function maintenanceSignature(item) {
   return [item.status || '', item.starts_at || '', item.ends_at || '', item.latest_update || '', item.affected_service || ''].join('|');
 }
 
+export function sourceIntelligenceSummary(providers, maintenance = []) {
+  const available = providers.filter(provider => provider.source_state === 'available' && provider.ok === true);
+  const components = providers.flatMap(provider => Array.isArray(provider.component_status) ? provider.component_status : []);
+  return {
+    maintenance_count: maintenance.length,
+    ongoing_maintenance_count: maintenance.filter(item => maintenanceState(item.status) === 'in_progress').length,
+    structured_source_count: available.filter(provider => provider.evidence_tier === 'structured').length,
+    feed_source_count: available.filter(provider => provider.evidence_tier === 'feed').length,
+    page_source_count: available.filter(provider => ['rendered-page', 'public-page'].includes(provider.evidence_tier)).length,
+    high_confidence_source_count: providers.filter(provider => provider.source_confidence === 'high').length,
+    schema_change_count: providers.filter(provider => provider.schema_changed === true).length,
+    failure_streak_count: providers.filter(provider => Number(provider.consecutive_failures || 0) >= 2).length,
+    component_issue_count: components.filter(component => !/^(?:operational|available|up|ok|none|good)$/i.test(String(component.status || ''))).length
+  };
+}
+
 export function sourceIntelligenceChanges(previous, current, now = new Date().toISOString()) {
   if (!previous?.providers?.length) return [];
   const changes = [];
