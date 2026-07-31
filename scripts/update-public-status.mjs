@@ -10,6 +10,7 @@ import {
   summarizeProviders,
   validatePayload
 } from './update-status.mjs';
+import { additionalPublicOverrides, providerSpecificConclusion, renderPublicPage } from './public-source-repairs.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const catalogPath = path.join(root, 'config', 'providers.json');
@@ -89,12 +90,9 @@ const publicOverrides = {
     url: 'https://status.salesforce.com/current',
     sourceName: 'Salesforce Trust public status page'
   },
-  heroku: {
-    mode: 'status-html',
-    url: 'https://status.heroku.com/',
-    sourceName: 'Heroku public status page'
-  }
 };
+
+Object.assign(publicOverrides, additionalPublicOverrides);
 
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
@@ -395,6 +393,8 @@ export function discoverFeedUrls(html, pageUrl) {
 }
 
 function htmlIssueConclusion(provider, source, html) {
+  const specific = providerSpecificConclusion(provider, html);
+  if (specific) return specific;
   const current = currentHtmlSection(html);
   const lower = current.toLowerCase();
   if (/cloudflare|attention required|verify you are human|captcha|access denied|enable javascript to run this app/.test(lower) && current.length < 4000) {
@@ -465,8 +465,17 @@ async function parsePublicHtml(provider, source) {
     if (feedResult?.source_state === 'available') return feedResult;
     return providerStatus(provider, source, `Source unavailable: HTTP ${result.status || 'failed'}`, 'blue', false, result.log?.error || result.log?.message, logs, [], 'unavailable');
   }
-  const conclusion = htmlIssueConclusion(provider, source, result.body);
-  const feedResult = await tryFeedCandidates(provider, source, result.body, logs);
+  let pageBody = result.body;
+  let conclusion = htmlIssueConclusion(provider, source, pageBody);
+  if (conclusion.kind === 'limited' && source.render === true) {
+    const rendered = renderPublicPage(source);
+    logs.push(rendered.log);
+    if (rendered.ok) {
+      pageBody = rendered.body;
+      conclusion = htmlIssueConclusion(provider, source, pageBody);
+    }
+  }
+  const feedResult = await tryFeedCandidates(provider, source, pageBody, logs);
   if (feedResult?.incidents?.length) return feedResult;
   if (conclusion.kind === 'issue') {
     const incident = makeIncident(provider, source, conclusion.title, conclusion.note, source.url, '', 'active', conclusion.color);

@@ -240,15 +240,6 @@
     "technician_action": "Test sign-in paths and follow approved identity continuity procedures."
   },
   {
-    "id": "quad9",
-    "name": "Quad9",
-    "category": "DNS and Internet",
-    "priority": 68,
-    "enabled": true,
-    "sourceType": "statuspage",
-    "url": "https://status.quad9.net/api/v2/summary.json"
-  },
-  {
     "id": "lumen",
     "name": "Lumen",
     "category": "ISPs and Backbone",
@@ -346,15 +337,6 @@
     "enabled": true,
     "sourceType": "statuspage",
     "url": "https://status.auth0.com/api/v2/summary.json"
-  },
-  {
-    "id": "onelogin",
-    "name": "OneLogin",
-    "category": "Identity / Access",
-    "priority": 78,
-    "enabled": true,
-    "sourceType": "statuspage",
-    "url": "https://status.onelogin.com/api/v2/summary.json"
   },
   {
     "id": "bitwarden",
@@ -555,24 +537,6 @@
     "url": "https://status.knowbe4.com/api/v2/summary.json"
   },
   {
-    "id": "acronis",
-    "name": "Acronis",
-    "category": "Backup",
-    "priority": 78,
-    "enabled": true,
-    "sourceType": "statuspage",
-    "url": "https://status.acronis.com/api/v2/summary.json"
-  },
-  {
-    "id": "veeam-cloud-services",
-    "name": "Veeam Cloud Services",
-    "category": "Backup",
-    "priority": 78,
-    "enabled": true,
-    "sourceType": "statuspage",
-    "url": "https://status.veeam.com/api/v2/summary.json"
-  },
-  {
     "id": "crashplan",
     "name": "CrashPlan",
     "category": "Backup",
@@ -618,15 +582,6 @@
     "url": "https://status.godaddy.com/api/v2/summary.json"
   },
   {
-    "id": "namecheap",
-    "name": "Namecheap",
-    "category": "Registrar / DNS",
-    "priority": 60,
-    "enabled": true,
-    "sourceType": "statuspage",
-    "url": "https://status.namecheap.com/api/v2/summary.json"
-  },
-  {
     "id": "linode",
     "name": "Linode",
     "category": "Edge / Hosting",
@@ -643,15 +598,6 @@
     "enabled": true,
     "sourceType": "statuspage",
     "url": "https://status.vultr.com/api/v2/summary.json"
-  },
-  {
-    "id": "heroku",
-    "name": "Heroku",
-    "category": "Edge / Hosting",
-    "priority": 60,
-    "enabled": true,
-    "sourceType": "heroku-current-status",
-    "url": "https://status.heroku.com/api/v4/current-status"
   },
   {
     "id": "vercel",
@@ -762,15 +708,6 @@
     "url": "https://status.zendesk.com/api/v2/summary.json"
   },
   {
-    "id": "intercom",
-    "name": "Intercom",
-    "category": "Support",
-    "priority": 60,
-    "enabled": true,
-    "sourceType": "statuspage",
-    "url": "https://status.intercom.com/api/v2/summary.json"
-  },
-  {
     "id": "notion",
     "name": "Notion",
     "category": "Productivity",
@@ -850,14 +787,5 @@
     "enabled": true,
     "sourceType": "statuspage",
     "url": "https://www.paypal-status.com/api/v2/summary.json"
-  },
-  {
-    "id": "square",
-    "name": "Square",
-    "category": "Payments",
-    "priority": 60,
-    "enabled": true,
-    "sourceType": "statuspage",
-    "url": "https://www.issquareup.com/api/v2/summary.json"
   }
 ]
