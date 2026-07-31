@@ -27,7 +27,7 @@ Attention (`critical`, `action`, `watch`, `informational`) expresses technician 
 
 The Pages build optionally downloads the last deployed, validated snapshot. Comparison identifies new/escalated/de-escalated/resolved incidents, service degradation/recovery, and unavailable/limited source transitions. Initial generation creates no mass event; retrieval failure does not fail the build; history is bounded to 100 entries and generated JSON is never committed.
 
-The 90-provider catalog supports optional `criticality`, `tags`, `services`, `client_impact`, and `technician_action`. High-value identity, cloud, security, DNS, RMM/PSA, email, and connectivity entries receive specific guidance rather than generic filler. `scripts/validate-providers.mjs` validates types, concise guidance, URLs, unique IDs, source types, and counts.
+The canonical 78-provider catalog supports optional `criticality`, `tags`, `services`, `client_impact`, and `technician_action`. High-value identity, cloud, security, DNS, RMM/PSA, email, and connectivity entries receive specific guidance rather than generic filler. `scripts/validate-providers.mjs` validates types, concise guidance, URLs, unique IDs, source types, and counts.
 
 ## Static architecture and commands
 
@@ -55,61 +55,96 @@ Retrieval checks Content-Length, streams up to a configurable 2 MiB limit, valid
 
 ## CI and deployment
 
-`.github/workflows/test.yml` runs `npm ci`, provider validation, deterministic tests, typecheck, and `build:app` on pull requests without vendors. The sole Pages workflow triggers on `main`, manual dispatch, and at minutes 17/47. Its **build** job has only `contents: read`, runs checks, one live generation, one Vite build, and uploads `dist`; its dependent **deploy** job alone has `pages: write` and `id-token: write`. One concurrency group prevents overlapping deployments. Vite base `/sst/` is fixed for Pages; `status.json` and logos are copied into `dist`.
+`.github/workflows/test.yml` runs `npm ci`, provider validation, deterministic tests, typecheck, and `build:app` on pull requests without vendors. The sole Pages workflow triggers on `main`, manual dispatch, and at minutes 7, 19, 31, 43, and 55. Its **build** job has only `contents: read`, runs catalog validation, one live generation, payload checks, and one Vite build; its dependent **deploy** job alone has `pages: write` and `id-token: write`. One concurrency group prevents overlapping deployments. Vite base `/sst/` is fixed for Pages; `status.json` and logos are copied into `dist`.
 
 ## External source research and adoption policy
 
-The services below were reviewed on 2026-07-31 as design references, discovery aids, or possible licensed integrations. They are not runtime dependencies. Public commercial aggregator pages must not be scraped, copied, or treated as official vendor data. Crowdsourced reports must remain a separately labeled anomaly signal and must never create an official operational or incident conclusion.
+The references below were reviewed on 2026-07-31 for ideas, source discovery, and parser methodology. They are **not runtime dependencies**. This project remains free and static: no API keys, credentials, authenticated tenant access, paid feeds, licensed aggregators, commercial monitoring services, or scraping of aggregator dashboards.
 
-### Source hierarchy
+Commercial aggregators and crowdsourced outage sites may identify patterns or point to an official status page, but their claims cannot become an official service conclusion. Any endpoint discovered through a third party must be independently verified as a public first-party vendor source before it can enter the catalog.
 
-Use the highest available source in this order:
+### Allowed source hierarchy
 
-1. An authenticated official tenant, account, customer, region, or contract-specific API with read-only access.
-2. An official public structured API, including vendor JSON, Atlassian Statuspage, Status.io, Better Stack, or a documented provider-specific endpoint.
-3. An official RSS or Atom feed that preserves incident identity, timestamps, lifecycle, components, and region where available.
-4. An official public page parsed by a provider-specific, fixture-tested adapter that fails closed when the structure changes.
-5. A licensed commercial aggregator API only when the original official source is unavailable or materially incomplete, and only after validating service coverage, rate limits, attribution, retention, display, and redistribution terms.
-6. A licensed crowdsourced or telemetry-based API only as corroborating evidence. It must be labeled third-party observed or possible problem, never official incident or operational truth.
+Use the highest available free, unauthenticated, first-party source in this order:
+
+1. An official public structured status or incident endpoint, including documented vendor JSON, Atlassian Statuspage, Status.io, Better Stack, Instatus, or another vendor-owned schema.
+2. An official RSS or Atom feed that preserves incident identity, timestamps, lifecycle, components, and regional scope where available.
+3. An official public HTML page parsed by a provider-specific, fixture-tested adapter that fails closed when its structure changes.
+4. A bundled limited record when no trustworthy public source is readable. Limited records remain `unknown` and never imply operational health.
+
+Not allowed as runtime truth:
+
+- authenticated or tenant-specific APIs;
+- commercial aggregator APIs or dashboards;
+- crowdsourced outage volume;
+- social-media posts;
+- copied incident data whose redistribution terms are unknown;
+- generic search results, marketing pages, release notes, or news posts.
 
 ### Engineering methods worth adopting
 
-- Prefer documented status and incident endpoints over page-wide HTML. Probe standard Statuspage paths such as `/api/v2/summary.json`, `/api/v2/incidents.json`, and `/api/v2/components.json` only after confirming they belong to the provider.
-- Add a first-class Status.io public API adapter. Status.io exposes overall state, components, locations, active incidents, maintenance, messages, lifecycle codes, and affected components in structured data.
-- Preserve the provider incident ID, source URL, incident lifecycle, first detection, latest update, affected components, affected regions, and maintenance classification as separate fields.
-- Filter by the incident's affected component and region, not by unrelated navigation, support, or footer text from the source page.
-- Keep incidents, planned maintenance, security events, informational notices, release notes, and marketing posts as distinct record classes.
-- Deduplicate by provider incident ID and normalized provider scope. Repeated updates should update one incident while preserving its first and latest timestamps.
-- Reuse one bounded request when multiple catalog entries share the same official source, then split records by explicit product/component identity.
-- Send a recognizable `User-Agent` and parser-specific `Accept` header. Honor rate limits, bounded retries, `Retry-After`, `ETag`, and `Last-Modified` where supported.
-- Track source schema fingerprints, parser failures, last successful retrieval, and content-type changes so silent adapter breakage becomes an explicit source failure.
-- Use read-only OAuth or narrowly scoped credentials for private status sources. Never place customer or tenant credentials in the browser or generated payload.
-- Fail closed. Empty, malformed, login, bot-protection, consent, or unknown-schema responses must remain `unknown`, `limited`, or `unavailable`, never operational or incident.
+- Prefer structured incident and component endpoints over page-wide HTML. Probe conventional paths such as `/api/v2/summary.json`, `/api/v2/incidents.json`, `/api/v2/components.json`, `status.json`, `incidents.json`, `index.json`, `history.rss`, and `history.atom` only after confirming the hostname belongs to the provider.
+- Build explicit adapters by status-page platform rather than broad keyword scraping: Atlassian Statuspage, Status.io, Better Stack, Instatus, RSS, Atom, and provider-specific JSON.
+- Preserve the provider incident ID, source URL, lifecycle state, first detection, latest update, affected components, affected regions, impact, and maintenance classification as separate fields.
+- Filter by the incident record's title, components, locations, and region metadata—not navigation, footer, support, or unrelated page text.
+- Keep incidents, planned maintenance, security advisories, informational notices, release notes, and marketing posts as separate record classes.
+- Deduplicate by provider incident ID plus normalized component scope. Repeated updates should mutate one incident while preserving both first-detected and latest-update timestamps.
+- Reuse one bounded request when multiple products share an official source, then split records only by explicit product or component identity.
+- Track source schema fingerprints, content type, parser version, last successful retrieval, consecutive failures, and last semantic change so silent adapter breakage becomes an explicit source problem.
+- Use conditional retrieval with `ETag` and `Last-Modified` when supported, honor `Retry-After`, and retain bounded timeouts, response limits, retries, and concurrency.
+- Keep a fixture corpus containing real operational, degraded, major, maintenance, marketing, login, bot-challenge, empty, malformed, and region-specific responses for every adapter.
+- Run source canaries that test parsing and schema shape separately from service health. A parser failure must not be reported as a vendor incident.
+- Fail closed. Empty, malformed, login, bot-protection, consent, unknown-schema, or nonspecific responses remain `unknown`, `limited`, or `unavailable`, never operational or incident.
 
-### Candidate source work
+### Ideas evaluated from the references
 
-- **HaloPSA and ConnectWise:** both public pages use Status.io. Discover and validate their Status.io public API identifiers, then replace limited or fragile HTML parsing with a structured Status.io adapter.
-- **Microsoft 365 and Entra ID:** use Microsoft Graph Service Communications with `ServiceHealth.Read.All` for tenant-specific truth. Public Microsoft feeds remain broad fallback context and cannot prove an individual customer tenant is healthy.
-- **QuickBooks:** Intuit exposes a structured developer-status API for the QuickBooks Online API component. Treat that as a distinct developer/API source unless its scope is proven to represent the end-user QuickBooks Online service.
-- **IncidentHub or IsDown:** evaluate one licensed aggregator API as an optional fallback for providers whose official pages are blocked, unstable, or incomplete. Do not integrate both as competing sources without a deterministic precedence policy.
-- **Downdetector Enterprise:** consider only as a secondary anomaly signal for ISP and large consumer-platform problems. Its report-volume baseline is valuable corroboration but is not an authoritative incident source.
-- **StatusSight and the DrDroid repository:** use as endpoint-discovery and parser-method references. Do not scrape their public dashboards or rely on undocumented redistribution rights.
+- **IncidentHub:** useful concepts include component and region subscriptions, incident lifecycle transitions, monitoring-failure alerts, maintenance separation, per-customer dependency views, and explicit triggered/updated/resolved events. Adopt the data model and lifecycle discipline, not the commercial service.
+- **Downdetector:** report volume compared with a historical baseline can help humans recognize a possible widespread outage. Because it is crowdsourced and commercial, use it only as an external manual corroboration reference—not as a runtime source or health conclusion.
+- **StatusSight:** useful presentation ideas include source recency, component-level status, recent incident history, and a large searchable service directory. Its public dashboard is a discovery aid only.
+- **Status Aggregator / IsDown:** useful workflow ideas are polling, normalization, component filtering, change detection, history, and alert suppression. The commercial service and its copied catalog are not runtime dependencies.
+- **DrDroid:** the open-source repository demonstrates separate JSON, RSS, Atom, and Better Stack adapters; incident-detail endpoints; service priority; persistence; a recognizable user agent; and change-only notifications. Its Supabase, email, credentials, and paid-service architecture are out of scope here.
+- **Reddit creator post:** reinforces the practical value of structured JSON over brittle page scraping and a dedicated collector that publishes a simple browser-readable artifact. Community claims remain methodology only.
+
+### Public first-party source candidates to verify
+
+The DrDroid repository and the aggregator directories expose useful endpoint leads. These are **unverified candidates**, not accepted sources. Before adding one, confirm ownership, current schema, service scope, regional meaning, maintenance behavior, and terms directly from the vendor.
+
+| Candidate provider or scope | Public endpoint pattern to verify | Notes |
+| --- | --- | --- |
+| ServiceNow | `https://servicenow.statuspage.io/api/v2/incidents.json` | Verify that the page represents the intended ServiceNow cloud products and regions. |
+| SendGrid | `https://status.sendgrid.com/api/v2/incidents.json` | Structured Statuspage candidate; separate from broader Twilio incidents. |
+| Twilio | `https://status.twilio.com/api/v2/incidents.json` | Validate component and regional filtering before catalog use. |
+| Fastly | `https://www.fastlystatus.com/status.json` and `incidents.json` | Nonstandard public JSON candidate. |
+| Akamai | `https://www.akamaistatus.com/api/v2/incidents.json` | Validate whether all relevant Akamai products are represented. |
+| DigitalOcean | `https://status.digitalocean.com/api/v2/incidents.json` | Standard Statuspage candidate. |
+| Linode / Akamai Connected Cloud | `https://status.linode.com/api/v2/incidents.json` | Confirm branding, scope, and whether it duplicates Akamai coverage. |
+| Oracle Cloud Infrastructure | `https://ocistatus.oraclecloud.com/api/v2/incidents.json` | Confirm region/component metadata and public availability. |
+| GitLab | `https://status.gitlab.com/pages/5b36dc6502d06804c08349f7/rss` | RSS candidate; verify incident identity and update ordering. |
+| AWS | `https://status.aws.amazon.com/rss/all.rss` | Broad official feed; requires strict service and US-region scoping. |
+| Azure | `https://azure.status.microsoft/en-us/status/feed/` | Broad official feed; do not infer tenant-specific health. |
+| Xero API | `https://status.xero.com/api/v2/incidents.json` | Developer/API scope may not represent the full end-user service. |
+| FreshBooks API | `https://status.freshbooks.com/api/v2/incidents.json` | Confirm whether it covers the customer application or only APIs. |
+| QuickBooks Online API | `https://status.developer.intuit.com/api/v2/incidents.json` | Treat as developer/API status unless end-user scope is proven. |
+| Better Stack-hosted pages | `index.json` plus the page's official feed | Build a generic adapter only after validating the documented schema. |
+| Status.io-hosted pages | Provider-specific public status and incident endpoints | Highest-priority adapter research for HaloPSA and ConnectWise. |
+
+No candidate should be added solely because it appears in another aggregator's source code. Each must pass a live-source probe, fixture tests, US-scope review, and fail-closed validation.
 
 ### Research references
 
 | Reference | Useful takeaway | Adoption boundary |
 | --- | --- | --- |
-| [IncidentHub knowledge base](https://incidenthub.cloud/knowledge-base) | Component and region filtering, incident lifecycle alerts, maintenance separation, and monitoring-failure awareness. | Methodology reference only unless a licensed API contract is established. |
-| [IncidentHub](https://incidenthub.cloud/) | Large monitored-service catalog, private source ingestion, read-only account sources, and per-client status views. | Possible licensed fallback or private-source integration, not a page-scraping target. |
-| [IncidentHub documentation](https://docs.incidenthub.cloud/) | Webhook payloads distinguish triggered, updated, and resolved events and include affected components. | Public webhook documentation does not by itself establish a general reusable query API. |
-| [Downdetector companies](https://downdetector.com/companies/) | Broad vendor discovery and report-volume anomaly detection against service-specific historical baselines. | Enterprise API only, and only as separately labeled crowd corroboration. |
-| [StatusSight creator post](https://www.reddit.com/r/SideProject/comments/1enbsgc/i_created_a_status_page_aggregator_that_monitors/) | Prefer public JSON files over inconsistent HTML and poll frequently with a dedicated collector. | Community methodology, not an upstream data contract. |
-| [StatusSight](https://statussight.com/) | Component-level display, recent incidents, large catalog, and visible source recency. | Discovery/reference only because no public API or redistribution terms were identified. |
-| [Status Aggregator](https://statusaggregator.com/) | IsDown workflow of connect, poll, normalize, filter, and alert across public and private sources. | Licensed IsDown API candidate only, never scrape the marketing dashboard. |
-| [DrDroid status-page aggregator](https://drdroid.io/status-page-aggregator) | Database-backed polling, normalized vendor records, change-based alerting, and custom/private service support. | Product and architectural reference. |
-| [DrDroid open-source repository](https://github.com/DrDroidLab/status-page-aggregator) | MIT implementation with separate JSON, RSS, Atom, and Better Stack adapters, incident endpoints, persistence, and priority alerts. | Endpoint candidates must still be independently verified against official provider scope. |
-| [IsDown article](https://medium.com/isdown/status-page-aggregator-monitor-all-your-services-8c3e3e993b7b) | Continuous polling, normalization, filtering, historical tracking, and RSS/Atom/Statuspage support. | General methodology only because the article contains inconsistent polling-frequency claims. |
+| [IncidentHub knowledge base](https://incidenthub.cloud/knowledge-base) | Component and region filtering, lifecycle alerts, maintenance separation, and monitoring-failure awareness. | Design reference only; no commercial dependency or copied incident data. |
+| [IncidentHub](https://incidenthub.cloud/) | Dependency views, broad service discovery, private-source concepts, and per-customer grouping. | Discovery and product reference only. |
+| [IncidentHub documentation](https://docs.incidenthub.cloud/) | Triggered, updated, and resolved event semantics with affected components. | Schema inspiration only; webhook documentation is not a reusable public feed. |
+| [Downdetector companies](https://downdetector.com/companies/) | Broad provider discovery and anomaly-baseline concepts. | Manual corroboration only; crowdsourced reports are not official truth. |
+| [StatusSight creator post](https://www.reddit.com/r/SideProject/comments/1enbsgc/i_created_a_status_page_aggregator_that_monitors/) | Prefer structured JSON over inconsistent HTML and publish a simple collected artifact. | Community methodology only. |
+| [StatusSight](https://statussight.com/) | Component display, source recency, incident history, and searchable catalog ideas. | Discovery/reference only; do not scrape its dashboard. |
+| [Status Aggregator](https://statusaggregator.com/) | Poll, normalize, filter, detect changes, retain history, and suppress noise. | Commercial IsDown reference only. |
+| [DrDroid status-page aggregator](https://drdroid.io/status-page-aggregator) | Adapter separation, persistence, priority services, and change-based notifications. | Architecture reference; hosted dependencies are outside this project. |
+| [DrDroid open-source repository](https://github.com/DrDroidLab/status-page-aggregator) | MIT code with Statuspage JSON, RSS, Atom, Better Stack, incident-detail, and endpoint candidate lists. | Verify every endpoint independently before use; do not copy unverified status conclusions. |
+| [IsDown article](https://medium.com/isdown/status-page-aggregator-monitor-all-your-services-8c3e3e993b7b) | Normalization, filtering, historical tracking, and multi-format ingestion. | General methodology only; no commercial integration. |
 
 ## Limitations
 
-Official public status may omit account-, tenant-, region-, or address-specific effects. Microsoft 365 and Entra ID details require tenant-authenticated Microsoft Graph service communications; this public static application intentionally accepts no credentials and labels unauthenticated Microsoft coverage limited. A provider source outage is not evidence of a vendor outage. See [the repository report](docs/repository-report.md) and [contribution guide](CONTRIBUTING.md).
+Official public status may omit account-, tenant-, region-, or address-specific effects. Microsoft 365 and Entra ID public feeds cannot prove an individual customer tenant is healthy. This static application intentionally accepts no credentials and uses no paid or authenticated sources. A provider source outage is not evidence of a vendor outage. See [the repository report](docs/repository-report.md) and [contribution guide](CONTRIBUTING.md).
