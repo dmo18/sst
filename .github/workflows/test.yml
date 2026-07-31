@@ -17,6 +17,21 @@ jobs:
         with:
           node-version: "22"
           cache: npm
+      - name: Correct patch driver
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const path = 'scripts/apply-hotfix-251.mjs';
+          let value = fs.readFileSync(path, 'utf8');
+          value = value.replace(
+            "  `${validator}export async function generateStatus()`,",
+            "  validator,"
+          );
+          const marker = "write('scripts/source-intelligence.mjs', intelligence);\n";
+          const addition = `${marker}\nlet sourceTest = read('scripts/__tests__/source-intelligence.test.js');\nsourceTest = replaceOnce(sourceTest, \"parser_version: '2.5.0'\", \"parser_version: '2.5.1'\", 'source-intelligence parser fixture');\nwrite('scripts/__tests__/source-intelligence.test.js', sourceTest);\n`;
+          if (!value.includes("source-intelligence parser fixture")) value = value.replace(marker, addition);
+          fs.writeFileSync(path, value);
+          NODE
       - name: Apply hotfix
         run: node scripts/apply-hotfix-251.mjs
       - name: Synchronize release version and lockfile
