@@ -11,6 +11,7 @@ The project uses semantic versioning. Dates are shown in ISO format. The newest 
 - Replaced generic incident headings with actual provider incident titles, current details, affected services, regional scope, and timestamps where the official source exposes them.
 - Moved N-able monitoring from its release-news site to the official uptime dashboard and rejected marketing, release-note, and quarterly wrap-up posts.
 - Split N-able and Cove incidents by affected product so unrelated N-central and Cove records cannot contaminate each other.
+- Treated active incidents and planned maintenance as separate bounded N-able records, and reused one shared uptime-page request for N-able and Cove.
 - Applied title-first US regional filtering so international-only Cisco Umbrella, Cloudflare, and other incidents are not retained because of unrelated page boilerplate.
 - Added truthful parsers for Cloudflare, Docker, Cisco Umbrella, N-able, and Cove, and made inconclusive generic HTML fail closed instead of publishing fabricated incident text.
 
