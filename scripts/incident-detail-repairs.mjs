@@ -1,3 +1,5 @@
+import { structuredSourceConclusion, structuredSourceOverrides } from './structured-source-adapters.mjs';
+
 const BLOCK_BREAK = /<\/?(?:article|section|main|header|footer|div|p|h[1-6]|li|ul|ol|table|tr|td|th|br|details|summary)[^>]*>/gi;
 
 export const incidentDetailOverrides = {
@@ -43,6 +45,10 @@ export const incidentDetailOverrides = {
     regionScope: 'us'
   }
 };
+
+// Structured source adapters supersede fragile HTML overrides when a verified
+// public first-party JSON or Status.io source is available.
+Object.assign(incidentDetailOverrides, structuredSourceOverrides);
 
 function decode(value) {
   return String(value || '')
@@ -284,6 +290,10 @@ function nableConclusion(provider, html) {
 
 export function providerIncidentConclusion(provider, html) {
   if (!provider?.id) return null;
+
+  const structured = structuredSourceConclusion(provider, html, incidentDetailOverrides[provider.id]);
+  if (structured) return structured;
+
   if (provider.id === 'n-able' || provider.id === 'cove-data-protection') return nableConclusion(provider, html);
   if (!['cloudflare', 'docker', 'cisco-umbrella'].includes(provider.id)) return null;
 
