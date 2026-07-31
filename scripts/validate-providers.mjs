@@ -3,7 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 const root = fileURLToPath(new URL('..', import.meta.url));
 const catalogPath = path.join(root, 'config', 'providers.json');
-const expectedProviderCount = 90;
+const expectedProviderCount = 87;
 const allowedSourceTypes = new Set([
     'statuspage',
     'rss',

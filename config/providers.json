@@ -249,36 +249,6 @@
     "url": "https://status.quad9.net/api/v2/summary.json"
   },
   {
-    "id": "att",
-    "name": "AT&T",
-    "category": "ISPs and Backbone",
-    "priority": 55,
-    "enabled": true,
-    "sourceType": "limited-official",
-    "url": "https://www.att.com/outages/",
-    "message": "Official AT&T outage status requires a customer service address, account, or location to determine impact."
-  },
-  {
-    "id": "cox",
-    "name": "Cox",
-    "category": "ISPs and Backbone",
-    "priority": 53,
-    "enabled": true,
-    "sourceType": "limited-official",
-    "url": "https://www.cox.com/residential/support/outages.html",
-    "message": "Official Cox outage status requires a service address, ZIP code, or account identity to determine impact."
-  },
-  {
-    "id": "comcast-business",
-    "name": "Comcast Business",
-    "category": "ISPs and Backbone",
-    "priority": 55,
-    "enabled": true,
-    "sourceType": "limited-official",
-    "url": "https://business.comcast.com/status/",
-    "message": "Official Comcast Business status requires customer account identity or sign-in to determine impact."
-  },
-  {
     "id": "lumen",
     "name": "Lumen",
     "category": "ISPs and Backbone",
