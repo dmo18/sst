@@ -71,6 +71,22 @@ export const additionalPublicOverrides = {
     feedCandidates: ['https://www.syncrostatus.com/state_feed/feed.atom'],
     sourceName: 'Syncro public status page'
   },
+  kaseya: {
+    mode: 'status-html',
+    url: 'https://status.kaseya.com/',
+    feedCandidates: [
+      'https://status.kaseya.com/history.rss',
+      'https://status.kaseya.com/history.atom'
+    ],
+    sourceName: 'Kaseya public status page',
+    regionScope: 'us'
+  },
+  okta: {
+    mode: 'status-html',
+    url: 'https://status.okta.com/',
+    sourceName: 'Okta public status page',
+    regionScope: 'us'
+  },
   salesforce: {
     mode: 'status-html',
     url: 'https://status.salesforce.com/current',
@@ -105,6 +121,17 @@ function cleanRenderedText(value) {
     .trim();
 }
 
+const globalRegionPattern = /\b(?:global|worldwide|all regions|all customers|multiple regions|across regions)\b/i;
+const usRegionPattern = /\b(?:united states|u\.s\.|usa|us customers?|us cells?|north america|america east|america west|us[- ](?:east|west|central|north|south)(?:[- ]\d+)?|us(?:e|w|c)\d+)\b|\bokta\.com:\d+\b|\boktapreview\.com:\d+\b/i;
+const nonUsRegionPattern = /\b(?:emea|europe|eu(?:rope)?(?:[- ]?(?:cell|region|zone))?[- ]?\d*|uk(?:[- ]?(?:cell|region|zone))?[- ]?\d*|united kingdom|apac|asia(?: pacific)?|australia|new zealand|canada|latin america|latam|middle east|africa|germany|german|france|spain|japan|singapore|india|brazil|okta-emea\.com:\d+)\b|\b(?:aue|gbe|cae|de|eu|uk|ap|sg|jp)\d+(?:[-_a-z0-9]*)\b/i;
+
+export function isUsRelevantIncident(value) {
+  const text = cleanRenderedText(value);
+  if (!text) return true;
+  if (globalRegionPattern.test(text) || usRegionPattern.test(text)) return true;
+  return !nonUsRegionPattern.test(text);
+}
+
 function healthy(status) {
   return { kind: 'healthy', status };
 }
@@ -115,6 +142,94 @@ function issue(providerName, note, color = 'amber') {
     color,
     title: `${providerName} public status reports an active issue`,
     note
+  };
+}
+
+function decodeEmbeddedJson(value) {
+  return String(value || '')
+    .replace(/&quot;|&#34;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>');
+}
+
+function extractMarkedJsonObjects(value, marker) {
+  const text = decodeEmbeddedJson(value);
+  const records = [];
+  let cursor = 0;
+  while (cursor < text.length) {
+    const markerIndex = text.indexOf(marker, cursor);
+    if (markerIndex < 0) break;
+    const start = text.lastIndexOf('{"attributes"', markerIndex);
+    if (start < cursor) {
+      cursor = markerIndex + marker.length;
+      continue;
+    }
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
+    let end = -1;
+    for (let index = start; index < text.length; index += 1) {
+      const character = text[index];
+      if (inString) {
+        if (escaped) escaped = false;
+        else if (character === '\\') escaped = true;
+        else if (character === '"') inString = false;
+        continue;
+      }
+      if (character === '"') {
+        inString = true;
+        continue;
+      }
+      if (character === '{') depth += 1;
+      else if (character === '}') {
+        depth -= 1;
+        if (depth === 0) {
+          end = index + 1;
+          break;
+        }
+      }
+    }
+    if (end < 0) break;
+    try {
+      records.push(JSON.parse(text.slice(start, end)));
+    } catch { }
+    cursor = end;
+  }
+  return records;
+}
+
+export function parseOktaIncidentRecords(html) {
+  return extractMarkedJsonObjects(html, '"type":"Incident__c"')
+    .filter(record => record && typeof record === 'object' && record.Incident_Title__c);
+}
+
+function oktaConclusion(html) {
+  const records = parseOktaIncidentRecords(html);
+  if (!records.length) return null;
+  const active = records.filter(record => !/\b(?:resolved|completed|closed|postmortem|cancelled)\b/i.test(String(record.Status__c || '')));
+  const activeUs = active.filter(record => isUsRelevantIncident([
+    record.Incident_Title__c,
+    record.Log__c,
+    record.Impacted_Cells__c,
+    record.CurrencyIsoCode
+  ].filter(Boolean).join(' ')));
+  if (!activeUs.length) return healthy('Okta reports no active US service incidents');
+  return {
+    kind: 'issues',
+    incidents: activeUs.map(record => {
+      const text = `${record.Incident_Title__c || ''} ${record.Log__c || ''} ${record.Category__c || ''}`;
+      return {
+        title: record.Incident_Title__c || record.Name || 'Okta service incident',
+        note: record.Log__c || 'Okta reports an active service incident.',
+        color: record.Is_Mis_Red__c === true || /\b(?:critical|major outage|complete outage|unavailable)\b/i.test(text) ? 'red' : 'amber',
+        firstDetected: record.Start_Time__c || record.CreatedDate || record.Start_Date__c || '',
+        latestUpdate: record.Last_Updated__c || record.LastModifiedDate || record.CreatedDate || '',
+        status: record.Status__c || 'active',
+        affectedService: [record.Okta_Sub_Service__c, record.Service_Feature__c].filter(Boolean).join(' / ')
+      };
+    })
   };
 }
 
@@ -161,6 +276,8 @@ export function providerSpecificConclusion(provider, html) {
       return /All services are online/i.test(text) ? healthy('SuperOps reports all services online') : null;
     case 'syncro':
       return /Operating Normally/i.test(text) ? healthy('Syncro reports normal operation') : null;
+    case 'okta':
+      return oktaConclusion(html);
     case 'salesforce': {
       const start = text.search(/Current Status/i);
       if (start < 0) return null;
