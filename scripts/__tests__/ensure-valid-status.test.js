@@ -38,27 +38,31 @@ function payload(sourceState = 'unavailable') {
   };
 }
 
-test('unreadable sources become explicit valid limited records', () => {
+test('unreadable sources become explicit valid limited records without counting as live coverage', () => {
   const previous = payload('unavailable');
   const normalized = normalizeStatusPayload(payload('unavailable'), previous, generatedAt);
   const item = normalized.providers[0];
 
   assert.equal(item.source_state, 'limited');
   assert.equal(item.service_state, 'unknown');
-  assert.equal(item.ok, true);
+  assert.equal(item.ok, false);
   assert.equal(item.status_data_valid, true);
   assert.equal(item.status_data_basis, 'limited-fallback');
-  assert.match(item.message, /not operational confirmation/);
+  assert.match(item.message, /not live coverage/);
   assert.equal(providerHasValidStatusData(item), true);
   assert.equal(normalized.summary.unavailable_count, 0);
   assert.equal(normalized.summary.limited_count, 1);
   assert.equal(normalized.summary.invalid_status_count, 0);
   assert.equal(normalized.summary.valid_status_count, 1);
   assert.equal(normalized.summary.valid_status_percent, 100);
+  assert.equal(normalized.summary.live_source_count, 0);
+  assert.equal(normalized.summary.live_source_coverage_percent, 0);
+  assert.equal(normalized.summary.coverage_percent, 0);
+  assert.equal(normalized.summary.fallback_source_count, 1);
   assert.equal(normalized.changes[0].type, 'source_limited');
 });
 
-test('available official data remains available and valid', () => {
+test('available official data remains available, valid, and covered', () => {
   const normalized = normalizeStatusPayload(payload('available'), null, generatedAt);
   const item = normalized.providers[0];
 
@@ -66,6 +70,10 @@ test('available official data remains available and valid', () => {
   assert.equal(item.service_state, 'operational');
   assert.equal(item.status_data_basis, 'live-official');
   assert.equal(normalized.summary.invalid_status_count, 0);
+  assert.equal(normalized.summary.live_source_count, 1);
+  assert.equal(normalized.summary.live_source_coverage_percent, 100);
+  assert.equal(normalized.summary.coverage_percent, 100);
+  assert.equal(normalized.summary.fallback_source_count, 0);
 });
 
 test('disabled catalog sources fail the all-sources-valid requirement', () => {
