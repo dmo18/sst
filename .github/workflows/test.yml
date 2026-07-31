@@ -47,9 +47,10 @@ jobs:
           npm run validate-browser-payload
           git restore public/status.json 2>/dev/null || true
           rm -f public/previous-status.json
-      - name: Commit exact validated recovery
+      - name: Commit exact validated recovery code
         run: |
-          rm -f .github/workflows/apply-hotfix-251.yml scripts/apply-hotfix-251.mjs
+          rm -f scripts/apply-hotfix-251.mjs
+          git restore .github/workflows
           git diff --check
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
