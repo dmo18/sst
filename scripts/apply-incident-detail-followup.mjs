@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+// This branch-only script is idempotent and exists only to verify the generated repair.
 const root = fileURLToPath(new URL('..', import.meta.url));
 
 function read(relative) {
