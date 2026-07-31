@@ -569,10 +569,21 @@ function structuredIncidents(provider, source, conclusion) {
   ));
 }
 
+const publicHtmlRequestCache = new Map();
+
+async function fetchPublicHtml(requestProvider) {
+  const accept = 'text/html, text/plain, */*';
+  const key = `${requestProvider.url}|${accept}`;
+  if (!publicHtmlRequestCache.has(key)) {
+    publicHtmlRequestCache.set(key, fetchSource(requestProvider, accept));
+  }
+  return publicHtmlRequestCache.get(key);
+}
+
 async function parsePublicHtml(provider, source) {
   const requestProvider = { ...provider, url: source.url, sourceType: source.mode };
-  const result = await fetchSource(requestProvider, 'text/html, text/plain, */*');
-  const logs = result.logs || [result.log];
+  const result = await fetchPublicHtml(requestProvider);
+  const logs = [...(result.logs || [result.log])];
   if (!result.ok) {
     const feedResult = await tryFeedCandidates(provider, source, '', logs);
     if (feedResult?.source_state === 'available') return feedResult;
@@ -580,7 +591,7 @@ async function parsePublicHtml(provider, source) {
   }
   let pageBody = result.body;
   let conclusion = htmlIssueConclusion(provider, source, pageBody);
-  if (conclusion.kind === 'limited' && source.render === true) {
+  if ((conclusion.kind === 'limited' || (conclusion.kind === 'issue' && isGenericIncidentTitle(conclusion.title))) && source.render === true) {
     const rendered = renderPublicPage(source);
     logs.push(rendered.log);
     if (rendered.ok) {

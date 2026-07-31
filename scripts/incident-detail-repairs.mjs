@@ -15,6 +15,7 @@ export const incidentDetailOverrides = {
     mode: 'status-html',
     url: 'https://www.dockerstatus.com/',
     sourceName: 'Docker public systems status page',
+    render: true,
     regionScope: 'us'
   },
   'cisco-umbrella': {

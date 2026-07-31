@@ -455,5 +455,35 @@ test('N-able parser produces bounded records with service and timestamps', () =>
 test('repaired provider sources use official operational dashboards', () => {
   assert.equal(resolvePublicSource({ id: 'n-able', url: 'https://status.n-able.com/api/v2/summary.json', sourceType: 'statuspage' }).url, 'https://uptime.n-able.com/');
   assert.equal(resolvePublicSource({ id: 'cisco-umbrella', url: 'https://status.umbrella.com/api/v2/summary.json', sourceType: 'statuspage' }).url, 'https://status.sse.cisco.com/');
-  assert.equal(resolvePublicSource({ id: 'docker', url: 'https://status.docker.com/api/v2/summary.json', sourceType: 'statuspage' }).url, 'https://www.dockerstatus.com/');
+  const dockerSource = resolvePublicSource({ id: 'docker', url: 'https://status.docker.com/api/v2/summary.json', sourceType: 'statuspage' });
+  assert.equal(dockerSource.url, 'https://www.dockerstatus.com/');
+  assert.equal(dockerSource.render, true);
+});
+
+
+test('N-able and Cove share one public uptime page request without mixing incidents', async () => {
+  const fixture = `<main>Active Incidents
+    Active Incident ID: 301 Start: Jul 31, 2026 15:00:00 UTC End: N/A Severity: Minor Outage Status: Investigating
+    N-able N-central (All Regions) Customers may see delayed policy updates.
+    Services Impacted N-central (All Regions) Timeline Update Jul 31, 2026 16:00:00 UTC Mitigation is in progress.
+    Active Incident ID: 302 Start: Jul 31, 2026 15:30:00 UTC End: N/A Severity: Minor Outage Status: Identified
+    N-able Cove Data Protection Americas Customers may see delayed backup jobs.
+    Services Impacted Cove Data Protection (Americas) Timeline Update Jul 31, 2026 16:10:00 UTC Mitigation is in progress.
+    Resolved Incidents</main>`;
+  let fetches = 0;
+  globalThis.fetch = async () => {
+    fetches += 1;
+    return response(fixture);
+  };
+  const [nable, cove] = await Promise.all([
+    loadPublicProvider({ id: 'n-able', name: 'N-able', category: 'MSP Platforms', priority: 86, sourceType: 'statuspage', url: 'https://status.n-able.com/api/v2/summary.json' }),
+    loadPublicProvider({ id: 'cove-data-protection', name: 'Cove Data Protection', category: 'Backup', priority: 78, sourceType: 'statuspage', url: 'https://status.covedataprotection.com/api/v2/summary.json' })
+  ]);
+  assert.equal(fetches, 1);
+  assert.equal(nable.incidents.length, 1);
+  assert.match(nable.incidents[0].title, /N-central/i);
+  assert.doesNotMatch(nable.incidents[0].note, /Cove Data Protection/i);
+  assert.equal(cove.incidents.length, 1);
+  assert.match(cove.incidents[0].title, /Cove Data Protection Americas/i);
+  assert.doesNotMatch(cove.incidents[0].note, /N-central/i);
 });
