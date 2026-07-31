@@ -131,7 +131,7 @@ test('verified public source overrides use free first-party pages', () => {
   for (const id of ['ringcentral', 'sophos', 'bitdefender-gravityzone', 'bitwarden', 'cove-data-protection', 'crashplan', 'fortinet', 'keeper', 'malwarebytes', 'superops', 'syncro', 'kaseya', 'okta', 'salesforce', 'zendesk', 'backblaze']) {
     const source = additionalPublicOverrides[id];
     assert.ok(source);
-    assert.equal(source.mode, 'status-html');
+    assert.equal(source.mode, id === 'superops' ? 'betterstack-json' : 'status-html');
     assert.match(source.url, /^https:\/\//);
   }
   assert.equal(additionalPublicOverrides.kaseya.regionScope, 'us');

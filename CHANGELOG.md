@@ -4,6 +4,22 @@ All notable changes to the Service Heads-Up Console are recorded here.
 
 The project uses semantic versioning. Dates are shown in ISO format. The newest released version must match `package.json`.
 
+## [2.4.0] - 2026-07-31
+
+### Added
+
+- Added first-party structured adapters for Atlassian Statuspage JSON, Better Stack public status JSON, and rendered Status.io pages.
+- Added lifecycle, affected-component, official incident-link, first-detected, and latest-update extraction for structured incident records.
+- Added source-adapter labels in provider diagnostics and incident-stage labels on incident cards.
+
+### Changed
+
+- Moved selected existing providers from broad HTML interpretation to their official public Statuspage JSON summaries.
+- Moved SuperOps to its official public Better Stack JSON document.
+- Added component and location-aware Status.io parsing for ConnectWise and HaloPSA.
+- Kept scheduled maintenance, resolved incidents, editorial content, generic headings, and explicitly non-US-only incidents out of active incident output.
+- Made malformed or non-operational structured responses without a usable incident record fail closed.
+
 ## [2.3.9] - 2026-07-31
 
 ### Fixed

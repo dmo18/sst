@@ -571,8 +571,10 @@ function structuredIncidents(provider, source, conclusion) {
 
 const publicHtmlRequestCache = new Map();
 
-async function fetchPublicHtml(requestProvider) {
-  const accept = 'text/html, text/plain, */*';
+async function fetchPublicHtml(requestProvider, source) {
+  const accept = /-json$/i.test(source.mode)
+    ? 'application/json, text/json, */*'
+    : 'text/html, text/plain, */*';
   const key = `${requestProvider.url}|${accept}`;
   if (!publicHtmlRequestCache.has(key)) {
     publicHtmlRequestCache.set(key, fetchSource(requestProvider, accept));
@@ -582,7 +584,7 @@ async function fetchPublicHtml(requestProvider) {
 
 async function parsePublicHtml(provider, source) {
   const requestProvider = { ...provider, url: source.url, sourceType: source.mode };
-  const result = await fetchPublicHtml(requestProvider);
+  const result = await fetchPublicHtml(requestProvider, source);
   const logs = [...(result.logs || [result.log])];
   if (!result.ok) {
     const feedResult = await tryFeedCandidates(provider, source, '', logs);
@@ -599,7 +601,7 @@ async function parsePublicHtml(provider, source) {
       conclusion = htmlIssueConclusion(provider, source, pageBody);
     }
   }
-  const feedResult = await tryFeedCandidates(provider, source, pageBody, logs);
+  const feedResult = /-json$/i.test(source.mode) ? null : await tryFeedCandidates(provider, source, pageBody, logs);
   if (feedResult?.incidents?.length) return feedResult;
   if (conclusion.kind === 'issues') {
     const incidents = structuredIncidents(provider, source, conclusion);

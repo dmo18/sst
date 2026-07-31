@@ -88,6 +88,16 @@ function safeJson(value) {
   }
 }
 
+function toIso(value) {
+  const normalized = clean(value)
+    .replace(/(\d)(AM|PM)\b/i, '$1 $2')
+    .replace(/\bEDT\b/i, 'GMT-0400')
+    .replace(/\bEST\b/i, 'GMT-0500')
+    .replace(/\bUTC\b/i, 'GMT+0000');
+  const timestamp = Date.parse(normalized);
+  return Number.isFinite(timestamp) ? new Date(timestamp).toISOString() : '';
+}
+
 function statuspageSource(url, name, regionScope = 'us') {
   const pageUrl = url.endsWith(STATUSPAGE_SUFFIX) ? `${url.slice(0, -STATUSPAGE_SUFFIX.length)}/` : url;
   return {
@@ -144,8 +154,16 @@ const statuspageCandidates = {
   docusign: ['https://status.docusign.com/api/v2/summary.json', 'DocuSign']
 };
 
+const enabledStatuspageIds = new Set([
+  'cloudflare', 'openai', 'anthropic', 'sentinelone', 'dnsfilter', 'ninjaone',
+  'meraki', 'digitalocean', 'zoom', '1password', 'duo', 'huntress', 'twilio',
+  'discord', 'notion'
+]);
+
 export const structuredSourceOverrides = Object.fromEntries(
-  Object.entries(statuspageCandidates).map(([id, [url, name]]) => [id, statuspageSource(url, name)])
+  Object.entries(statuspageCandidates)
+    .filter(([id]) => enabledStatuspageIds.has(id))
+    .map(([id, [url, name]]) => [id, statuspageSource(url, name)])
 );
 
 structuredSourceOverrides.superops = {
@@ -297,11 +315,13 @@ const TITLE_NOISE = /^(?:status|active incident|active incidents?|incident statu
 
 export function parseStatusioPage(value, provider = {}, source = {}) {
   const lines = textLines(value);
-  const historyIndex = lines.findIndex(line => /^(?:scheduled maintenance|past incidents?|incident history)$/i.test(line));
-  const current = historyIndex >= 0 ? lines.slice(0, historyIndex) : lines.slice(0, 1200);
-  const activeMarker = current.findIndex(line => /^active incident$/i.test(line));
+  const pageBoundary = lines.findIndex(line => /^(?:scheduled maintenance|past incidents?|incident history)$/i.test(line));
+  const current = pageBoundary >= 0 ? lines.slice(0, pageBoundary) : lines.slice(0, 1200);
+  const markers = current
+    .map((line, index) => /^active incident$/i.test(line) ? index : -1)
+    .filter(index => index >= 0);
 
-  if (activeMarker < 0) {
+  if (!markers.length) {
     if (current.some(line => /all systems operational|0 active incidents?/i.test(line))) {
       return { kind: 'healthy', status: `${provider.name || 'Provider'} reports all systems operational` };
     }
@@ -309,55 +329,62 @@ export function parseStatusioPage(value, provider = {}, source = {}) {
   }
 
   const incidents = [];
-  for (let index = activeMarker + 1; index < current.length; index += 1) {
-    const statusMatch = STATUS_LINE.exec(current[index]);
-    if (!statusMatch || /^(?:resolved|completed)$/i.test(statusMatch[1])) continue;
+  let foundSpecificIncident = false;
+  let foundNonUsIncident = false;
+
+  for (let markerIndex = 0; markerIndex < markers.length; markerIndex += 1) {
+    const segment = current.slice(markers[markerIndex] + 1, markers[markerIndex + 1] ?? current.length);
+    const severityIndex = segment.findIndex(line => /^(?:degraded performance|partial outage|major outage)$/i.test(line));
+    const lifecycleIndex = segment.findIndex(line => /^(?:investigating|identified|monitoring|update|in progress)$/i.test(line));
+    const anchor = severityIndex >= 0 ? severityIndex : lifecycleIndex;
+    if (anchor < 0) continue;
 
     let title = '';
-    for (let cursor = index - 1; cursor > activeMarker; cursor -= 1) {
-      const candidate = clean(current[cursor]);
-      if (!candidate || TITLE_NOISE.test(candidate) || STATUS_LINE.test(candidate) || DATE_LINE.test(candidate)) continue;
+    for (let index = anchor - 1; index >= 0; index -= 1) {
+      const candidate = clean(segment[index]);
+      if (!candidate || TITLE_NOISE.test(candidate) || DATE_LINE.test(candidate) || STATUS_LINE.test(candidate)) continue;
       if (/^(?:operational|degraded performance|partial outage|major outage)$/i.test(candidate)) continue;
       title = candidate;
       break;
     }
     if (!title || isGenericTitle(title)) continue;
+    foundSpecificIncident = true;
 
-    const details = [];
-    const components = [];
-    const locations = [];
-    let mode = 'detail';
-    let latestUpdate = '';
-    for (let cursor = index + 1; cursor < Math.min(current.length, index + 28); cursor += 1) {
-      const line = clean(current[cursor]);
-      if (!line) continue;
-      if (STATUS_LINE.test(line) || /^active incident$/i.test(line)) break;
-      if (/^components?$/i.test(line)) { mode = 'components'; continue; }
-      if (/^locations?$/i.test(line)) { mode = 'locations'; continue; }
-      if (DATE_LINE.test(line)) { latestUpdate ||= new Date(line).toISOString(); continue; }
-      if (mode === 'components') components.push(line);
-      else if (mode === 'locations') locations.push(line);
-      else if (!TITLE_NOISE.test(line)) details.push(line);
+    const componentsIndex = segment.findIndex(line => /^components?$/i.test(line));
+    const locationsIndex = segment.findIndex(line => /^locations?$/i.test(line));
+    const firstDateIndex = segment.findIndex(line => DATE_LINE.test(line));
+    const componentEnd = [locationsIndex, firstDateIndex, lifecycleIndex].filter(index => index > componentsIndex).sort((a, b) => a - b)[0] ?? segment.length;
+    const locationEnd = [firstDateIndex, lifecycleIndex].filter(index => index > locationsIndex).sort((a, b) => a - b)[0] ?? segment.length;
+    const components = componentsIndex >= 0 ? segment.slice(componentsIndex + 1, componentEnd).filter(line => !TITLE_NOISE.test(line)) : [];
+    const locations = locationsIndex >= 0 ? segment.slice(locationsIndex + 1, locationEnd).filter(line => !TITLE_NOISE.test(line)) : [];
+    const dates = segment.filter(line => DATE_LINE.test(line)).map(toIso).filter(Boolean).sort();
+    const lifecycle = lifecycleIndex >= 0 ? clean(segment[lifecycleIndex]) : clean(segment[severityIndex] || 'active');
+    const noteStart = lifecycleIndex >= 0 ? lifecycleIndex + 1 : Math.max(severityIndex + 1, firstDateIndex + 1);
+    const note = clean(segment.slice(noteStart).filter(line => !DATE_LINE.test(line) && !TITLE_NOISE.test(line)).join(' ')).slice(0, 900);
+    const affectedService = uniqueNames([...components, ...locations]);
+    if (isEditorial(title, note) || isPlannedOnly(title, note, lifecycle)) continue;
+    if (!isUsRelevant(title, `${note} ${locations.join(' ')}`, source.regionScope)) {
+      foundNonUsIncident = true;
+      continue;
     }
 
-    const affectedService = uniqueNames([...components, ...locations]);
-    const note = clean([statusMatch[2], ...details].filter(Boolean).join(' ')).slice(0, 900);
-    if (isEditorial(title, note) || isPlannedOnly(title, note, statusMatch[1])) continue;
-    if (!isUsRelevant(title, `${note} ${locations.join(' ')}`, source.regionScope)) continue;
     incidents.push({
       title,
-      note: note || `${statusMatch[1]} update from the official status page.`,
-      status: statusMatch[1].toLowerCase(),
-      firstDetected: latestUpdate,
-      latestUpdate,
+      note: note || `${lifecycle} update from the official status page.`,
+      status: lifecycle.toLowerCase(),
+      firstDetected: dates[0] || '',
+      latestUpdate: dates.at(-1) || dates[0] || '',
       affectedService,
-      color: colorFor(`${statusMatch[1]} ${title} ${note}`),
+      color: colorFor(`${segment[severityIndex] || ''} ${lifecycle} ${title} ${note}`),
       url: source.url
     });
   }
 
   if (incidents.length) return { kind: 'issues', incidents };
-  return { kind: 'healthy', status: `${provider.name || 'Provider'} reports no active US-relevant incidents` };
+  if (foundSpecificIncident && foundNonUsIncident) {
+    return { kind: 'healthy', status: `${provider.name || 'Provider'} reports no active US-relevant incidents` };
+  }
+  return null;
 }
 
 export function structuredSourceConclusion(provider, value, source = {}) {
