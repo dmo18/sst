@@ -50,7 +50,7 @@ test('Better Stack maintenance remains separate while operational status stays h
 
   assert.equal(conclusion.kind, 'healthy');
   assert.equal(conclusion.maintenance.length, 1);
-  assert.equal(conclusion.maintenance[0].status, 'maintenance');
+  assert.equal(conclusion.maintenance[0].status, 'scheduled');
   assert.equal(conclusion.maintenance[0].affectedService, 'US Portal');
 });
 
