@@ -4,6 +4,21 @@ All notable changes to the Service Heads-Up Console are recorded here.
 
 The project uses semantic versioning. Dates are shown in ISO format. The newest released version must match `package.json`.
 
+## [2.5.1] - 2026-07-31
+
+### Fixed
+
+- Fixed recurring same-title maintenance windows producing duplicate IDs that caused the deployed browser validator to reject the entire payload.
+- Added deterministic maintenance identity based on the vendor ID when available, otherwise the normalized title, maintenance window, and official source URL.
+- Added global maintenance deduplication that merges repeated updates into one bounded timeline.
+- Added maintenance validation parity to the server-side generator so duplicate IDs, invalid states, timestamps, providers, or URLs fail before publication.
+
+### Deployment safety
+
+- Added the exact browser payload validator as a mandatory pre-deployment check.
+- Added deployed HTML, JavaScript, CSS, and status-payload smoke checks after GitHub Pages publication.
+- Added a headless-browser render assertion before the deployment success marker is published.
+
 ## [2.5.0] - 2026-07-31
 
 ### Added

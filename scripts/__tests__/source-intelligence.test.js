@@ -18,7 +18,7 @@ test('schema fingerprints track shape rather than JSON key order or values', () 
 
 test('source evidence separates transport quality from service health', () => {
   assert.deepEqual(sourceEvidence('statuspage-json', 'available', true), {
-    evidence_tier: 'structured', source_confidence: 'high', parser_version: '2.5.0'
+    evidence_tier: 'structured', source_confidence: 'high', parser_version: '2.5.1'
   });
   assert.equal(sourceEvidence('feed', 'available', true).source_confidence, 'medium');
   assert.equal(sourceEvidence('status-html', 'limited', false).source_confidence, 'none');

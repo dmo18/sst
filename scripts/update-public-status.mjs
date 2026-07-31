@@ -159,6 +159,35 @@ function normalizeIncidentTitle(value) {
     .trim();
 }
 
+function stableHash(value) {
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0).toString(16).padStart(8, '0');
+}
+
+function canonicalMaintenanceTime(value) {
+  const timestamp = Date.parse(value || '');
+  return Number.isFinite(timestamp) ? new Date(timestamp).toISOString() : cleanText(value || '');
+}
+
+function maintenanceToken(source, item, title) {
+  const vendorId = cleanText(item.id || '');
+  if (vendorId) return vendorId;
+  const normalizedTitle = normalizeIncidentTitle(title) || cleanText(title).toLowerCase() || 'maintenance';
+  const sourceUrl = safeIncidentUrl(item.url || source.pageUrl || source.url, source.pageUrl || source.url);
+  const signature = [
+    normalizedTitle,
+    canonicalMaintenanceTime(item.startsAt || item.starts_at || item.time),
+    canonicalMaintenanceTime(item.endsAt || item.ends_at),
+    sourceUrl
+  ].join('|');
+  const slug = normalizedTitle.replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 72) || 'maintenance';
+  return `${slug}-${stableHash(signature)}`;
+}
+
 function shortTime(value) {
   if (!value) return '';
   const date = new Date(value);
@@ -225,12 +254,12 @@ function makeIncident(provider, source, item) {
   };
 }
 
-function makeMaintenance(provider, source, item) {
+export function makeMaintenance(provider, source, item) {
   const title = cleanText(item.title || 'Scheduled maintenance');
-  const vendorId = cleanText(item.id || '');
+  const token = maintenanceToken(source, item, title);
   const status = normalizeMaintenanceState(item.status || 'scheduled');
   return {
-    id: `${provider.id}:${vendorId || normalizeIncidentTitle(title) || title.toLowerCase()}:maintenance`,
+    id: `${provider.id}:${token}:maintenance`,
     providerId: provider.id,
     provider: provider.name,
     category: provider.category,
@@ -248,6 +277,33 @@ function makeMaintenance(provider, source, item) {
     attention: status === 'in_progress' ? 'action' : 'watch',
     updates: boundedTimeline(item.updates)
   };
+}
+
+export function dedupeMaintenanceRecords(items) {
+  const records = new Map();
+  for (const item of Array.isArray(items) ? items : []) {
+    if (!item?.id) continue;
+    const current = records.get(item.id);
+    if (!current) {
+      records.set(item.id, { ...item, updates: boundedTimeline(item.updates) });
+      continue;
+    }
+    const currentTime = Date.parse(current.latest_update || current.announced_at || '') || 0;
+    const itemTime = Date.parse(item.latest_update || item.announced_at || '') || 0;
+    const newer = itemTime >= currentTime ? item : current;
+    const older = itemTime >= currentTime ? current : item;
+    records.set(item.id, {
+      ...older,
+      ...newer,
+      starts_at: newer.starts_at || older.starts_at || '',
+      ends_at: newer.ends_at || older.ends_at || '',
+      announced_at: newer.announced_at || older.announced_at || '',
+      latest_update: newer.latest_update || older.latest_update || '',
+      affected_service: newer.affected_service || older.affected_service || '',
+      updates: boundedTimeline([...(current.updates || []), ...(item.updates || [])])
+    });
+  }
+  return [...records.values()];
 }
 
 function providerStatus(provider, source, status, color, ok, message, logs, incidents = [], maintenance = [], sourceState, extras = {}) {
@@ -693,9 +749,10 @@ export async function generatePublicStatus() {
   const incidents = results.flatMap(result => result.incidents || [])
     .filter(activeIncident)
     .sort((a, b) => (severityRank[b.color] - severityRank[a.color]) || ((b.priority || 0) - (a.priority || 0)));
-  const maintenance = results.flatMap(result => result.maintenance || [])
-    .filter(item => maintenanceIsRelevant(item))
-    .sort((a, b) => Number(b.status === 'in_progress') - Number(a.status === 'in_progress') || (Date.parse(a.starts_at || '') || Number.MAX_SAFE_INTEGER) - (Date.parse(b.starts_at || '') || Number.MAX_SAFE_INTEGER));
+  const maintenance = dedupeMaintenanceRecords(
+    results.flatMap(result => result.maintenance || [])
+      .filter(item => maintenanceIsRelevant(item))
+  ).sort((a, b) => Number(b.status === 'in_progress') - Number(a.status === 'in_progress') || (Date.parse(a.starts_at || '') || Number.MAX_SAFE_INTEGER) - (Date.parse(b.starts_at || '') || Number.MAX_SAFE_INTEGER));
   const generatedAt = new Date().toISOString();
   const rawProviders = results.map(({ incidents: _incidents, maintenance: _maintenance, ...provider }) => provider);
   const providers = enrichProviderHistory(rawProviders, previous, incidents, generatedAt)
