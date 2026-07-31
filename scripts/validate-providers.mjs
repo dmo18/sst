@@ -3,7 +3,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 const root = fileURLToPath(new URL('..', import.meta.url));
 const catalogPath = path.join(root, 'config', 'providers.json');
-const expectedProviderCount = 79;
+const consolidationPath = path.join(root, 'config', 'provider-consolidation.json');
+const expectedRawProviderCount = 79;
+const expectedActiveProviderCount = 78;
 const allowedSourceTypes = new Set([
     'statuspage',
     'rss',
@@ -28,6 +30,7 @@ function fail(message, context) {
     return `${message}${suffix}`;
 }
 const catalog = JSON.parse(fs.readFileSync(catalogPath, 'utf8'));
+const consolidation = JSON.parse(fs.readFileSync(consolidationPath, 'utf8'));
 const errors = [];
 const ids = new Set();
 const urls = new Set();
@@ -37,8 +40,8 @@ if (!Array.isArray(catalog)) {
     errors.push('Provider catalog must be an array.');
 }
 else {
-    if (catalog.length !== expectedProviderCount) {
-        errors.push(`Expected ${expectedProviderCount} providers, found ${catalog.length}.`);
+    if (catalog.length !== expectedRawProviderCount) {
+        errors.push(`Expected ${expectedRawProviderCount} raw providers, found ${catalog.length}.`);
     }
     for (const [index, provider] of catalog.entries()) {
         const context = provider?.id || provider?.name || `index ${index}`;
@@ -94,6 +97,34 @@ else {
             categories.add(provider.category);
     }
 }
+const excludedProviderIds = consolidation?.excludedProviderIds;
+const providerOverrides = consolidation?.providerOverrides;
+if (!Array.isArray(excludedProviderIds) || excludedProviderIds.some(id => typeof id !== 'string' || !id.trim())) {
+    errors.push('provider-consolidation excludedProviderIds must be an array of provider ids.');
+}
+if (!providerOverrides || typeof providerOverrides !== 'object' || Array.isArray(providerOverrides)) {
+    errors.push('provider-consolidation providerOverrides must be an object.');
+}
+const excluded = new Set(Array.isArray(excludedProviderIds) ? excludedProviderIds : []);
+for (const id of excluded) {
+    if (!ids.has(id)) errors.push(fail('Excluded provider id is not in the raw catalog.', id));
+}
+for (const id of Object.keys(providerOverrides || {})) {
+    if (!ids.has(id)) errors.push(fail('Provider override id is not in the raw catalog.', id));
+    if (excluded.has(id)) errors.push(fail('Provider cannot be both excluded and overridden.', id));
+}
+const activeCatalog = Array.isArray(catalog)
+    ? catalog.filter(provider => !excluded.has(provider.id)).map(provider => ({ ...provider, ...(providerOverrides?.[provider.id] || {}) }))
+    : [];
+if (activeCatalog.length !== expectedActiveProviderCount) {
+    errors.push(`Expected ${expectedActiveProviderCount} active providers, found ${activeCatalog.length}.`);
+}
+const activeIds = new Set(activeCatalog.map(provider => provider.id));
+if (activeIds.has('datto')) errors.push('Datto must be absorbed into Kaseya, not emitted as a separate active provider.');
+const kaseya = activeCatalog.find(provider => provider.id === 'kaseya');
+if (!kaseya || !Array.isArray(kaseya.services) || !kaseya.services.includes('Autotask PSA')) {
+    errors.push('Kaseya must include Autotask PSA in its consolidated services.');
+}
 for (const [url, providers] of sharedUrls)
     if (providers.length > 1)
         console.warn(`Shared official source: ${providers.join(', ')} -> ${url}`);
@@ -103,4 +134,4 @@ if (errors.length) {
         console.error(`- ${error}`);
     process.exit(1);
 }
-console.log(`Validated ${catalog.length} providers across ${categories.size} categories and ${urls.size} unique URLs.`);
+console.log(`Validated ${activeCatalog.length} active providers from ${catalog.length} raw entries across ${categories.size} categories and ${urls.size} unique URLs.`);
