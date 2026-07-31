@@ -11,6 +11,7 @@ The project uses semantic versioning. Dates are shown in ISO format. The newest 
 - Added first-party structured adapters for Atlassian Statuspage JSON, Better Stack public status JSON, and rendered Status.io pages.
 - Added lifecycle, affected-component, official incident-link, first-detected, and latest-update extraction for structured incident records.
 - Added source-adapter labels in provider diagnostics and incident-stage labels on incident cards.
+- Enabled verified Statuspage JSON handling for Cloudflare, OpenAI, Anthropic, SentinelOne, DNSFilter, NinjaOne, Cisco Meraki, DigitalOcean, Zoom, 1Password, Duo, Huntress, Twilio, Discord, and Notion.
 
 ### Changed
 
