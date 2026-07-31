@@ -61,16 +61,16 @@ export function normalizeProviderStatus(provider, incidents, now = new Date().to
   const originalMessage = compact(provider.message);
   const originalStatus = compact(provider.status);
   const reason = originalMessage || originalStatus || 'The official source did not return readable status data.';
-  const message = `The official source could not be machine-read during this build. A valid fail-closed limited status record was published instead. This is not operational confirmation and is not evidence of a vendor outage. Retrieval detail: ${reason}`;
+  const message = `The official source could not be machine-read during this build. A fail-closed limited record was published instead. This record is not live coverage, is not operational confirmation, and is not evidence of a vendor outage. Retrieval detail: ${reason}`;
   const fallbackLog = {
     timestamp: now,
     completed_at: now,
     duration_ms: 0,
     url: provider.source,
     source_type: 'valid-status-fallback',
-    ok: true,
-    status: 'valid limited fallback',
-    message: 'Published an explicit limited status record after the official source failed to provide readable current data.'
+    ok: false,
+    status: 'limited fallback',
+    message: 'Published an explicit limited record after the official source failed to provide readable current data.'
   };
 
   return {
@@ -81,7 +81,7 @@ export function normalizeProviderStatus(provider, incidents, now = new Date().to
     source_state: 'limited',
     attention: hasActiveIncident ? provider.attention : 'watch',
     message,
-    ok: true,
+    ok: false,
     download_log: [...(Array.isArray(provider.download_log) ? provider.download_log : []), fallbackLog],
     status_data_valid: true,
     status_data_basis: 'limited-fallback'
@@ -108,6 +108,13 @@ export function normalizeStatusPayload(payload, previous = null, now = payload?.
   const validStatusPercent = normalizedProviders.length
     ? Math.round(validStatusCount / normalizedProviders.length * 100)
     : 0;
+  const liveSourceCount = normalizedProviders.filter(provider => provider.source_state === 'available' && provider.ok === true).length;
+  const liveSourceCoveragePercent = normalizedProviders.length
+    ? Math.round(liveSourceCount / normalizedProviders.length * 100)
+    : 0;
+  const fallbackCount = normalizedProviders.filter(provider => provider.status_data_basis === 'limited-fallback').length;
+  const limitedCount = normalizedProviders.filter(provider => provider.source_state === 'limited').length;
+  const staleCount = normalizedProviders.filter(provider => provider.source_state === 'stale').length;
   const summarized = summarizeProviders(normalizedProviders, payload.incidents);
   const validatedBase = {
     ...payload,
@@ -126,8 +133,12 @@ export function normalizeStatusPayload(payload, previous = null, now = payload?.
     ...validatedBase,
     summary: {
       ...validatedBase.summary,
-      live_source_coverage_percent: summarized.coverage_percent,
-      coverage_percent: validStatusPercent
+      coverage_percent: liveSourceCoveragePercent,
+      live_source_coverage_percent: liveSourceCoveragePercent,
+      live_source_count: liveSourceCount,
+      limited_source_count: limitedCount,
+      stale_source_count: staleCount,
+      fallback_source_count: fallbackCount
     }
   };
   const changes = compareSnapshots(validPrevious, base, now);
@@ -136,10 +147,11 @@ export function normalizeStatusPayload(payload, previous = null, now = payload?.
     changes,
     history: [...changes, ...(validPrevious?.history || payload.history || [])].slice(0, 100),
     status_data_policy: {
-      requirement: 'Every provider must publish valid status data.',
+      requirement: 'Every provider must publish an explicit status record, but only successfully captured current official sources count as coverage.',
       valid_source_states: [...validSourceStates],
       normalized_provider_count: normalizedCount,
-      coverage_definition: 'coverage_percent is valid provider status coverage; live_source_coverage_percent is machine-readable live official source coverage.'
+      coverage_definition: 'coverage_percent and live_source_coverage_percent are the percentage of providers with a successfully captured current official source. Limited, stale, and fallback records do not count as coverage.',
+      record_validity_definition: 'valid_status_percent measures structurally valid records and must not be presented as live provider coverage.'
     }
   };
 
@@ -150,8 +162,8 @@ export function normalizeStatusPayload(payload, previous = null, now = payload?.
   if (normalized.summary.invalid_status_count !== 0 || normalized.summary.valid_status_count !== normalized.providers.length) {
     throw new Error('Status data summary did not reconcile to zero invalid providers.');
   }
-  if (normalized.summary.coverage_percent !== 100) {
-    throw new Error(`Provider coverage must be 100, received ${normalized.summary.coverage_percent}.`);
+  if (normalized.summary.coverage_percent !== normalized.summary.live_source_coverage_percent) {
+    throw new Error('Coverage metrics must reconcile to live official source coverage.');
   }
 
   return normalized;
@@ -174,5 +186,5 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const statusPath = process.argv[2] ? path.resolve(process.argv[2]) : defaultStatusPath;
   const previousPath = process.argv[3] ? path.resolve(process.argv[3]) : defaultPreviousPath;
   const payload = enforceValidStatusFile(statusPath, previousPath);
-  console.log(`Validated status data for ${payload.providers.length} providers: ${payload.summary.invalid_status_count} invalid, ${payload.summary.valid_status_count} valid, ${payload.summary.coverage_percent}% provider coverage, ${payload.summary.live_source_coverage_percent}% live source coverage.`);
+  console.log(`Validated ${payload.summary.valid_status_count}/${payload.providers.length} status records; ${payload.summary.live_source_count}/${payload.providers.length} live official sources (${payload.summary.live_source_coverage_percent}% coverage); ${payload.summary.fallback_source_count} fallbacks.`);
 }
