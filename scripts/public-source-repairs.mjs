@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import { spawnSync } from 'node:child_process';
+import { incidentDetailOverrides, providerIncidentConclusion } from './incident-detail-repairs.mjs';
 
 export const additionalPublicOverrides = {
   ringcentral: {
@@ -106,6 +107,8 @@ export const additionalPublicOverrides = {
     render: true
   }
 };
+
+Object.assign(additionalPublicOverrides, incidentDetailOverrides);
 
 function cleanRenderedText(value) {
   return String(value || '')
@@ -236,6 +239,8 @@ function oktaConclusion(html) {
 export function providerSpecificConclusion(provider, html) {
   const text = cleanRenderedText(html);
   if (!text) return null;
+  const detailed = providerIncidentConclusion(provider, html);
+  if (detailed) return detailed;
 
   switch (provider.id) {
     case 'ringcentral': {

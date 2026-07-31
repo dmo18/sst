@@ -16,6 +16,7 @@ import {
   providerSpecificConclusion,
   renderPublicPage
 } from './public-source-repairs.mjs';
+import { isEditorialIncidentEntry, isGenericIncidentTitle, isIncidentUsRelevant } from './incident-detail-repairs.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const catalogPath = path.join(root, 'config', 'providers.json');
@@ -329,7 +330,7 @@ export function parseFeedEntries(xml) {
 }
 
 function issueText(value) {
-  return /\b(outage|unavailable|down|degrad(?:ed|ation|ing)?|disruption|service impact|incident|intermittent|latency|elevated errors?|fail(?:ure|ures|ing|ed)?|partial outage|major outage|critical|investigat(?:e|ed|ing|ion)?|identified|monitoring)\b/i.test(value);
+  return /\b(outage|unavailable|down|degrad(?:ed|ation|ing)?|disruption|service impact|incident|intermittent|latency|elevated errors?|fail(?:ure|ures|ing|ed)?|partial outage|major outage|critical|investigat(?:e|ed|ing)?|identified|monitoring)\b/i.test(value);
 }
 
 function resolvedText(value) {
@@ -362,7 +363,7 @@ function itemColor(value) {
 export function activeFeedEntries(entries, maxAgeHours = 168, now = Date.now()) {
   return entries.filter(item => {
     const text = `${item.title} ${item.note} ${item.status}`;
-    if (!issueText(text) || resolvedText(text) || maintenanceOnly(text)) return false;
+    if (isEditorialIncidentEntry(item) || isGenericIncidentTitle(item.title) || !issueText(text) || resolvedText(text) || maintenanceOnly(text)) return false;
     const ms = Date.parse(item.time || '');
     if (!Number.isFinite(ms)) return true;
     const age = now - ms;
@@ -372,7 +373,7 @@ export function activeFeedEntries(entries, maxAgeHours = 168, now = Date.now()) 
 
 export function scopeFeedEntries(entries, source = {}) {
   if (source.regionScope === 'global') return entries;
-  return entries.filter(item => isUsRelevantIncident(`${item.title || ''} ${item.note || ''} ${item.status || ''}`));
+  return entries.filter(item => isIncidentUsRelevant(item));
 }
 
 export function dedupeIncidentEntries(entries) {
@@ -568,10 +569,21 @@ function structuredIncidents(provider, source, conclusion) {
   ));
 }
 
+const publicHtmlRequestCache = new Map();
+
+async function fetchPublicHtml(requestProvider) {
+  const accept = 'text/html, text/plain, */*';
+  const key = `${requestProvider.url}|${accept}`;
+  if (!publicHtmlRequestCache.has(key)) {
+    publicHtmlRequestCache.set(key, fetchSource(requestProvider, accept));
+  }
+  return publicHtmlRequestCache.get(key);
+}
+
 async function parsePublicHtml(provider, source) {
   const requestProvider = { ...provider, url: source.url, sourceType: source.mode };
-  const result = await fetchSource(requestProvider, 'text/html, text/plain, */*');
-  const logs = result.logs || [result.log];
+  const result = await fetchPublicHtml(requestProvider);
+  const logs = [...(result.logs || [result.log])];
   if (!result.ok) {
     const feedResult = await tryFeedCandidates(provider, source, '', logs);
     if (feedResult?.source_state === 'available') return feedResult;
@@ -579,7 +591,7 @@ async function parsePublicHtml(provider, source) {
   }
   let pageBody = result.body;
   let conclusion = htmlIssueConclusion(provider, source, pageBody);
-  if (conclusion.kind === 'limited' && source.render === true) {
+  if ((conclusion.kind === 'limited' || (conclusion.kind === 'issue' && isGenericIncidentTitle(conclusion.title))) && source.render === true) {
     const rendered = renderPublicPage(source);
     logs.push(rendered.log);
     if (rendered.ok) {
@@ -597,6 +609,19 @@ async function parsePublicHtml(provider, source) {
     }
   }
   if (conclusion.kind === 'issue') {
+    if (isGenericIncidentTitle(conclusion.title)) {
+      return providerStatus(
+        provider,
+        source,
+        'Limited official source',
+        'blue',
+        false,
+        'The page reported an issue state without a specific incident title or details, so no incident was published.',
+        logs,
+        [],
+        'limited'
+      );
+    }
     const incident = makeIncident(
       provider,
       source,
