@@ -2,58 +2,19 @@ name: Pull request checks
 on:
   pull_request:
 permissions:
-  contents: write
+  contents: read
 jobs:
-  recover:
-    if: github.actor != 'github-actions[bot]'
+  test:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.head_ref }}
-          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
           cache: npm
-      - name: Correct patch driver
-        run: |
-          node --input-type=module <<'NODE'
-          import fs from 'node:fs';
-          const path = 'scripts/apply-hotfix-251.mjs';
-          let value = fs.readFileSync(path, 'utf8');
-          value = value.replace(
-            "  `${validator}export async function generateStatus()`,",
-            "  validator,"
-          );
-          const marker = "write('scripts/source-intelligence.mjs', intelligence);\n";
-          const addition = `${marker}\nlet sourceTest = read('scripts/__tests__/source-intelligence.test.js');\nsourceTest = replaceOnce(sourceTest, \"parser_version: '2.5.0'\", \"parser_version: '2.5.1'\", 'source-intelligence parser fixture');\nwrite('scripts/__tests__/source-intelligence.test.js', sourceTest);\n`;
-          if (!value.includes("source-intelligence parser fixture")) value = value.replace(marker, addition);
-          fs.writeFileSync(path, value);
-          NODE
-      - name: Apply hotfix
-        run: node scripts/apply-hotfix-251.mjs
-      - name: Synchronize release version and lockfile
-        run: npm version 2.5.1 --no-git-tag-version
       - run: npm ci
       - run: npm run validate-providers
       - run: npm test
       - run: npm run typecheck
       - run: npm run build:app
-      - name: Verify a live generated payload with both validators
-        run: |
-          npm run update-status
-          npm run validate-browser-payload
-          git restore public/status.json 2>/dev/null || true
-          rm -f public/previous-status.json
-      - name: Commit exact validated recovery code
-        run: |
-          rm -f scripts/apply-hotfix-251.mjs
-          git restore .github/workflows
-          git diff --check
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -m "Release 2.5.1 production payload recovery"
-          git push origin HEAD:${{ github.head_ref }}
