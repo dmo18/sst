@@ -42,7 +42,7 @@ const nonUsRegionPattern = /\b(?:emea|europe|european|eu(?:rope)?(?:[- ]?(?:cell
 function isUsRelevant(title, note = '', scope = '') {
   if (scope === 'global') return true;
   const heading = clean(title);
-  const details = clean(note).slice(0, 1400);
+  const details = clean(note).slice(0, 1800);
   if (globalRegionPattern.test(heading) || usRegionPattern.test(heading)) return true;
   if (nonUsRegionPattern.test(heading)) return false;
   if (globalRegionPattern.test(details) || usRegionPattern.test(details)) return true;
@@ -74,7 +74,7 @@ function colorFor(value, impact = '') {
   return /\b(?:critical|major|major outage|complete outage|service down|unavailable|downtime)\b/i.test(`${impact} ${value}`) ? 'red' : 'amber';
 }
 
-function uniqueNames(values, limit = 5) {
+function uniqueNames(values, limit = 8) {
   const names = [...new Set(values.map(clean).filter(Boolean))];
   if (names.length <= limit) return names.join(', ');
   return `${names.slice(0, limit).join(', ')} +${names.length - limit} more`;
@@ -96,6 +96,43 @@ function toIso(value) {
     .replace(/\bUTC\b/i, 'GMT+0000');
   const timestamp = Date.parse(normalized);
   return Number.isFinite(timestamp) ? new Date(timestamp).toISOString() : '';
+}
+
+function boundedUpdates(values) {
+  return (Array.isArray(values) ? [...values] : [])
+    .sort((a, b) => Date.parse(b?.updated_at || b?.created_at || b?.display_at || b?.published_at || '') - Date.parse(a?.updated_at || a?.created_at || a?.display_at || a?.published_at || ''))
+    .slice(0, 8)
+    .map(update => ({
+      status: clean(update?.status || ''),
+      note: clean(update?.body || update?.message || update?.description || ''),
+      at: update?.updated_at || update?.created_at || update?.display_at || update?.published_at || ''
+    }))
+    .filter(update => update.note || update.status || update.at);
+}
+
+function componentRecords(values) {
+  const records = [];
+  const seen = new Set();
+  for (const component of Array.isArray(values) ? values : []) {
+    const name = clean(component?.name || component?.display_name || component?.public_name || component?.id);
+    if (!name || seen.has(name.toLowerCase())) continue;
+    seen.add(name.toLowerCase());
+    records.push({
+      name,
+      status: clean(component?.status || component?.state || 'unknown').toLowerCase().replace(/\s+/g, '_'),
+      group: clean(component?.group_name || component?.group || component?.group_id || '')
+    });
+    if (records.length >= 36) break;
+  }
+  return records;
+}
+
+function maintenanceState(value) {
+  const status = clean(value).toLowerCase();
+  if (/in[_ -]?progress|ongoing|underway|started/.test(status)) return 'in_progress';
+  if (/completed|resolved|cancelled|canceled|finished/.test(status)) return 'completed';
+  if (/scheduled|planned|upcoming|not[_ -]?started|maintenance/.test(status)) return 'scheduled';
+  return 'unknown';
 }
 
 function statuspageSource(url, name, regionScope = 'us') {
@@ -154,16 +191,8 @@ const statuspageCandidates = {
   docusign: ['https://status.docusign.com/api/v2/summary.json', 'DocuSign']
 };
 
-const enabledStatuspageIds = new Set([
-  'cloudflare', 'openai', 'anthropic', 'sentinelone', 'dnsfilter', 'ninjaone',
-  'meraki', 'digitalocean', 'zoom', '1password', 'duo', 'huntress', 'twilio',
-  'discord', 'notion'
-]);
-
 export const structuredSourceOverrides = Object.fromEntries(
-  Object.entries(statuspageCandidates)
-    .filter(([id]) => enabledStatuspageIds.has(id))
-    .map(([id, [url, name]]) => [id, statuspageSource(url, name)])
+  Object.entries(statuspageCandidates).map(([id, [url, name]]) => [id, statuspageSource(url, name)])
 );
 
 structuredSourceOverrides.superops = {
@@ -195,28 +224,27 @@ export function parseStatuspageSummary(value, provider = {}, source = {}) {
   const json = safeJson(value);
   if (!json || typeof json !== 'object' || !Array.isArray(json.incidents) || !json.status) return null;
 
+  const components = componentRecords(json.components)
+    .filter(component => isUsRelevant(component.name, component.group || '', source.regionScope));
   const unresolved = json.incidents.filter(incident => !/^(?:resolved|completed|closed|postmortem|cancelled)$/i.test(String(incident?.status || '')));
   const incidents = [];
 
   for (const incident of unresolved) {
-    const updates = Array.isArray(incident.incident_updates) ? [...incident.incident_updates] : [];
-    updates.sort((a, b) => Date.parse(b?.updated_at || b?.created_at || '') - Date.parse(a?.updated_at || a?.created_at || ''));
+    const updates = boundedUpdates(incident.incident_updates);
     const latest = updates[0] || {};
     const title = clean(incident.name || incident.title);
-    const note = clean(latest.body || incident.body || incident.description).slice(0, 900);
+    const note = clean(latest.note || incident.body || incident.description).slice(0, 900);
     const status = clean(incident.status || latest.status || 'active');
-    const components = [
+    const affectedComponents = [
       ...(Array.isArray(incident.components) ? incident.components : []),
-      ...(Array.isArray(latest.affected_components) ? latest.affected_components : [])
+      ...(Array.isArray(incident?.incident_updates?.[0]?.affected_components) ? incident.incident_updates[0].affected_components : [])
     ];
-    const componentNames = components.map(component => component?.name || component?.display_name || component?.id);
-    const affectedService = uniqueNames(componentNames);
-    const regionText = `${affectedService} ${components.map(component => `${component?.group_id || ''} ${component?.description || ''}`).join(' ')}`;
+    const affectedService = uniqueNames(affectedComponents.map(component => component?.name || component?.display_name || component?.id));
+    const regionText = `${affectedService} ${affectedComponents.map(component => `${component?.group_id || ''} ${component?.description || ''}`).join(' ')}`;
     if (!title || isGenericTitle(title) || isEditorial(title, note) || isPlannedOnly(title, note, status)) continue;
     if (!isUsRelevant(title, `${note} ${regionText}`, source.regionScope)) continue;
-
-    const firstDetected = incident.started_at || incident.created_at || latest.created_at || '';
-    const latestUpdate = incident.updated_at || latest.updated_at || latest.created_at || firstDetected;
+    const firstDetected = incident.started_at || incident.created_at || updates.at(-1)?.at || '';
+    const latestUpdate = incident.updated_at || latest.at || firstDetected;
     incidents.push({
       id: String(incident.id || ''),
       title,
@@ -226,19 +254,43 @@ export function parseStatuspageSummary(value, provider = {}, source = {}) {
       latestUpdate,
       affectedService,
       color: colorFor(`${title} ${note}`, incident.impact),
-      url: incident.shortlink || incident.incident_url || incident.html_url || json.page?.url || source.pageUrl || source.url
+      url: incident.shortlink || incident.incident_url || incident.html_url || json.page?.url || source.pageUrl || source.url,
+      updates
     });
   }
 
-  if (incidents.length) return { kind: 'issues', incidents };
-  if (unresolved.length && incidents.length === 0) {
-    return { kind: 'healthy', status: `${provider.name || 'Provider'} reports no active US-relevant incidents` };
+  const maintenance = [];
+  for (const event of Array.isArray(json.scheduled_maintenances) ? json.scheduled_maintenances : []) {
+    const status = maintenanceState(event.status);
+    if (status === 'completed') continue;
+    const updates = boundedUpdates(event.incident_updates);
+    const latest = updates[0] || {};
+    const title = clean(event.name || event.title || 'Scheduled maintenance');
+    const note = clean(latest.note || event.body || event.description || 'The provider has scheduled maintenance.').slice(0, 900);
+    const affectedComponents = Array.isArray(event.components) ? event.components : [];
+    const affectedService = uniqueNames(affectedComponents.map(component => component?.name || component?.display_name || component?.id));
+    if (!title || isEditorial(title, note)) continue;
+    if (!isUsRelevant(title, `${note} ${affectedService}`, source.regionScope)) continue;
+    maintenance.push({
+      id: String(event.id || ''),
+      title,
+      note,
+      status,
+      startsAt: event.scheduled_for || event.starts_at || event.created_at || '',
+      endsAt: event.scheduled_until || event.ends_at || '',
+      announcedAt: event.created_at || updates.at(-1)?.at || '',
+      latestUpdate: event.updated_at || latest.at || event.created_at || '',
+      affectedService,
+      url: event.shortlink || event.incident_url || event.html_url || json.page?.url || source.pageUrl || source.url,
+      updates
+    });
   }
 
+  const extras = { maintenance, components };
+  if (incidents.length) return { kind: 'issues', incidents, ...extras };
+  if (unresolved.length) return { kind: 'healthy', status: `${provider.name || 'Provider'} reports no active US-relevant incidents`, ...extras };
   const indicator = String(json.status?.indicator || '').toLowerCase();
-  if (indicator === 'none') {
-    return { kind: 'healthy', status: clean(json.status?.description) || `${provider.name || 'Provider'} reports all systems operational` };
-  }
+  if (indicator === 'none') return { kind: 'healthy', status: clean(json.status?.description) || `${provider.name || 'Provider'} reports all systems operational`, ...extras };
   return null;
 }
 
@@ -252,39 +304,51 @@ export function parseBetterStackIndex(value, provider = {}, source = {}) {
   const json = safeJson(value);
   if (!json || typeof json !== 'object' || !json.data?.attributes || !Array.isArray(json.included)) return null;
 
-  const resources = new Map(
-    json.included
-      .filter(item => item?.type === 'status_page_resource')
-      .map(item => [String(item.id), item.attributes || {}])
-  );
-  const updates = new Map(
-    json.included
-      .filter(item => item?.type === 'status_update')
-      .map(item => [String(item.id), item.attributes || {}])
-  );
+  const resources = new Map(json.included.filter(item => item?.type === 'status_page_resource').map(item => [String(item.id), item.attributes || {}]));
+  const components = componentRecords([...resources.entries()].map(([id, attributes]) => ({ id, name: attributes.public_name, status: attributes.status })))
+    .filter(component => isUsRelevant(component.name, component.group || '', source.regionScope));
+  const updates = new Map(json.included.filter(item => item?.type === 'status_update').map(item => [String(item.id), item.attributes || {}]));
   const reports = json.included.filter(item => item?.type === 'status_report');
   const incidents = [];
+  const maintenance = [];
 
   for (const report of reports) {
     const attributes = report.attributes || {};
-    if (attributes.ends_at || String(attributes.report_type || '').toLowerCase() === 'maintenance') continue;
-    const aggregate = String(attributes.aggregate_state || '').toLowerCase();
-    if (!['degraded', 'downtime'].includes(aggregate)) continue;
-
     const reportUpdates = relationshipIds(report, 'status_updates')
       .map(id => ({ id, ...(updates.get(id) || {}) }))
       .sort((a, b) => Date.parse(b.published_at || '') - Date.parse(a.published_at || ''));
+    const timeline = boundedUpdates(reportUpdates);
     const latest = reportUpdates[0] || {};
     const affected = Array.isArray(latest.affected_resources) && latest.affected_resources.length
       ? latest.affected_resources
       : Array.isArray(attributes.affected_resources) ? attributes.affected_resources : [];
-    const affectedNames = affected.map(item => resources.get(String(item.status_page_resource_id))?.public_name || item.status_page_resource_id);
-    const affectedService = uniqueNames(affectedNames);
+    const affectedService = uniqueNames(affected.map(item => resources.get(String(item.status_page_resource_id))?.public_name || item.status_page_resource_id));
     const title = clean(attributes.title);
-    const note = clean(latest.message || attributes.message || attributes.description).slice(0, 900);
-    if (!title || isGenericTitle(title) || isEditorial(title, note) || isPlannedOnly(title, note, attributes.report_type)) continue;
-    if (!isUsRelevant(title, `${note} ${affectedService}`, source.regionScope)) continue;
+    const note = clean(latest.message || attributes.message || attributes.description || '').slice(0, 900);
+    if (!title || isEditorial(title, note) || !isUsRelevant(title, `${note} ${affectedService}`, source.regionScope)) continue;
 
+    const reportType = String(attributes.report_type || '').toLowerCase();
+    const aggregate = String(attributes.aggregate_state || '').toLowerCase();
+    if (reportType === 'maintenance' || aggregate === 'maintenance') {
+      if (attributes.ends_at && Date.parse(attributes.ends_at) < Date.now() - 15 * 60 * 1000) continue;
+      maintenance.push({
+        id: String(report.id || ''),
+        title,
+        note: note || 'The provider has scheduled maintenance.',
+        status: maintenanceState(attributes.status || aggregate || reportType),
+        startsAt: attributes.starts_at || attributes.created_at || '',
+        endsAt: attributes.ends_at || '',
+        announcedAt: attributes.created_at || timeline.at(-1)?.at || '',
+        latestUpdate: latest.published_at || attributes.updated_at || attributes.starts_at || '',
+        affectedService,
+        url: source.pageUrl || source.url,
+        updates: timeline
+      });
+      continue;
+    }
+
+    if (attributes.ends_at || !['degraded', 'downtime'].includes(aggregate)) continue;
+    if (isGenericTitle(title) || isPlannedOnly(title, note, reportType)) continue;
     incidents.push({
       id: String(report.id || ''),
       title,
@@ -294,17 +358,16 @@ export function parseBetterStackIndex(value, provider = {}, source = {}) {
       latestUpdate: latest.published_at || attributes.updated_at || attributes.starts_at || '',
       affectedService,
       color: aggregate === 'downtime' ? 'red' : 'amber',
-      url: source.pageUrl || source.url
+      url: source.pageUrl || source.url,
+      updates: timeline
     });
   }
 
-  if (incidents.length) return { kind: 'issues', incidents };
+  const extras = { maintenance, components };
+  if (incidents.length) return { kind: 'issues', incidents, ...extras };
   const aggregate = String(json.data.attributes.aggregate_state || '').toLowerCase();
-  if (aggregate === 'operational') {
-    return { kind: 'healthy', status: `${provider.name || json.data.attributes.company_name || 'Provider'} reports all systems operational` };
-  }
-  if (aggregate === 'maintenance') {
-    return { kind: 'healthy', status: `${provider.name || 'Provider'} reports scheduled maintenance only` };
+  if (aggregate === 'operational' || aggregate === 'maintenance') {
+    return { kind: 'healthy', status: aggregate === 'maintenance' ? `${provider.name || 'Provider'} reports scheduled maintenance only` : `${provider.name || json.data.attributes.company_name || 'Provider'} reports all systems operational`, ...extras };
   }
   return null;
 }
@@ -317,57 +380,47 @@ export function parseStatusioPage(value, provider = {}, source = {}) {
   const lines = textLines(value);
   const pageBoundary = lines.findIndex(line => /^(?:scheduled maintenance|past incidents?|incident history)$/i.test(line));
   const current = pageBoundary >= 0 ? lines.slice(0, pageBoundary) : lines.slice(0, 1200);
-  const markers = current
-    .map((line, index) => /^active incident$/i.test(line) ? index : -1)
-    .filter(index => index >= 0);
-
+  const markers = current.map((line, index) => /^active incident$/i.test(line) ? index : -1).filter(index => index >= 0);
   if (!markers.length) {
-    if (current.some(line => /all systems operational|0 active incidents?/i.test(line))) {
-      return { kind: 'healthy', status: `${provider.name || 'Provider'} reports all systems operational` };
-    }
+    if (current.some(line => /all systems operational|0 active incidents?/i.test(line))) return { kind: 'healthy', status: `${provider.name || 'Provider'} reports all systems operational`, maintenance: [], components: [] };
     return null;
   }
 
   const incidents = [];
   let foundSpecificIncident = false;
   let foundNonUsIncident = false;
-
   for (let markerIndex = 0; markerIndex < markers.length; markerIndex += 1) {
     const segment = current.slice(markers[markerIndex] + 1, markers[markerIndex + 1] ?? current.length);
     const severityIndex = segment.findIndex(line => /^(?:degraded performance|partial outage|major outage)$/i.test(line));
     const lifecycleIndex = segment.findIndex(line => /^(?:investigating|identified|monitoring|update|in progress)$/i.test(line));
     const anchor = severityIndex >= 0 ? severityIndex : lifecycleIndex;
     if (anchor < 0) continue;
-
     let title = '';
     for (let index = anchor - 1; index >= 0; index -= 1) {
       const candidate = clean(segment[index]);
-      if (!candidate || TITLE_NOISE.test(candidate) || DATE_LINE.test(candidate) || STATUS_LINE.test(candidate)) continue;
-      if (/^(?:operational|degraded performance|partial outage|major outage)$/i.test(candidate)) continue;
+      if (!candidate || TITLE_NOISE.test(candidate) || DATE_LINE.test(candidate) || STATUS_LINE.test(candidate) || /^(?:operational|degraded performance|partial outage|major outage)$/i.test(candidate)) continue;
       title = candidate;
       break;
     }
     if (!title || isGenericTitle(title)) continue;
     foundSpecificIncident = true;
-
     const componentsIndex = segment.findIndex(line => /^components?$/i.test(line));
     const locationsIndex = segment.findIndex(line => /^locations?$/i.test(line));
     const firstDateIndex = segment.findIndex(line => DATE_LINE.test(line));
     const componentEnd = [locationsIndex, firstDateIndex, lifecycleIndex].filter(index => index > componentsIndex).sort((a, b) => a - b)[0] ?? segment.length;
     const locationEnd = [firstDateIndex, lifecycleIndex].filter(index => index > locationsIndex).sort((a, b) => a - b)[0] ?? segment.length;
-    const components = componentsIndex >= 0 ? segment.slice(componentsIndex + 1, componentEnd).filter(line => !TITLE_NOISE.test(line)) : [];
+    const componentNames = componentsIndex >= 0 ? segment.slice(componentsIndex + 1, componentEnd).filter(line => !TITLE_NOISE.test(line)) : [];
     const locations = locationsIndex >= 0 ? segment.slice(locationsIndex + 1, locationEnd).filter(line => !TITLE_NOISE.test(line)) : [];
     const dates = segment.filter(line => DATE_LINE.test(line)).map(toIso).filter(Boolean).sort();
     const lifecycle = lifecycleIndex >= 0 ? clean(segment[lifecycleIndex]) : clean(segment[severityIndex] || 'active');
     const noteStart = lifecycleIndex >= 0 ? lifecycleIndex + 1 : Math.max(severityIndex + 1, firstDateIndex + 1);
     const note = clean(segment.slice(noteStart).filter(line => !DATE_LINE.test(line) && !TITLE_NOISE.test(line)).join(' ')).slice(0, 900);
-    const affectedService = uniqueNames([...components, ...locations]);
+    const affectedService = uniqueNames([...componentNames, ...locations]);
     if (isEditorial(title, note) || isPlannedOnly(title, note, lifecycle)) continue;
     if (!isUsRelevant(title, `${note} ${locations.join(' ')}`, source.regionScope)) {
       foundNonUsIncident = true;
       continue;
     }
-
     incidents.push({
       title,
       note: note || `${lifecycle} update from the official status page.`,
@@ -376,14 +429,12 @@ export function parseStatusioPage(value, provider = {}, source = {}) {
       latestUpdate: dates.at(-1) || dates[0] || '',
       affectedService,
       color: colorFor(`${segment[severityIndex] || ''} ${lifecycle} ${title} ${note}`),
-      url: source.url
+      url: source.url,
+      updates: [{ status: lifecycle.toLowerCase(), note: note || `${lifecycle} update from the official status page.`, at: dates.at(-1) || dates[0] || '' }]
     });
   }
-
-  if (incidents.length) return { kind: 'issues', incidents };
-  if (foundSpecificIncident && foundNonUsIncident) {
-    return { kind: 'healthy', status: `${provider.name || 'Provider'} reports no active US-relevant incidents` };
-  }
+  if (incidents.length) return { kind: 'issues', incidents, maintenance: [], components: [] };
+  if (foundSpecificIncident && foundNonUsIncident) return { kind: 'healthy', status: `${provider.name || 'Provider'} reports no active US-relevant incidents`, maintenance: [], components: [] };
   return null;
 }
 
