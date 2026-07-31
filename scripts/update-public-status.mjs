@@ -25,7 +25,8 @@ const publicOverrides = {
     pageUrl: 'https://status.cloud.microsoft/',
     sourceName: 'Microsoft 365 public RSS',
     maxAgeHours: 336,
-    allowEmpty: true
+    allowEmpty: true,
+    confirmHealthyFromFeed: true
   },
   entra: {
     mode: 'entra-html',
@@ -37,21 +38,24 @@ const publicOverrides = {
     url: 'https://www.google.com/appsstatus/dashboard/en/feed.atom',
     pageUrl: 'https://www.google.com/appsstatus/dashboard/',
     sourceName: 'Google Workspace public Atom feed',
-    maxAgeHours: 336
+    maxAgeHours: 336,
+    confirmHealthyFromFeed: true
   },
   'google-cloud': {
     mode: 'feed',
     url: 'https://status.cloud.google.com/en/feed.atom',
     pageUrl: 'https://status.cloud.google.com/',
     sourceName: 'Google Cloud public Atom feed',
-    maxAgeHours: 336
+    maxAgeHours: 336,
+    confirmHealthyFromFeed: true
   },
   slack: {
     mode: 'feed',
     url: 'https://slack-status.com/feed/rss',
     pageUrl: 'https://slack-status.com/',
     sourceName: 'Slack public RSS',
-    maxAgeHours: 336
+    maxAgeHours: 336,
+    confirmHealthyFromFeed: true
   },
   halopsa: {
     mode: 'status-html',
@@ -71,6 +75,10 @@ const publicOverrides = {
   'quickbooks-online': {
     mode: 'status-html',
     url: 'https://status.quickbooks.intuit.com/',
+    feedCandidates: [
+      'https://status.quickbooks.intuit.com/history.rss',
+      'https://status.quickbooks.intuit.com/history.atom'
+    ],
     sourceName: 'QuickBooks public status page'
   },
   salesforce: {
@@ -237,7 +245,7 @@ export function resolvePublicSource(provider) {
     return { mode: 'limited', url: provider.url, sourceName: 'Official account or location-specific outage page' };
   }
   if (provider.sourceType === 'rss') {
-    return { mode: 'feed', url: provider.url, sourceName: `${provider.name} public RSS`, maxAgeHours: provider.maxAgeHours || 168 };
+    return { mode: 'feed', url: provider.url, sourceName: `${provider.name} public RSS`, maxAgeHours: provider.maxAgeHours || 168, confirmHealthyFromFeed: true };
   }
   if (/\/api\/v2\/summary\.json$/i.test(new URL(provider.url).pathname)) {
     const pageUrl = publicPageUrl(provider.url);
@@ -338,7 +346,10 @@ async function parsePublicFeed(provider, source) {
     const worst = incidents.reduce((current, item) => severityRank[item.color] > severityRank[current] ? item.color : current, 'amber');
     return providerStatus(provider, source, `${incidents.length} active public incident${incidents.length === 1 ? '' : 's'}`, worst, true, '', logs, incidents);
   }
-  return providerStatus(provider, source, 'No active incidents in the official public feed', 'green', true, '', logs);
+  if (source.confirmHealthyFromFeed === true) {
+    return providerStatus(provider, source, 'No active incidents in the official public feed', 'green', true, '', logs);
+  }
+  return providerStatus(provider, source, 'Official incident feed is readable, but current component health is not confirmed', 'blue', false, 'The feed has no active incident, but a history feed alone cannot confirm that every current component is operational.', logs, [], 'limited');
 }
 
 function currentHtmlSection(html) {
@@ -375,16 +386,20 @@ function htmlIssueConclusion(provider, source, html) {
   if (provider.id === 'entra') return entraConclusion(current);
 
   const activeCount = /\b([1-9]\d*)\s+active incidents?\b/i.exec(current);
-  const issuePattern = /\b(major outage|partial outage|degraded performance|service disruption|service degradation|critical incident|active incident|investigating an issue|identified an issue|monitoring an issue)\b/i;
-  const issue = issuePattern.exec(current);
-  if (activeCount || issue) {
-    const text = activeCount ? `${activeCount[1]} active incidents` : issue[0];
-    const color = /major|critical|outage/i.test(text) && !/partial/i.test(text) ? 'red' : 'amber';
-    return { kind: 'issue', color, title: `${provider.name} public status page reports an active issue`, note: text };
+  if (activeCount) {
+    return { kind: 'issue', color: 'amber', title: `${provider.name} public status page reports an active issue`, note: `${activeCount[1]} active incidents` };
   }
 
   const healthy = /\b(all systems operational|all systems working|all services operational|all services are operational|no active incidents|0 active incidents|no incidents reported|everything is operating normally)\b/i.exec(current);
   if (healthy) return { kind: 'healthy', status: cleanText(healthy[0]) };
+
+  const issuePattern = /\b(major outage|partial outage|degraded performance|service disruption|service degradation|critical incident|active incident|investigating an issue|identified an issue|monitoring an issue)\b/i;
+  const issue = issuePattern.exec(current);
+  if (issue) {
+    const text = issue[0];
+    const color = /major|critical|outage/i.test(text) && !/partial/i.test(text) ? 'red' : 'amber';
+    return { kind: 'issue', color, title: `${provider.name} public status page reports an active issue`, note: text };
+  }
 
   const operationalMatches = current.match(/\bOperational\b/gi) || [];
   const problemMatches = current.match(/\b(Major Outage|Partial Outage|Degraded Performance|Service Disruption)\b/gi) || [];
@@ -397,14 +412,16 @@ function htmlIssueConclusion(provider, source, html) {
 export function entraConclusion(text) {
   const marker = /Microsoft Entra ID(?:\s*\(formerly Azure AD\))?/i.exec(text);
   if (!marker) return { kind: 'limited', message: 'The Azure public status page did not expose a readable Microsoft Entra ID row.' };
-  const window = text.slice(marker.index, marker.index + 700);
-  if (/\b(Critical|Major|Outage)\b/i.test(window)) {
-    return { kind: 'issue', color: 'red', title: 'Microsoft Entra ID public status reports a critical issue', note: cleanText(window).slice(0, 500) };
+  const row = text.slice(marker.index, marker.index + 500);
+  const tail = text.slice(marker.index + marker[0].length, marker.index + marker[0].length + 180);
+  const firstStatus = /\b(Good|Information|Warning|Critical|Major|Outage|Degraded|Not available|N\/A)\b/i.exec(tail)?.[1]?.toLowerCase();
+  if (firstStatus && /critical|major|outage/.test(firstStatus)) {
+    return { kind: 'issue', color: 'red', title: 'Microsoft Entra ID public status reports a critical issue', note: cleanText(row).slice(0, 500) };
   }
-  if (/\b(Warning|Degraded|Information)\b/i.test(window)) {
-    return { kind: 'issue', color: 'amber', title: 'Microsoft Entra ID public status reports an issue', note: cleanText(window).slice(0, 500) };
+  if (firstStatus && /warning|degraded|information/.test(firstStatus)) {
+    return { kind: 'issue', color: 'amber', title: 'Microsoft Entra ID public status reports an issue', note: cleanText(row).slice(0, 500) };
   }
-  if (/\bGood\b/i.test(window)) return { kind: 'healthy', status: 'Microsoft Entra ID public status is Good' };
+  if (firstStatus === 'good') return { kind: 'healthy', status: 'Microsoft Entra ID public status is Good' };
   return { kind: 'limited', message: 'The Microsoft Entra ID row was found, but its current status could not be determined.' };
 }
 
@@ -427,6 +444,8 @@ async function parsePublicHtml(provider, source) {
   const result = await fetchSource(requestProvider, 'text/html, text/plain, */*');
   const logs = result.logs || [result.log];
   if (!result.ok) {
+    const feedResult = await tryFeedCandidates(provider, source, '', logs);
+    if (feedResult?.source_state === 'available') return feedResult;
     return providerStatus(provider, source, `Source unavailable: HTTP ${result.status || 'failed'}`, 'blue', false, result.log?.error || result.log?.message, logs, [], 'unavailable');
   }
   const conclusion = htmlIssueConclusion(provider, source, result.body);
