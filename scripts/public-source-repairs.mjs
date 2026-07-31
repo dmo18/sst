@@ -122,7 +122,7 @@ function cleanRenderedText(value) {
 }
 
 const globalRegionPattern = /\b(?:global|worldwide|all regions|all customers|multiple regions|across regions)\b/i;
-const usRegionPattern = /\b(?:united states|u\.s\.|usa|us customers?|us cells?|north america|america east|america west|us[- ](?:east|west|central|north|south)(?:[- ]\d+)?|us(?:e|w|c)\d+)\b|\bokta\.com:\d+\b|\boktapreview\.com:\d+\b/i;
+const usRegionPattern = /\b(?:united states|u\.s\.|usa|us|us customers?|us cells?|north america|america east|america west|us[- ](?:east|west|central|north|south)(?:[- ]\d+)?|us(?:e|w|c)\d+)\b|\bokta\.com:\d+\b|\boktapreview\.com:\d+\b/i;
 const nonUsRegionPattern = /\b(?:emea|europe|eu(?:rope)?(?:[- ]?(?:cell|region|zone))?[- ]?\d*|uk(?:[- ]?(?:cell|region|zone))?[- ]?\d*|united kingdom|apac|asia(?: pacific)?|australia|new zealand|canada|latin america|latam|middle east|africa|germany|german|france|spain|japan|singapore|india|brazil|okta-emea\.com:\d+)\b|\b(?:aue|gbe|cae|de|eu|uk|ap|sg|jp)\d+(?:[-_a-z0-9]*)\b/i;
 
 export function isUsRelevantIncident(value) {
