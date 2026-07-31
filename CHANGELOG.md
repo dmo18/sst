@@ -4,6 +4,26 @@ All notable changes to the Service Heads-Up Console are recorded here.
 
 The project uses semantic versioning. Dates are shown in ISO format. The newest released version must match `package.json`.
 
+## [2.5.0] - 2026-07-31
+
+### Added
+
+- Added a separate maintenance-intelligence model for scheduled and in-progress work, including affected services, start/end times, official links, and bounded provider update timelines.
+- Added source-evidence tiers, confidence labels, parser versions, structural schema fingerprints, schema-change warnings, last successful retrieval, consecutive failure streaks, and last semantic-change timestamps.
+- Added component-level state capture for supported structured sources and surfaced component problems in provider diagnostics.
+- Added lifecycle events for source schema drift, repeated retrieval failures, and maintenance announcement, start, update, and completion.
+- Added operator and wallboard metrics for maintenance, high-confidence sources, structured sources, schema changes, failure streaks, and component issues.
+- Added deterministic regression tests for source fingerprints, confidence semantics, reliability history, maintenance separation, and lifecycle changes.
+
+### Changed
+
+- Enabled the verified first-party Statuspage JSON adapter for every existing catalog provider whose vendor-owned structured endpoint was already documented in the source matrix.
+- Preserved up to eight current vendor incident or maintenance updates rather than showing only the newest sentence.
+- Separated planned maintenance from active incidents so routine work remains visible without inflating outage counts; maintenance that escalates to active customer impact remains an incident.
+- Expanded retained lifecycle history from 100 to 200 bounded records.
+- Added structural parser canaries that distinguish source-shape changes from ordinary incident wording changes and fail closed when a structured source becomes unreadable.
+- Kept the product static and free: no API keys, credentials, authenticated tenant access, commercial aggregators, crowdsourced outage data, or browser-side vendor calls were introduced.
+
 ## [2.4.0] - 2026-07-31
 
 ### Added
