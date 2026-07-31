@@ -167,3 +167,52 @@ test('Salesforce ignores informational messages but captures service degradation
   );
   assert.equal(issue.kind, 'issue');
 });
+
+
+test('scheduled event notices with conditional impact are not incidents', () => {
+  const entries = [{
+    title: 'THIS IS A SCHEDULED EVENT',
+    note: 'Scheduled maintenance is currently in progress. Traffic might be re-routed, there is a possibility of slight latency, and interfaces may become temporarily unavailable.',
+    status: 'in_progress',
+    time: 'Thu, 31 Jul 2026 12:00:00 GMT'
+  }];
+  assert.equal(activeFeedEntries(entries, 336, Date.parse('2026-07-31T13:00:00Z')).length, 0);
+});
+
+test('planned maintenance stays suppressed when expected limitations sound severe', () => {
+  const entries = [{
+    title: 'Scheduled maintenance window',
+    note: 'During this planned maintenance, users may be unable to create settings and connections could fail over. Service disruption is possible.',
+    status: 'scheduled',
+    time: 'Thu, 31 Jul 2026 12:00:00 GMT'
+  }];
+  assert.equal(activeFeedEntries(entries, 336, Date.parse('2026-07-31T13:00:00Z')).length, 0);
+});
+
+test('scheduled maintenance escalated to active customer impact remains an incident', () => {
+  const entries = [{
+    title: 'Scheduled maintenance update',
+    note: 'Investigating: customers are currently experiencing connection failures during the maintenance window.',
+    status: 'investigating',
+    time: 'Thu, 31 Jul 2026 12:00:00 GMT'
+  }];
+  assert.equal(activeFeedEntries(entries, 336, Date.parse('2026-07-31T13:00:00Z')).length, 1);
+});
+
+test('emergency or critical maintenance events remain incidents', () => {
+  const entries = [
+    {
+      title: 'Emergency maintenance due to unexpected outage',
+      note: 'Service is currently unavailable while emergency work is performed.',
+      status: 'identified',
+      time: 'Thu, 31 Jul 2026 12:00:00 GMT'
+    },
+    {
+      title: 'Scheduled maintenance escalated to critical incident',
+      note: 'A major service outage has been declared.',
+      status: 'critical',
+      time: 'Thu, 31 Jul 2026 12:00:00 GMT'
+    }
+  ];
+  assert.equal(activeFeedEntries(entries, 336, Date.parse('2026-07-31T13:00:00Z')).length, 2);
+});
