@@ -33,7 +33,5 @@ jobs:
       - run: npm test
       - run: npm run typecheck
       - run: npm run build:app
-      - name: Generate live provider payload
-        run: npm run update-status
       - name: Audit live incident details
         run: node scripts/audit-live-incident-details.mjs
