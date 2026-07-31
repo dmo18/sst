@@ -33,6 +33,8 @@ jobs:
       - name: Retrieve prior snapshot (optional)
         run: curl --fail --silent --show-error --max-time 10 https://dmo18.github.io/sst/status.json -o public/previous-status.json || true
       - run: npm run update-status
+      - name: Verify browser payload compatibility before deployment
+        run: npm run validate-browser-payload
       - name: Verify truthful source coverage and payload freshness
         id: verify-status
         run: |
@@ -87,8 +89,9 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     permissions:
+      contents: read
       pages: write
       id-token: write
       statuses: write
@@ -98,6 +101,28 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - name: Smoke-test deployed assets and browser payload
+        env:
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+        run: node --experimental-strip-types scripts/production-smoke.mjs "$PAGE_URL"
+      - name: Render deployed page in headless Chrome
+        env:
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          BROWSER="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
+          test -n "$BROWSER"
+          "$BROWSER" --headless=new --disable-gpu --no-sandbox --virtual-time-budget=20000 --dump-dom "${PAGE_URL}?smoke=${GITHUB_RUN_ID}" > /tmp/live-dom.html
+          echo "DOM_BYTES $(wc -c < /tmp/live-dom.html)"
+          grep -q 'Technician briefing' /tmp/live-dom.html
+          grep -q 'Provider diagnostics and evidence' /tmp/live-dom.html
+          ! grep -q 'Status intelligence unavailable' /tmp/live-dom.html
+          ! grep -q 'Load failed; no health conclusion is available' /tmp/live-dom.html
       - name: Publish deployed status data verification
         env:
           GH_TOKEN: ${{ github.token }}
