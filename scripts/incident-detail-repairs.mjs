@@ -206,12 +206,13 @@ export function parseNableIncidentRecords(html) {
   const tail = text.slice(activeIndex);
   const resolvedIndex = tail.search(/\b(?:Resolved Incidents?|Past Incidents?|Incident History)\b/i);
   const active = resolvedIndex > 0 ? tail.slice(0, resolvedIndex) : tail.slice(0, 100000);
-  const markers = [...active.matchAll(/Active Incident ID:\s*(\d+)/gi)];
+  const boundaries = [...active.matchAll(/(?:Active Incident|Planned Scheduled Maintenance|Scheduled Maintenance) ID:\s*(\d+)/gi)];
   const records = [];
 
-  for (let index = 0; index < markers.length; index += 1) {
-    const marker = markers[index];
-    const block = active.slice(marker.index, markers[index + 1]?.index ?? active.length);
+  for (let index = 0; index < boundaries.length; index += 1) {
+    const marker = boundaries[index];
+    if (!/^Active Incident ID:/i.test(marker[0])) continue;
+    const block = active.slice(marker.index, boundaries[index + 1]?.index ?? active.length);
     const id = marker[1];
     const startRaw = /Start:\s*(.+?)\s+End:/i.exec(block)?.[1] || '';
     const severity = /Severity:\s*(.+?)\s+Status:/i.exec(block)?.[1] || '';
@@ -262,8 +263,10 @@ function nableConclusion(provider, html) {
   }
 
   const records = allRecords.filter(record => {
-    const isCove = /\bcove(?: data protection| draas)?\b/i.test(`${record.title} ${record.affectedService}`);
-    if (provider.id === 'cove-data-protection' && !isCove) return false;
+    const identityText = `${record.title} ${record.affectedService}`;
+    const isCove = /\bcove(?: data protection| draas)?\b/i.test(identityText);
+    const isNcentral = /\bn[- ]?central\b/i.test(identityText);
+    if (provider.id === 'cove-data-protection' && (!isCove || isNcentral)) return false;
     if (provider.id === 'n-able' && isCove) return false;
     return isIncidentUsRelevant({ title: record.title, note: record.regionText });
   });

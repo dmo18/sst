@@ -487,3 +487,25 @@ test('N-able and Cove share one public uptime page request without mixing incide
   assert.match(cove.incidents[0].title, /Cove Data Protection Americas/i);
   assert.doesNotMatch(cove.incidents[0].note, /N-central/i);
 });
+
+
+test('planned maintenance is a hard boundary between N-able active incidents', () => {
+  const fixture = `<main>Active Incidents
+    Active Incident ID: 401 Start: Jul 15, 2026 15:00:00 UTC End: N/A Severity: Minor Outage Status: Identified
+    N-able N-central (All Regions) Some features may not be functioning as expected.
+    Services Impacted N-central On-premise (Americas) N-central On-premise (APAC) N-central On-premise (Europe)
+    Timeline Update Jul 31, 2026 16:00:00 UTC Engineering is monitoring.
+    Planned Scheduled Maintenance ID: 201444 Start: Aug 1, 2026 07:15:00 UTC End: Aug 1, 2026 10:00:00 UTC Severity: Minor Outage Status: Planning
+    N-able Cove Data Protection Americas Planned storage maintenance.
+    Services Impacted Cove Data Protection (Americas)
+    Resolved Incidents</main>`;
+  const records = parseNableIncidentRecords(fixture);
+  assert.equal(records.length, 1);
+  assert.match(records[0].title, /N-central/i);
+  assert.doesNotMatch(records[0].affectedService, /Cove|Scheduled Maintenance/i);
+  const cove = providerSpecificConclusion({ id: 'cove-data-protection', name: 'Cove Data Protection' }, fixture);
+  assert.equal(cove.kind, 'healthy');
+  const nable = providerSpecificConclusion({ id: 'n-able', name: 'N-able' }, fixture);
+  assert.equal(nable.kind, 'issues');
+  assert.equal(nable.incidents.length, 1);
+});
