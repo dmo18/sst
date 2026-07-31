@@ -29,9 +29,12 @@ const publicOverrides = {
     confirmHealthyFromFeed: true
   },
   entra: {
-    mode: 'entra-html',
-    url: 'https://azure.status.microsoft/en-us/status',
-    sourceName: 'Azure public status'
+    mode: 'feed',
+    url: 'https://rssfeed.azure.status.microsoft/en-us/status/feed/',
+    pageUrl: 'https://azure.status.microsoft/en-us/status',
+    sourceName: 'Azure public status RSS',
+    maxAgeHours: 336,
+    includePattern: /Microsoft Entra ID|Azure Active Directory|\bEntra\b|identity|authentication|sign-?in/i
   },
   'google-workspace': {
     mode: 'feed',
@@ -178,11 +181,13 @@ function providerStatus(provider, source, status, color, ok, message, logs, inci
     ? 'critical'
     : serviceState === 'degraded'
       ? 'action'
-      : resolvedSourceState === 'unavailable' && critical
-        ? 'action'
-        : ['limited', 'unavailable', 'stale'].includes(resolvedSourceState)
-          ? 'watch'
-          : 'informational';
+      : serviceState === 'unknown'
+        ? 'watch'
+        : resolvedSourceState === 'unavailable' && critical
+          ? 'action'
+          : ['limited', 'unavailable', 'stale'].includes(resolvedSourceState)
+            ? 'watch'
+            : 'informational';
   return {
     id: provider.id,
     name: provider.name,
@@ -314,6 +319,20 @@ export function activeFeedEntries(entries, maxAgeHours = 168, now = Date.now()) 
   });
 }
 
+function feedAvailableWithoutHealthConclusion(provider, source, logs) {
+  return providerStatus(
+    provider,
+    source,
+    'Official public incident feed is readable; no active incident was found',
+    'blue',
+    true,
+    'The official incident feed is live and readable, but it does not confirm current component health. No operational conclusion was made.',
+    logs,
+    [],
+    'available'
+  );
+}
+
 async function parsePublicFeed(provider, source) {
   const requestProvider = { ...provider, url: source.url, sourceType: source.mode };
   const result = await fetchSource(requestProvider, 'application/rss+xml, application/atom+xml, application/xml, text/xml, text/plain, */*');
@@ -321,14 +340,21 @@ async function parsePublicFeed(provider, source) {
   if (!result.ok) {
     return providerStatus(provider, source, `Source unavailable: HTTP ${result.status || 'failed'}`, 'blue', false, result.log?.error || result.log?.message, logs, [], 'unavailable');
   }
+  const feedDocument = /<(?:rss|feed)\b/i.test(result.body);
   const entries = parseFeedEntries(result.body);
   if (!entries.length) {
-    if (source.allowEmpty === true && /<(?:rss|feed)\b/i.test(result.body)) {
+    if (!feedDocument) {
+      return providerStatus(provider, source, 'Limited official source', 'blue', false, 'The official feed loaded but was not a readable RSS or Atom document, so no service-health conclusion was made.', logs, [], 'limited');
+    }
+    if (source.allowEmpty === true && source.confirmHealthyFromFeed === true) {
       return providerStatus(provider, source, 'No active incidents in the official public feed', 'green', true, '', logs);
     }
-    return providerStatus(provider, source, 'Limited official source', 'blue', false, 'The official feed loaded but contained no readable entries, so no service-health conclusion was made.', logs, [], 'limited');
+    return feedAvailableWithoutHealthConclusion(provider, source, logs);
   }
-  const active = activeFeedEntries(entries, source.maxAgeHours || 168);
+  const relevantEntries = source.includePattern
+    ? entries.filter(item => source.includePattern.test(`${item.title} ${item.note} ${item.status}`))
+    : entries;
+  const active = activeFeedEntries(relevantEntries, source.maxAgeHours || 168);
   const incidents = active.slice(0, 12).map(item => {
     const text = `${item.title} ${item.note} ${item.status}`;
     return makeIncident(provider, source, item.title, item.note, item.url || source.pageUrl || source.url, item.time, item.status, itemColor(text));
@@ -340,7 +366,7 @@ async function parsePublicFeed(provider, source) {
   if (source.confirmHealthyFromFeed === true) {
     return providerStatus(provider, source, 'No active incidents in the official public feed', 'green', true, '', logs);
   }
-  return providerStatus(provider, source, 'Official incident feed is readable, but current component health is not confirmed', 'blue', false, 'The feed has no active incident, but a history feed alone cannot confirm that every current component is operational.', logs, [], 'limited');
+  return feedAvailableWithoutHealthConclusion(provider, source, logs);
 }
 
 function currentHtmlSection(html) {
