@@ -381,7 +381,7 @@ test('marketing and release posts are not service incidents', () => {
 
 test('generic incident headings are never published as incident titles', async () => {
   assert.equal(isGenericIncidentTitle('Active Incident'), true);
-  assert.equal(isGenericIncidentTitle('Cloudflare public status page reports an active issue'), false);
+  assert.equal(isGenericIncidentTitle('Cloudflare public status page reports an active issue'), true);
   globalThis.fetch = async url => String(url).endsWith('/')
     ? response('<main><h2>Active Incident</h2><p>Partial Outage</p></main>')
     : response('Not found', 404, 'text/plain');

@@ -598,6 +598,19 @@ async function parsePublicHtml(provider, source) {
     }
   }
   if (conclusion.kind === 'issue') {
+    if (isGenericIncidentTitle(conclusion.title)) {
+      return providerStatus(
+        provider,
+        source,
+        'Limited official source',
+        'blue',
+        false,
+        'The page reported an issue state without a specific incident title or details, so no incident was published.',
+        logs,
+        [],
+        'limited'
+      );
+    }
     const incident = makeIncident(
       provider,
       source,

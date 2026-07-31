@@ -73,7 +73,7 @@ function clean(value) {
 }
 
 const globalRegionPattern = /\b(?:global|worldwide|all regions|all customers|multiple regions|across regions)\b/i;
-const usRegionPattern = /\b(?:united states|u\.s\.|usa|north america|americas|us customers?|us cells?|us[- ](?:east|west|central|north|south)(?:[- ]\d+)?|us(?:e|w|c)\d+)\b/i;
+const usRegionPattern = /\b(?:united states|u\.s\.|usa|us|north america|americas|us customers?|us cells?|us[- ](?:east|west|central|north|south)(?:[- ]\d+)?|us(?:e|w|c)\d+)\b/i;
 const nonUsRegionPattern = /\b(?:emea|europe|european|eu(?:rope)?(?:[- ]?(?:cell|region|zone))?[- ]?\d*|uk(?:[- ]?(?:cell|region|zone))?[- ]?\d*|united kingdom|apac|asia(?: pacific)?|australia|new zealand|canada|latin america|latam|middle east|africa|germany|france|spain|japan|singapore|india|brazil|china|beijing|hong kong|korea|dubai|uae|istanbul|türkiye|turkey|london|amsterdam|berlin|tokyo|sydney|frankfurt|paris|madrid|milan|warsaw|stockholm|kochi|kuala lumpur)\b|\b(?:aue|gbe|cae|de|eu|uk|ap|sg|jp)\d+(?:[-_a-z0-9]*)\b/i;
 
 export function isIncidentUsRelevant(item) {
@@ -92,7 +92,7 @@ export function isIncidentUsRelevant(item) {
 
 export function isGenericIncidentTitle(value) {
   const title = clean(value).toLowerCase().replace(/[.:\-]+$/g, '').trim();
-  return /^(?:active incidents?|incident|service incident|status|status update|current status|degraded service|partial outage|major outage|report issue|this is a scheduled event)$/i.test(title);
+  return /^(?:active incidents?|incident|service incident|status|status update|current status|degraded service|partial outage|major outage|report issue|this is a scheduled event|[^\n]{2,180} public status(?: page)? reports an active issue)$/i.test(title);
 }
 
 export function isEditorialIncidentEntry(item) {
