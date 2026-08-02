@@ -4,6 +4,22 @@ All notable changes to the Service Heads-Up Console are recorded here.
 
 The project uses semantic versioning. Dates are shown in ISO format. The newest released version must match `package.json`.
 
+## [3.2.0] - 2026-08-02
+
+### Ultra-HD visual system
+
+- Replaced the fixed-scale admin-panel styling with a progressively scaled visual system for laptop, ultrawide, 4K, 5K, and 8K displays.
+- Added a 6,200px operating canvas, fluid typography, higher-resolution spacing, finer hairlines, deeper spatial hierarchy, and premium navigation, panel, table, drawer, and wallboard treatments.
+- Changed standard desktop KPI presentation from eight cramped columns to a readable four-column rhythm while retaining eight-column telemetry on ultrawide and higher-resolution displays.
+- Added dedicated 2,200px, 3,400px, and 5,000px breakpoints for larger rows, controls, logos, gutters, and metric surfaces.
+- Added deterministic 8K compositor rules that remove oversized blur layers and preserve complete provider-table rendering under software and hardware acceleration.
+- Added visual contract tests that protect stylesheet load order, progressive resolution breakpoints, reduced-motion support, desktop legibility, and 8K rendering safeguards.
+
+### Trust and scope
+
+- Preserved all first-party source, evidence, collection, refresh, status, and fail-closed behavior without adding external fonts, assets, services, credentials, API keys, or browser-side vendor calls.
+- Validated the application with fresh first-party data and rendered production builds at 1,920×1,080, 3,840×2,160, and 7,680×4,320 before release.
+
 ## [3.1.0] - 2026-08-02
 
 ### Enterprise application experience
