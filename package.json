@@ -1,8 +1,8 @@
 {
   "name": "msp-status-hud",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "private": true,
-  "description": "First-party public-source MSP service intelligence and operations command center.",
+  "description": "Enterprise first-party MSP service intelligence and live operations workspace.",
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
