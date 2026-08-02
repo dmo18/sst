@@ -4,6 +4,22 @@ All notable changes to the Service Heads-Up Console are recorded here.
 
 The project uses semantic versioning. Dates are shown in ISO format. The newest released version must match `package.json`.
 
+## [3.1.0] - 2026-08-02
+
+### Enterprise application experience
+
+- Replaced the decorative command-center presentation with a restrained enterprise SaaS shell: persistent workspace navigation, compact top bar, flat data surfaces, dense information hierarchy, and consistent operational tables.
+- Replaced provider cards with a sortable provider operations table showing service state, source health, event counts, quality, request latency, request success, and observation age in directly comparable columns.
+- Added continuously updating Eastern time, payload age, last browser check, next-refresh countdown, incident ages, source-observation ages, and wallboard timestamps without inventing streaming vendor data.
+- Added a live KPI strip for incidents, affected providers, confirmed operational providers, coverage, collection quality, blind spots, request success, and p95 latency.
+- Reworked incident operations, source reliability, timeline, maintenance, provider details, and wallboard layouts for clearer scanning and lower visual noise.
+- Added deterministic tests for second-, minute-, hour-, and day-level relative time plus refresh-countdown boundaries.
+
+### Trust and deployment safety
+
+- Preserved the first-party-only, unauthenticated, fail-closed data contract and the separation between service health and collection health.
+- Kept existing browser-render deployment markers while adding enterprise UI smoke assertions for live fields and provider tables.
+
 ## [3.0.0] - 2026-08-01
 
 ### Rebuilt

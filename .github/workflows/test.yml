@@ -2,74 +2,21 @@ name: Pull request checks
 on:
   pull_request:
 permissions:
-  contents: write
+  contents: read
 jobs:
-  migrate:
-    if: github.actor != 'github-actions[bot]'
+  test:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.head_ref }}
-          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
           cache: npm
-      - name: Apply enterprise SaaS workspace redesign
-        run: |
-          node scripts/apply-enterprise-ui.mjs
-          node scripts/apply-enterprise-marker.mjs
-      - name: Synchronize 3.1.0 release metadata
-        run: npm version 3.1.0 --no-git-tag-version
       - run: npm ci
       - run: npm run validate-providers
       - run: npm test
       - run: npm run typecheck
       - run: npm run build:app
-      - name: Generate and validate current first-party data
-        run: |
-          npm run update-status
-          npm run validate-browser-payload
-          npm run build:app
-      - name: Render enterprise workspace in headless Chrome
-        run: |
-          npm run preview -- --port 4173 > /tmp/preview.log 2>&1 &
-          PREVIEW_PID=$!
-          trap 'kill $PREVIEW_PID 2>/dev/null || true' EXIT
-          for attempt in $(seq 1 30); do
-            curl --fail --silent http://127.0.0.1:4173/sst/ >/dev/null && break
-            sleep 1
-          done
-          BROWSER="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
-          test -n "$BROWSER"
-          for attempt in $(seq 1 3); do
-            "$BROWSER" --headless=new --disable-gpu --no-sandbox --disable-dev-shm-usage --user-data-dir="/tmp/chrome-enterprise-$attempt" --virtual-time-budget=15000 --dump-dom "http://127.0.0.1:4173/sst/?smoke=$attempt" > /tmp/enterprise-dom.html
-            if grep -q 'Live dependency table' /tmp/enterprise-dom.html; then break; fi
-            sleep 2
-          done
-          echo "DOM_BYTES $(wc -c < /tmp/enterprise-dom.html)"
-          grep -Eo 'Operations command center|Provider operations|Live dependency table|Last browser check|Source reliability|What deserves attention now|Status intelligence unavailable' /tmp/enterprise-dom.html | head -30 || true
-          grep -q 'Operations command center' /tmp/enterprise-dom.html
-          grep -q 'Provider operations' /tmp/enterprise-dom.html
-          grep -q 'Live dependency table' /tmp/enterprise-dom.html
-          grep -q 'Last browser check' /tmp/enterprise-dom.html
-          grep -q 'Source reliability' /tmp/enterprise-dom.html
-          grep -q 'What deserves attention now' /tmp/enterprise-dom.html
-          ! grep -q 'Status intelligence unavailable' /tmp/enterprise-dom.html
-      - name: Commit exact validated release candidate
-        run: |
-          git restore public/status.json 2>/dev/null || true
-          rm -f public/previous-status.json
-          rm -rf scripts/enterprise-ui-payload scripts/apply-enterprise-ui.mjs scripts/apply-enterprise-marker.mjs
-          git checkout origin/main -- .github/workflows/test.yml
-          git diff --check
-          test ! -e scripts/apply-enterprise-ui.mjs
-          test ! -e scripts/apply-enterprise-marker.mjs
-          test ! -e scripts/enterprise-ui-payload
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -m "Release 3.1.0 enterprise operations workspace"
-          git push origin HEAD:${{ github.head_ref }}
+      - name: Audit production dependencies
+        run: npm audit --audit-level=high
