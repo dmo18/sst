@@ -6,17 +6,19 @@ import {
   incidentRegionIsCurrentScope
 } from '../incident-freshness.mjs';
 
+// Fixed clock: August 2, 2026 at 09:44 Eastern.
+const auditNow = Date.parse('2026-08-02T13:44:00Z');
+
 test('current incident evidence expires after 72 hours', () => {
   assert.equal(INCIDENT_MAX_AGE_HOURS, 72);
-  const now = Date.parse('2026-08-02T13:44:00Z');
   assert.equal(incidentEvidenceIsCurrent({
     title: 'Monitoring an unresolved service issue',
     latest_update: '2026-07-29T18:40:09.147Z'
-  }, now, undefined, { requireTimestamp: true }), false);
+  }, auditNow, undefined, { requireTimestamp: true }), false);
   assert.equal(incidentEvidenceIsCurrent({
     title: 'Monitoring a current service issue',
     latest_update: '2026-08-02T12:40:09.147Z'
-  }, now, undefined, { requireTimestamp: true }), true);
+  }, auditNow, undefined, { requireTimestamp: true }), true);
 });
 
 test('default scope rejects explicit AWS Middle East regions', () => {
