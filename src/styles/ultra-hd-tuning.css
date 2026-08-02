@@ -1,0 +1,109 @@
+/* Final legibility and high-resolution compositor tuning. */
+
+.topbar-title > span,
+.topbar-live span,
+.nav-section-label,
+.section-header > div > span,
+.section-eyebrow,
+.metric-tile header span,
+.filter-bar label,
+.data-table-head,
+.attention-head,
+.category-head,
+.status-chip {
+  font-size: max(.62rem, 10px);
+}
+
+.topbar-title p,
+.topbar-live small,
+.lifecycle-strip,
+.section-header p,
+.metric-tile small,
+.provider-identity small,
+.data-table-row small,
+.attention-row p,
+.workspace-footer {
+  font-size: max(.68rem, 11px);
+}
+
+.provider-identity b,
+.data-table-row strong,
+.topbar-live b {
+  font-size: max(.84rem, 13px);
+}
+
+@media (min-width: 1501px) and (max-width: 2399px) {
+  .metric-strip {
+    grid-template-columns: repeat(4, minmax(220px, 1fr));
+  }
+
+  .metric-strip-six {
+    grid-template-columns: repeat(3, minmax(240px, 1fr));
+  }
+
+  .metric-tile {
+    min-height: 144px;
+  }
+
+  .metric-tile:nth-child(4n) {
+    border-right: 1px solid rgba(148, 181, 224, .15) !important;
+  }
+}
+
+@media (min-width: 2400px) {
+  .metric-strip {
+    grid-template-columns: repeat(8, minmax(170px, 1fr));
+  }
+
+  .metric-strip-six {
+    grid-template-columns: repeat(6, minmax(190px, 1fr));
+  }
+}
+
+@media (min-width: 5000px) {
+  /*
+   * Large blur and sticky compositor surfaces can exceed software raster tile
+   * budgets at 8K. Keep the same hierarchy while using deterministic flat
+   * layers that render cleanly with and without GPU acceleration.
+   */
+  .app-sidebar,
+  .workspace-topbar,
+  .lifecycle-strip,
+  .workspace-panel,
+  .posture-panel,
+  .page-summary,
+  .filter-bar,
+  .data-table-head,
+  .drawer-header,
+  .drawer-footer {
+    backdrop-filter: none;
+  }
+
+  .workspace-panel,
+  .posture-panel,
+  .page-summary,
+  .filter-bar,
+  .wallboard-shell > header,
+  .wallboard-priority,
+  .wallboard-providers,
+  .wallboard-kpis {
+    box-shadow: 0 18px 54px rgba(0, 0, 0, .28), 0 1px 0 rgba(255,255,255,.03) inset;
+  }
+
+  .data-table-head {
+    position: relative;
+    top: auto;
+    contain: layout paint;
+  }
+
+  .data-table-row {
+    contain: layout paint;
+  }
+
+  .workspace-panel::before,
+  .page-summary::before,
+  .posture-panel::before,
+  .enterprise-shell::after {
+    display: none;
+  }
+}
