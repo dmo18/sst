@@ -18,7 +18,9 @@ jobs:
           node-version: "22"
           cache: npm
       - name: Apply enterprise SaaS workspace redesign
-        run: node scripts/apply-enterprise-ui.mjs
+        run: |
+          node scripts/apply-enterprise-ui.mjs
+          node scripts/apply-enterprise-marker.mjs
       - name: Synchronize 3.1.0 release metadata
         run: npm version 3.1.0 --no-git-tag-version
       - run: npm ci
@@ -48,7 +50,8 @@ jobs:
             sleep 2
           done
           echo "DOM_BYTES $(wc -c < /tmp/enterprise-dom.html)"
-          grep -Eo 'Provider operations|Live dependency table|Last browser check|Source reliability|What deserves attention now|Status intelligence unavailable' /tmp/enterprise-dom.html | head -30 || true
+          grep -Eo 'Operations command center|Provider operations|Live dependency table|Last browser check|Source reliability|What deserves attention now|Status intelligence unavailable' /tmp/enterprise-dom.html | head -30 || true
+          grep -q 'Operations command center' /tmp/enterprise-dom.html
           grep -q 'Provider operations' /tmp/enterprise-dom.html
           grep -q 'Live dependency table' /tmp/enterprise-dom.html
           grep -q 'Last browser check' /tmp/enterprise-dom.html
@@ -59,10 +62,11 @@ jobs:
         run: |
           git restore public/status.json 2>/dev/null || true
           rm -f public/previous-status.json
-          rm -rf scripts/enterprise-ui-payload scripts/apply-enterprise-ui.mjs
+          rm -rf scripts/enterprise-ui-payload scripts/apply-enterprise-ui.mjs scripts/apply-enterprise-marker.mjs
           git checkout origin/main -- .github/workflows/test.yml
           git diff --check
           test ! -e scripts/apply-enterprise-ui.mjs
+          test ! -e scripts/apply-enterprise-marker.mjs
           test ! -e scripts/enterprise-ui-payload
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
