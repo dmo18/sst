@@ -1,8 +1,13 @@
-export const INCIDENT_MAX_AGE_DAYS = 45;
+export const INCIDENT_MAX_AGE_HOURS = 72;
+export const INCIDENT_MAX_AGE_DAYS = INCIDENT_MAX_AGE_HOURS / 24;
 
 const MONTH = '(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)';
 const monthDate = new RegExp('\\b' + MONTH + '\\s+\\d{1,2}\\s*,\\s*\\d{4}(?:\\s*(?:-|at)?\\s*\\d{1,2}:\\d{2}(?::\\d{2})?\\s*(?:UTC|GMT|EDT|EST)?)?', 'gi');
 const isoDate = /\b20\d{2}-\d{2}-\d{2}(?:T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?)?/gi;
+
+const globalRegionPattern = /\b(?:global|worldwide|all regions|all customers|multiple regions|across regions)\b/i;
+const usRegionPattern = /\b(?:united states|u\.s\.|usa|us|north america|americas|us customers?|us cells?|us[- ](?:east|west|central|north|south)(?:[- ]\d+)?|us(?:e|w|c)\d+)\b/i;
+const nonUsRegionPattern = /\b(?:emea|europe|european|eu(?:rope)?(?:[- ]?(?:cell|region|zone))?[- ]?\d*|uk(?:[- ]?(?:cell|region|zone))?[- ]?\d*|united kingdom|apac|asia(?: pacific)?|australia|new zealand|canada|latin america|latam|middle east|africa|germany|france|spain|japan|singapore|india|brazil|china|beijing|hong kong|korea|bahrain|manama|saudi arabia|qatar|oman|kuwait|dubai|uae|israel|istanbul|türkiye|turkey|london|amsterdam|berlin|tokyo|sydney|frankfurt|paris|madrid|milan|warsaw|stockholm|kochi|kuala lumpur)\b|\b(?:me-(?:south|central)-\d+|aue|gbe|cae|de|eu|uk|ap|sg|jp)\d*(?:[-_a-z0-9]*)\b/i;
 
 function clean(value) {
   return String(value || '').replace(/\s+/g, ' ').trim();
@@ -29,7 +34,32 @@ export function dateLikeIncidentTitle(value) {
   return monthOnly.test(title) || /^20\d{2}-\d{2}-\d{2}(?:[ T].*)?$/.test(title);
 }
 
+export function incidentRegionIsCurrentScope(item) {
+  const title = clean(item?.title || '');
+  const details = clean([
+    item?.affected_service,
+    item?.affectedService,
+    item?.region,
+    item?.regions,
+    item?.location,
+    item?.locations,
+    item?.components,
+    item?.note,
+    item?.status
+  ].filter(Boolean).join(' ')).slice(0, 2400);
+
+  if (globalRegionPattern.test(title) || usRegionPattern.test(title)) return true;
+  if (nonUsRegionPattern.test(title)) return false;
+  if (globalRegionPattern.test(details) || usRegionPattern.test(details)) return true;
+  return !nonUsRegionPattern.test(details);
+}
+
 export function incidentTimestampMs(item) {
+  const updateTimes = Array.isArray(item?.updates)
+    ? item.updates.map(update => parseDate(update?.at || update?.updated_at || update?.created_at || update?.published_at)).filter(Boolean)
+    : [];
+  const newestUpdate = updateTimes.length ? Math.max(...updateTimes) : 0;
+  if (newestUpdate) return newestUpdate;
   for (const key of ['latestUpdate', 'latest_update', 'rawTime', 'time', 'updated_at', 'firstDetected', 'first_detected', 'created_at']) {
     const parsed = parseDate(item?.[key]);
     if (parsed) return parsed;
@@ -44,7 +74,7 @@ export function embeddedIncidentDateMs(value) {
 }
 
 export function incidentEvidenceIsCurrent(item, now = Date.now(), maxAgeDays = INCIDENT_MAX_AGE_DAYS, options = {}) {
-  if (!item || dateLikeIncidentTitle(item.title)) return false;
+  if (!item || dateLikeIncidentTitle(item.title) || !incidentRegionIsCurrentScope(item)) return false;
   const maxAgeMs = maxAgeDays * 24 * 60 * 60 * 1000;
   const timestamp = incidentTimestampMs(item);
   if (timestamp) {
