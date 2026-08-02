@@ -1,4 +1,4 @@
-name: Deploy MSP Operations Command Center
+name: Deploy ServiceOps Enterprise Workspace
 on:
   push:
     branches: [main]
@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 jobs:
   build:
     permissions:
@@ -137,7 +137,7 @@ jobs:
             sleep 8
           done
           exit 1
-      - name: Render deployed command center in headless Chrome
+      - name: Render deployed enterprise workspace in headless Chrome
         env:
           PAGE_URL: ${{ steps.deployment.outputs.page_url }}
         run: |
@@ -145,15 +145,16 @@ jobs:
           test -n "$BROWSER"
           for attempt in $(seq 1 4); do
             "$BROWSER" --headless=new --disable-gpu --no-sandbox --disable-dev-shm-usage --user-data-dir="/tmp/live-chrome-$attempt" --virtual-time-budget=20000 --dump-dom "${PAGE_URL}?smoke=${GITHUB_RUN_ID}-$attempt" > /tmp/live-dom.html
-            if grep -q 'What deserves attention now' /tmp/live-dom.html; then break; fi
+            if grep -q 'Live dependency table' /tmp/live-dom.html; then break; fi
             sleep 6
           done
           echo "DOM_BYTES $(wc -c < /tmp/live-dom.html)"
-          grep -Eo 'Operations command center|Current posture|What deserves attention now|Dependency landscape|Status intelligence unavailable|invalid or unsupported payload[^<]*' /tmp/live-dom.html | head -30 || true
-          grep -q 'Operations command center' /tmp/live-dom.html
-          grep -q 'Current posture' /tmp/live-dom.html
+          grep -Eo 'Provider operations|Live dependency table|Last browser check|Source reliability|What deserves attention now|Status intelligence unavailable|invalid or unsupported payload[^<]*' /tmp/live-dom.html | head -30 || true
+          grep -q 'Provider operations' /tmp/live-dom.html
+          grep -q 'Live dependency table' /tmp/live-dom.html
+          grep -q 'Last browser check' /tmp/live-dom.html
+          grep -q 'Source reliability' /tmp/live-dom.html
           grep -q 'What deserves attention now' /tmp/live-dom.html
-          grep -q 'Dependency landscape' /tmp/live-dom.html
           ! grep -q 'Status intelligence unavailable' /tmp/live-dom.html
           ! grep -q 'invalid or unsupported payload' /tmp/live-dom.html
       - name: Publish deployed intelligence verification
