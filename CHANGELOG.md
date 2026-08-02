@@ -4,6 +4,19 @@ All notable changes to the Service Heads-Up Console are recorded here.
 
 The project uses semantic versioning. Dates are shown in ISO format. The newest released version must match `package.json`.
 
+## [3.3.1] - 2026-08-02
+
+### Fixed
+
+- Replaced the 45-day unresolved-incident window with a strict 72-hour current-evidence requirement across structured JSON, feeds, HTML, and provider-specific adapters.
+- Made the newest official vendor timeline update authoritative, so long-running incidents remain visible only while the vendor continues publishing current evidence.
+- Removed the stale KnowBe4 monitoring record whose newest official update was July 29.
+- Centralized US-scope enforcement for Bahrain, Manama, AWS `me-south-1`, AWS `me-central-1`, and other explicit non-US regions.
+- Removed the Elastic Cloud AWS Bahrain incident from the default US view regardless of its unresolved lifecycle state.
+- Reconciled providers to limited/unknown when stale incident evidence is removed instead of leaving them degraded without a current incident.
+- Prevented adjacent HTML incident records from borrowing each other's timestamps.
+- Replaced stale hard-coded “current incident” fixtures with dates inside the current audit window and added explicit KnowBe4, Bahrain, Manama, and AWS Middle East regression coverage.
+
 ## [3.3.0] - 2026-08-02
 
 ### Fixed
