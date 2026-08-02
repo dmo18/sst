@@ -1,0 +1,77 @@
+name: Stale data and mobile audit
+on:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - name: Capture production payload
+        run: |
+          mkdir -p audit
+          curl --fail --silent --show-error --location 'https://dmo18.github.io/sst/status.json?audit=${{ github.run_id }}' -o audit/production-status.json
+          python3 - <<'PY'
+          import json, datetime, re
+          from pathlib import Path
+          p=json.loads(Path('audit/production-status.json').read_text())
+          now=datetime.datetime.now(datetime.timezone.utc)
+          lines=[f"generated_at={p.get('generated_at')}", f"version={p.get('version')}", f"incidents={len(p.get('incidents',[]))}", f"maintenance={len(p.get('maintenance',[]))}"]
+          stale=[]
+          for kind in ('incidents','maintenance'):
+              for item in p.get(kind,[]):
+                  selected=''
+                  for key in ('latest_update','rawTime','first_detected','starts_at','announced_at'):
+                      if item.get(key):
+                          selected=str(item[key]); break
+                  age_days=None
+                  if selected:
+                      try:
+                          dt=datetime.datetime.fromisoformat(selected.replace('Z','+00:00'))
+                          if dt.tzinfo is None: dt=dt.replace(tzinfo=datetime.timezone.utc)
+                          age_days=(now-dt.astimezone(datetime.timezone.utc)).total_seconds()/86400
+                      except Exception:
+                          pass
+                  text=' '.join(str(item.get(k,'')) for k in ('provider','title','note','status','affected_service'))
+                  if (age_days is not None and age_days > 21) or re.search(r'\bMar(?:ch)?\b|2026-03|2025-03|2024-03', text, re.I):
+                      stale.append({'kind':kind,'provider':item.get('provider'),'title':item.get('title'),'status':item.get('status'),'selected_time':selected,'age_days':age_days,'url':item.get('url')})
+          lines.append(f"stale_or_march={len(stale)}")
+          for row in stale: lines.append(json.dumps(row, sort_keys=True))
+          Path('audit/production-audit.txt').write_text('\n'.join(lines)+'\n')
+          print('\n'.join(lines))
+          PY
+      - name: Generate branch payload
+        run: npm run update-status
+      - run: npm run build:app
+      - name: Start branch preview
+        run: |
+          npm run preview -- --port 4173 > /tmp/preview.log 2>&1 &
+          for attempt in $(seq 1 40); do
+            if curl --fail --silent http://127.0.0.1:4173/sst/ > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/preview.log
+          exit 1
+      - name: Render production and branch mobile views
+        run: |
+          BROWSER="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
+          test -n "$BROWSER"
+          for size in 360,800 390,844 430,932; do
+            label="${size/,/x}"
+            "$BROWSER" --headless=new --disable-gpu --no-sandbox --disable-dev-shm-usage --hide-scrollbars --force-device-scale-factor=1 --window-size="$size" --virtual-time-budget=15000 --screenshot="audit/production-${label}.png" 'https://dmo18.github.io/sst/'
+            "$BROWSER" --headless=new --disable-gpu --no-sandbox --disable-dev-shm-usage --hide-scrollbars --force-device-scale-factor=1 --window-size="$size" --virtual-time-budget=15000 --screenshot="audit/branch-${label}.png" 'http://127.0.0.1:4173/sst/'
+          done
+          ls -lh audit
+      - uses: actions/upload-artifact@v4
+        with:
+          name: stale-mobile-audit
+          path: audit
+          if-no-files-found: error
+          retention-days: 1
