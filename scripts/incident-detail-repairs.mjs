@@ -183,7 +183,7 @@ function currentStatusPageIncidents(provider, html) {
     let time = '';
     for (let cursor = index - 1; cursor >= Math.max(0, index - 6); cursor -= 1) {
       if (DATE_LINE.test(current[cursor])) { time = isoDate(current[cursor]); break; }
-      if (STATUS_LINE.test(current[cursor])) break;
+      if (STATUS_LINE.test(current[cursor]) || meaningfulTitle(current[cursor])) break;
     }
     for (let cursor = index + 1; cursor < Math.min(current.length, index + 16); cursor += 1) {
       const line = current[cursor];
