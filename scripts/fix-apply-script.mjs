@@ -25,3 +25,11 @@ const after = `  const html = '<main>' +
 if (!text.includes(before)) throw new Error('Embedded Cisco test fixture was not found');
 text = text.replace(before, after);
 fs.writeFileSync(path, text);
+
+const refinePath = 'scripts/refine-stale-mobile-fix.mjs';
+let refine = fs.readFileSync(refinePath, 'utf8');
+const callbackRepair = "\nawait import('./fix-active-incident-callback.mjs');\n";
+if (!refine.includes("fix-active-incident-callback.mjs")) {
+  refine += callbackRepair;
+  fs.writeFileSync(refinePath, refine);
+}
