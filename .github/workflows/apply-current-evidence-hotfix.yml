@@ -1,22 +1,20 @@
 name: Apply current-evidence hotfix
 
 on:
-  pull_request:
+  push:
     branches: [main]
-    types: [opened, synchronize, reopened]
 
 permissions:
   contents: write
 
 jobs:
   apply-and-validate:
-    if: github.event.pull_request.head.ref == 'agent/tighten-current-evidence-72h'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.ref }}
+          ref: agent/tighten-current-evidence-72h
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -53,6 +51,15 @@ jobs:
               raise SystemExit('Expected timestamp boundary block was not found')
           parser.write_text(value.replace(old, new))
           PY
+      - name: Commit applied patch
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add package.json package-lock.json CHANGELOG.md scripts/incident-detail-repairs.mjs scripts/__tests__/structured-source-adapters.test.js scripts/__tests__/update-public-status.test.js
+          if ! git diff --cached --quiet; then
+            git commit -m 'Finalize 3.3.1 current-evidence hotfix'
+            git push origin HEAD:agent/tighten-current-evidence-72h
+          fi
       - run: npm ci
       - run: npm run validate-providers
       - run: npm test
@@ -74,12 +81,3 @@ jobs:
           }
           console.log(`Validated ${payload.incidents.length} current US-relevant incidents.`);
           NODE
-      - name: Commit validated branch changes
-        run: |
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add package.json package-lock.json CHANGELOG.md scripts/incident-detail-repairs.mjs scripts/__tests__/structured-source-adapters.test.js scripts/__tests__/update-public-status.test.js
-          if ! git diff --cached --quiet; then
-            git commit -m 'Finalize 3.3.1 current-evidence hotfix'
-            git push origin HEAD:${{ github.event.pull_request.head.ref }}
-          fi
