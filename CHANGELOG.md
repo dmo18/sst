@@ -4,6 +4,28 @@ All notable changes to the Service Heads-Up Console are recorded here.
 
 The project uses semantic versioning. Dates are shown in ISO format. The newest released version must match `package.json`.
 
+## [3.0.0] - 2026-08-01
+
+### Rebuilt
+
+- Replaced the long-form dashboard with an operator-first command center: Overview, Incident Room, Provider Intelligence, Source Integrity, Timeline, and a full-screen wallboard.
+- Added an action queue that ranks active vendor incidents, in-progress maintenance, critical source blind spots, repeated collection failures, and parser schema drift.
+- Added provider detail drawers with the observation contract, evidence tier, truth basis, quality score, freshness, parser, schema, request trace, incidents, maintenance, and component state.
+- Added a responsive dependency landscape, collection trust distribution, source-quality table, keyboard navigation, accessible focus behavior, and reduced-motion support.
+
+### Data collection
+
+- Replaced unrestricted catalog fan-out with global and per-origin collection budgets and round-robin origin scheduling.
+- Added per-provider source health, truth basis, data-quality scoring, source host, request latency, attempt counts, freshness, incident count, maintenance count, and component-issue count.
+- Added a top-level collection-run contract with run ID, pipeline version, duration, origin and source counts, request success, median and p95 latency, quality score, and healthy/watch/blind source distribution.
+- Preserved free, unauthenticated, first-party-only collection with no API keys, credentials, paid services, commercial aggregators, crowdsourced data, or browser-side vendor calls.
+
+### Validation and UX safety
+
+- Added server and browser validation for the collection intelligence contract and reconciliation of provider, request, source-health, and quality metrics.
+- Kept service state and source health independent so a collector failure cannot become an outage or an operational confirmation.
+- Added deterministic tests for origin budgets, quality scoring, collection metrics, action prioritization, source-health filtering, and category reconciliation.
+
 ## [2.5.1] - 2026-07-31
 
 ### Fixed

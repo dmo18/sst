@@ -1,6 +1,9 @@
 export type StatusColor = 'green' | 'amber' | 'red' | 'blue';
 export type ServiceState = 'operational' | 'degraded' | 'major' | 'unknown';
 export type SourceState = 'available' | 'limited' | 'unavailable' | 'disabled' | 'pending' | 'stale';
+export type SourceHealth = 'healthy' | 'watch' | 'blind';
+export type TruthBasis = 'vendor-incident' | 'confirmed-operational' | 'observed-no-conclusion' | 'last-known-official' | 'limited-official' | 'no-current-observation';
+export type FreshnessState = 'fresh' | 'aging' | 'stale' | 'unknown';
 export type AttentionLevel = 'critical' | 'action' | 'watch' | 'informational';
 export type Criticality = 'high' | 'medium' | 'low';
 export type EvidenceTier = 'structured' | 'feed' | 'rendered-page' | 'public-page' | 'limited';
@@ -51,10 +54,13 @@ export interface ProviderStatus {
   color: StatusColor;
   service_state: ServiceState;
   source_state: SourceState;
+  source_health?: SourceHealth;
+  truth_basis?: TruthBasis;
   attention: AttentionLevel;
   message?: string;
   ok: boolean;
   source: string;
+  source_host?: string;
   priority: number;
   criticality?: Criticality;
   tags?: string[];
@@ -75,6 +81,16 @@ export interface ProviderStatus {
   consecutive_failures?: number;
   last_semantic_change_at?: string;
   component_status?: ComponentStatus[];
+  data_quality_score?: number;
+  source_latency_ms?: number;
+  collection_attempt_count?: number;
+  collection_success_count?: number;
+  collection_failure_count?: number;
+  freshness_seconds?: number;
+  freshness_state?: FreshnessState;
+  active_incident_count?: number;
+  maintenance_count?: number;
+  problem_component_count?: number;
 }
 
 export interface IncidentUpdate {
@@ -186,12 +202,47 @@ export interface StatusSummary {
   schema_change_count?: number;
   failure_streak_count?: number;
   component_issue_count?: number;
+  actionable_provider_count?: number;
+  healthy_source_count?: number;
+  watch_source_count?: number;
+  blind_spot_count?: number;
+  average_data_quality_score?: number;
+  request_count?: number;
+  successful_request_count?: number;
+  failed_request_count?: number;
+  request_success_percent?: number;
+  origin_count?: number;
+  median_request_ms?: number;
+  p95_request_ms?: number;
+}
+
+export interface CollectionRun {
+  pipeline_version: string;
+  run_id: string;
+  started_at: string;
+  completed_at: string;
+  duration_ms: number;
+  provider_count: number;
+  origin_count: number;
+  unique_source_count: number;
+  shared_source_count: number;
+  request_count: number;
+  successful_request_count: number;
+  failed_request_count: number;
+  request_success_percent: number;
+  median_request_ms: number;
+  p95_request_ms: number;
+  quality_score: number;
+  healthy_source_count: number;
+  watch_source_count: number;
+  blind_spot_count: number;
 }
 
 export interface StatusPayload {
   schema_version: 2;
   generated_at: string;
   summary: StatusSummary;
+  collection?: CollectionRun;
   providers: ProviderStatus[];
   incidents: Incident[];
   maintenance?: Maintenance[];

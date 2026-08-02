@@ -31,6 +31,29 @@ function validBasis(provider) {
   return 'limited-official';
 }
 
+function average(values) {
+  return values.length ? Math.round(values.reduce((sum, value) => sum + value, 0) / values.length) : 0;
+}
+
+function collectionMetrics(providers) {
+  const requestCount = providers.reduce((sum, provider) => sum + Number(provider.collection_attempt_count || 0), 0);
+  const successfulRequestCount = providers.reduce((sum, provider) => sum + Number(provider.collection_success_count || 0), 0);
+  const failedRequestCount = providers.reduce((sum, provider) => sum + Number(provider.collection_failure_count || 0), 0);
+  const quality = providers.map(provider => Number(provider.data_quality_score)).filter(Number.isFinite);
+  return {
+    actionable_provider_count: providers.filter(provider => ['critical', 'action'].includes(provider.attention)).length,
+    healthy_source_count: providers.filter(provider => provider.source_health === 'healthy').length,
+    watch_source_count: providers.filter(provider => provider.source_health === 'watch').length,
+    blind_spot_count: providers.filter(provider => provider.source_health === 'blind').length,
+    average_data_quality_score: average(quality),
+    request_count: requestCount,
+    successful_request_count: successfulRequestCount,
+    failed_request_count: failedRequestCount,
+    request_success_percent: requestCount ? Math.round(successfulRequestCount / requestCount * 100) : 0,
+    origin_count: new Set(providers.map(provider => provider.source_host).filter(Boolean)).size
+  };
+}
+
 export function providerHasValidStatusData(provider) {
   return Boolean(
     provider
@@ -78,11 +101,15 @@ export function normalizeProviderStatus(provider, incidents, now = new Date().to
     color: hasActiveIncident ? provider.color : 'blue',
     service_state: hasActiveIncident ? provider.service_state : 'unknown',
     source_state: 'limited',
+    source_health: 'blind',
+    truth_basis: 'no-current-observation',
     attention: hasActiveIncident ? provider.attention : 'watch',
     message,
     ok: false,
     source_confidence: 'none',
     evidence_tier: provider.evidence_tier || 'limited',
+    data_quality_score: Math.min(12, Number(provider.data_quality_score || 12)),
+    freshness_state: provider.freshness_state || 'unknown',
     download_log: [...(Array.isArray(provider.download_log) ? provider.download_log : []), fallbackLog],
     status_data_valid: true,
     status_data_basis: 'limited-fallback'
@@ -108,20 +135,37 @@ export function normalizeStatusPayload(payload, previous = null, now = payload?.
   const validStatusCount = normalizedProviders.filter(providerHasValidStatusData).length;
   const invalidStatusCount = normalizedProviders.length - validStatusCount;
   const validStatusPercent = normalizedProviders.length ? Math.round(validStatusCount / normalizedProviders.length * 100) : 0;
+  const enabledProviders = normalizedProviders.filter(provider => provider.source_state !== 'disabled');
   const liveSourceCount = normalizedProviders.filter(provider => provider.source_state === 'available' && provider.ok === true).length;
-  const liveSourceCoveragePercent = normalizedProviders.length ? Math.round(liveSourceCount / normalizedProviders.length * 100) : 0;
+  const liveSourceCoveragePercent = enabledProviders.length ? Math.round(liveSourceCount / enabledProviders.length * 100) : 0;
   const fallbackCount = normalizedProviders.filter(provider => provider.status_data_basis === 'limited-fallback').length;
   const limitedCount = normalizedProviders.filter(provider => provider.source_state === 'limited').length;
   const staleCount = normalizedProviders.filter(provider => provider.source_state === 'stale').length;
   const summarized = summarizeProviders(normalizedProviders, payload.incidents);
   const intelligence = sourceIntelligenceSummary(normalizedProviders, maintenance);
+  const collectionSummary = collectionMetrics(normalizedProviders);
+  const collection = payload.collection ? {
+    ...payload.collection,
+    provider_count: normalizedProviders.length,
+    request_count: collectionSummary.request_count,
+    successful_request_count: collectionSummary.successful_request_count,
+    failed_request_count: collectionSummary.failed_request_count,
+    request_success_percent: collectionSummary.request_success_percent,
+    quality_score: collectionSummary.average_data_quality_score,
+    healthy_source_count: collectionSummary.healthy_source_count,
+    watch_source_count: collectionSummary.watch_source_count,
+    blind_spot_count: collectionSummary.blind_spot_count
+  } : undefined;
   const validatedBase = {
     ...payload,
+    ...(collection ? { collection } : {}),
     maintenance,
     providers: normalizedProviders,
     summary: {
+      ...payload.summary,
       ...summarized,
       ...intelligence,
+      ...collectionSummary,
       valid_status_count: validStatusCount,
       invalid_status_count: invalidStatusCount,
       valid_status_percent: validStatusPercent
@@ -154,7 +198,8 @@ export function normalizeStatusPayload(payload, previous = null, now = payload?.
       normalized_provider_count: normalizedCount,
       coverage_definition: 'coverage_percent and live_source_coverage_percent are the percentage of providers with a successfully captured current official source. Limited, stale, and fallback records do not count as coverage.',
       record_validity_definition: 'valid_status_percent measures structurally valid records and must not be presented as live provider coverage.',
-      evidence_definition: 'source_confidence describes the quality and readability of the first-party source, not the severity or health of the vendor service.'
+      evidence_definition: 'source_confidence describes the quality and readability of the first-party source, not the severity or health of the vendor service.',
+      collection_definition: 'source_health and data_quality_score describe the collector observation, freshness, evidence tier, and parser reliability. They never replace vendor service state.'
     }
   };
 
@@ -182,5 +227,5 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const statusPath = process.argv[2] ? path.resolve(process.argv[2]) : defaultStatusPath;
   const previousPath = process.argv[3] ? path.resolve(process.argv[3]) : defaultPreviousPath;
   const payload = enforceValidStatusFile(statusPath, previousPath);
-  console.log(`Validated ${payload.summary.valid_status_count}/${payload.providers.length} status records; ${payload.summary.live_source_count}/${payload.providers.length} live official sources (${payload.summary.live_source_coverage_percent}% coverage); ${payload.summary.fallback_source_count} fallbacks; ${payload.summary.maintenance_count} maintenance events.`);
+  console.log(`Validated ${payload.summary.valid_status_count}/${payload.providers.length} status records; ${payload.summary.live_source_count}/${payload.providers.length} live official sources (${payload.summary.live_source_coverage_percent}% coverage); ${payload.summary.fallback_source_count} fallbacks; ${payload.summary.maintenance_count} maintenance events; collection quality ${payload.collection?.quality_score ?? 'legacy'}.`);
 }

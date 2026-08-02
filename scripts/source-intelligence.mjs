@@ -1,4 +1,4 @@
-export const PARSER_VERSION = '2.5.1';
+export const PARSER_VERSION = '3.0.0';
 
 const structuredModes = new Set(['statuspage-json', 'betterstack-json', 'provider-json']);
 const feedModes = new Set(['feed', 'rss', 'atom']);

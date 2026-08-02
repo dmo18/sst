@@ -1,6 +1,8 @@
 import type {
   AttentionLevel,
+  CollectionRun,
   ComponentStatus,
+  FreshnessState,
   Incident,
   Maintenance,
   ProviderConfig,
@@ -8,13 +10,17 @@ import type {
   ProviderStatus,
   ServiceState,
   SourceConfidence,
+  SourceHealth,
   SourceState,
   StatusChange,
-  StatusPayload
+  StatusPayload,
+  TruthBasis
 } from './types';
 
 const serviceRank: Record<ServiceState, number> = { major: 4, degraded: 3, unknown: 2, operational: 1 };
 const attentionRank: Record<AttentionLevel, number> = { critical: 4, action: 3, watch: 2, informational: 1 };
+const sourceHealthRank: Record<SourceHealth, number> = { blind: 3, watch: 2, healthy: 1 };
+const healthyComponent = /^(?:operational|available|up|ok|none|good)$/i;
 
 export interface IssueBrief extends Incident {
   label: string;
@@ -23,6 +29,7 @@ export interface IssueBrief extends Incident {
   mspImpact: string;
   technicianAction: string;
   operatorPriority: string;
+  evidenceLabel: string;
 }
 
 export interface DiagnosticSource {
@@ -31,10 +38,13 @@ export interface DiagnosticSource {
   category: string;
   serviceState: ServiceState;
   sourceState: SourceState;
+  sourceHealth: SourceHealth;
+  truthBasis: TruthBasis;
   attention: AttentionLevel;
   status: string;
   message: string;
   source: string;
+  sourceHost: string;
   ok: boolean;
   checkedAt: string;
   sourceType: string;
@@ -56,16 +66,55 @@ export interface DiagnosticSource {
   consecutiveFailures: number;
   lastSemanticChangeAt: string;
   componentStatus: ComponentStatus[];
+  dataQualityScore: number;
+  sourceLatencyMs: number;
+  collectionAttemptCount: number;
+  collectionSuccessCount: number;
+  collectionFailureCount: number;
+  freshnessSeconds?: number;
+  freshnessState: FreshnessState;
+  activeIncidentCount: number;
+  maintenanceCount: number;
+  problemComponentCount: number;
+}
+
+export type ActionKind = 'incident' | 'maintenance' | 'source' | 'schema';
+
+export interface ActionItem {
+  id: string;
+  kind: ActionKind;
+  attention: AttentionLevel;
+  providerId: string;
+  provider: string;
+  title: string;
+  detail: string;
+  action: string;
+  updatedAt: string;
+  source: string;
+  score: number;
+}
+
+export interface CategoryPulse {
+  category: string;
+  total: number;
+  operational: number;
+  affected: number;
+  unknown: number;
+  blind: number;
+  averageQuality: number;
 }
 
 export interface IssueConsoleModel {
   version: string;
   generatedAt: string;
+  collection: CollectionRun | null;
   incidentCount: number;
   affectedCount: number;
   briefs: IssueBrief[];
   maintenance: Maintenance[];
   diagnostics: DiagnosticSource[];
+  actionQueue: ActionItem[];
+  categoryPulse: CategoryPulse[];
   changes: StatusChange[];
   history: StatusChange[];
   summary: StatusPayload['summary'];
@@ -79,6 +128,10 @@ export interface IssueConsoleModel {
   failureStreakCount: number;
   highConfidenceCount: number;
   componentIssueCount: number;
+  qualityScore: number;
+  healthySourceCount: number;
+  watchSourceCount: number;
+  blindSpotCount: number;
 }
 
 function clean(value?: string): string {
@@ -125,21 +178,18 @@ function categoryImpact(item: Incident, service: string): string {
   if (category.includes('communication') || category.includes('collaboration')) return major
     ? `${item.provider} may block calling, meetings, messaging, files, notifications, or collaboration for ${service}.`
     : `${item.provider} may degrade calls, meetings, chat, notifications, file sync, or collaboration for ${service}.`;
-  return major
-    ? `${item.provider} may cause a major interruption for ${service}.`
-    : `${item.provider} may degrade ${service}.`;
+  return major ? `${item.provider} may cause a major interruption for ${service}.` : `${item.provider} may degrade ${service}.`;
 }
 
 function derivedMspImpact(item: Incident, provider?: ProviderStatus): string {
   const configured = clean(item.client_impact || provider?.client_impact);
   if (configured.length > 24) return configured;
-  const service = affectedServiceLabel(item);
   const sourceNote = provider?.source_confidence === 'high'
-    ? 'The conclusion is based on structured first-party evidence.'
+    ? 'The conclusion is backed by structured first-party evidence.'
     : provider?.source_confidence === 'medium'
-      ? 'The conclusion is based on a readable first-party feed or rendered page.'
-      : 'Source confidence is limited; correlate before broad client communication.';
-  return `${categoryImpact(item, service)} ${sourceNote}`;
+      ? 'The conclusion is backed by a readable first-party feed or rendered page.'
+      : 'Evidence is limited; correlate before broad client communication.';
+  return `${categoryImpact(item, affectedServiceLabel(item))} ${sourceNote}`;
 }
 
 function categoryAction(item: Incident): string {
@@ -156,18 +206,15 @@ function categoryAction(item: Incident): string {
 function derivedTechnicianAction(item: Incident, provider?: ProviderStatus): string {
   const configured = clean(item.technician_action || provider?.technician_action);
   if (configured.length > 24) return configured;
-  const caution = provider && provider.source_confidence !== 'high'
-    ? ' Recheck the official source before client-wide messaging.'
-    : ' Continue monitoring the official incident timeline.';
-  return `${categoryAction(item)}${caution}`;
+  return `${categoryAction(item)}${provider && provider.source_confidence !== 'high' ? ' Recheck the official source before client-wide messaging.' : ' Continue monitoring the official incident timeline.'}`;
 }
 
 function operatorPriority(item: Incident, provider?: ProviderStatus): string {
   const criticalProvider = provider?.criticality === 'high' || (provider?.priority || item.priority || 0) >= 85;
-  if (item.service_state === 'major' && criticalProvider) return 'P1: major issue on a high-priority dependency';
-  if (item.service_state === 'major') return 'P1: major vendor issue; confirm client impact now';
-  if (criticalProvider) return 'P2: high-priority dependency degraded';
-  return 'P3: monitor, correlate tickets, and update as scope changes';
+  if (item.service_state === 'major' && criticalProvider) return 'P1 · major issue on a high-priority dependency';
+  if (item.service_state === 'major') return 'P1 · major vendor issue; confirm client impact now';
+  if (criticalProvider) return 'P2 · high-priority dependency degraded';
+  return 'P3 · monitor, correlate tickets, and update as scope changes';
 }
 
 export function clientCommunicationDraft(item: Incident, _provider?: ProviderStatus): string {
@@ -186,6 +233,8 @@ function catalogFallback(provider: ProviderConfig, at: string): ProviderStatus {
     color: 'blue',
     service_state: 'unknown',
     source_state: provider.enabled === false ? 'disabled' : 'pending',
+    source_health: 'blind',
+    truth_basis: 'no-current-observation',
     attention: 'watch',
     message: provider.message || 'Waiting for generated status.',
     ok: false,
@@ -201,6 +250,7 @@ function catalogFallback(provider: ProviderConfig, at: string): ProviderStatus {
     download_log: [],
     evidence_tier: 'limited',
     source_confidence: 'none',
+    data_quality_score: 0,
     consecutive_failures: 0,
     component_status: []
   };
@@ -212,10 +262,34 @@ function merge(payload: StatusPayload, catalog: ProviderConfig[]): ProviderStatu
     if (map.has(provider.id)) throw new Error(`Duplicate provider id in status payload: ${provider.id}`);
     map.set(provider.id, provider);
   }
-  for (const provider of catalog) {
-    if (!map.has(provider.id)) map.set(provider.id, catalogFallback(provider, payload.generated_at));
-  }
+  for (const provider of catalog) if (!map.has(provider.id)) map.set(provider.id, catalogFallback(provider, payload.generated_at));
   return [...map.values()];
+}
+
+function inferredSourceHealth(provider: ProviderStatus): SourceHealth {
+  if (provider.source_health) return provider.source_health;
+  if (provider.source_state === 'available' && provider.ok) return 'healthy';
+  if (['unavailable', 'pending', 'disabled'].includes(provider.source_state)) return 'blind';
+  return 'watch';
+}
+
+function inferredTruthBasis(provider: ProviderStatus): TruthBasis {
+  if (provider.truth_basis) return provider.truth_basis;
+  if (['major', 'degraded'].includes(provider.service_state) && provider.source_state === 'available') return 'vendor-incident';
+  if (provider.service_state === 'operational' && provider.source_state === 'available') return 'confirmed-operational';
+  if (provider.source_state === 'available') return 'observed-no-conclusion';
+  if (provider.source_state === 'stale') return 'last-known-official';
+  if (provider.source_state === 'limited') return 'limited-official';
+  return 'no-current-observation';
+}
+
+function inferredQuality(provider: ProviderStatus): number {
+  if (Number.isFinite(provider.data_quality_score)) return Number(provider.data_quality_score);
+  if (provider.source_state !== 'available') return provider.source_state === 'limited' ? 30 : 8;
+  if (provider.evidence_tier === 'structured') return 94;
+  if (provider.evidence_tier === 'feed') return 84;
+  if (provider.evidence_tier === 'rendered-page') return 74;
+  return 64;
 }
 
 export function filterDiagnostics(items: DiagnosticSource[], query: string, filters: string[]): DiagnosticSource[] {
@@ -229,8 +303,109 @@ export function filterDiagnostics(items: DiagnosticSource[], query: string, filt
               : filter === 'structured' ? item.evidenceTier === 'structured'
                 : filter === 'schema-change' ? item.schemaChanged
                   : filter === 'failure-streak' ? item.consecutiveFailures >= 2
-                    : filter === item.sourceState || filter === item.serviceState || item.tags.includes(filter) || item.category.toLowerCase().includes(filter)
+                    : filter === 'healthy-source' ? item.sourceHealth === 'healthy'
+                      : filter === 'watch-source' ? item.sourceHealth === 'watch'
+                        : filter === 'blind-source' ? item.sourceHealth === 'blind'
+                          : filter === 'maintenance' ? item.maintenanceCount > 0
+                            : filter === 'stale' ? ['aging', 'stale'].includes(item.freshnessState)
+                              : filter === item.sourceState || filter === item.serviceState || item.tags.includes(filter) || item.category.toLowerCase().includes(filter)
   ));
+}
+
+function buildCategoryPulse(diagnostics: DiagnosticSource[]): CategoryPulse[] {
+  const groups = new Map<string, DiagnosticSource[]>();
+  for (const item of diagnostics) groups.set(item.category, [...(groups.get(item.category) || []), item]);
+  return [...groups.entries()].map(([category, items]) => ({
+    category,
+    total: items.length,
+    operational: items.filter(item => item.serviceState === 'operational').length,
+    affected: items.filter(item => ['major', 'degraded'].includes(item.serviceState)).length,
+    unknown: items.filter(item => item.serviceState === 'unknown').length,
+    blind: items.filter(item => item.sourceHealth === 'blind').length,
+    averageQuality: Math.round(items.reduce((sum, item) => sum + item.dataQualityScore, 0) / items.length)
+  })).sort((a, b) => b.affected - a.affected || b.blind - a.blind || b.total - a.total || a.category.localeCompare(b.category));
+}
+
+function buildActionQueue(briefs: IssueBrief[], maintenance: Maintenance[], diagnostics: DiagnosticSource[]): ActionItem[] {
+  const items: ActionItem[] = [];
+  for (const incident of briefs) {
+    items.push({
+      id: `incident:${incident.id}`,
+      kind: 'incident',
+      attention: incident.attention,
+      providerId: incident.providerId,
+      provider: incident.provider,
+      title: incident.title,
+      detail: incident.note,
+      action: incident.technicianAction,
+      updatedAt: incident.latest_update || incident.rawTime || incident.first_detected || '',
+      source: incident.url,
+      score: incident.service_state === 'major' ? 1200 + incident.priority : 1000 + incident.priority
+    });
+  }
+  for (const item of maintenance.filter(entry => entry.status === 'in_progress')) {
+    items.push({
+      id: `maintenance:${item.id}`,
+      kind: 'maintenance',
+      attention: 'action',
+      providerId: item.providerId,
+      provider: item.provider,
+      title: item.title,
+      detail: item.note,
+      action: 'Confirm whether the maintenance window overlaps reported client symptoms before troubleshooting locally.',
+      updatedAt: item.latest_update || item.starts_at || item.announced_at || '',
+      source: item.url,
+      score: 800 + item.priority
+    });
+  }
+  for (const source of diagnostics) {
+    const critical = source.criticality === 'high' || source.priority >= 85;
+    if (source.sourceHealth === 'blind' && critical) {
+      items.push({
+        id: `source:${source.id}`,
+        kind: 'source',
+        attention: 'action',
+        providerId: source.id,
+        provider: source.provider,
+        title: 'No current machine-readable observation',
+        detail: source.message || source.status,
+        action: source.technicianAction || 'Open the official source manually and correlate current client symptoms before making a service conclusion.',
+        updatedAt: source.checkedAt,
+        source: source.source,
+        score: 720 + source.priority
+      });
+    } else if (source.consecutiveFailures >= 2) {
+      items.push({
+        id: `failure:${source.id}`,
+        kind: 'source',
+        attention: source.attention,
+        providerId: source.id,
+        provider: source.provider,
+        title: `${source.consecutiveFailures} consecutive collection failures`,
+        detail: source.message || source.status,
+        action: 'Verify the first-party endpoint and parser contract. Do not infer vendor health from the source failure.',
+        updatedAt: source.checkedAt,
+        source: source.source,
+        score: 600 + source.priority
+      });
+    }
+    if (source.schemaChanged) {
+      items.push({
+        id: `schema:${source.id}`,
+        kind: 'schema',
+        attention: 'watch',
+        providerId: source.id,
+        provider: source.provider,
+        title: 'Official source shape changed',
+        detail: `Parser ${source.parserVersion || 'unknown'} observed a new source fingerprint.`,
+        action: 'Review the captured source and parser fixture before trusting new semantics.',
+        updatedAt: source.checkedAt,
+        source: source.source,
+        score: 500 + source.priority
+      });
+    }
+  }
+  return items.sort((a, b) => b.score - a.score || Date.parse(b.updatedAt || '') - Date.parse(a.updatedAt || '')).slice(0, 40);
 }
 
 export function buildIssueConsoleModel(payload: StatusPayload, version: string, catalog: ProviderConfig[] = []): IssueConsoleModel {
@@ -247,16 +422,24 @@ export function buildIssueConsoleModel(payload: StatusPayload, version: string, 
     const components = provider.component_status || [];
     const relatedIncidents = payload.incidents.filter(item => item.providerId === provider.id);
     const relatedMaintenance = maintenance.filter(item => item.providerId === provider.id);
+    const sourceHealth = inferredSourceHealth(provider);
+    let sourceHost = provider.source_host || '';
+    if (!sourceHost) {
+      try { sourceHost = new URL(provider.source).hostname; } catch { }
+    }
     return {
       id: provider.id,
       provider: provider.name,
       category: provider.category,
       serviceState: provider.service_state,
       sourceState: provider.source_state,
+      sourceHealth,
+      truthBasis: inferredTruthBasis(provider),
       attention: provider.attention,
       status: provider.status,
       message: provider.message || '',
       source: provider.source,
+      sourceHost,
       ok: provider.ok,
       checkedAt: provider.checked_at || payload.generated_at,
       sourceType: provider.source_type || 'unknown',
@@ -276,10 +459,20 @@ export function buildIssueConsoleModel(payload: StatusPayload, version: string, 
       consecutiveFailures: provider.consecutive_failures || 0,
       lastSemanticChangeAt: provider.last_semantic_change_at || '',
       componentStatus: components,
-      searchText: `${provider.name} ${provider.category} ${(provider.tags || []).join(' ')} ${(provider.services || []).join(' ')} ${components.map(component => `${component.name} ${component.status}`).join(' ')} ${relatedIncidents.map(item => `${item.title} ${item.note}`).join(' ')} ${relatedMaintenance.map(item => `${item.title} ${item.note}`).join(' ')}`.toLowerCase(),
+      dataQualityScore: inferredQuality(provider),
+      sourceLatencyMs: Number(provider.source_latency_ms || 0),
+      collectionAttemptCount: Number(provider.collection_attempt_count || 0),
+      collectionSuccessCount: Number(provider.collection_success_count || 0),
+      collectionFailureCount: Number(provider.collection_failure_count || 0),
+      freshnessSeconds: provider.freshness_seconds,
+      freshnessState: provider.freshness_state || 'unknown',
+      activeIncidentCount: Number(provider.active_incident_count ?? relatedIncidents.length),
+      maintenanceCount: Number(provider.maintenance_count ?? relatedMaintenance.length),
+      problemComponentCount: Number(provider.problem_component_count ?? components.filter(component => !healthyComponent.test(component.status)).length),
+      searchText: `${provider.name} ${provider.category} ${(provider.tags || []).join(' ')} ${(provider.services || []).join(' ')} ${provider.source} ${sourceHost} ${components.map(component => `${component.name} ${component.status}`).join(' ')} ${relatedIncidents.map(item => `${item.title} ${item.note}`).join(' ')} ${relatedMaintenance.map(item => `${item.title} ${item.note}`).join(' ')}`.toLowerCase(),
       changed: changed.has(provider.id)
     };
-  }).sort((a, b) => attentionRank[b.attention] - attentionRank[a.attention] || serviceRank[b.serviceState] - serviceRank[a.serviceState] || Number(b.changed) - Number(a.changed) || b.priority - a.priority || a.provider.localeCompare(b.provider));
+  }).sort((a, b) => attentionRank[b.attention] - attentionRank[a.attention] || serviceRank[b.serviceState] - serviceRank[a.serviceState] || sourceHealthRank[b.sourceHealth] - sourceHealthRank[a.sourceHealth] || Number(b.changed) - Number(a.changed) || b.priority - a.priority || a.provider.localeCompare(b.provider));
 
   const briefs = [...payload.incidents]
     .sort((a, b) => attentionRank[b.attention] - attentionRank[a.attention] || serviceRank[b.service_state] - serviceRank[a.service_state] || b.priority - a.priority)
@@ -292,22 +485,29 @@ export function buildIssueConsoleModel(payload: StatusPayload, version: string, 
         mspImpact: derivedMspImpact(item, provider),
         technicianAction: derivedTechnicianAction(item, provider),
         operatorPriority: operatorPriority(item, provider),
+        evidenceLabel: provider?.source_confidence === 'high' ? 'Structured first-party evidence' : provider?.source_confidence === 'medium' ? 'Readable first-party evidence' : 'Limited first-party evidence',
         clientDraft: ''
       };
       return { ...brief, clientDraft: clientCommunicationDraft(brief, provider) };
     });
 
-  const componentIssueCount = diagnostics.flatMap(item => item.componentStatus)
-    .filter(component => !/^(?:operational|available|up|ok|none|good)$/i.test(component.status)).length;
+  const componentIssueCount = diagnostics.reduce((sum, item) => sum + item.problemComponentCount, 0);
+  const qualityScore = Number(payload.collection?.quality_score ?? payload.summary.average_data_quality_score ?? (diagnostics.length ? Math.round(diagnostics.reduce((sum, item) => sum + item.dataQualityScore, 0) / diagnostics.length) : 0));
+  const healthySourceCount = diagnostics.filter(item => item.sourceHealth === 'healthy').length;
+  const watchSourceCount = diagnostics.filter(item => item.sourceHealth === 'watch').length;
+  const blindSpotCount = diagnostics.filter(item => item.sourceHealth === 'blind').length;
 
   return {
     version,
     generatedAt: payload.generated_at,
+    collection: payload.collection || null,
     incidentCount: briefs.length,
     affectedCount: payload.summary.affected_provider_count,
     briefs,
     maintenance,
     diagnostics,
+    actionQueue: buildActionQueue(briefs, maintenance, diagnostics),
+    categoryPulse: buildCategoryPulse(diagnostics),
     changes: payload.changes,
     history: payload.history,
     summary: payload.summary,
@@ -320,10 +520,14 @@ export function buildIssueConsoleModel(payload: StatusPayload, version: string, 
     schemaChangeCount: diagnostics.filter(item => item.schemaChanged).length,
     failureStreakCount: diagnostics.filter(item => item.consecutiveFailures >= 2).length,
     highConfidenceCount: diagnostics.filter(item => item.sourceConfidence === 'high').length,
-    componentIssueCount
+    componentIssueCount,
+    qualityScore,
+    healthySourceCount,
+    watchSourceCount,
+    blindSpotCount
   };
 }
 
 export function wallboardSubset(model: IssueConsoleModel): DiagnosticSource[] {
-  return model.diagnostics.filter(item => item.attention !== 'informational' || item.changed);
+  return model.diagnostics.filter(item => item.attention !== 'informational' || item.changed || item.sourceHealth !== 'healthy');
 }

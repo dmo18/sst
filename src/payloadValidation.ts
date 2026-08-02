@@ -2,6 +2,9 @@ import type { StatusPayload } from './types';
 
 const services = new Set(['operational', 'degraded', 'major', 'unknown']);
 const sources = new Set(['available', 'limited', 'unavailable', 'disabled', 'pending', 'stale']);
+const sourceHealth = new Set(['healthy', 'watch', 'blind']);
+const truthBasis = new Set(['vendor-incident', 'confirmed-operational', 'observed-no-conclusion', 'last-known-official', 'limited-official', 'no-current-observation']);
+const freshness = new Set(['fresh', 'aging', 'stale', 'unknown']);
 const colors = new Set(['green', 'amber', 'red', 'blue']);
 const attention = new Set(['critical', 'action', 'watch', 'informational']);
 const confidence = new Set(['high', 'medium', 'low', 'none']);
@@ -17,6 +20,12 @@ const http = (value: unknown): boolean => {
 };
 
 const validDate = (value: unknown): boolean => typeof value === 'string' && Number.isFinite(Date.parse(value));
+const finiteNonNegative = (value: unknown): boolean => Number.isFinite(value) && Number(value) >= 0;
+const percentage = (value: unknown): boolean => finiteNonNegative(value) && Number(value) <= 100;
+
+function average(values: number[]): number {
+  return values.length ? Math.round(values.reduce((sum, value) => sum + value, 0) / values.length) : 0;
+}
 
 export function payloadValidationErrors(value: unknown): string[] {
   const errors: string[] = [];
@@ -45,17 +54,25 @@ export function payloadValidationErrors(value: unknown): string[] {
     ids.add(String(provider.id));
     if (!services.has(String(provider.service_state))) errors.push(`invalid service_state ${String(provider.id)}`);
     if (!sources.has(String(provider.source_state))) errors.push(`invalid source_state ${String(provider.id)}`);
+    if (provider.source_health !== undefined && !sourceHealth.has(String(provider.source_health))) errors.push(`invalid source_health ${String(provider.id)}`);
+    if (provider.truth_basis !== undefined && !truthBasis.has(String(provider.truth_basis))) errors.push(`invalid truth_basis ${String(provider.id)}`);
     if (!colors.has(String(provider.color))) errors.push(`invalid color ${String(provider.id)}`);
     if (!attention.has(String(provider.attention))) errors.push(`invalid attention ${String(provider.id)}`);
     if (typeof provider.ok !== 'boolean') errors.push(`invalid ok ${String(provider.id)}`);
     if (!Number.isFinite(provider.priority) || Number(provider.priority) < 0) errors.push(`invalid priority ${String(provider.id)}`);
     if (!http(provider.source)) errors.push(`invalid source URL ${String(provider.id)}`);
+    if (provider.source_host !== undefined && typeof provider.source_host !== 'string') errors.push(`invalid source_host ${String(provider.id)}`);
     if (provider.evidence_tier !== undefined && !evidence.has(String(provider.evidence_tier))) errors.push(`invalid evidence tier ${String(provider.id)}`);
     if (provider.source_confidence !== undefined && !confidence.has(String(provider.source_confidence))) errors.push(`invalid source confidence ${String(provider.id)}`);
     if (provider.consecutive_failures !== undefined && (!Number.isInteger(provider.consecutive_failures) || Number(provider.consecutive_failures) < 0)) errors.push(`invalid failure streak ${String(provider.id)}`);
+    if (provider.freshness_state !== undefined && !freshness.has(String(provider.freshness_state))) errors.push(`invalid freshness_state ${String(provider.id)}`);
     for (const key of ['checked_at', 'last_success_at', 'last_semantic_change_at']) {
       if (provider[key] && !validDate(provider[key])) errors.push(`invalid ${key} ${String(provider.id)}`);
     }
+    const numericFields = ['source_latency_ms', 'collection_attempt_count', 'collection_success_count', 'collection_failure_count', 'freshness_seconds', 'active_incident_count', 'maintenance_count', 'problem_component_count'];
+    for (const key of numericFields) if (provider[key] !== undefined && !finiteNonNegative(provider[key])) errors.push(`invalid ${key} ${String(provider.id)}`);
+    if (provider.data_quality_score !== undefined && !percentage(provider.data_quality_score)) errors.push(`invalid data_quality_score ${String(provider.id)}`);
+    if (provider.collection_attempt_count !== undefined && provider.collection_success_count !== undefined && provider.collection_failure_count !== undefined && Number(provider.collection_attempt_count) !== Number(provider.collection_success_count) + Number(provider.collection_failure_count)) errors.push(`collection counts do not reconcile ${String(provider.id)}`);
     if (provider.component_status !== undefined && !Array.isArray(provider.component_status)) errors.push(`invalid component status ${String(provider.id)}`);
   }
 
@@ -76,7 +93,7 @@ export function payloadValidationErrors(value: unknown): string[] {
   const maintenanceIds = new Set<string>();
   for (const item of maintenance) {
     if (!ids.has(String(item.providerId))) errors.push(`unknown maintenance provider ${String(item.providerId)}`);
-    if (maintenanceIds.has(String(item.id))) errors.push(`duplicate maintenance ${String(item.id)}`);
+    if (!item.id || maintenanceIds.has(String(item.id))) errors.push(`duplicate maintenance ${String(item.id || 'missing')}`);
     maintenanceIds.add(String(item.id));
     if (!http(item.url)) errors.push(`invalid maintenance URL ${String(item.id)}`);
     if (!maintenanceStates.has(String(item.status))) errors.push(`invalid maintenance state ${String(item.id)}`);
@@ -101,14 +118,13 @@ export function payloadValidationErrors(value: unknown): string[] {
     const optionalNumeric = [
       'maintenance_count', 'ongoing_maintenance_count', 'structured_source_count', 'feed_source_count',
       'page_source_count', 'high_confidence_source_count', 'schema_change_count', 'failure_streak_count',
-      'component_issue_count'
+      'component_issue_count', 'actionable_provider_count', 'healthy_source_count', 'watch_source_count',
+      'blind_spot_count', 'average_data_quality_score', 'request_count', 'successful_request_count',
+      'failed_request_count', 'request_success_percent', 'origin_count', 'median_request_ms', 'p95_request_ms'
     ];
-    for (const key of requiredNumeric) {
-      if (!Number.isFinite(summary[key]) || Number(summary[key]) < 0) errors.push(`invalid summary ${key}`);
-    }
-    for (const key of optionalNumeric) {
-      if (summary[key] !== undefined && (!Number.isFinite(summary[key]) || Number(summary[key]) < 0)) errors.push(`invalid summary ${key}`);
-    }
+    for (const key of requiredNumeric) if (!finiteNonNegative(summary[key])) errors.push(`invalid summary ${key}`);
+    for (const key of optionalNumeric) if (summary[key] !== undefined && !finiteNonNegative(summary[key])) errors.push(`invalid summary ${key}`);
+    for (const key of ['coverage_percent', 'live_source_coverage_percent', 'valid_status_percent', 'confirmed_operational_percent', 'average_data_quality_score', 'request_success_percent']) if (summary[key] !== undefined && !percentage(summary[key])) errors.push(`invalid summary percentage ${key}`);
     if (summary.provider_total !== providers.length) errors.push('provider count mismatch');
     if (summary.active_incident_count !== incidents.length) errors.push('incident count mismatch');
     if (summary.affected_provider_count !== new Set(incidents.map(item => item.providerId)).size) errors.push('affected provider count mismatch');
@@ -125,6 +141,7 @@ export function payloadValidationErrors(value: unknown): string[] {
     const expectedOperational = enabled.length ? Math.round(count('service_state', 'operational') / enabled.length * 100) : 0;
     if (summary.enabled_provider_count !== enabled.length || summary.coverage_percent !== expectedLiveSourceCoverage || summary.live_source_coverage_percent !== expectedLiveSourceCoverage || summary.valid_status_count !== validStatusCount || summary.invalid_status_count !== providers.length - validStatusCount || summary.valid_status_percent !== expectedValidStatusPercent || summary.confirmed_operational_percent !== expectedOperational) errors.push('coverage counts do not reconcile');
 
+    const qualityValues = providers.map(provider => Number(provider.data_quality_score)).filter(Number.isFinite);
     const optionalExpected: Record<string, number> = {
       maintenance_count: maintenance.length,
       ongoing_maintenance_count: maintenance.filter(item => item.status === 'in_progress').length,
@@ -134,10 +151,41 @@ export function payloadValidationErrors(value: unknown): string[] {
       high_confidence_source_count: providers.filter(provider => provider.source_confidence === 'high').length,
       schema_change_count: providers.filter(provider => provider.schema_changed === true).length,
       failure_streak_count: providers.filter(provider => Number(provider.consecutive_failures || 0) >= 2).length,
-      component_issue_count: providers.flatMap(provider => Array.isArray(provider.component_status) ? provider.component_status as Record<string, unknown>[] : []).filter(component => !/^(?:operational|available|up|ok|none|good)$/i.test(String(component.status || ''))).length
+      component_issue_count: providers.flatMap(provider => Array.isArray(provider.component_status) ? provider.component_status as Record<string, unknown>[] : []).filter(component => !/^(?:operational|available|up|ok|none|good)$/i.test(String(component.status || ''))).length,
+      actionable_provider_count: providers.filter(provider => ['critical', 'action'].includes(String(provider.attention))).length,
+      healthy_source_count: count('source_health', 'healthy'),
+      watch_source_count: count('source_health', 'watch'),
+      blind_spot_count: count('source_health', 'blind'),
+      average_data_quality_score: average(qualityValues),
+      request_count: providers.reduce((sum, provider) => sum + Number(provider.collection_attempt_count || 0), 0),
+      successful_request_count: providers.reduce((sum, provider) => sum + Number(provider.collection_success_count || 0), 0),
+      failed_request_count: providers.reduce((sum, provider) => sum + Number(provider.collection_failure_count || 0), 0),
+      origin_count: new Set(providers.map(provider => provider.source_host || (() => { try { return new URL(String(provider.source)).hostname; } catch { return ''; } })()).filter(Boolean)).size
     };
-    for (const [key, expected] of Object.entries(optionalExpected)) {
-      if (summary[key] !== undefined && summary[key] !== expected) errors.push(`summary ${key} does not reconcile`);
+    optionalExpected.request_success_percent = optionalExpected.request_count ? Math.round(optionalExpected.successful_request_count / optionalExpected.request_count * 100) : 0;
+    for (const [key, expected] of Object.entries(optionalExpected)) if (summary[key] !== undefined && summary[key] !== expected) errors.push(`summary ${key} does not reconcile`);
+  }
+
+  if (payload.collection !== undefined) {
+    if (!payload.collection || typeof payload.collection !== 'object') {
+      errors.push('collection must be an object');
+    } else {
+      const collection = payload.collection as Record<string, unknown>;
+      for (const key of ['pipeline_version', 'run_id']) if (typeof collection[key] !== 'string' || !collection[key]) errors.push(`invalid collection ${key}`);
+      for (const key of ['started_at', 'completed_at']) if (!validDate(collection[key])) errors.push(`invalid collection ${key}`);
+      const numeric = ['duration_ms', 'provider_count', 'origin_count', 'unique_source_count', 'shared_source_count', 'request_count', 'successful_request_count', 'failed_request_count', 'request_success_percent', 'median_request_ms', 'p95_request_ms', 'quality_score', 'healthy_source_count', 'watch_source_count', 'blind_spot_count'];
+      for (const key of numeric) if (!finiteNonNegative(collection[key])) errors.push(`invalid collection ${key}`);
+      for (const key of ['request_success_percent', 'quality_score']) if (!percentage(collection[key])) errors.push(`invalid collection percentage ${key}`);
+      const providerAttempts = providers.reduce((sum, provider) => sum + Number(provider.collection_attempt_count || 0), 0);
+      const providerSuccesses = providers.reduce((sum, provider) => sum + Number(provider.collection_success_count || 0), 0);
+      const providerFailures = providers.reduce((sum, provider) => sum + Number(provider.collection_failure_count || 0), 0);
+      const qualityValues = providers.map(provider => Number(provider.data_quality_score)).filter(Number.isFinite);
+      if (collection.provider_count !== providers.length) errors.push('collection provider_count mismatch');
+      if (collection.healthy_source_count !== providers.filter(provider => provider.source_health === 'healthy').length || collection.watch_source_count !== providers.filter(provider => provider.source_health === 'watch').length || collection.blind_spot_count !== providers.filter(provider => provider.source_health === 'blind').length) errors.push('collection source health counts do not reconcile');
+      if (collection.request_count !== providerAttempts || collection.successful_request_count !== providerSuccesses || collection.failed_request_count !== providerFailures) errors.push('collection request counts do not reconcile');
+      if (collection.request_success_percent !== (providerAttempts ? Math.round(providerSuccesses / providerAttempts * 100) : 0)) errors.push('collection request success does not reconcile');
+      if (collection.quality_score !== average(qualityValues)) errors.push('collection quality does not reconcile');
+      if (validDate(collection.started_at) && validDate(collection.completed_at) && Date.parse(String(collection.completed_at)) < Date.parse(String(collection.started_at))) errors.push('collection completed before it started');
     }
   }
 
