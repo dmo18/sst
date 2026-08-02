@@ -52,6 +52,15 @@ jobs:
               raise SystemExit('Expected timestamp boundary block was not found')
           parser.write_text(value.replace(old, new))
           PY
+      - name: Commit applied patch before validation
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add package.json package-lock.json CHANGELOG.md scripts/incident-detail-repairs.mjs scripts/__tests__/structured-source-adapters.test.js scripts/__tests__/update-public-status.test.js
+          if ! git diff --cached --quiet; then
+            git commit -m 'Finalize 3.3.1 current-evidence hotfix'
+            git push origin HEAD:agent/tighten-current-evidence-72h
+          fi
       - run: npm ci
       - run: npm run validate-providers
       - run: npm test
@@ -73,12 +82,3 @@ jobs:
           }
           console.log(`Validated ${payload.incidents.length} current US-relevant incidents.`);
           NODE
-      - name: Commit validated branch changes
-        run: |
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add package.json package-lock.json CHANGELOG.md scripts/incident-detail-repairs.mjs scripts/__tests__/structured-source-adapters.test.js scripts/__tests__/update-public-status.test.js
-          if ! git diff --cached --quiet; then
-            git commit -m 'Finalize 3.3.1 current-evidence hotfix'
-            git push origin HEAD:agent/tighten-current-evidence-72h
-          fi
