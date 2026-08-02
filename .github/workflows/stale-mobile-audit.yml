@@ -2,96 +2,29 @@ name: Stale data and mobile audit
 on:
   pull_request:
 permissions:
-  contents: write
+  contents: read
 jobs:
   audit:
-    if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.ref }}
-          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
           cache: npm
       - run: npm ci
-      - name: Capture production payload
-        run: |
-          mkdir -p audit
-          curl --fail --silent --show-error --location 'https://dmo18.github.io/sst/status.json?audit=${{ github.run_id }}' -o audit/production-status.json
-          python3 - <<'PY'
-          import json, datetime, re
-          from pathlib import Path
-          p=json.loads(Path('audit/production-status.json').read_text())
-          now=datetime.datetime.now(datetime.timezone.utc)
-          lines=[f"generated_at={p.get('generated_at')}", f"version={p.get('version')}", f"incidents={len(p.get('incidents',[]))}", f"maintenance={len(p.get('maintenance',[]))}"]
-          stale=[]
-          for kind in ('incidents','maintenance'):
-              for item in p.get(kind,[]):
-                  selected=''
-                  for key in ('latest_update','rawTime','first_detected','starts_at','announced_at'):
-                      if item.get(key):
-                          selected=str(item[key]); break
-                  age_days=None
-                  if selected:
-                      try:
-                          dt=datetime.datetime.fromisoformat(selected.replace('Z','+00:00'))
-                          if dt.tzinfo is None: dt=dt.replace(tzinfo=datetime.timezone.utc)
-                          age_days=(now-dt.astimezone(datetime.timezone.utc)).total_seconds()/86400
-                      except Exception:
-                          pass
-                  text=' '.join(str(item.get(k,'')) for k in ('provider','title','note','status','affected_service'))
-                  if (age_days is not None and age_days > 45 and kind == 'incidents') or re.search(r'^(?:Mar|Apr)\s+\d{1,2}\s*,\s*2026', str(item.get('title','')), re.I):
-                      stale.append({'kind':kind,'provider':item.get('provider'),'title':item.get('title'),'status':item.get('status'),'selected_time':selected,'age_days':age_days,'url':item.get('url')})
-          lines.append(f"invalid_current_records={len(stale)}")
-          for row in stale: lines.append(json.dumps(row, sort_keys=True))
-          Path('audit/production-audit.txt').write_text('\n'.join(lines)+'\n')
-          print('\n'.join(lines))
-          PY
-      - name: Apply production repair
-        run: node scripts/apply-stale-mobile-fix.mjs
-      - name: Synchronize release metadata
-        run: |
-          npm version 3.3.0 --no-git-tag-version
-          python3 - <<'PY'
-          from pathlib import Path
-          path=Path('CHANGELOG.md')
-          text=path.read_text()
-          marker='## [3.2.0] - 2026-08-02'
-          entry='''## [3.3.0] - 2026-08-02
-
-### Fixed
-
-- Rejected unresolved incident records when the official source has not published current evidence within 45 days, while retaining long-running incidents that have a recent vendor update.
-- Prevented date-only lines and status-update timestamps from becoming incident titles.
-- Corrected Cisco Umbrella parsing for spaced date punctuation and expanded international-region filtering for Dubai, Mumbai, Hyderabad, and Delhi.
-- Removed malformed date-title events from the active payload and retained audit history.
-- Changed ambiguous stale incident records to limited/unknown rather than presenting them as current incidents or confirmed healthy service.
-
-### Mobile operations experience
-
-- Replaced the wrapped horizontal desktop navigation with a fixed five-destination bottom navigation designed for phones.
-- Added a compact sticky mobile header and lifecycle strip so operational content appears immediately.
-- Replaced horizontally scrolling provider tables with touch-friendly provider summary cards.
-- Reworked KPI, action queue, category, incident, maintenance, timeline, provider drawer, filter, and safe-area layouts for 360px, 390px, and 430px phone widths.
-- Preserved continuously updating payload age, browser refresh countdowns, observation ages, source state, and fail-closed semantics.
-
-'''
-          if marker not in text:
-              raise SystemExit('3.2.0 changelog marker missing')
-          path.write_text(text.replace(marker, entry + marker, 1))
-          PY
+      - run: node scripts/apply-stale-mobile-fix.mjs
+      - run: node scripts/prepare-stale-mobile-release.mjs
       - run: npm run validate-providers
       - run: npm test
       - run: npm run typecheck
       - run: npm run update-status
       - run: npm run build:app
       - run: npm audit --audit-level=high
-      - name: Audit repaired branch payload
+      - name: Audit repaired payload
         run: |
+          mkdir -p audit repair-output
           python3 - <<'PY'
           import json, datetime, re
           from pathlib import Path
@@ -107,14 +40,16 @@ jobs:
                       dt=datetime.datetime.fromisoformat(selected.replace('Z','+00:00'))
                       if dt.tzinfo is None: dt=dt.replace(tzinfo=datetime.timezone.utc)
                       age=(now-dt.astimezone(datetime.timezone.utc)).total_seconds()/86400
-                  except Exception: pass
+                  except Exception:
+                      pass
               if re.search(r'^(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\w*\s+\d{1,2}\s*,\s*20\d{2}', title, re.I) or (age is not None and age > 45):
                   invalid.append({'provider':item.get('provider'),'title':title,'latest':selected,'age_days':age})
-          Path('audit/branch-audit.txt').write_text(json.dumps({'generated_at':p.get('generated_at'),'incidents':len(p.get('incidents',[])),'maintenance':len(p.get('maintenance',[])),'invalid_current_records':invalid}, indent=2)+'\n')
-          print(Path('audit/branch-audit.txt').read_text())
+          report={'generated_at':p.get('generated_at'),'incidents':len(p.get('incidents',[])),'maintenance':len(p.get('maintenance',[])),'invalid_current_records':invalid}
+          Path('audit/branch-audit.json').write_text(json.dumps(report, indent=2)+'\n')
+          print(json.dumps(report, indent=2))
           if invalid: raise SystemExit('Repaired payload still contains stale or date-title incidents')
           PY
-      - name: Start branch preview
+      - name: Start preview
         run: |
           npm run preview -- --port 4173 > /tmp/preview.log 2>&1 &
           for attempt in $(seq 1 40); do
@@ -123,26 +58,36 @@ jobs:
           done
           cat /tmp/preview.log
           exit 1
-      - name: Render production and branch phone views
+      - name: Render phone views
         run: |
           BROWSER="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
           test -n "$BROWSER"
           for size in 360,800 390,844 430,932; do
             label="${size/,/x}"
-            "$BROWSER" --headless=new --disable-gpu --no-sandbox --disable-dev-shm-usage --hide-scrollbars --force-device-scale-factor=1 --window-size="$size" --virtual-time-budget=15000 --screenshot="audit/production-${label}.png" 'https://dmo18.github.io/sst/'
             "$BROWSER" --headless=new --disable-gpu --no-sandbox --disable-dev-shm-usage --hide-scrollbars --force-device-scale-factor=1 --window-size="$size" --virtual-time-budget=15000 --screenshot="audit/branch-${label}.png" 'http://127.0.0.1:4173/sst/'
           done
-          ls -lh audit
+      - name: Package validated files
+        run: |
+          for file in \
+            scripts/incident-freshness.mjs \
+            scripts/update-status.mjs \
+            scripts/structured-source-adapters.mjs \
+            scripts/incident-detail-repairs.mjs \
+            scripts/update-public-status.mjs \
+            scripts/__tests__/incident-freshness.test.js \
+            src/main.tsx \
+            src/styles/mobile-ops.css \
+            package.json \
+            package-lock.json \
+            CHANGELOG.md; do
+            mkdir -p "repair-output/$(dirname "$file")"
+            cp "$file" "repair-output/$file"
+          done
       - uses: actions/upload-artifact@v4
         with:
-          name: stale-mobile-audit
-          path: audit
+          name: stale-mobile-repair-output
+          path: |
+            repair-output
+            audit
           if-no-files-found: error
           retention-days: 1
-      - name: Commit validated repair
-        run: |
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add scripts/incident-freshness.mjs scripts/update-status.mjs scripts/structured-source-adapters.mjs scripts/incident-detail-repairs.mjs scripts/update-public-status.mjs scripts/__tests__/incident-freshness.test.js src/main.tsx src/styles/mobile-ops.css package.json package-lock.json CHANGELOG.md
-          git commit -m "Fix stale incident retention and mobile UX"
-          git push origin HEAD:${{ github.event.pull_request.head.ref }}
