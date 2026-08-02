@@ -19,22 +19,57 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - name: Synchronize patch release metadata
+      - name: Synchronize patch release and current-fixture metadata
         run: |
           npm version 3.3.1 --no-git-tag-version
           python - <<'PY'
           from pathlib import Path
-          path = Path('CHANGELOG.md')
-          text = path.read_text()
+          changelog = Path('CHANGELOG.md')
+          text = changelog.read_text()
           heading = '## [3.3.1] - 2026-08-02\n\n'
           if heading not in text:
               marker = text.find('## [')
               entry = heading + '- Tightened current-incident evidence from 45 days to 72 hours across structured, feed, HTML, and provider-specific adapters.\n- Suppressed unresolved records whose newest official vendor update is older than 72 hours; providers fail closed to limited/unknown instead of remaining degraded.\n- Added global US-scope rejection for Bahrain, Manama, AWS `me-south-1`, AWS `me-central-1`, and other explicit non-US regions.\n- Added regressions for the stale KnowBe4 monitoring record and the Elastic Cloud AWS Bahrain incident.\n\n'
               text = text[:marker] + entry + text[marker:]
-              path.write_text(text)
+              changelog.write_text(text)
+
+          replacements = {
+              'scripts/__tests__/structured-source-adapters.test.js': [
+                  ('July 20, 2026 9:36AM EDT', 'August 2, 2026 8:36AM EDT'),
+                  ('/^2026-07-20T/', '/^2026-08-02T/')
+              ],
+              'scripts/__tests__/update-public-status.test.js': [
+                  ('Jul 31, 2026 - 16:20 UTC', 'Aug 2, 2026 - 12:20 UTC'),
+                  ('Jul 31, 2026 - 16:00 UTC', 'Aug 2, 2026 - 12:00 UTC')
+              ]
+          }
+          for filename, pairs in replacements.items():
+              path = Path(filename)
+              value = path.read_text()
+              for old, new in pairs:
+                  value = value.replace(old, new)
+              path.write_text(value)
           PY
       - run: npm ci
       - run: npm run validate-providers
+      - name: Diagnose current-evidence parser fixtures
+        run: |
+          node --input-type=module <<'NODE'
+          import { incidentEvidenceIsCurrent } from './scripts/incident-freshness.mjs';
+          import { providerIncidentConclusion } from './scripts/incident-detail-repairs.mjs';
+          const fixture = `<main>
+            <h2>Network Performance Issues in Istanbul</h2>
+            <p>Identified - The issue has been identified and a fix is being implemented.</p>
+            <p>Jul 28, 2026 - 10:25 UTC</p>
+            <h2>Workers API errors in US-East</h2>
+            <p>Investigating - US customers are currently experiencing failed Workers API requests.</p>
+            <p>Aug 2, 2026 - 12:20 UTC</p>
+            <h2>Past Incidents</h2>
+          </main>`;
+          console.log('now', new Date().toISOString());
+          console.log('direct evidence', incidentEvidenceIsCurrent({ title: 'Workers API errors in US-East', note: 'US customers are affected', latest_update: '2026-08-02T12:20:00Z' }, Date.now(), undefined, { requireTimestamp: true }));
+          console.log('parsed', JSON.stringify(providerIncidentConclusion({ id: 'cloudflare', name: 'Cloudflare' }, fixture), null, 2));
+          NODE
       - run: npm test
       - run: npm run typecheck
       - run: npm run build:app
@@ -60,10 +95,10 @@ jobs:
           NODE
       - name: Commit synchronized release files
         run: |
-          if ! git diff --quiet -- package.json package-lock.json CHANGELOG.md; then
+          if ! git diff --quiet -- package.json package-lock.json CHANGELOG.md scripts/__tests__/structured-source-adapters.test.js scripts/__tests__/update-public-status.test.js; then
             git config user.name github-actions[bot]
             git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-            git add package.json package-lock.json CHANGELOG.md
-            git commit -m 'Synchronize 3.3.1 release metadata'
+            git add package.json package-lock.json CHANGELOG.md scripts/__tests__/structured-source-adapters.test.js scripts/__tests__/update-public-status.test.js
+            git commit -m 'Synchronize 3.3.1 release metadata and current fixtures'
             git push origin HEAD:${{ github.event.pull_request.head.ref }}
           fi
