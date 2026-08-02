@@ -6,7 +6,7 @@ import {
   incidentRegionIsCurrentScope
 } from '../incident-freshness.mjs';
 
-// Fixed clock: August 2, 2026 at 09:44 Eastern.
+// Fixed audit clock: August 2, 2026 at 09:44 Eastern.
 const auditNow = Date.parse('2026-08-02T13:44:00Z');
 
 test('current incident evidence expires after 72 hours', () => {
