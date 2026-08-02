@@ -16,6 +16,7 @@ import {
   renderPublicPage
 } from './public-source-repairs.mjs';
 import { isEditorialIncidentEntry, isGenericIncidentTitle, isIncidentUsRelevant } from './incident-detail-repairs.mjs';
+import { INCIDENT_MAX_AGE_DAYS, dateLikeIncidentTitle, incidentEvidenceIsCurrent } from './incident-freshness.mjs';
 import {
   enrichProviderHistory,
   maintenanceIsRelevant,
@@ -642,7 +643,10 @@ async function tryFeedCandidates(provider, source, html, pageLogs) {
 }
 
 function structuredIncidents(provider, source, conclusion) {
-  return (conclusion.incidents || []).slice(0, 12).map(item => makeIncident(provider, source, item));
+  return (conclusion.incidents || [])
+    .filter(item => incidentEvidenceIsCurrent(item, Date.now(), INCIDENT_MAX_AGE_DAYS))
+    .slice(0, 12)
+    .map(item => makeIncident(provider, source, item));
 }
 
 function structuredMaintenance(provider, source, conclusion) {
@@ -688,9 +692,11 @@ async function parsePublicHtml(provider, source) {
       const worst = incidents.reduce((current, item) => severityRank[item.color] > severityRank[current] ? item.color : current, 'amber');
       return providerStatus(provider, source, `${incidents.length} active US public incident${incidents.length === 1 ? '' : 's'}`, worst, true, '', logs, incidents, maintenance, undefined, extras);
     }
+    return providerStatus(provider, source, 'Limited official source', 'blue', false, 'The page exposed unresolved incident records without current, timestamped evidence. They were not published as active.', logs, [], maintenance, 'limited', extras);
   }
   if (conclusion.kind === 'issue') {
     if (isGenericIncidentTitle(conclusion.title)) return providerStatus(provider, source, 'Limited official source', 'blue', false, 'The page reported an issue state without a specific incident title or details, so no incident was published.', logs, [], maintenance, 'limited', extras);
+    if (!incidentEvidenceIsCurrent(conclusion, Date.now(), INCIDENT_MAX_AGE_DAYS)) return providerStatus(provider, source, 'Limited official source', 'blue', false, 'The page reported an unresolved issue without recent official evidence, so it was not published as active.', logs, [], maintenance, 'limited', extras);
     const incident = makeIncident(provider, source, conclusion);
     return providerStatus(provider, source, conclusion.title, conclusion.color, true, '', logs, [incident], maintenance, undefined, extras);
   }
@@ -716,6 +722,22 @@ export async function loadPublicProvider(provider) {
   }
 }
 
+export function reconcileProviderIncidentEvidence(result, now = Date.now()) {
+  const incidents = (result?.incidents || []).filter(item => activeIncident(item, now));
+  if (incidents.length || !['major', 'degraded'].includes(result?.service_state)) return { ...result, incidents };
+  return {
+    ...result,
+    incidents: [],
+    status: 'Current incident evidence unavailable',
+    color: 'blue',
+    service_state: 'unknown',
+    source_state: result.source_state === 'available' ? 'limited' : result.source_state,
+    attention: 'watch',
+    ok: false,
+    message: 'The official source exposed an issue state without current timestamped incident evidence. It was not presented as an active provider incident.'
+  };
+}
+
 export async function generatePublicStatus() {
   const rawCatalog = readJson(catalogPath);
   if (!Array.isArray(rawCatalog)) throw new Error('Provider catalog must be an array.');
@@ -735,9 +757,10 @@ export async function generatePublicStatus() {
   }
 
   const collectionStartedAt = new Date().toISOString();
-  const results = await collectWithBudgets(catalog, resolvePublicSource, loadPublicProvider, collectionLimits);
+  const collectedResults = await collectWithBudgets(catalog, resolvePublicSource, loadPublicProvider, collectionLimits);
+  const results = collectedResults.map(result => reconcileProviderIncidentEvidence(result));
   const incidents = results.flatMap(result => result.incidents || [])
-    .filter(activeIncident)
+    .filter(item => activeIncident(item))
     .sort((a, b) => (severityRank[b.color] - severityRank[a.color]) || ((b.priority || 0) - (a.priority || 0)));
   const maintenance = dedupeMaintenanceRecords(
     results.flatMap(result => result.maintenance || [])
@@ -759,8 +782,10 @@ export async function generatePublicStatus() {
     maintenance
   };
   const changes = [...compareSnapshots(previous, base, generatedAt), ...sourceIntelligenceChanges(previous, base, generatedAt)]
+    .filter(change => !dateLikeIncidentTitle(change.title))
     .filter((change, index, all) => all.findIndex(candidate => candidate.id === change.id) === index);
-  const payload = { ...base, changes, history: [...changes, ...(previous?.history || [])].slice(0, 200) };
+  const retainedHistory = (previous?.history || []).filter(change => !dateLikeIncidentTitle(change.title));
+  const payload = { ...base, changes, history: [...changes, ...retainedHistory].slice(0, 200) };
   validatePayload(payload);
   writeJson(publicStatusPath, payload);
   console.log(`Generated v3 public-source intelligence for ${providers.length} providers: ${payload.summary.coverage_percent}% live coverage, quality ${payload.collection.quality_score}/100, ${payload.collection.origin_count} origins, ${incidents.length} incidents, ${maintenance.length} maintenance events.`);
