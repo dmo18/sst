@@ -1,1 +1,0 @@
-Persist the exact validated stale incident and mobile UX release.
