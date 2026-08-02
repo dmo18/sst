@@ -23,10 +23,10 @@ const statuspageFixture = {
       name: 'API latency in London',
       status: 'investigating',
       impact: 'minor',
-      created_at: '2026-07-31T14:00:00Z',
-      updated_at: '2026-07-31T14:30:00Z',
+      created_at: '2026-08-02T11:00:00Z',
+      updated_at: '2026-08-02T11:30:00Z',
       components: [{ id: 'eu-api', name: 'API Europe' }],
-      incident_updates: [{ status: 'investigating', body: 'Customers in London and Europe are affected.', created_at: '2026-07-31T14:30:00Z' }]
+      incident_updates: [{ status: 'investigating', body: 'Customers in London and Europe are affected.', created_at: '2026-08-02T11:30:00Z' }]
     },
     {
       id: 'us-1',
@@ -34,12 +34,12 @@ const statuspageFixture = {
       status: 'monitoring',
       impact: 'major',
       shortlink: 'https://stspg.io/us-1',
-      created_at: '2026-07-31T15:00:00Z',
-      updated_at: '2026-07-31T16:20:00Z',
+      created_at: '2026-08-02T12:00:00Z',
+      updated_at: '2026-08-02T13:20:00Z',
       components: [{ id: 'workers', name: 'Workers API' }, { id: 'iad', name: 'US-East' }],
       incident_updates: [
-        { status: 'investigating', body: 'US customers are experiencing failed requests.', created_at: '2026-07-31T15:05:00Z' },
-        { status: 'monitoring', body: 'A fix has been applied and error rates are recovering.', created_at: '2026-07-31T16:20:00Z' }
+        { status: 'investigating', body: 'US customers are experiencing failed requests.', created_at: '2026-08-02T12:05:00Z' },
+        { status: 'monitoring', body: 'A fix has been applied and error rates are recovering.', created_at: '2026-08-02T13:20:00Z' }
       ]
     },
     {
@@ -47,10 +47,10 @@ const statuspageFixture = {
       name: 'Resolved incident',
       status: 'resolved',
       impact: 'major',
-      created_at: '2026-07-31T12:00:00Z',
-      updated_at: '2026-07-31T13:00:00Z',
+      created_at: '2026-08-02T09:00:00Z',
+      updated_at: '2026-08-02T10:00:00Z',
       components: [{ id: 'api', name: 'API' }],
-      incident_updates: [{ status: 'resolved', body: 'Resolved.', created_at: '2026-07-31T13:00:00Z' }]
+      incident_updates: [{ status: 'resolved', body: 'Resolved.', created_at: '2026-08-02T10:00:00Z' }]
     }
   ],
   scheduled_maintenances: [{ id: 'maintenance-1', name: 'US maintenance', status: 'in_progress' }]
@@ -63,8 +63,8 @@ test('Statuspage JSON retains lifecycle, components, timestamps, and US scope', 
   assert.equal(conclusion.incidents[0].id, 'us-1');
   assert.equal(conclusion.incidents[0].title, 'Workers API errors in US-East');
   assert.equal(conclusion.incidents[0].status, 'monitoring');
-  assert.equal(conclusion.incidents[0].firstDetected, '2026-07-31T15:00:00Z');
-  assert.equal(conclusion.incidents[0].latestUpdate, '2026-07-31T16:20:00Z');
+  assert.equal(conclusion.incidents[0].firstDetected, '2026-08-02T12:00:00Z');
+  assert.equal(conclusion.incidents[0].latestUpdate, '2026-08-02T13:20:00Z');
   assert.equal(conclusion.incidents[0].affectedService, 'Workers API, US-East');
   assert.match(conclusion.incidents[0].note, /error rates are recovering/i);
   assert.equal(conclusion.incidents[0].color, 'red');
@@ -104,7 +104,7 @@ const betterStackFixture = {
       attributes: {
         title: 'US API request failures',
         report_type: 'manual',
-        starts_at: '2026-07-31T15:00:00Z',
+        starts_at: '2026-08-02T12:00:00Z',
         ends_at: null,
         aggregate_state: 'degraded',
         affected_resources: [{ status_page_resource_id: 'resource-us', status: 'degraded' }]
@@ -117,7 +117,7 @@ const betterStackFixture = {
       attributes: {
         title: 'Scheduled database maintenance',
         report_type: 'maintenance',
-        starts_at: '2026-07-31T17:00:00Z',
+        starts_at: '2026-08-02T15:00:00Z',
         ends_at: null,
         aggregate_state: 'downtime',
         affected_resources: [{ status_page_resource_id: 'resource-eu', status: 'maintenance' }]
@@ -129,7 +129,7 @@ const betterStackFixture = {
       type: 'status_update',
       attributes: {
         message: 'Investigating elevated API errors for US customers.',
-        published_at: '2026-07-31T15:05:00Z',
+        published_at: '2026-08-02T12:05:00Z',
         affected_resources: [{ status_page_resource_id: 'resource-us', status: 'degraded' }]
       }
     },
@@ -138,7 +138,7 @@ const betterStackFixture = {
       type: 'status_update',
       attributes: {
         message: 'The mitigation is reducing failed requests.',
-        published_at: '2026-07-31T16:10:00Z',
+        published_at: '2026-08-02T13:10:00Z',
         affected_resources: [{ status_page_resource_id: 'resource-us', status: 'degraded' }]
       }
     }
@@ -151,8 +151,8 @@ test('Better Stack JSON separates maintenance and preserves report details', () 
   assert.equal(conclusion.incidents.length, 1);
   assert.equal(conclusion.incidents[0].id, 'report-us');
   assert.equal(conclusion.incidents[0].title, 'US API request failures');
-  assert.equal(conclusion.incidents[0].firstDetected, '2026-07-31T15:00:00Z');
-  assert.equal(conclusion.incidents[0].latestUpdate, '2026-07-31T16:10:00Z');
+  assert.equal(conclusion.incidents[0].firstDetected, '2026-08-02T12:00:00Z');
+  assert.equal(conclusion.incidents[0].latestUpdate, '2026-08-02T13:10:00Z');
   assert.equal(conclusion.incidents[0].affectedService, 'US API');
   assert.match(conclusion.incidents[0].note, /mitigation/i);
 });
@@ -173,7 +173,7 @@ test('Status.io page parser exposes title, lifecycle, components, locations, and
     <p>Degraded Performance</p>
     <p>Components</p><p>SIEM</p>
     <p>Locations</p><p>All Regions</p>
-    <p>July 20, 2026 9:36AM EDT</p>
+    <p>August 2, 2026 8:36AM EDT</p>
     <p>Monitoring</p>
     <p>We resolved the cause and are monitoring delayed alerts while normal delivery is restored.</p>
     <h2>Scheduled Maintenance</h2>
@@ -184,7 +184,7 @@ test('Status.io page parser exposes title, lifecycle, components, locations, and
   assert.equal(conclusion.incidents.length, 1);
   assert.equal(conclusion.incidents[0].title, 'Delayed SIEM Alerting');
   assert.match(conclusion.incidents[0].affectedService, /SIEM|All Regions/);
-  assert.match(conclusion.incidents[0].latestUpdate, /^2026-07-20T/);
+  assert.match(conclusion.incidents[0].latestUpdate, /^2026-08-02T/);
 });
 
 test('Status.io page parser hides non-US-only incidents and ignores scheduled maintenance', () => {
@@ -194,7 +194,7 @@ test('Status.io page parser hides non-US-only incidents and ignores scheduled ma
     <p>Degraded Performance</p>
     <p>Components</p><p>HaloPSA</p>
     <p>Locations</p><p>United Kingdom</p>
-    <p>July 31, 2026 4:00PM UTC</p>
+    <p>August 2, 2026 8:00AM UTC</p>
     <p>Investigating</p><p>UK customers are affected.</p>
     <h2>Scheduled Maintenance</h2>
     <p>US maintenance window</p>
