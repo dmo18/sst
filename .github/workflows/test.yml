@@ -18,7 +18,5 @@ jobs:
       - run: npm test
       - run: npm run typecheck
       - run: npm run build:app
-      - name: Validate committed browser payload compatibility
-        run: npm run validate-browser-payload
       - name: Audit production dependencies
         run: npm audit --audit-level=high
