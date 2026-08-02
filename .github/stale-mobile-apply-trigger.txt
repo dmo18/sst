@@ -1,1 +1,1 @@
-Build the validated stale incident and mobile UX repair artifact.
+Build the repaired and validated stale incident and mobile UX artifact.
