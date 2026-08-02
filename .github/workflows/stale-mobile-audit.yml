@@ -2,13 +2,17 @@ name: Stale data and mobile audit
 on:
   pull_request:
 permissions:
-  contents: read
+  contents: write
 jobs:
   audit:
+    if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
@@ -26,7 +30,7 @@ jobs:
       - run: npm audit --audit-level=high
       - name: Audit repaired payload
         run: |
-          mkdir -p audit repair-output
+          mkdir -p audit
           python3 - <<'PY'
           import json, datetime, re
           from pathlib import Path
@@ -51,7 +55,6 @@ jobs:
           orphaned=[{'id':provider.get('id'),'name':provider.get('name'),'state':provider.get('service_state'),'status':provider.get('status')} for provider in affected if provider.get('id') not in providers_with_incidents]
           report={'generated_at':p.get('generated_at'),'incidents':len(p.get('incidents',[])),'affected_providers':len(affected),'maintenance':len(p.get('maintenance',[])),'invalid_current_records':invalid,'affected_without_incident':orphaned}
           Path('audit/branch-audit.json').write_text(json.dumps(report, indent=2)+'\n')
-          Path('audit/branch-status.json').write_text(json.dumps(p, indent=2)+'\n')
           print(json.dumps(report, indent=2))
           if invalid or orphaned: raise SystemExit('Repaired payload still contains stale or unreconciled affected records')
           PY
@@ -74,9 +77,11 @@ jobs:
           done
           "$BROWSER" --headless=new --disable-gpu --no-sandbox --disable-dev-shm-usage --hide-scrollbars --force-device-scale-factor=1 --window-size=390,844 --virtual-time-budget=15000 --screenshot='audit/incidents-390x844.png' 'http://127.0.0.1:4173/sst/?view=incidents'
           "$BROWSER" --headless=new --disable-gpu --no-sandbox --disable-dev-shm-usage --hide-scrollbars --force-device-scale-factor=1 --window-size=390,844 --virtual-time-budget=15000 --screenshot='audit/providers-390x844.png' 'http://127.0.0.1:4173/sst/?view=providers'
-      - name: Package validated files
+      - name: Commit exact validated files
         run: |
-          for file in \
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add \
             scripts/incident-freshness.mjs \
             scripts/update-status.mjs \
             scripts/structured-source-adapters.mjs \
@@ -87,15 +92,6 @@ jobs:
             src/styles/mobile-ops.css \
             package.json \
             package-lock.json \
-            CHANGELOG.md; do
-            mkdir -p "repair-output/$(dirname "$file")"
-            cp "$file" "repair-output/$file"
-          done
-      - uses: actions/upload-artifact@v4
-        with:
-          name: stale-mobile-repair-output
-          path: |
-            repair-output
-            audit
-          if-no-files-found: error
-          retention-days: 1
+            CHANGELOG.md
+          git commit -m "Fix stale incident retention and mobile UX"
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
