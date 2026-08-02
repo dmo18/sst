@@ -24,13 +24,14 @@ import {
   sourceEvidence,
   sourceIntelligenceChanges
 } from './source-intelligence.mjs';
+import { buildCollectionIntelligence, collectWithBudgets } from './collection-intelligence.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const catalogPath = path.join(root, 'config', 'providers.json');
 const consolidationPath = path.join(root, 'config', 'provider-consolidation.json');
 const publicStatusPath = path.join(root, 'public', 'status.json');
 const previousStatusPath = path.join(root, 'public', 'previous-status.json');
-const concurrency = 10;
+const collectionLimits = Object.freeze({ globalLimit: 10, perOriginLimit: 2 });
 const severityRank = { red: 4, amber: 3, blue: 2, green: 1 };
 
 const publicOverrides = {
@@ -715,18 +716,6 @@ export async function loadPublicProvider(provider) {
   }
 }
 
-async function mapLimit(items, limit, mapper) {
-  const results = new Array(items.length);
-  let index = 0;
-  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, async () => {
-    while (index < items.length) {
-      const current = index++;
-      results[current] = await mapper(items[current]);
-    }
-  }));
-  return results;
-}
-
 export async function generatePublicStatus() {
   const rawCatalog = readJson(catalogPath);
   if (!Array.isArray(rawCatalog)) throw new Error('Provider catalog must be an array.');
@@ -745,7 +734,8 @@ export async function generatePublicStatus() {
     previous = null;
   }
 
-  const results = await mapLimit(catalog, concurrency, loadPublicProvider);
+  const collectionStartedAt = new Date().toISOString();
+  const results = await collectWithBudgets(catalog, resolvePublicSource, loadPublicProvider, collectionLimits);
   const incidents = results.flatMap(result => result.incidents || [])
     .filter(activeIncident)
     .sort((a, b) => (severityRank[b.color] - severityRank[a.color]) || ((b.priority || 0) - (a.priority || 0)));
@@ -755,12 +745,15 @@ export async function generatePublicStatus() {
   ).sort((a, b) => Number(b.status === 'in_progress') - Number(a.status === 'in_progress') || (Date.parse(a.starts_at || '') || Number.MAX_SAFE_INTEGER) - (Date.parse(b.starts_at || '') || Number.MAX_SAFE_INTEGER));
   const generatedAt = new Date().toISOString();
   const rawProviders = results.map(({ incidents: _incidents, maintenance: _maintenance, ...provider }) => provider);
-  const providers = enrichProviderHistory(rawProviders, previous, incidents, generatedAt)
+  const historicalProviders = enrichProviderHistory(rawProviders, previous, incidents, generatedAt);
+  const collectionIntelligence = buildCollectionIntelligence(historicalProviders, incidents, maintenance, collectionStartedAt, generatedAt);
+  const providers = collectionIntelligence.providers
     .sort((a, b) => (severityRank[b.color] - severityRank[a.color]) || ((b.priority || 0) - (a.priority || 0)) || a.name.localeCompare(b.name));
   const base = {
     schema_version: 2,
     generated_at: generatedAt,
-    summary: summarizeProviders(providers, incidents, maintenance),
+    summary: { ...summarizeProviders(providers, incidents, maintenance), ...collectionIntelligence.summary },
+    collection: collectionIntelligence.collection,
     providers,
     incidents,
     maintenance
@@ -770,7 +763,7 @@ export async function generatePublicStatus() {
   const payload = { ...base, changes, history: [...changes, ...(previous?.history || [])].slice(0, 200) };
   validatePayload(payload);
   writeJson(publicStatusPath, payload);
-  console.log(`Generated free public-source status for ${providers.length} providers: ${payload.summary.coverage_percent}% live coverage, ${incidents.length} active incidents, ${maintenance.length} maintenance events.`);
+  console.log(`Generated v3 public-source intelligence for ${providers.length} providers: ${payload.summary.coverage_percent}% live coverage, quality ${payload.collection.quality_score}/100, ${payload.collection.origin_count} origins, ${incidents.length} incidents, ${maintenance.length} maintenance events.`);
   return payload;
 }
 

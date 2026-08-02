@@ -1,6 +1,12 @@
-# MSP Service Heads-Up Console
+# MSP Operations Command Center
 
 A static, official-source-only service-status intelligence and early-warning dashboard for MSP technicians. The live site is **https://dmo18.github.io/sst/**. It answers what needs attention, which official sources can be trusted, what changed, and what cautious client communication may be appropriate without a backend, database, credentials, paid API, browser-side vendor calls, or unofficial outage scraping.
+
+## Version 3 command center
+
+Version 3 rebuilds the product around two independent questions: **what is the vendor reporting?** and **how trustworthy is the collector observation?** The collection pipeline uses origin-aware global and per-host concurrency budgets, reuses shared first-party sources, measures request success and latency, scores every provider observation, and publishes a complete collection-run contract with quality, freshness, evidence, parser, and blind-spot metrics.
+
+The interface is now an operator command center rather than a long status page. Overview prioritizes the action queue and dependency landscape; Incident Room combines vendor lifecycle, impact, technician guidance, and client-safe drafts; Provider Intelligence makes every dependency explorable; Source Integrity exposes the complete evidence and collection trace; Timeline retains bounded operational changes; and Wallboard presents the highest-value signals without interaction. Service state and source health remain visually and semantically separate everywhere.
 
 ## Operational workflow
 
@@ -38,7 +44,7 @@ The canonical 78-provider catalog supports optional `criticality`, `tags`, `serv
 ## Static architecture and commands
 
 ```text
-config/providers.json -> validation -> bounded official retrieval -> validated public/status.json
+config/providers.json -> origin-aware bounded retrieval -> adapter normalization -> collection intelligence -> dual validation -> public/status.json
 package.json + React/Vite + status.json -> dist -> GitHub Pages
 browser -> deployed status.json only
 ```
