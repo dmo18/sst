@@ -1,3 +1,5 @@
+import { INCIDENT_MAX_AGE_DAYS, incidentEvidenceIsCurrent } from './incident-freshness.mjs';
+
 const STATUSPAGE_SUFFIX = '/api/v2/summary.json';
 
 function clean(value) {
@@ -228,6 +230,7 @@ export function parseStatuspageSummary(value, provider = {}, source = {}) {
     .filter(component => isUsRelevant(component.name, component.group || '', source.regionScope));
   const unresolved = json.incidents.filter(incident => !/^(?:resolved|completed|closed|postmortem|cancelled)$/i.test(String(incident?.status || '')));
   const incidents = [];
+  let staleIncidentCount = 0;
 
   for (const incident of unresolved) {
     const updates = boundedUpdates(incident.incident_updates);
@@ -245,6 +248,10 @@ export function parseStatuspageSummary(value, provider = {}, source = {}) {
     if (!isUsRelevant(title, `${note} ${regionText}`, source.regionScope)) continue;
     const firstDetected = incident.started_at || incident.created_at || updates.at(-1)?.at || '';
     const latestUpdate = incident.updated_at || latest.at || firstDetected;
+    if (!incidentEvidenceIsCurrent({ title, note, status, firstDetected, latestUpdate }, Date.now(), INCIDENT_MAX_AGE_DAYS, { requireTimestamp: true })) {
+      staleIncidentCount += 1;
+      continue;
+    }
     incidents.push({
       id: String(incident.id || ''),
       title,
@@ -288,6 +295,7 @@ export function parseStatuspageSummary(value, provider = {}, source = {}) {
 
   const extras = { maintenance, components };
   if (incidents.length) return { kind: 'issues', incidents, ...extras };
+  if (staleIncidentCount) return { kind: 'limited', message: `${provider.name || 'Provider'} lists ${staleIncidentCount} unresolved incident record${staleIncidentCount === 1 ? '' : 's'} without an official update in the last ${INCIDENT_MAX_AGE_DAYS} days. The records were not presented as current.`, ...extras };
   if (unresolved.length) return { kind: 'healthy', status: `${provider.name || 'Provider'} reports no active US-relevant incidents`, ...extras };
   const indicator = String(json.status?.indicator || '').toLowerCase();
   if (indicator === 'none') return { kind: 'healthy', status: clean(json.status?.description) || `${provider.name || 'Provider'} reports all systems operational`, ...extras };
@@ -311,6 +319,7 @@ export function parseBetterStackIndex(value, provider = {}, source = {}) {
   const reports = json.included.filter(item => item?.type === 'status_report');
   const incidents = [];
   const maintenance = [];
+  let staleReportCount = 0;
 
   for (const report of reports) {
     const attributes = report.attributes || {};
@@ -349,13 +358,19 @@ export function parseBetterStackIndex(value, provider = {}, source = {}) {
 
     if (attributes.ends_at || !['degraded', 'downtime'].includes(aggregate)) continue;
     if (isGenericTitle(title) || isPlannedOnly(title, note, reportType)) continue;
+    const firstDetected = attributes.starts_at || attributes.created_at || '';
+    const latestUpdate = latest.published_at || attributes.updated_at || firstDetected;
+    if (!incidentEvidenceIsCurrent({ title, note, status: latest.status || aggregate, firstDetected, latestUpdate }, Date.now(), INCIDENT_MAX_AGE_DAYS, { requireTimestamp: true })) {
+      staleReportCount += 1;
+      continue;
+    }
     incidents.push({
       id: String(report.id || ''),
       title,
       note: note || 'The official status page reports an active service issue.',
       status: clean(latest.status || attributes.aggregate_state || 'active'),
-      firstDetected: attributes.starts_at || attributes.created_at || '',
-      latestUpdate: latest.published_at || attributes.updated_at || attributes.starts_at || '',
+      firstDetected,
+      latestUpdate,
       affectedService,
       color: aggregate === 'downtime' ? 'red' : 'amber',
       url: source.pageUrl || source.url,
@@ -366,6 +381,7 @@ export function parseBetterStackIndex(value, provider = {}, source = {}) {
   const extras = { maintenance, components };
   if (incidents.length) return { kind: 'issues', incidents, ...extras };
   const aggregate = String(json.data.attributes.aggregate_state || '').toLowerCase();
+  if (staleReportCount && !['operational', 'maintenance'].includes(aggregate)) return { kind: 'limited', message: `${provider.name || 'Provider'} has unresolved structured records without a recent official update. They were not presented as current.`, ...extras };
   if (aggregate === 'operational' || aggregate === 'maintenance') {
     return { kind: 'healthy', status: aggregate === 'maintenance' ? `${provider.name || 'Provider'} reports scheduled maintenance only` : `${provider.name || json.data.attributes.company_name || 'Provider'} reports all systems operational`, ...extras };
   }
@@ -421,12 +437,15 @@ export function parseStatusioPage(value, provider = {}, source = {}) {
       foundNonUsIncident = true;
       continue;
     }
+    const firstDetected = dates[0] || '';
+    const latestUpdate = dates.at(-1) || dates[0] || '';
+    if (!incidentEvidenceIsCurrent({ title, note, status: lifecycle, firstDetected, latestUpdate }, Date.now(), INCIDENT_MAX_AGE_DAYS, { requireTimestamp: true })) continue;
     incidents.push({
       title,
       note: note || `${lifecycle} update from the official status page.`,
       status: lifecycle.toLowerCase(),
-      firstDetected: dates[0] || '',
-      latestUpdate: dates.at(-1) || dates[0] || '',
+      firstDetected,
+      latestUpdate,
       affectedService,
       color: colorFor(`${segment[severityIndex] || ''} ${lifecycle} ${title} ${note}`),
       url: source.url,

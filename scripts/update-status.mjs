@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { INCIDENT_MAX_AGE_DAYS, incidentEvidenceIsCurrent } from './incident-freshness.mjs';
 const root = fileURLToPath(new URL('..', import.meta.url));
 const catalogPath = path.join(root, 'config', 'providers.json');
 const publicStatusPath = path.join(root, 'public', 'status.json');
@@ -264,9 +265,8 @@ export function recentRssIncident(item, maxAgeHours) {
     const age = Date.now() - ms;
     return age >= -300000 && age <= maxAgeHours * 60 * 60 * 1000;
 }
-export function activeIncident(item) {
-    const timestamp = parseDateMs(item.rawTime);
-    if (timestamp > Date.now() + 300000)
+export function activeIncident(item, now = Date.now(), maxAgeDays = INCIDENT_MAX_AGE_DAYS) {
+    if (!incidentEvidenceIsCurrent(item, now, maxAgeDays))
         return false;
     const text = `${item.title} ${item.note} ${item.status}`.toLowerCase();
     if (/resolved|completed|postmortem|closed|fixed/.test(text))
@@ -300,7 +300,7 @@ export async function parseStatuspage(provider) {
             const note = update.body || item.impact || item.status || '';
             const color = colorFromText(`${item.impact || ''} ${item.status || ''} ${note}`);
             return incident(provider, item.name, note, 'Statuspage API', item.shortlink || item.url || provider.url, update.updated_at || update.created_at || update.display_at || item.updated_at || item.created_at, item.status, color);
-        }).filter(activeIncident);
+        }).filter(item => activeIncident(item));
         if (incidents.length) {
             const worst = incidents.reduce((current, item) => severityRank[item.color] > severityRank[current] ? item.color : current, 'amber');
             return providerStatus(provider, `${incidents.length} active issue${incidents.length === 1 ? '' : 's'}`, worst, true, '', logs, incidents);
@@ -407,7 +407,7 @@ async function parseSalesforceActiveIncidents(provider) {
             const note = update.message || item.message || item.additionalInformation || impacts || item.status || '';
             const color = colorFromText(`${item.severity || ''} ${item.status || ''} ${impacts} ${note}`);
             return incident(provider, item.subject || item.name || item.id || 'Salesforce incident', note, 'Salesforce Trust API', item.externalUrl || provider.url, update.createdAt || item.createdAt || item.updatedAt, item.status, color);
-        }).filter(activeIncident);
+        }).filter(item => activeIncident(item));
         if (incidents.length) {
             const worst = incidents.reduce((current, item) => severityRank[item.color] > severityRank[current] ? item.color : current, 'amber');
             return providerStatus(provider, `${incidents.length} active Salesforce Trust incident${incidents.length === 1 ? '' : 's'}`, worst, true, 'Salesforce Trust incident data is global; instance-specific status still requires an instance, domain, POD, or MID search.', logs, incidents.slice(0, 10));
@@ -477,7 +477,7 @@ async function parseSlackCurrentStatus(provider) {
             const note = item.notes?.at?.(-1)?.body || item.notes?.[0]?.body || item.services?.map(service => service.name).join(', ') || item.status || '';
             const color = colorFromText(`${item.type || ''} ${item.status || ''} ${note}`);
             return incident(provider, item.title || item.id || 'Slack incident', note, 'Slack current status API', item.url || provider.url, item.date_updated || item.date_created, item.status, color);
-        }).filter(activeIncident);
+        }).filter(item => activeIncident(item));
         if (incidents.length) {
             const worst = incidents.reduce((current, item) => severityRank[item.color] > severityRank[current] ? item.color : current, 'amber');
             return providerStatus(provider, `${incidents.length} active Slack incident${incidents.length === 1 ? '' : 's'}`, worst, true, '', logs, incidents);

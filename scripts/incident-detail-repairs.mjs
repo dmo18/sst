@@ -1,4 +1,5 @@
 import { structuredSourceConclusion, structuredSourceOverrides } from './structured-source-adapters.mjs';
+import { INCIDENT_MAX_AGE_DAYS, dateLikeIncidentTitle, incidentEvidenceIsCurrent } from './incident-freshness.mjs';
 
 const BLOCK_BREAK = /<\/?(?:article|section|main|header|footer|div|p|h[1-6]|li|ul|ol|table|tr|td|th|br|details|summary)[^>]*>/gi;
 
@@ -81,7 +82,7 @@ function clean(value) {
 
 const globalRegionPattern = /\b(?:global|worldwide|all regions|all customers|multiple regions|across regions)\b/i;
 const usRegionPattern = /\b(?:united states|u\.s\.|usa|us|north america|americas|us customers?|us cells?|us[- ](?:east|west|central|north|south)(?:[- ]\d+)?|us(?:e|w|c)\d+)\b/i;
-const nonUsRegionPattern = /\b(?:emea|europe|european|eu(?:rope)?(?:[- ]?(?:cell|region|zone))?[- ]?\d*|uk(?:[- ]?(?:cell|region|zone))?[- ]?\d*|united kingdom|apac|asia(?: pacific)?|australia|new zealand|canada|latin america|latam|middle east|africa|germany|france|spain|japan|singapore|india|brazil|china|beijing|hong kong|korea|dubai|uae|istanbul|türkiye|turkey|london|amsterdam|berlin|tokyo|sydney|frankfurt|paris|madrid|milan|warsaw|stockholm|kochi|kuala lumpur)\b|\b(?:aue|gbe|cae|de|eu|uk|ap|sg|jp)\d+(?:[-_a-z0-9]*)\b/i;
+const nonUsRegionPattern = /\b(?:emea|europe|european|eu(?:rope)?(?:[- ]?(?:cell|region|zone))?[- ]?\d*|uk(?:[- ]?(?:cell|region|zone))?[- ]?\d*|united kingdom|apac|asia(?: pacific)?|australia|new zealand|canada|latin america|latam|middle east|africa|germany|france|spain|japan|singapore|india|brazil|china|beijing|hong kong|korea|dubai|uae|istanbul|türkiye|turkey|london|amsterdam|berlin|tokyo|sydney|frankfurt|paris|madrid|milan|warsaw|stockholm|kochi|kuala lumpur|mumbai|hyderabad|delhi)\b|\b(?:aue|gbe|cae|de|eu|uk|ap|sg|jp)\d+(?:[-_a-z0-9]*)\b/i;
 
 export function isIncidentUsRelevant(item) {
   const title = clean(item?.title || '');
@@ -113,6 +114,7 @@ export function isEditorialIncidentEntry(item) {
 
 function isoDate(value) {
   const normalized = clean(value)
+    .replace(/\s+,/g, ',')
     .replace(/\s+-\s+/g, ' ')
     .replace(/\bUTC\b/i, ' UTC');
   const date = new Date(normalized);
@@ -137,7 +139,7 @@ function resolved(value) {
 }
 
 const STATUS_LINE = /^(Investigating|Identified|Monitoring|Update|In progress|Scheduled|Resolved|Completed)\s*[-:]\s*(.*)$/i;
-const DATE_LINE = /^(?:[A-Z][a-z]{2}\s+\d{1,2},\s+\d{4}\s*(?:-|at)?\s*\d{1,2}:\d{2}(?::\d{2})?\s*UTC|[A-Z][a-z]{2}\s+\d{1,2},\s*\d{1,2}:\d{2}\s*UTC)$/i;
+const DATE_LINE = /^(?:[A-Z][a-z]{2,8}\s+\d{1,2}\s*,\s*\d{4}\s*(?:-|at)?\s*\d{1,2}:\d{2}(?::\d{2})?\s*(?:UTC|EDT|EST)|[A-Z][a-z]{2}\s+\d{1,2}\s*,\s*\d{1,2}:\d{2}\s*UTC)$/i;
 const TITLE_NOISE = /^(?:status|active incidents?|current incidents?|subscribe to incident|subscribe|components?|affected components?|affected data centers?|we'?re here to help|past incidents?|incident history|report issue|updated a few seconds ago)$/i;
 
 function meaningfulTitle(line) {
@@ -146,7 +148,11 @@ function meaningfulTitle(line) {
     && value.length <= 220
     && !TITLE_NOISE.test(value)
     && !DATE_LINE.test(value)
+    && !dateLikeIncidentTitle(value)
     && !STATUS_LINE.test(value)
+    && value.split(/\s+/).length <= 18
+    && !/^(?:we|our|customers?|users?|some|the team|engineering)\b/i.test(value)
+    && !/[.!?]$/.test(value)
     && !isGenericIncidentTitle(value)
     && !/^all systems operational$/i.test(value)
     && !/^no incidents reported/i.test(value);
@@ -165,7 +171,7 @@ function currentStatusPageIncidents(provider, html) {
     if (resolved(status)) continue;
 
     let title = '';
-    for (let cursor = index - 1; cursor >= Math.max(0, index - 14); cursor -= 1) {
+    for (let cursor = index - 1; cursor >= Math.max(0, index - 40); cursor -= 1) {
       if (meaningfulTitle(current[cursor])) {
         title = current[cursor];
         break;
@@ -175,6 +181,10 @@ function currentStatusPageIncidents(provider, html) {
 
     const detail = [statusMatch[2]];
     let time = '';
+    for (let cursor = index - 1; cursor >= Math.max(0, index - 6); cursor -= 1) {
+      if (DATE_LINE.test(current[cursor])) { time = isoDate(current[cursor]); break; }
+      if (STATUS_LINE.test(current[cursor])) break;
+    }
     for (let cursor = index + 1; cursor < Math.min(current.length, index + 16); cursor += 1) {
       const line = current[cursor];
       if (DATE_LINE.test(line)) {
@@ -198,6 +208,7 @@ function currentStatusPageIncidents(provider, html) {
       affectedService: ''
     };
     if (!isIncidentUsRelevant(item)) continue;
+    if (!incidentEvidenceIsCurrent(item, Date.now(), INCIDENT_MAX_AGE_DAYS, { requireTimestamp: true })) continue;
 
     const existing = byTitle.get(title.toLowerCase());
     if (!existing || Date.parse(item.latestUpdate || '') >= Date.parse(existing.latestUpdate || '')) byTitle.set(title.toLowerCase(), item);
