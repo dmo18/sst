@@ -1,0 +1,49 @@
+name: Prepare ultra-HD release
+on:
+  pull_request:
+permissions:
+  contents: write
+jobs:
+  prepare:
+    if: github.actor != 'github-actions[bot]' && github.head_ref == 'agent/ultra-hd-visual-system'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Synchronize release metadata
+        run: |
+          npm version 3.2.0 --no-git-tag-version --allow-same-version
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+
+          const changelogPath = 'CHANGELOG.md';
+          let changelog = fs.readFileSync(changelogPath, 'utf8');
+          if (!changelog.includes('## [3.2.0] - 2026-08-02')) {
+            const block = `## [3.2.0] - 2026-08-02\n\n### Ultra-HD visual system\n\n- Replaced the fixed-scale admin-panel styling with a progressively scaled visual system for laptop, ultrawide, 4K, 5K, and 8K displays.\n- Added a 6,200px operating canvas, fluid typography, higher-resolution spacing, finer hairlines, deeper spatial hierarchy, and premium navigation, panel, table, drawer, and wallboard treatments.\n- Changed standard desktop KPI presentation from eight cramped columns to a readable four-column rhythm while retaining eight-column telemetry on ultrawide and higher-resolution displays.\n- Added dedicated 2,200px, 3,400px, and 5,000px breakpoints for larger rows, controls, logos, gutters, and metric surfaces.\n- Added deterministic 8K compositor rules that remove oversized blur layers and preserve complete provider-table rendering under software and hardware acceleration.\n- Added visual contract tests that protect stylesheet load order, progressive resolution breakpoints, reduced-motion support, desktop legibility, and 8K rendering safeguards.\n\n### Trust and scope\n\n- Preserved all first-party source, evidence, collection, refresh, status, and fail-closed behavior without adding external fonts, assets, services, credentials, API keys, or browser-side vendor calls.\n- Validated the application with fresh first-party data and rendered production builds at 1,920×1,080, 3,840×2,160, and 7,680×4,320 before release.\n\n`;
+            changelog = changelog.replace('## [3.1.0] - 2026-08-02', `${block}## [3.1.0] - 2026-08-02`);
+            fs.writeFileSync(changelogPath, changelog);
+          }
+
+          const indexPath = 'index.html';
+          let index = fs.readFileSync(indexPath, 'utf8');
+          index = index.replace('<meta name="theme-color" content="#11161d">', '<meta name="theme-color" content="#020409">');
+          index = index.replace('Enterprise MSP service intelligence with live provider, incident, and source-reliability operations.', 'Ultra-HD enterprise MSP service intelligence with live provider, incident, and source-reliability operations.');
+          fs.writeFileSync(indexPath, index);
+          NODE
+      - name: Commit release metadata
+        run: |
+          if git diff --quiet; then
+            echo "Release metadata already synchronized."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json CHANGELOG.md index.html
+          git commit -m "Release 3.2.0 ultra-HD visual system"
+          git push origin HEAD:${{ github.head_ref }}
