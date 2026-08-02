@@ -8,7 +8,7 @@ console.log(`INDEX ${htmlResponse.status} ${htmlResponse.url} ${htmlResponse.hea
 const html = await htmlResponse.text();
 console.log(`INDEX_BYTES ${Buffer.byteLength(html)}`);
 if (!htmlResponse.ok) throw new Error(`index failed with HTTP ${htmlResponse.status}`);
-if (!/MSP Operations Command Center/i.test(html)) throw new Error('deployed index does not identify the v3 command center');
+if (!/<title>ServiceOps \| MSP Service Intelligence<\/title>/i.test(html)) throw new Error('deployed index does not identify the v3.1 ServiceOps enterprise workspace');
 
 const scripts = [...html.matchAll(/<script[^>]+src=["']([^"']+)["']/gi)].map(match => new URL(match[1], base).href);
 const styles = [...html.matchAll(/<link[^>]+href=["']([^"']+)["'][^>]*>/gi)].map(match => new URL(match[1], base).href).filter(url => /\.css(?:\?|$)/.test(url));
