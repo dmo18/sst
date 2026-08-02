@@ -1,0 +1,69 @@
+name: Stale evidence hotfix validation
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Synchronize patch release metadata
+        run: |
+          npm version 3.3.1 --no-git-tag-version
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('CHANGELOG.md')
+          text = path.read_text()
+          heading = '## [3.3.1] - 2026-08-02\n\n'
+          if heading not in text:
+              marker = text.find('## [')
+              entry = heading + '- Tightened current-incident evidence from 45 days to 72 hours across structured, feed, HTML, and provider-specific adapters.\n- Suppressed unresolved records whose newest official vendor update is older than 72 hours; providers fail closed to limited/unknown instead of remaining degraded.\n- Added global US-scope rejection for Bahrain, Manama, AWS `me-south-1`, AWS `me-central-1`, and other explicit non-US regions.\n- Added regressions for the stale KnowBe4 monitoring record and the Elastic Cloud AWS Bahrain incident.\n\n'
+              text = text[:marker] + entry + text[marker:]
+              path.write_text(text)
+          PY
+      - run: npm ci
+      - run: npm run validate-providers
+      - run: npm test
+      - run: npm run typecheck
+      - run: npm run build:app
+      - name: Generate current first-party payload
+        run: npm run update-status
+      - name: Reject stale and non-US active records
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import { incidentEvidenceIsCurrent } from './scripts/incident-freshness.mjs';
+          const payload = JSON.parse(fs.readFileSync('public/status.json', 'utf8'));
+          const bad = (payload.incidents || []).filter(item => !incidentEvidenceIsCurrent(item, Date.now(), undefined, { requireTimestamp: true }));
+          if (bad.length) {
+            console.error('Stale or out-of-scope records:', JSON.stringify(bad.map(({ provider, title, latest_update, affected_service }) => ({ provider, title, latest_update, affected_service })), null, 2));
+            process.exit(1);
+          }
+          const named = (payload.incidents || []).filter(item => /\b(?:knowbe4|bahrain|manama|me-south-1|me-central-1)\b/i.test(`${item.provider || ''} ${item.title || ''} ${item.note || ''} ${item.affected_service || ''}`));
+          if (named.length) {
+            console.error('Reported regressions remained:', JSON.stringify(named, null, 2));
+            process.exit(1);
+          }
+          console.log(`Validated ${payload.incidents.length} current US-relevant incidents.`);
+          NODE
+      - name: Commit synchronized release files
+        run: |
+          if ! git diff --quiet -- package.json package-lock.json CHANGELOG.md; then
+            git config user.name github-actions[bot]
+            git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+            git add package.json package-lock.json CHANGELOG.md
+            git commit -m 'Synchronize 3.3.1 release metadata'
+            git push origin HEAD:${{ github.event.pull_request.head.ref }}
+          fi
