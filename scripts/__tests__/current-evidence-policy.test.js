@@ -25,6 +25,10 @@ test('default scope rejects explicit AWS Middle East regions', () => {
     affected_service: 'AWS EC2 Health: me-south-1'
   }), false);
   assert.equal(incidentRegionIsCurrentScope({
+    title: 'Network disruption in Manama',
+    affected_service: 'Middle East region'
+  }), false);
+  assert.equal(incidentRegionIsCurrentScope({
     title: 'Global AWS connectivity disruption'
   }), true);
 });
