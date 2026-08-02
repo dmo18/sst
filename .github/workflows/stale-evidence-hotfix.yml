@@ -1,0 +1,51 @@
+name: Stale evidence hotfix validation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/incident-freshness.mjs'
+      - 'scripts/__tests__/incident-freshness.test.js'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'CHANGELOG.md'
+      - '.github/workflows/stale-evidence-hotfix.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run validate:providers
+      - run: npm test
+      - run: npm run typecheck
+      - run: npm run build:app
+      - name: Generate current first-party payload
+        run: npm run update:public
+      - name: Reject stale and non-US active records
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import { incidentEvidenceIsCurrent } from './scripts/incident-freshness.mjs';
+          const payload = JSON.parse(fs.readFileSync('public/status.json', 'utf8'));
+          const bad = (payload.incidents || []).filter(item => !incidentEvidenceIsCurrent(item, Date.now(), undefined, { requireTimestamp: true }));
+          if (bad.length) {
+            console.error(JSON.stringify(bad.map(({ provider, title, latest_update, affected_service }) => ({ provider, title, latest_update, affected_service })), null, 2));
+            process.exit(1);
+          }
+          const forbidden = (payload.incidents || []).filter(item => /\b(?:bahrain|manama|me-south-1|me-central-1)\b/i.test(`${item.title || ''} ${item.note || ''} ${item.affected_service || ''}`));
+          if (forbidden.length) {
+            console.error('Non-US records remained:', JSON.stringify(forbidden, null, 2));
+            process.exit(1);
+          }
+          console.log(`Validated ${payload.incidents.length} current US-relevant incidents.`);
+          NODE
