@@ -1,1 +1,1 @@
-Build the repaired and validated stale incident and mobile UX artifact.
+Validate reconciled provider state and all phone workspaces.
