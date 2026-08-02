@@ -1,1 +1,1 @@
-Validate reconciled provider state and all phone workspaces.
+Persist the exact validated stale incident and mobile UX release.
