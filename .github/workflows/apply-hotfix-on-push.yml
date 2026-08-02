@@ -1,0 +1,84 @@
+name: Apply 3.3.1 hotfix on push
+
+on:
+  push:
+    branches:
+      - agent/tighten-current-evidence-72h
+
+permissions:
+  contents: write
+
+jobs:
+  apply-and-validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/tighten-current-evidence-72h
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Apply release patch
+        run: |
+          npm version 3.3.1 --no-git-tag-version
+          python - <<'PY'
+          from pathlib import Path
+          changelog = Path('CHANGELOG.md')
+          text = changelog.read_text()
+          heading = '## [3.3.1] - 2026-08-02\n\n'
+          if heading not in text:
+              marker = text.find('## [')
+              entry = heading + '- Tightened current-incident evidence from 45 days to 72 hours across all adapters.\n- Suppressed unresolved records whose newest official update is older than 72 hours.\n- Rejected Bahrain, Manama, `me-south-1`, `me-central-1`, and other explicit non-US regions.\n- Prevented adjacent HTML incidents from borrowing timestamps.\n- Added KnowBe4 and AWS Bahrain regressions.\n\n'
+              changelog.write_text(text[:marker] + entry + text[marker:])
+          replacements = {
+              'scripts/__tests__/structured-source-adapters.test.js': [('July 20, 2026 9:36AM EDT', 'August 2, 2026 8:36AM EDT'), ('/^2026-07-20T/', '/^2026-08-02T/')],
+              'scripts/__tests__/update-public-status.test.js': [('Jul 31, 2026 - 16:20 UTC', 'Aug 2, 2026 - 12:20 UTC'), ('Jul 31, 2026 - 16:00 UTC', 'Aug 2, 2026 - 12:00 UTC')]
+          }
+          for filename, pairs in replacements.items():
+              path = Path(filename)
+              value = path.read_text()
+              for old, new in pairs:
+                  value = value.replace(old, new)
+              path.write_text(value)
+          parser = Path('scripts/incident-detail-repairs.mjs')
+          value = parser.read_text()
+          old = """      if (DATE_LINE.test(current[cursor])) { time = isoDate(current[cursor]); break; }
+      if (STATUS_LINE.test(current[cursor])) break;"""
+          new = """      if (DATE_LINE.test(current[cursor])) { time = isoDate(current[cursor]); break; }
+      if (STATUS_LINE.test(current[cursor]) || meaningfulTitle(current[cursor])) break;"""
+          if old not in value and new not in value:
+              raise SystemExit('Expected timestamp boundary block was not found')
+          parser.write_text(value.replace(old, new))
+          PY
+      - run: npm ci
+      - run: npm run validate-providers
+      - run: npm test
+      - run: npm run typecheck
+      - run: npm run build:app
+      - name: Generate and audit current payload
+        run: |
+          npm run update-status
+          npm run validate-browser-payload -- public/status.json
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import { incidentEvidenceIsCurrent } from './scripts/incident-freshness.mjs';
+          const payload = JSON.parse(fs.readFileSync('public/status.json', 'utf8'));
+          const bad = payload.incidents.filter(item => !incidentEvidenceIsCurrent(item, Date.now(), undefined, { requireTimestamp: true }));
+          const regressions = payload.incidents.filter(item => /\b(?:knowbe4|bahrain|manama|me-south-1|me-central-1)\b/i.test(`${item.provider || ''} ${item.title || ''} ${item.note || ''} ${item.affected_service || ''}`));
+          if (bad.length || regressions.length) {
+            console.error(JSON.stringify({ bad, regressions }, null, 2));
+            process.exit(1);
+          }
+          console.log(`Validated ${payload.incidents.length} current US-relevant incidents.`);
+          NODE
+      - name: Commit validated branch changes
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add package.json package-lock.json CHANGELOG.md scripts/incident-detail-repairs.mjs scripts/__tests__/structured-source-adapters.test.js scripts/__tests__/update-public-status.test.js
+          if ! git diff --cached --quiet; then
+            git commit -m 'Finalize 3.3.1 current-evidence hotfix'
+            git push origin HEAD:agent/tighten-current-evidence-72h
+          fi
