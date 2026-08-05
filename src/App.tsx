@@ -20,6 +20,8 @@ const CATALOG = (providerCatalog as ProviderConfig[])
     .filter(provider => !EXCLUDED_PROVIDER_IDS.has(provider.id))
     .map(provider => ({ ...provider, ...(CONSOLIDATION.providerOverrides[provider.id] || {}) }));
 const REFRESH_MS = 60000;
+const MAX_PAYLOAD_AGE_MS = 20 * 60 * 1000;
+const MAX_FUTURE_SKEW_MS = 5 * 60 * 1000;
 
 async function fetchStatus(signal: AbortSignal): Promise<StatusPayload> {
     const response = await fetch(`${import.meta.env.BASE_URL}status.json?ts=${Date.now()}`, { cache: 'no-store', signal });
@@ -31,7 +33,16 @@ async function fetchStatus(signal: AbortSignal): Promise<StatusPayload> {
         console.error('status.json validation failed:', errors);
         throw new Error(`status.json has an invalid or unsupported payload (${errors.join('; ')})`);
     }
-    return data as StatusPayload;
+    const payload = data as StatusPayload;
+    const generatedAt = Date.parse(payload.generated_at || '');
+    const payloadAgeMs = Date.now() - generatedAt;
+    if (!Number.isFinite(generatedAt))
+        throw new Error('status.json generated_at is invalid');
+    if (payloadAgeMs < -MAX_FUTURE_SKEW_MS)
+        throw new Error('status.json was generated too far in the future');
+    if (payloadAgeMs > MAX_PAYLOAD_AGE_MS)
+        throw new Error(`status.json is stale (${Math.round(payloadAgeMs / 60000)} minutes old; maximum 20 minutes)`);
+    return payload;
 }
 
 export function App(): JSX.Element {
