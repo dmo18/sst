@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, type RefObject } from 'react';
 import { ProviderIcon } from './providerIcon';
 import { relativeAgeAt } from './liveTelemetry';
 import type { DataLifecycle } from './types';
@@ -37,7 +37,7 @@ function timestamp(value?: string): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function usePriorityAutoLoop(listRef: React.RefObject<HTMLDivElement>): void {
+function usePriorityAutoLoop(listRef: RefObject<HTMLDivElement>): void {
   const paused = useRef(false);
 
   useEffect(() => {
@@ -47,6 +47,7 @@ function usePriorityAutoLoop(listRef: React.RefObject<HTMLDivElement>): void {
     let frame = 0;
     let lastFrame = performance.now();
     let resumeAt = lastFrame + LOOP_START_DELAY_MS;
+    let resetTimer = 0;
 
     const animate = (now: number) => {
       const maximum = Math.max(0, list.scrollHeight - list.clientHeight);
@@ -55,9 +56,9 @@ function usePriorityAutoLoop(listRef: React.RefObject<HTMLDivElement>): void {
 
       if (!paused.current && maximum > 2 && now >= resumeAt) {
         list.scrollTop = Math.min(maximum, list.scrollTop + elapsed * LOOP_SPEED_PX_PER_SECOND / 1000);
-        if (list.scrollTop >= maximum - 1) {
+        if (list.scrollTop >= maximum - 1 && !list.classList.contains('is-loop-resetting')) {
           list.classList.add('is-loop-resetting');
-          window.setTimeout(() => {
+          resetTimer = window.setTimeout(() => {
             list.scrollTop = 0;
             list.classList.remove('is-loop-resetting');
           }, 260);
@@ -82,6 +83,7 @@ function usePriorityAutoLoop(listRef: React.RefObject<HTMLDivElement>): void {
 
     return () => {
       window.cancelAnimationFrame(frame);
+      window.clearTimeout(resetTimer);
       list.removeEventListener('pointerenter', pause);
       list.removeEventListener('pointerleave', resume);
       list.removeEventListener('focusin', pause);
