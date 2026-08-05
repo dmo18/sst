@@ -1,0 +1,61 @@
+@layer wallboard {
+  .wallboard-v2 .wallboard-priority-v2 {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    overflow: hidden;
+  }
+
+  .wallboard-v2 .wallboard-priority-v2 > h2 {
+    position: relative;
+    top: auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .wallboard-v2 .wallboard-priority-list {
+    min-height: 0;
+    overflow: hidden;
+    scroll-behavior: auto;
+    opacity: 1;
+    transition: opacity 260ms ease;
+  }
+
+  .wallboard-v2 .wallboard-priority-list.is-loop-resetting {
+    opacity: 0;
+  }
+
+  .wallboard-v2 .wallboard-priority-list > article {
+    grid-template-columns: 42px minmax(0, 1fr) 88px;
+  }
+
+  .wallboard-v2 .wallboard-signal-icon {
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    font: inherit;
+  }
+
+  .wallboard-v2 .wallboard-signal-icon .provider-icon {
+    width: 32px;
+    height: 32px;
+  }
+
+  .wallboard-v2 .wallboard-priority-list article > div {
+    min-width: 0;
+  }
+
+  .wallboard-v2 .wallboard-priority-list article h3,
+  .wallboard-v2 .wallboard-priority-list article p {
+    overflow-wrap: anywhere;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .wallboard-v2 .wallboard-priority-list {
+      overflow-y: auto;
+      transition: none;
+    }
+  }
+}
