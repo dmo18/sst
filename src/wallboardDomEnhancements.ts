@@ -1,15 +1,5 @@
-const WALLBOARD_IDLE_MS = 2200;
-
-let idleTimer = 0;
-let enhancementTimer = 0;
 let lastBrowserCheckAt = 0;
 let generatedAt = 0;
-
-function removeLegacyControlButtons(shell: HTMLElement): void {
-  for (const button of shell.querySelectorAll<HTMLButtonElement>('button')) {
-    if (/show controls/i.test(button.textContent || '')) button.remove();
-  }
-}
 
 function ageLabel(timestamp: number): string {
   if (!timestamp) return 'unknown';
@@ -20,7 +10,10 @@ function ageLabel(timestamp: number): string {
   return `${Math.floor(minutes / 60)}h`;
 }
 
-function ensureTelemetry(shell: HTMLElement): void {
+function ensureTelemetry(): void {
+  const shell = document.querySelector<HTMLElement>('.wallboard-shell');
+  if (!shell) return;
+
   let telemetry = shell.querySelector<HTMLElement>('.wallboard-mini-telemetry');
   if (!telemetry) {
     telemetry = document.createElement('aside');
@@ -28,44 +21,29 @@ function ensureTelemetry(shell: HTMLElement): void {
     telemetry.setAttribute('aria-label', 'Wallboard freshness telemetry');
     shell.appendChild(telemetry);
   }
-  telemetry.innerHTML = `<span>Payload <b>${ageLabel(generatedAt)}</b></span><span>Browser <b>${ageLabel(lastBrowserCheckAt)}</b></span>`;
-}
 
-function enhanceWallboard(): void {
-  const shell = document.querySelector<HTMLElement>('.wallboard-shell');
-  if (!shell) return;
-  removeLegacyControlButtons(shell);
-  ensureTelemetry(shell);
-}
+  telemetry.replaceChildren();
+  const payload = document.createElement('span');
+  payload.append('Payload ');
+  const payloadAge = document.createElement('b');
+  payloadAge.textContent = ageLabel(generatedAt);
+  payload.appendChild(payloadAge);
 
-function scheduleEnhancement(): void {
-  window.clearTimeout(enhancementTimer);
-  enhancementTimer = window.setTimeout(enhanceWallboard, 100);
-}
+  const browser = document.createElement('span');
+  browser.append('Browser ');
+  const browserAge = document.createElement('b');
+  browserAge.textContent = ageLabel(lastBrowserCheckAt);
+  browser.appendChild(browserAge);
 
-function revealControls(): void {
-  const shell = document.querySelector<HTMLElement>('.wallboard-shell');
-  if (!shell) return;
-  shell.classList.add('wallboard-controls-visible');
-  window.clearTimeout(idleTimer);
-  idleTimer = window.setTimeout(() => shell.classList.remove('wallboard-controls-visible'), WALLBOARD_IDLE_MS);
+  telemetry.append(payload, browser);
 }
 
 window.addEventListener('sst:browser-check', event => {
   const detail = (event as CustomEvent<{ checkedAt?: number; generatedAt?: string }>).detail;
   lastBrowserCheckAt = Number(detail?.checkedAt || Date.now());
   generatedAt = Date.parse(detail?.generatedAt || '') || generatedAt;
-  const shell = document.querySelector<HTMLElement>('.wallboard-shell');
-  if (shell) ensureTelemetry(shell);
+  ensureTelemetry();
 });
 
-const observer = new MutationObserver(scheduleEnhancement);
-observer.observe(document.documentElement, { childList: true, subtree: true });
-window.addEventListener('pointermove', revealControls, { passive: true });
-window.addEventListener('pointerdown', revealControls, { passive: true });
-window.addEventListener('keydown', revealControls);
-window.setInterval(() => {
-  const shell = document.querySelector<HTMLElement>('.wallboard-shell');
-  if (shell) ensureTelemetry(shell);
-}, 1000);
-queueMicrotask(enhanceWallboard);
+window.setInterval(ensureTelemetry, 1000);
+queueMicrotask(ensureTelemetry);
