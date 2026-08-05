@@ -1,10 +1,15 @@
 @layer wallboard {
+  .wallboard-shell {
+    --wallboard-overlay-inset: 8px;
+    --wallboard-header-height: 68px;
+    --wallboard-overlay-gap: 8px;
+  }
+
   .wallboard-shell > header,
   .wallboard-shell > .wallboard-kpis {
     position: fixed !important;
-    left: 0;
-    right: 0;
-    z-index: 120;
+    left: var(--wallboard-overlay-inset);
+    right: var(--wallboard-overlay-inset);
     margin: 0 !important;
     opacity: 0;
     pointer-events: none;
@@ -13,14 +18,19 @@
   }
 
   .wallboard-shell > header {
-    top: 0;
-    transform: translateY(-115%);
+    top: var(--wallboard-overlay-inset);
+    z-index: 122;
+    min-height: var(--wallboard-header-height);
+    transform: translateY(calc(-100% - var(--wallboard-overlay-inset)));
+    background: rgba(15, 23, 34, .98);
+    backdrop-filter: blur(16px);
   }
 
   .wallboard-shell > .wallboard-kpis {
-    top: 76px;
-    transform: translateY(-150%);
-    background: rgba(7, 13, 22, .97);
+    top: calc(var(--wallboard-overlay-inset) + var(--wallboard-header-height) + var(--wallboard-overlay-gap));
+    z-index: 121;
+    transform: translateY(calc(-200% - var(--wallboard-header-height)));
+    background: rgba(7, 13, 22, .98);
     backdrop-filter: blur(16px);
   }
 
