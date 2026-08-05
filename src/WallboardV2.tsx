@@ -118,6 +118,15 @@ export function WallboardV2({
       return timeDifference || a.provider.localeCompare(b.provider) || a.title.localeCompare(b.title);
     }), [model?.actionQueue]);
 
+  const alertProviders = useMemo(() => {
+    const seen = new Set<string>();
+    return signals.filter(item => {
+      if (seen.has(item.providerId)) return false;
+      seen.add(item.providerId);
+      return true;
+    });
+  }, [signals]);
+
   usePriorityMarquee(priorityViewportRef, priorityTrackRef, priorityGroupRef, signals.length);
 
   const providers = useMemo(() => (model?.diagnostics || [])
@@ -144,6 +153,13 @@ export function WallboardV2({
       <main>
         <section className="wallboard-priority wallboard-priority-v2">
           <h2><span>Priority signals</span></h2>
+          <div className="wallboard-alert-provider-rail" aria-label="Providers with active alerts">
+            {alertProviders.map(item => (
+              <span key={item.providerId} title={item.provider} aria-label={item.provider}>
+                <ProviderIcon id={item.providerId} name={item.provider} />
+              </span>
+            ))}
+          </div>
           <div className="wallboard-priority-list" ref={priorityViewportRef}>
             {signals.length ? (
               <div className="wallboard-priority-track" ref={priorityTrackRef}>
