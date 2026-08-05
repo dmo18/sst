@@ -1,9 +1,11 @@
 const WALLBOARD_IDLE_MS = 2200;
-const SIGNAL_SCROLL_PIXELS_PER_SECOND = 18;
+const SIGNAL_ADVANCE_MS = 6500;
 
 let idleTimer = 0;
 let enhancementTimer = 0;
-let signalAnimation: Animation | null = null;
+let signalTimer = 0;
+let lastBrowserCheckAt = 0;
+let generatedAt = 0;
 
 function normalize(value: string | null | undefined): string {
   return (value || '').trim().toLowerCase();
@@ -33,7 +35,7 @@ function relativeAgeMilliseconds(value: string | null | undefined): number {
 }
 
 function priorityRows(section: HTMLElement): HTMLElement[] {
-  return [...section.querySelectorAll<HTMLElement>('article:not([data-wallboard-clone="true"])')];
+  return [...section.querySelectorAll<HTMLElement>(':scope > article')];
 }
 
 function sortPriorityRows(section: HTMLElement): HTMLElement[] {
@@ -54,11 +56,10 @@ function replacePriorityNumbers(shell: HTMLElement): void {
     if (name && icon) icons.set(name, icon);
   }
 
-  for (const row of shell.querySelectorAll<HTMLElement>('.wallboard-priority article:not([data-wallboard-clone="true"])')) {
+  for (const row of shell.querySelectorAll<HTMLElement>('.wallboard-priority > article')) {
     const providerName = row.querySelector('div > b')?.textContent || 'Provider';
-    const provider = normalize(providerName);
     const first = row.firstElementChild;
-    const source = icons.get(provider);
+    const source = icons.get(normalize(providerName));
     if (!first || !source || first.classList.contains('priority-provider-icon')) continue;
     const icon = source.cloneNode(true) as HTMLImageElement;
     icon.classList.add('priority-provider-icon');
@@ -67,68 +68,68 @@ function replacePriorityNumbers(shell: HTMLElement): void {
   }
 }
 
-function clearSignalLoop(section: HTMLElement): void {
-  signalAnimation?.cancel();
-  signalAnimation = null;
-  const viewport = section.querySelector<HTMLElement>(':scope > .wallboard-signal-viewport');
-  if (!viewport) return;
-  const originals = [...viewport.querySelectorAll<HTMLElement>('article:not([data-wallboard-clone="true"])')];
-  for (const row of originals) section.appendChild(row);
-  viewport.remove();
+function setupSignalRotation(section: HTMLElement): void {
+  window.clearInterval(signalTimer);
+  signalTimer = 0;
+  section.scrollTo({ top: 0, behavior: 'auto' });
+  const rows = priorityRows(section);
+  if (rows.length < 2 || section.scrollHeight <= section.clientHeight + 8) return;
+
+  let index = 0;
+  signalTimer = window.setInterval(() => {
+    const currentRows = priorityRows(section);
+    if (!currentRows.length) return;
+    index = (index + 1) % currentRows.length;
+    const target = currentRows[index];
+    const top = target.offsetTop - (section.querySelector('h2')?.clientHeight || 0) - 8;
+    if (index === 0 || top >= section.scrollHeight - section.clientHeight - 4) {
+      section.scrollTo({ top: index === 0 ? 0 : top, behavior: 'smooth' });
+    } else {
+      section.scrollTo({ top, behavior: 'smooth' });
+    }
+  }, SIGNAL_ADVANCE_MS);
 }
 
-function setupSignalLoop(section: HTMLElement): void {
-  clearSignalLoop(section);
-  const rows = sortPriorityRows(section);
-  if (rows.length < 2) return;
+function ageLabel(timestamp: number): string {
+  if (!timestamp) return 'unknown';
+  const seconds = Math.max(0, Math.floor((Date.now() - timestamp) / 1000));
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m`;
+  return `${Math.floor(minutes / 60)}h`;
+}
 
-  const viewport = document.createElement('div');
-  viewport.className = 'wallboard-signal-viewport';
-  const track = document.createElement('div');
-  track.className = 'wallboard-signal-track';
-  viewport.appendChild(track);
-  for (const row of rows) track.appendChild(row);
-  section.appendChild(viewport);
-
-  requestAnimationFrame(() => {
-    const availableHeight = viewport.clientHeight;
-    const originalHeight = track.scrollHeight;
-    if (availableHeight <= 0 || originalHeight <= availableHeight + 8) return;
-
-    for (const row of rows) {
-      const clone = row.cloneNode(true) as HTMLElement;
-      clone.dataset.wallboardClone = 'true';
-      clone.setAttribute('aria-hidden', 'true');
-      track.appendChild(clone);
-    }
-
-    const duration = Math.max(18_000, originalHeight / SIGNAL_SCROLL_PIXELS_PER_SECOND * 1000);
-    signalAnimation = track.animate(
-      [{ transform: 'translateY(0)' }, { transform: `translateY(-${originalHeight}px)` }],
-      { duration, iterations: Infinity, easing: 'linear' }
-    );
-  });
+function ensureTelemetry(shell: HTMLElement): void {
+  let telemetry = shell.querySelector<HTMLElement>('.wallboard-mini-telemetry');
+  if (!telemetry) {
+    telemetry = document.createElement('aside');
+    telemetry.className = 'wallboard-mini-telemetry';
+    telemetry.setAttribute('aria-label', 'Wallboard freshness telemetry');
+    shell.appendChild(telemetry);
+  }
+  telemetry.innerHTML = `<span>Payload <b>${ageLabel(generatedAt)}</b></span><span>Browser <b>${ageLabel(lastBrowserCheckAt)}</b></span>`;
 }
 
 function enhanceWallboard(): void {
   const shell = document.querySelector<HTMLElement>('.wallboard-shell');
   if (!shell) {
-    signalAnimation?.cancel();
-    signalAnimation = null;
+    window.clearInterval(signalTimer);
+    signalTimer = 0;
     return;
   }
   removeLegacyControlButtons(shell);
   const priority = shell.querySelector<HTMLElement>('.wallboard-priority');
-  if (!priority) return;
-  clearSignalLoop(priority);
-  sortPriorityRows(priority);
-  replacePriorityNumbers(shell);
-  setupSignalLoop(priority);
+  if (priority) {
+    sortPriorityRows(priority);
+    replacePriorityNumbers(shell);
+    setupSignalRotation(priority);
+  }
+  ensureTelemetry(shell);
 }
 
 function scheduleEnhancement(): void {
   window.clearTimeout(enhancementTimer);
-  enhancementTimer = window.setTimeout(enhanceWallboard, 80);
+  enhancementTimer = window.setTimeout(enhanceWallboard, 100);
 }
 
 function revealControls(): void {
@@ -139,10 +140,22 @@ function revealControls(): void {
   idleTimer = window.setTimeout(() => shell.classList.remove('wallboard-controls-visible'), WALLBOARD_IDLE_MS);
 }
 
+window.addEventListener('sst:browser-check', event => {
+  const detail = (event as CustomEvent<{ checkedAt?: number; generatedAt?: string }>).detail;
+  lastBrowserCheckAt = Number(detail?.checkedAt || Date.now());
+  generatedAt = Date.parse(detail?.generatedAt || '') || generatedAt;
+  const shell = document.querySelector<HTMLElement>('.wallboard-shell');
+  if (shell) ensureTelemetry(shell);
+});
+
 const observer = new MutationObserver(scheduleEnhancement);
 observer.observe(document.documentElement, { childList: true, subtree: true });
 window.addEventListener('pointermove', revealControls, { passive: true });
 window.addEventListener('pointerdown', revealControls, { passive: true });
 window.addEventListener('keydown', revealControls);
 window.addEventListener('resize', scheduleEnhancement, { passive: true });
+window.setInterval(() => {
+  const shell = document.querySelector<HTMLElement>('.wallboard-shell');
+  if (shell) ensureTelemetry(shell);
+}, 1000);
 queueMicrotask(enhanceWallboard);
