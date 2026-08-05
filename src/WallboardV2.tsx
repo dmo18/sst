@@ -155,8 +155,9 @@ export function WallboardV2({
           <h2><span>Priority signals</span></h2>
           <div className="wallboard-alert-provider-rail" aria-label="Providers with active alerts">
             {alertProviders.map(item => (
-              <span key={item.providerId} title={item.provider} aria-label={item.provider}>
+              <span className="wallboard-alert-provider-chip" key={item.providerId} title={item.provider} aria-label={item.provider}>
                 <ProviderIcon id={item.providerId} name={item.provider} />
+                <b>{item.provider}</b>
               </span>
             ))}
           </div>
