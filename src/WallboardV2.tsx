@@ -2,11 +2,10 @@ import { useEffect, useMemo, useRef, type RefObject } from 'react';
 import { ProviderIcon } from './providerIcon';
 import { relativeAgeAt } from './liveTelemetry';
 import type { DataLifecycle } from './types';
-import type { IssueConsoleModel } from './statusViewModel';
+import type { ActionItem, IssueConsoleModel } from './statusViewModel';
 
 const EASTERN_TIME_ZONE = 'America/New_York';
-const CAROUSEL_START_DELAY_MS = 2600;
-const CAROUSEL_STEP_MS = 5200;
+const LOOP_SPEED_PX_PER_SECOND = 22;
 
 function clockLabel(now: number): string {
   return new Intl.DateTimeFormat('en-US', {
@@ -36,62 +35,65 @@ function timestamp(value?: string): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function usePriorityCarousel(listRef: RefObject<HTMLDivElement>, itemCount: number): void {
+function usePriorityMarquee(
+  viewportRef: RefObject<HTMLDivElement>,
+  trackRef: RefObject<HTMLDivElement>,
+  groupRef: RefObject<HTMLDivElement>,
+  itemCount: number
+): void {
   useEffect(() => {
-    const list = listRef.current;
-    if (!list || itemCount < 2 || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const viewport = viewportRef.current;
+    const track = trackRef.current;
+    const group = groupRef.current;
+    if (!viewport || !track || !group) return;
 
-    let stepTimer = 0;
-    let startTimer = 0;
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     let resizeObserver: ResizeObserver | null = null;
-    let currentIndex = 0;
 
-    const rows = () => Array.from(list.querySelectorAll<HTMLElement>(':scope > article'));
-    const hasOverflow = () => list.scrollHeight > list.clientHeight + 2;
+    const measure = () => {
+      const groupHeight = Math.ceil(group.getBoundingClientRect().height);
+      const shouldLoop = !reducedMotion.matches && itemCount > 1 && groupHeight > viewport.clientHeight + 2;
 
-    const showIndex = (index: number, behavior: ScrollBehavior) => {
-      const items = rows();
-      if (!items.length) return;
-      currentIndex = ((index % items.length) + items.length) % items.length;
-      list.scrollTo({ top: items[currentIndex].offsetTop, behavior });
+      track.classList.remove('is-looping');
+      track.style.removeProperty('--wallboard-loop-distance');
+      track.style.removeProperty('--wallboard-loop-duration');
+
+      if (!shouldLoop || groupHeight <= 0) return;
+
+      const durationSeconds = Math.max(12, groupHeight / LOOP_SPEED_PX_PER_SECOND);
+      track.style.setProperty('--wallboard-loop-distance', `${groupHeight}px`);
+      track.style.setProperty('--wallboard-loop-duration', `${durationSeconds}s`);
+      void track.offsetHeight;
+      track.classList.add('is-looping');
     };
 
-    const advance = () => {
-      if (!hasOverflow()) {
-        if (list.scrollTop !== 0) list.scrollTo({ top: 0, behavior: 'auto' });
-        currentIndex = 0;
-        return;
-      }
-
-      const items = rows();
-      if (!items.length) return;
-      showIndex(currentIndex + 1 >= items.length ? 0 : currentIndex + 1, 'smooth');
-    };
-
-    const start = () => {
-      window.clearInterval(stepTimer);
-      stepTimer = window.setInterval(advance, CAROUSEL_STEP_MS);
-    };
-
-    startTimer = window.setTimeout(start, CAROUSEL_START_DELAY_MS);
-    resizeObserver = new ResizeObserver(() => {
-      const items = rows();
-      if (!items.length) return;
-      const nearest = items.reduce((best, item, index) => {
-        const distance = Math.abs(item.offsetTop - list.scrollTop);
-        return distance < best.distance ? { index, distance } : best;
-      }, { index: 0, distance: Number.POSITIVE_INFINITY });
-      currentIndex = nearest.index;
-      showIndex(currentIndex, 'auto');
-    });
-    resizeObserver.observe(list);
+    const scheduleMeasure = () => window.requestAnimationFrame(measure);
+    resizeObserver = new ResizeObserver(scheduleMeasure);
+    resizeObserver.observe(viewport);
+    resizeObserver.observe(group);
+    reducedMotion.addEventListener('change', scheduleMeasure);
+    scheduleMeasure();
 
     return () => {
-      window.clearTimeout(startTimer);
-      window.clearInterval(stepTimer);
       resizeObserver?.disconnect();
+      reducedMotion.removeEventListener('change', scheduleMeasure);
+      track.classList.remove('is-looping');
     };
-  }, [itemCount, listRef]);
+  }, [groupRef, itemCount, trackRef, viewportRef]);
+}
+
+function SignalRows({ signals, now, copy = false }: { signals: ActionItem[]; now: number; copy?: boolean }): JSX.Element {
+  return (
+    <div className={`wallboard-priority-group${copy ? ' wallboard-priority-copy' : ''}`} aria-hidden={copy || undefined}>
+      {signals.map(item => (
+        <article key={`${copy ? 'copy:' : ''}${item.id}`} className={`attention-${item.attention}`}>
+          <span className="wallboard-signal-icon"><ProviderIcon id={item.providerId} name={item.provider} /></span>
+          <div><b>{item.provider}</b><h3>{item.title}</h3><p>{item.detail}</p></div>
+          <time>{relativeAgeAt(item.updatedAt, now)}</time>
+        </article>
+      ))}
+    </div>
+  );
 }
 
 export function WallboardV2({
@@ -105,7 +107,9 @@ export function WallboardV2({
   now: number;
   onExit: () => void;
 }): JSX.Element {
-  const priorityListRef = useRef<HTMLDivElement>(null);
+  const priorityViewportRef = useRef<HTMLDivElement>(null);
+  const priorityTrackRef = useRef<HTMLDivElement>(null);
+  const priorityGroupRef = useRef<HTMLDivElement>(null);
 
   const signals = useMemo(() => (model?.actionQueue || [])
     .filter(item => item.kind === 'incident')
@@ -114,7 +118,7 @@ export function WallboardV2({
       return timeDifference || a.provider.localeCompare(b.provider) || a.title.localeCompare(b.title);
     }), [model?.actionQueue]);
 
-  usePriorityCarousel(priorityListRef, signals.length);
+  usePriorityMarquee(priorityViewportRef, priorityTrackRef, priorityGroupRef, signals.length);
 
   const providers = useMemo(() => (model?.diagnostics || [])
     .filter(item => item.attention !== 'informational' || item.sourceHealth !== 'healthy')
@@ -140,14 +144,13 @@ export function WallboardV2({
       <main>
         <section className="wallboard-priority wallboard-priority-v2">
           <h2><span>Priority signals</span></h2>
-          <div className="wallboard-priority-list" ref={priorityListRef}>
-            {signals.length ? signals.map(item => (
-              <article key={item.id} className={`attention-${item.attention}`}>
-                <span className="wallboard-signal-icon"><ProviderIcon id={item.providerId} name={item.provider} /></span>
-                <div><b>{item.provider}</b><h3>{item.title}</h3><p>{item.detail}</p></div>
-                <time>{relativeAgeAt(item.updatedAt, now)}</time>
-              </article>
-            )) : <div className="empty-state"><b>No active vendor incidents</b></div>}
+          <div className="wallboard-priority-list" ref={priorityViewportRef}>
+            {signals.length ? (
+              <div className="wallboard-priority-track" ref={priorityTrackRef}>
+                <div ref={priorityGroupRef}><SignalRows signals={signals} now={now} /></div>
+                <SignalRows signals={signals} now={now} copy />
+              </div>
+            ) : <div className="empty-state"><b>No active vendor incidents</b></div>}
           </div>
         </section>
 
