@@ -40,25 +40,32 @@
     min-width: 0;
     min-height: 0;
     height: 100%;
-    overflow-x: hidden;
-    overflow-y: auto;
-    scroll-behavior: smooth;
-    scroll-snap-type: y proximity;
-    scrollbar-width: none;
+    overflow: hidden;
     overscroll-behavior: contain;
   }
 
-  .wallboard-v2 .wallboard-priority-list::-webkit-scrollbar {
-    width: 0;
-    height: 0;
+  .wallboard-v2 .wallboard-priority-track {
+    width: 100%;
+    transform: translate3d(0, 0, 0);
+    will-change: transform;
   }
 
-  .wallboard-v2 .wallboard-priority-list > article {
+  .wallboard-v2 .wallboard-priority-track.is-looping {
+    animation: wallboard-priority-marquee var(--wallboard-loop-duration) linear infinite;
+  }
+
+  .wallboard-v2 .wallboard-priority-track:not(.is-looping) .wallboard-priority-copy {
+    display: none;
+  }
+
+  .wallboard-v2 .wallboard-priority-group {
+    width: 100%;
+  }
+
+  .wallboard-v2 .wallboard-priority-group > article {
     width: 100%;
     min-width: 0;
     grid-template-columns: 42px minmax(0, 1fr) 88px;
-    scroll-snap-align: start;
-    scroll-margin-top: 1px;
   }
 
   .wallboard-v2 .wallboard-signal-icon {
@@ -74,13 +81,18 @@
     height: 32px;
   }
 
-  .wallboard-v2 .wallboard-priority-list article > div {
+  .wallboard-v2 .wallboard-priority-group article > div {
     min-width: 0;
   }
 
-  .wallboard-v2 .wallboard-priority-list article h3,
-  .wallboard-v2 .wallboard-priority-list article p {
+  .wallboard-v2 .wallboard-priority-group article h3,
+  .wallboard-v2 .wallboard-priority-group article p {
     overflow-wrap: anywhere;
+  }
+
+  @keyframes wallboard-priority-marquee {
+    from { transform: translate3d(0, 0, 0); }
+    to { transform: translate3d(0, calc(-1 * var(--wallboard-loop-distance)), 0); }
   }
 
   @media (max-width: 1180px), (max-height: 520px) {
@@ -119,7 +131,7 @@
       padding-bottom: 7px;
     }
 
-    .wallboard-v2 .wallboard-priority-list > article {
+    .wallboard-v2 .wallboard-priority-group > article {
       min-height: 104px;
       padding-top: 10px;
       padding-bottom: 10px;
@@ -128,7 +140,7 @@
   }
 
   @media (max-width: 720px) {
-    .wallboard-v2 .wallboard-priority-list > article {
+    .wallboard-v2 .wallboard-priority-group > article {
       min-height: 112px;
       grid-template-columns: 38px minmax(0, 1fr) 52px;
       gap: 8px;
@@ -142,22 +154,18 @@
       height: 30px;
     }
 
-    .wallboard-v2 .wallboard-priority-list article h3 {
-      display: -webkit-box;
-      -webkit-box-orient: vertical;
-      -webkit-line-clamp: 2;
-      overflow: hidden;
+    .wallboard-v2 .wallboard-priority-group article h3,
+    .wallboard-v2 .wallboard-priority-group article p {
+      display: block;
+      overflow: visible;
+      -webkit-line-clamp: unset;
     }
 
-    .wallboard-v2 .wallboard-priority-list article p {
-      display: -webkit-box;
+    .wallboard-v2 .wallboard-priority-group article p {
       margin-top: 4px;
-      -webkit-box-orient: vertical;
-      -webkit-line-clamp: 2;
-      overflow: hidden;
     }
 
-    .wallboard-v2 .wallboard-priority-list article time {
+    .wallboard-v2 .wallboard-priority-group article time {
       align-self: start;
       padding-top: 2px;
       white-space: nowrap;
@@ -166,8 +174,15 @@
 
   @media (prefers-reduced-motion: reduce) {
     .wallboard-v2 .wallboard-priority-list {
-      scroll-behavior: auto;
-      scroll-snap-type: none;
+      overflow-y: auto;
+    }
+
+    .wallboard-v2 .wallboard-priority-track.is-looping {
+      animation: none;
+    }
+
+    .wallboard-v2 .wallboard-priority-copy {
+      display: none;
     }
   }
 }
