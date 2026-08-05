@@ -1,17 +1,31 @@
 @layer wallboard {
-  .wallboard-shell > header {
+  .wallboard-shell > header,
+  .wallboard-shell > .wallboard-kpis {
     position: fixed !important;
-    inset: 0 0 auto 0;
+    left: 0;
+    right: 0;
     z-index: 120;
     margin: 0 !important;
     opacity: 0;
-    transform: translateY(-110%);
     pointer-events: none;
-    transition: opacity 140ms ease, transform 180ms ease;
+    transition: opacity 150ms ease, transform 190ms ease;
     box-shadow: 0 10px 28px rgba(0, 0, 0, .42);
   }
 
-  .wallboard-shell.wallboard-controls-visible > header {
+  .wallboard-shell > header {
+    top: 0;
+    transform: translateY(-115%);
+  }
+
+  .wallboard-shell > .wallboard-kpis {
+    top: 78px;
+    transform: translateY(-135%);
+    background: rgba(7, 13, 22, .97);
+    backdrop-filter: blur(16px);
+  }
+
+  .wallboard-shell.wallboard-controls-visible > header,
+  .wallboard-shell.wallboard-controls-visible > .wallboard-kpis {
     opacity: 1;
     transform: translateY(0);
     pointer-events: auto;
@@ -21,6 +35,11 @@
   .wallboard-shell .wallboard-control-peek,
   .wallboard-shell .show-controls {
     display: none !important;
+  }
+
+  .wallboard-priority {
+    min-height: 0;
+    overflow: hidden;
   }
 
   .wallboard-priority article > .priority-provider-icon {
@@ -36,5 +55,27 @@
 
   .wallboard-priority article > span:first-child {
     display: none;
+  }
+
+  .wallboard-signal-viewport {
+    min-height: 0;
+    height: calc(100% - 54px);
+    overflow: hidden;
+    mask-image: linear-gradient(to bottom, transparent 0, black 22px, black calc(100% - 22px), transparent 100%);
+  }
+
+  .wallboard-signal-track {
+    will-change: transform;
+  }
+
+  .wallboard-signal-track article {
+    flex: 0 0 auto;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .wallboard-signal-track {
+      animation: none !important;
+      transform: none !important;
+    }
   }
 }
