@@ -1,5 +1,6 @@
 let lastBrowserCheckAt = 0;
 let generatedAt = 0;
+let controlsTimer = 0;
 
 function ageLabel(timestamp: number): string {
   if (!timestamp) return 'unknown';
@@ -10,8 +11,22 @@ function ageLabel(timestamp: number): string {
   return `${Math.floor(minutes / 60)}h`;
 }
 
+function wallboardShell(): HTMLElement | null {
+  return document.querySelector<HTMLElement>('.wallboard-shell');
+}
+
+function revealControls(): void {
+  const shell = wallboardShell();
+  if (!shell) return;
+  shell.classList.add('wallboard-controls-visible');
+  window.clearTimeout(controlsTimer);
+  controlsTimer = window.setTimeout(() => {
+    wallboardShell()?.classList.remove('wallboard-controls-visible');
+  }, 3200);
+}
+
 function ensureTelemetry(): void {
-  const shell = document.querySelector<HTMLElement>('.wallboard-shell');
+  const shell = wallboardShell();
   if (!shell) return;
 
   let telemetry = shell.querySelector<HTMLElement>('.wallboard-mini-telemetry');
@@ -20,6 +35,7 @@ function ensureTelemetry(): void {
     telemetry.className = 'wallboard-mini-telemetry';
     telemetry.setAttribute('aria-label', 'Wallboard freshness telemetry');
     shell.appendChild(telemetry);
+    revealControls();
   }
 
   telemetry.replaceChildren();
@@ -38,6 +54,9 @@ function ensureTelemetry(): void {
   telemetry.append(payload, browser);
 }
 
+window.addEventListener('pointermove', revealControls, { passive: true });
+window.addEventListener('pointerdown', revealControls, { passive: true });
+window.addEventListener('keydown', revealControls);
 window.addEventListener('sst:browser-check', event => {
   const detail = (event as CustomEvent<{ checkedAt?: number; generatedAt?: string }>).detail;
   lastBrowserCheckAt = Number(detail?.checkedAt || Date.now());
