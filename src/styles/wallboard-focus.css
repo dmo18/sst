@@ -1,9 +1,16 @@
 @layer wallboard {
   .wallboard-shell {
     --wallboard-overlay-inset: 10px;
-    --wallboard-header-height: 66px;
-    --wallboard-kpi-height: 104px;
+    --wallboard-header-height: 72px;
+    --wallboard-kpi-height: 88px;
     --wallboard-overlay-gap: 8px;
+    --wallboard-overlay-travel: calc(
+      var(--wallboard-overlay-inset) +
+      var(--wallboard-header-height) +
+      var(--wallboard-overlay-gap) +
+      var(--wallboard-kpi-height) +
+      16px
+    );
   }
 
   .wallboard-shell > header,
@@ -13,13 +20,15 @@
     right: var(--wallboard-overlay-inset) !important;
     width: auto !important;
     margin: 0 !important;
-    box-sizing: border-box;
+    box-sizing: border-box !important;
     opacity: 0;
+    visibility: hidden;
     pointer-events: none;
-    transform: translateY(-220px);
-    transition: opacity 140ms ease, transform 180ms ease;
+    transform: translate3d(0, calc(-1 * var(--wallboard-overlay-travel)), 0);
+    transition: opacity 140ms ease, transform 180ms ease, visibility 0s linear 180ms;
     box-shadow: 0 12px 34px rgba(0, 0, 0, .48);
     backdrop-filter: blur(18px);
+    contain: layout paint;
   }
 
   .wallboard-shell > header {
@@ -28,8 +37,18 @@
     height: var(--wallboard-header-height) !important;
     min-height: var(--wallboard-header-height) !important;
     max-height: var(--wallboard-header-height) !important;
+    display: grid !important;
+    grid-template-columns: minmax(260px, 1fr) auto auto auto !important;
+    align-items: center !important;
+    gap: 18px !important;
+    padding: 10px 14px !important;
     overflow: hidden;
     background: rgba(15, 23, 34, .985);
+  }
+
+  .wallboard-shell > header h1 {
+    margin: 2px 0 0 !important;
+    line-height: 1.08;
   }
 
   .wallboard-shell > .wallboard-kpis {
@@ -38,20 +57,45 @@
     height: var(--wallboard-kpi-height) !important;
     min-height: var(--wallboard-kpi-height) !important;
     max-height: var(--wallboard-kpi-height) !important;
+    display: grid !important;
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
     overflow: hidden;
     background: rgba(7, 13, 22, .985);
+  }
+
+  .wallboard-shell > .wallboard-kpis > .metric-tile {
+    min-width: 0 !important;
+    min-height: 0 !important;
+    height: 100% !important;
+    padding: 12px 16px !important;
+    border-bottom: 0 !important;
+    overflow: hidden;
+  }
+
+  .wallboard-shell > .wallboard-kpis .metric-tile header {
+    min-height: 15px;
+  }
+
+  .wallboard-shell > .wallboard-kpis .metric-tile strong {
+    margin-top: 5px;
+    line-height: 1;
   }
 
   .wallboard-shell.wallboard-controls-visible > header,
   .wallboard-shell.wallboard-controls-visible > .wallboard-kpis {
     opacity: 1;
+    visibility: visible;
     pointer-events: auto;
-    transform: translateY(0);
+    transform: translate3d(0, 0, 0);
+    transition-delay: 0s;
   }
 
   .wallboard-shell > button,
   .wallboard-shell .wallboard-control-peek,
-  .wallboard-shell .show-controls {
+  .wallboard-shell .show-controls,
+  .wallboard-shell .wallboard-show-header,
+  .wallboard-shell .wallboard-runtime-filter,
+  .wallboard-shell .wallboard-filter-summary {
     display: none !important;
   }
 
@@ -81,8 +125,24 @@
 
   @media (max-width: 900px) {
     .wallboard-shell {
-      --wallboard-header-height: 58px;
-      --wallboard-kpi-height: 96px;
+      --wallboard-header-height: 64px;
+      --wallboard-kpi-height: 82px;
+    }
+
+    .wallboard-shell > header {
+      grid-template-columns: minmax(0, 1fr) auto auto !important;
+      gap: 10px !important;
+    }
+
+    .wallboard-shell > header > div:first-child {
+      display: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .wallboard-shell > header,
+    .wallboard-shell > .wallboard-kpis {
+      transition: none;
     }
   }
 }
