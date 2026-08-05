@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import providerCatalog from '../config/providers.json';
 import providerConsolidation from '../config/provider-consolidation.json';
 import packageMetadata from '../package.json';
 import { dataLifecycleReducer, initialDataLifecycle } from './dataLifecycle';
 import { IssueConsole } from './IssueConsole';
+import { WallboardV2 } from './WallboardV2';
 import { buildIssueConsoleModel } from './statusViewModel';
 import { payloadValidationErrors } from './payloadValidation';
 import { RequestOwnership } from './requestOwnership';
@@ -75,10 +76,17 @@ async function fetchStatus(signal: AbortSignal): Promise<StatusFetchResult> {
     return { data: payload, freshnessWarning };
 }
 
+function isWallboardRoute(): boolean {
+    return new URLSearchParams(location.search).get('view') === 'wallboard';
+}
+
 export function App(): JSX.Element {
     const [state, dispatch] = useReducer(dataLifecycleReducer, initialDataLifecycle);
+    const [wallboardMode, setWallboardMode] = useState(isWallboardRoute);
+    const [now, setNow] = useState(() => Date.now());
     const ownership = useRef(new RequestOwnership());
     const mounted = useRef(true);
+
     const refresh = useCallback(async () => {
         const slot = ownership.current.begin();
         if (!slot)
@@ -104,6 +112,7 @@ export function App(): JSX.Element {
             ownership.current.finish(request);
         }
     }, []);
+
     useEffect(() => {
         mounted.current = true;
         void refresh();
@@ -111,6 +120,48 @@ export function App(): JSX.Element {
             void refresh(); }, REFRESH_MS);
         return () => { mounted.current = false; window.clearInterval(id); ownership.current.cancel(); };
     }, [refresh]);
+
+    useEffect(() => {
+        const tick = window.setInterval(() => setNow(Date.now()), 1000);
+        return () => window.clearInterval(tick);
+    }, []);
+
+    useEffect(() => {
+        const syncRoute = () => setWallboardMode(isWallboardRoute());
+        const originalPushState = history.pushState;
+        const originalReplaceState = history.replaceState;
+
+        history.pushState = function (...args: Parameters<History['pushState']>) {
+            originalPushState.apply(this, args);
+            syncRoute();
+        };
+        history.replaceState = function (...args: Parameters<History['replaceState']>) {
+            originalReplaceState.apply(this, args);
+            syncRoute();
+        };
+        window.addEventListener('popstate', syncRoute);
+
+        return () => {
+            history.pushState = originalPushState;
+            history.replaceState = originalReplaceState;
+            window.removeEventListener('popstate', syncRoute);
+        };
+    }, []);
+
     const model = useMemo(() => state.data ? buildIssueConsoleModel(state.data, `v${packageMetadata.version}`, CATALOG) : null, [state.data]);
-    return <main className="app-frame"><IssueConsole model={model} lifecycle={state} onRefresh={() => void refresh()}/></main>;
+
+    const exitWallboard = () => {
+        const search = new URLSearchParams(location.search);
+        search.delete('view');
+        history.replaceState(null, '', `${location.pathname}${search.size ? `?${search}` : ''}${location.hash}`);
+        setWallboardMode(false);
+    };
+
+    return (
+        <main className="app-frame">
+            {wallboardMode
+                ? <WallboardV2 model={model} lifecycle={state} now={now} onExit={exitWallboard} />
+                : <IssueConsole model={model} lifecycle={state} onRefresh={() => void refresh()} />}
+        </main>
+    );
 }
