@@ -1,46 +1,52 @@
 @layer wallboard {
   .wallboard-shell {
-    --wallboard-overlay-inset: 8px;
-    --wallboard-header-height: 68px;
+    --wallboard-overlay-inset: 10px;
+    --wallboard-header-height: 66px;
+    --wallboard-kpi-height: 104px;
     --wallboard-overlay-gap: 8px;
   }
 
   .wallboard-shell > header,
   .wallboard-shell > .wallboard-kpis {
     position: fixed !important;
-    left: var(--wallboard-overlay-inset);
-    right: var(--wallboard-overlay-inset);
+    left: var(--wallboard-overlay-inset) !important;
+    right: var(--wallboard-overlay-inset) !important;
+    width: auto !important;
     margin: 0 !important;
+    box-sizing: border-box;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 150ms ease, transform 190ms ease;
-    box-shadow: 0 10px 28px rgba(0, 0, 0, .42);
+    transform: translateY(-220px);
+    transition: opacity 140ms ease, transform 180ms ease;
+    box-shadow: 0 12px 34px rgba(0, 0, 0, .48);
+    backdrop-filter: blur(18px);
   }
 
   .wallboard-shell > header {
-    top: var(--wallboard-overlay-inset);
-    z-index: 122;
-    min-height: var(--wallboard-header-height);
-    transform: translateY(calc(-100% - var(--wallboard-overlay-inset)));
-    background: rgba(15, 23, 34, .98);
-    backdrop-filter: blur(16px);
+    top: var(--wallboard-overlay-inset) !important;
+    z-index: 152;
+    height: var(--wallboard-header-height) !important;
+    min-height: var(--wallboard-header-height) !important;
+    max-height: var(--wallboard-header-height) !important;
+    overflow: hidden;
+    background: rgba(15, 23, 34, .985);
   }
 
   .wallboard-shell > .wallboard-kpis {
-    top: calc(var(--wallboard-overlay-inset) + var(--wallboard-header-height) + var(--wallboard-overlay-gap));
-    z-index: 121;
-    transform: translateY(calc(-200% - var(--wallboard-header-height)));
-    background: rgba(7, 13, 22, .98);
-    backdrop-filter: blur(16px);
+    top: calc(var(--wallboard-overlay-inset) + var(--wallboard-header-height) + var(--wallboard-overlay-gap)) !important;
+    z-index: 151;
+    height: var(--wallboard-kpi-height) !important;
+    min-height: var(--wallboard-kpi-height) !important;
+    max-height: var(--wallboard-kpi-height) !important;
+    overflow: hidden;
+    background: rgba(7, 13, 22, .985);
   }
 
-  .wallboard-shell:hover > header,
-  .wallboard-shell:hover > .wallboard-kpis,
-  .wallboard-shell:focus-within > header,
-  .wallboard-shell:focus-within > .wallboard-kpis {
+  .wallboard-shell.wallboard-controls-visible > header,
+  .wallboard-shell.wallboard-controls-visible > .wallboard-kpis {
     opacity: 1;
-    transform: translateY(0);
     pointer-events: auto;
+    transform: translateY(0);
   }
 
   .wallboard-shell > button,
@@ -53,7 +59,7 @@
     position: fixed;
     right: 10px;
     bottom: 7px;
-    z-index: 130;
+    z-index: 160;
     display: flex;
     gap: 10px;
     padding: 4px 7px;
@@ -71,5 +77,12 @@
   .wallboard-mini-telemetry b {
     color: #d8e6f7;
     font-weight: 700;
+  }
+
+  @media (max-width: 900px) {
+    .wallboard-shell {
+      --wallboard-header-height: 58px;
+      --wallboard-kpi-height: 96px;
+    }
   }
 }
