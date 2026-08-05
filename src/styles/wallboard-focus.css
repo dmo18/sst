@@ -37,47 +37,6 @@
     display: none !important;
   }
 
-  .wallboard-priority {
-    min-height: 0;
-    overflow: hidden;
-  }
-
-  .wallboard-priority > h2 {
-    position: relative;
-    z-index: 1;
-  }
-
-  .wallboard-priority > article {
-    width: 100%;
-    max-width: 100%;
-    box-sizing: border-box;
-    opacity: 1;
-    transition: opacity 220ms ease;
-  }
-
-  .wallboard-priority.wallboard-signals-fading > article:not(.wallboard-signal-hidden) {
-    opacity: 0;
-  }
-
-  .wallboard-priority > article.wallboard-signal-hidden {
-    display: none !important;
-  }
-
-  .wallboard-priority article > .priority-provider-icon {
-    width: 32px;
-    height: 32px;
-    align-self: center;
-    border: 1px solid #374151;
-    border-radius: 7px;
-    padding: 4px;
-    object-fit: contain;
-    background: #eef2f6;
-  }
-
-  .wallboard-priority article > span:first-child {
-    display: none;
-  }
-
   .wallboard-mini-telemetry {
     position: fixed;
     right: 10px;
@@ -100,11 +59,5 @@
   .wallboard-mini-telemetry b {
     color: #d8e6f7;
     font-weight: 700;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .wallboard-priority > article {
-      transition: none;
-    }
   }
 }
