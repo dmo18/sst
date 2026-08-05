@@ -5,9 +5,8 @@ import type { DataLifecycle } from './types';
 import type { IssueConsoleModel } from './statusViewModel';
 
 const EASTERN_TIME_ZONE = 'America/New_York';
-const LOOP_START_DELAY_MS = 1800;
-const LOOP_RESET_DELAY_MS = 900;
-const LOOP_SPEED_PX_PER_SECOND = 22;
+const CAROUSEL_START_DELAY_MS = 2600;
+const CAROUSEL_STEP_MS = 5200;
 
 function clockLabel(now: number): string {
   return new Intl.DateTimeFormat('en-US', {
@@ -37,44 +36,62 @@ function timestamp(value?: string): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function usePriorityAutoLoop(listRef: RefObject<HTMLDivElement>): void {
+function usePriorityCarousel(listRef: RefObject<HTMLDivElement>, itemCount: number): void {
   useEffect(() => {
     const list = listRef.current;
-    if (!list || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (!list || itemCount < 2 || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
-    let frame = 0;
-    let resetTimer = 0;
-    let lastFrame = performance.now();
-    let resumeAt = lastFrame + LOOP_START_DELAY_MS;
+    let stepTimer = 0;
+    let startTimer = 0;
+    let resizeObserver: ResizeObserver | null = null;
+    let currentIndex = 0;
 
-    const animate = (now: number) => {
-      const maximum = Math.max(0, list.scrollHeight - list.clientHeight);
-      const elapsed = Math.min(64, Math.max(0, now - lastFrame));
-      lastFrame = now;
+    const rows = () => Array.from(list.querySelectorAll<HTMLElement>(':scope > article'));
+    const hasOverflow = () => list.scrollHeight > list.clientHeight + 2;
 
-      if (maximum <= 2) {
-        if (list.scrollTop !== 0) list.scrollTop = 0;
-      } else if (now >= resumeAt && !list.classList.contains('is-loop-resetting')) {
-        list.scrollTop = Math.min(maximum, list.scrollTop + elapsed * LOOP_SPEED_PX_PER_SECOND / 1000);
-        if (list.scrollTop >= maximum - 1) {
-          list.classList.add('is-loop-resetting');
-          resetTimer = window.setTimeout(() => {
-            list.scrollTop = 0;
-            list.classList.remove('is-loop-resetting');
-            resumeAt = performance.now() + LOOP_RESET_DELAY_MS;
-          }, 220);
-        }
+    const showIndex = (index: number, behavior: ScrollBehavior) => {
+      const items = rows();
+      if (!items.length) return;
+      currentIndex = ((index % items.length) + items.length) % items.length;
+      list.scrollTo({ top: items[currentIndex].offsetTop, behavior });
+    };
+
+    const advance = () => {
+      if (!hasOverflow()) {
+        if (list.scrollTop !== 0) list.scrollTo({ top: 0, behavior: 'auto' });
+        currentIndex = 0;
+        return;
       }
 
-      frame = window.requestAnimationFrame(animate);
+      const items = rows();
+      if (!items.length) return;
+      showIndex(currentIndex + 1 >= items.length ? 0 : currentIndex + 1, 'smooth');
     };
 
-    frame = window.requestAnimationFrame(animate);
-    return () => {
-      window.cancelAnimationFrame(frame);
-      window.clearTimeout(resetTimer);
+    const start = () => {
+      window.clearInterval(stepTimer);
+      stepTimer = window.setInterval(advance, CAROUSEL_STEP_MS);
     };
-  }, [listRef]);
+
+    startTimer = window.setTimeout(start, CAROUSEL_START_DELAY_MS);
+    resizeObserver = new ResizeObserver(() => {
+      const items = rows();
+      if (!items.length) return;
+      const nearest = items.reduce((best, item, index) => {
+        const distance = Math.abs(item.offsetTop - list.scrollTop);
+        return distance < best.distance ? { index, distance } : best;
+      }, { index: 0, distance: Number.POSITIVE_INFINITY });
+      currentIndex = nearest.index;
+      showIndex(currentIndex, 'auto');
+    });
+    resizeObserver.observe(list);
+
+    return () => {
+      window.clearTimeout(startTimer);
+      window.clearInterval(stepTimer);
+      resizeObserver?.disconnect();
+    };
+  }, [itemCount, listRef]);
 }
 
 export function WallboardV2({
@@ -89,7 +106,6 @@ export function WallboardV2({
   onExit: () => void;
 }): JSX.Element {
   const priorityListRef = useRef<HTMLDivElement>(null);
-  usePriorityAutoLoop(priorityListRef);
 
   const signals = useMemo(() => (model?.actionQueue || [])
     .filter(item => item.kind === 'incident')
@@ -97,6 +113,8 @@ export function WallboardV2({
       const timeDifference = timestamp(b.updatedAt) - timestamp(a.updatedAt);
       return timeDifference || a.provider.localeCompare(b.provider) || a.title.localeCompare(b.title);
     }), [model?.actionQueue]);
+
+  usePriorityCarousel(priorityListRef, signals.length);
 
   const providers = useMemo(() => (model?.diagnostics || [])
     .filter(item => item.attention !== 'informational' || item.sourceHealth !== 'healthy')
