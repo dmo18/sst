@@ -40,11 +40,10 @@
     min-width: 0;
     min-height: 0;
     height: 100%;
-    overflow-x: hidden;
-    overflow-y: hidden;
+    overflow: hidden;
     scroll-behavior: auto;
     opacity: 1;
-    transition: opacity 260ms ease;
+    transition: opacity 220ms ease;
     overscroll-behavior: contain;
   }
 
@@ -80,46 +79,45 @@
     overflow-wrap: anywhere;
   }
 
-  @media (max-width: 1180px) {
+  @media (max-width: 1180px), (max-height: 520px) {
     .wallboard-v2 {
-      padding: 8px !important;
-      gap: 6px !important;
+      display: block !important;
+      padding: 0 !important;
+      overflow: hidden !important;
     }
 
     .wallboard-v2 > main {
+      position: absolute !important;
+      inset: 6px !important;
       display: block !important;
-      height: 100% !important;
+      width: auto !important;
+      height: auto !important;
+      min-width: 0 !important;
+      min-height: 0 !important;
     }
 
     .wallboard-v2 .wallboard-priority-v2 {
-      width: 100%;
-      height: 100%;
+      position: absolute;
+      inset: 0;
+      width: auto;
+      height: auto;
     }
 
-    .wallboard-v2 .wallboard-providers {
+    .wallboard-v2 .wallboard-providers,
+    .wallboard-v2 > footer {
       display: none !important;
     }
   }
 
   @media (max-height: 620px) {
-    .wallboard-v2 {
-      padding: 6px !important;
-      gap: 4px !important;
-    }
-
-    .wallboard-v2 > footer {
-      min-height: 11px;
-      font-size: 9px;
-    }
-
     .wallboard-v2 .wallboard-priority-v2 > h2 {
-      padding-top: 8px;
-      padding-bottom: 8px;
+      padding-top: 7px;
+      padding-bottom: 7px;
     }
 
     .wallboard-v2 .wallboard-priority-list > article {
-      padding-top: 9px;
-      padding-bottom: 9px;
+      padding-top: 8px;
+      padding-bottom: 8px;
     }
   }
 
