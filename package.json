@@ -12,8 +12,8 @@
     "ensure-valid-status": "node scripts/ensure-valid-status.mjs",
     "update-status": "npm run update-status:raw && npm run ensure-valid-status",
     "validate-providers": "node scripts/validate-providers.mjs",
-    "test": "node --test --experimental-strip-types src/__tests__/*.test.ts scripts/__tests__/*.test.js",
-    "test:watch": "node --test --watch --experimental-strip-types src/__tests__/*.test.ts scripts/__tests__/*.test.js",
+    "test": "node --import ./scripts/__tests__/test-clock.mjs --test --experimental-strip-types src/__tests__/*.test.ts scripts/__tests__/*.test.js",
+    "test:watch": "node --import ./scripts/__tests__/test-clock.mjs --test --watch --experimental-strip-types src/__tests__/*.test.ts scripts/__tests__/*.test.js",
     "typecheck": "tsc --noEmit",
     "build:app": "vite build",
     "validate-browser-payload": "node --experimental-strip-types scripts/validate-browser-payload.mjs"
