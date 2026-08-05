@@ -1,0 +1,40 @@
+@layer wallboard {
+  .wallboard-shell > header {
+    position: fixed !important;
+    inset: 0 0 auto 0;
+    z-index: 120;
+    margin: 0 !important;
+    opacity: 0;
+    transform: translateY(-110%);
+    pointer-events: none;
+    transition: opacity 140ms ease, transform 180ms ease;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, .42);
+  }
+
+  .wallboard-shell.wallboard-controls-visible > header {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+
+  .wallboard-shell > button,
+  .wallboard-shell .wallboard-control-peek,
+  .wallboard-shell .show-controls {
+    display: none !important;
+  }
+
+  .wallboard-priority article > .priority-provider-icon {
+    width: 32px;
+    height: 32px;
+    align-self: center;
+    border: 1px solid #374151;
+    border-radius: 7px;
+    padding: 4px;
+    object-fit: contain;
+    background: #eef2f6;
+  }
+
+  .wallboard-priority article > span:first-child {
+    display: none;
+  }
+}
