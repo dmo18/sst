@@ -71,13 +71,15 @@ test('wallboard priority list uses a seamless continuous marquee', async () => {
   assert.doesNotMatch(css, /-webkit-line-clamp:\s*2/);
 });
 
-test('compact wallboard keeps a short title row and persistent provider alert rail', async () => {
+test('compact wallboard identifies alert providers with labeled chips', async () => {
   const source = await read('src/WallboardV2.tsx');
   const css = await read('src/styles/wallboard-v2.css');
   assert.match(source, /wallboard-alert-provider-rail/);
-  assert.match(source, /Providers with active alerts/);
+  assert.match(source, /wallboard-alert-provider-chip/);
+  assert.match(source, /<b>\{item\.provider\}<\/b>/);
   assert.match(source, /const seen = new Set<string>\(\)/);
-  assert.match(css, /grid-template-rows:\s*44px 38px minmax\(0, 1fr\)/);
-  assert.match(css, /\.wallboard-v2 \.wallboard-alert-provider-rail\s*\{[\s\S]*display:\s*flex/);
-  assert.match(css, /\.wallboard-v2 \.wallboard-alert-provider-rail \.provider-icon\s*\{[\s\S]*width:\s*26px/);
+  assert.match(css, /overflow-x:\s*auto/);
+  assert.match(css, /\.wallboard-v2 \.wallboard-alert-provider-chip\s*\{[\s\S]*display:\s*inline-flex/);
+  assert.match(css, /\.wallboard-v2 \.wallboard-alert-provider-chip b\s*\{[\s\S]*text-overflow:\s*ellipsis/);
+  assert.match(css, /\.wallboard-v2 \.wallboard-alert-provider-chip \.provider-icon\s*\{[\s\S]*width:\s*22px/);
 });
