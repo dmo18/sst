@@ -24,8 +24,10 @@
     backdrop-filter: blur(16px);
   }
 
-  .wallboard-shell.wallboard-controls-visible > header,
-  .wallboard-shell.wallboard-controls-visible > .wallboard-kpis {
+  .wallboard-shell:hover > header,
+  .wallboard-shell:hover > .wallboard-kpis,
+  .wallboard-shell:focus-within > header,
+  .wallboard-shell:focus-within > .wallboard-kpis {
     opacity: 1;
     transform: translateY(0);
     pointer-events: auto;
