@@ -36,6 +36,10 @@
     gap: 12px;
   }
 
+  .wallboard-v2 .wallboard-alert-provider-rail {
+    display: none;
+  }
+
   .wallboard-v2 .wallboard-priority-list {
     min-width: 0;
     min-height: 0;
@@ -117,6 +121,39 @@
       inset: 0;
       width: auto;
       height: auto;
+      grid-template-rows: 48px 42px minmax(0, 1fr);
+    }
+
+    .wallboard-v2 .wallboard-priority-v2 > h2 {
+      min-height: 0;
+      padding: 8px 14px;
+      font-size: clamp(17px, 4.5vw, 22px);
+      line-height: 1;
+    }
+
+    .wallboard-v2 .wallboard-alert-provider-rail {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      padding: 5px 12px;
+      overflow: hidden;
+      border-top: 1px solid var(--border-subtle, rgba(122, 162, 214, 0.18));
+      border-bottom: 1px solid var(--border-subtle, rgba(122, 162, 214, 0.18));
+      background: rgba(5, 13, 24, 0.9);
+    }
+
+    .wallboard-v2 .wallboard-alert-provider-rail > span {
+      flex: 0 0 auto;
+      width: 30px;
+      height: 30px;
+      display: grid;
+      place-items: center;
+    }
+
+    .wallboard-v2 .wallboard-alert-provider-rail .provider-icon {
+      width: 28px;
+      height: 28px;
     }
 
     .wallboard-v2 .wallboard-providers,
@@ -126,11 +163,6 @@
   }
 
   @media (max-height: 620px) {
-    .wallboard-v2 .wallboard-priority-v2 > h2 {
-      padding-top: 7px;
-      padding-bottom: 7px;
-    }
-
     .wallboard-v2 .wallboard-priority-group > article {
       min-height: 104px;
       padding-top: 10px;
@@ -140,6 +172,30 @@
   }
 
   @media (max-width: 720px) {
+    .wallboard-v2 .wallboard-priority-v2 {
+      grid-template-rows: 44px 38px minmax(0, 1fr);
+    }
+
+    .wallboard-v2 .wallboard-priority-v2 > h2 {
+      padding: 7px 12px;
+      font-size: 18px;
+    }
+
+    .wallboard-v2 .wallboard-alert-provider-rail {
+      gap: 6px;
+      padding: 4px 10px;
+    }
+
+    .wallboard-v2 .wallboard-alert-provider-rail > span {
+      width: 28px;
+      height: 28px;
+    }
+
+    .wallboard-v2 .wallboard-alert-provider-rail .provider-icon {
+      width: 26px;
+      height: 26px;
+    }
+
     .wallboard-v2 .wallboard-priority-group > article {
       min-height: 112px;
       grid-template-columns: 38px minmax(0, 1fr) 52px;
