@@ -70,3 +70,14 @@ test('wallboard priority list uses a seamless continuous marquee', async () => {
   assert.match(css, /wallboard-priority-track:not\(\.is-looping\) \.wallboard-priority-copy/);
   assert.doesNotMatch(css, /-webkit-line-clamp:\s*2/);
 });
+
+test('compact wallboard keeps a short title row and persistent provider alert rail', async () => {
+  const source = await read('src/WallboardV2.tsx');
+  const css = await read('src/styles/wallboard-v2.css');
+  assert.match(source, /wallboard-alert-provider-rail/);
+  assert.match(source, /Providers with active alerts/);
+  assert.match(source, /const seen = new Set<string>\(\)/);
+  assert.match(css, /grid-template-rows:\s*44px 38px minmax\(0, 1fr\)/);
+  assert.match(css, /\.wallboard-v2 \.wallboard-alert-provider-rail\s*\{[\s\S]*display:\s*flex/);
+  assert.match(css, /\.wallboard-v2 \.wallboard-alert-provider-rail \.provider-icon\s*\{[\s\S]*width:\s*26px/);
+});
