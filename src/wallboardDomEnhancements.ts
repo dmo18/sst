@@ -1,9 +1,11 @@
 const WALLBOARD_IDLE_MS = 2200;
-const SIGNAL_ADVANCE_MS = 6500;
+const SIGNAL_PAGE_MS = 7000;
+const SIGNAL_FADE_MS = 220;
 
 let idleTimer = 0;
 let enhancementTimer = 0;
 let signalTimer = 0;
+let signalPage = 0;
 let lastBrowserCheckAt = 0;
 let generatedAt = 0;
 
@@ -68,26 +70,50 @@ function replacePriorityNumbers(shell: HTMLElement): void {
   }
 }
 
-function setupSignalRotation(section: HTMLElement): void {
+function rowsPerPage(section: HTMLElement, rows: HTMLElement[]): number {
+  const heading = section.querySelector<HTMLElement>('h2');
+  const available = Math.max(1, section.clientHeight - (heading?.offsetHeight || 0));
+  let used = 0;
+  let count = 0;
+  for (const row of rows) {
+    const height = Math.max(1, row.getBoundingClientRect().height);
+    if (count && used + height > available) break;
+    used += height;
+    count += 1;
+  }
+  return Math.max(1, count);
+}
+
+function showSignalPage(section: HTMLElement, rows: HTMLElement[], page: number, perPage: number): void {
+  const pageCount = Math.max(1, Math.ceil(rows.length / perPage));
+  const normalizedPage = page % pageCount;
+  const start = normalizedPage * perPage;
+  const end = start + perPage;
+  rows.forEach((row, index) => row.classList.toggle('wallboard-signal-hidden', index < start || index >= end));
+  signalPage = normalizedPage;
+}
+
+function setupSignalPagination(section: HTMLElement): void {
   window.clearInterval(signalTimer);
   signalTimer = 0;
-  section.scrollTo({ top: 0, behavior: 'auto' });
+  section.classList.remove('wallboard-signals-fading');
   const rows = priorityRows(section);
-  if (rows.length < 2 || section.scrollHeight <= section.clientHeight + 8) return;
+  rows.forEach(row => row.classList.remove('wallboard-signal-hidden'));
+  if (rows.length < 2) return;
 
-  let index = 0;
+  const perPage = rowsPerPage(section, rows);
+  const pageCount = Math.ceil(rows.length / perPage);
+  if (pageCount <= 1) return;
+  signalPage = 0;
+  showSignalPage(section, rows, signalPage, perPage);
+
   signalTimer = window.setInterval(() => {
-    const currentRows = priorityRows(section);
-    if (!currentRows.length) return;
-    index = (index + 1) % currentRows.length;
-    const target = currentRows[index];
-    const top = target.offsetTop - (section.querySelector('h2')?.clientHeight || 0) - 8;
-    if (index === 0 || top >= section.scrollHeight - section.clientHeight - 4) {
-      section.scrollTo({ top: index === 0 ? 0 : top, behavior: 'smooth' });
-    } else {
-      section.scrollTo({ top, behavior: 'smooth' });
-    }
-  }, SIGNAL_ADVANCE_MS);
+    section.classList.add('wallboard-signals-fading');
+    window.setTimeout(() => {
+      showSignalPage(section, rows, signalPage + 1, perPage);
+      section.classList.remove('wallboard-signals-fading');
+    }, SIGNAL_FADE_MS);
+  }, SIGNAL_PAGE_MS);
 }
 
 function ageLabel(timestamp: number): string {
@@ -122,7 +148,7 @@ function enhanceWallboard(): void {
   if (priority) {
     sortPriorityRows(priority);
     replacePriorityNumbers(shell);
-    setupSignalRotation(priority);
+    setupSignalPagination(priority);
   }
   ensureTelemetry(shell);
 }
