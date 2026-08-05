@@ -39,25 +39,28 @@
 
   .wallboard-priority {
     min-height: 0;
-    overflow-y: hidden;
-    scroll-behavior: smooth;
-    scrollbar-width: none;
-    mask-image: linear-gradient(to bottom, black 0, black calc(100% - 22px), transparent 100%);
-  }
-
-  .wallboard-priority::-webkit-scrollbar {
-    display: none;
+    overflow: hidden;
   }
 
   .wallboard-priority > h2 {
-    position: sticky;
-    top: 0;
-    z-index: 3;
-    background: inherit;
+    position: relative;
+    z-index: 1;
   }
 
-  .wallboard-priority article {
-    min-width: 0;
+  .wallboard-priority > article {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    opacity: 1;
+    transition: opacity 220ms ease;
+  }
+
+  .wallboard-priority.wallboard-signals-fading > article:not(.wallboard-signal-hidden) {
+    opacity: 0;
+  }
+
+  .wallboard-priority > article.wallboard-signal-hidden {
+    display: none !important;
   }
 
   .wallboard-priority article > .priority-provider-icon {
@@ -100,8 +103,8 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .wallboard-priority {
-      scroll-behavior: auto;
+    .wallboard-priority > article {
+      transition: none;
     }
   }
 }
