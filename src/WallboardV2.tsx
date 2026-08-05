@@ -5,9 +5,9 @@ import type { DataLifecycle } from './types';
 import type { IssueConsoleModel } from './statusViewModel';
 
 const EASTERN_TIME_ZONE = 'America/New_York';
-const LOOP_START_DELAY_MS = 2600;
-const LOOP_RESET_DELAY_MS = 1500;
-const LOOP_SPEED_PX_PER_SECOND = 18;
+const LOOP_START_DELAY_MS = 2200;
+const LOOP_RESET_DELAY_MS = 1200;
+const LOOP_SPEED_PX_PER_SECOND = 20;
 
 function clockLabel(now: number): string {
   return new Intl.DateTimeFormat('en-US', {
@@ -38,56 +38,53 @@ function timestamp(value?: string): number {
 }
 
 function usePriorityAutoLoop(listRef: RefObject<HTMLDivElement>): void {
-  const paused = useRef(false);
-
   useEffect(() => {
     const list = listRef.current;
     if (!list || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
     let frame = 0;
+    let resetTimer = 0;
     let lastFrame = performance.now();
     let resumeAt = lastFrame + LOOP_START_DELAY_MS;
-    let resetTimer = 0;
+    let userPauseUntil = 0;
+
+    const pauseForUserInput = () => {
+      userPauseUntil = performance.now() + 2600;
+    };
 
     const animate = (now: number) => {
       const maximum = Math.max(0, list.scrollHeight - list.clientHeight);
-      const elapsed = Math.min(64, now - lastFrame);
+      const elapsed = Math.min(64, Math.max(0, now - lastFrame));
       lastFrame = now;
 
-      if (!paused.current && maximum > 2 && now >= resumeAt) {
+      if (maximum <= 2) {
+        if (list.scrollTop !== 0) list.scrollTop = 0;
+      } else if (now >= resumeAt && now >= userPauseUntil && !list.classList.contains('is-loop-resetting')) {
         list.scrollTop = Math.min(maximum, list.scrollTop + elapsed * LOOP_SPEED_PX_PER_SECOND / 1000);
-        if (list.scrollTop >= maximum - 1 && !list.classList.contains('is-loop-resetting')) {
+        if (list.scrollTop >= maximum - 1) {
           list.classList.add('is-loop-resetting');
           resetTimer = window.setTimeout(() => {
             list.scrollTop = 0;
             list.classList.remove('is-loop-resetting');
+            resumeAt = performance.now() + LOOP_RESET_DELAY_MS;
           }, 260);
-          resumeAt = now + LOOP_RESET_DELAY_MS;
         }
       }
 
       frame = window.requestAnimationFrame(animate);
     };
 
-    const pause = () => { paused.current = true; };
-    const resume = () => {
-      paused.current = false;
-      resumeAt = performance.now() + 900;
-    };
-
-    list.addEventListener('pointerenter', pause);
-    list.addEventListener('pointerleave', resume);
-    list.addEventListener('focusin', pause);
-    list.addEventListener('focusout', resume);
+    list.addEventListener('wheel', pauseForUserInput, { passive: true });
+    list.addEventListener('touchstart', pauseForUserInput, { passive: true });
+    list.addEventListener('pointerdown', pauseForUserInput, { passive: true });
     frame = window.requestAnimationFrame(animate);
 
     return () => {
       window.cancelAnimationFrame(frame);
       window.clearTimeout(resetTimer);
-      list.removeEventListener('pointerenter', pause);
-      list.removeEventListener('pointerleave', resume);
-      list.removeEventListener('focusin', pause);
-      list.removeEventListener('focusout', resume);
+      list.removeEventListener('wheel', pauseForUserInput);
+      list.removeEventListener('touchstart', pauseForUserInput);
+      list.removeEventListener('pointerdown', pauseForUserInput);
     };
   }, [listRef]);
 }
