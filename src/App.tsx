@@ -27,6 +27,30 @@ const CATALOG = (providerCatalog as ProviderConfig[])
 const REFRESH_MS = 60000;
 const MAX_PAYLOAD_AGE_MS = 20 * 60 * 1000;
 const MAX_FUTURE_SKEW_MS = 5 * 60 * 1000;
+const EMERGENCY_MAINTENANCE = /\b(?:emergency|unplanned|critical|urgent)\b/i;
+const PRODUCTION_IMPACT = /\b(?:production|outage|service interruption|service disruption|customer impact|customers? (?:are|may be) affected|degraded service)\b/i;
+
+function operationalPayload(payload: StatusPayload): StatusPayload {
+    const emergencyMaintenance = (payload.maintenance || []).filter(item => {
+        const text = `${item.title || ''} ${item.note || ''} ${item.status || ''}`;
+        return item.status === 'in_progress' && EMERGENCY_MAINTENANCE.test(text) && PRODUCTION_IMPACT.test(text);
+    });
+    const maintenanceCount = new Map<string, number>();
+    for (const item of emergencyMaintenance)
+        maintenanceCount.set(item.providerId, (maintenanceCount.get(item.providerId) || 0) + 1);
+    const isMaintenanceChange = (type: string) => /maintenance/i.test(type);
+
+    return {
+        ...payload,
+        maintenance: emergencyMaintenance,
+        providers: payload.providers.map(provider => ({
+            ...provider,
+            maintenance_count: maintenanceCount.get(provider.id) || 0
+        })),
+        changes: payload.changes.filter(change => !isMaintenanceChange(change.type)),
+        history: payload.history.filter(change => !isMaintenanceChange(change.type))
+    };
+}
 
 async function fetchStatus(signal: AbortSignal): Promise<StatusFetchResult> {
     const response = await fetch(`${import.meta.env.BASE_URL}status.json?ts=${Date.now()}`, { cache: 'no-store', signal });
@@ -38,7 +62,7 @@ async function fetchStatus(signal: AbortSignal): Promise<StatusFetchResult> {
         console.error('status.json validation failed:', errors);
         throw new Error(`status.json has an invalid or unsupported payload (${errors.join('; ')})`);
     }
-    const payload = data as StatusPayload;
+    const payload = operationalPayload(data as StatusPayload);
     const generatedAt = Date.parse(payload.generated_at || '');
     const payloadAgeMs = Date.now() - generatedAt;
     if (!Number.isFinite(generatedAt))
