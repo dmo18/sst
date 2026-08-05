@@ -84,7 +84,7 @@ function rowsPerPage(section: HTMLElement, rows: HTMLElement[]): number {
   return Math.max(1, count);
 }
 
-function showSignalPage(section: HTMLElement, rows: HTMLElement[], page: number, perPage: number): void {
+function showSignalPage(rows: HTMLElement[], page: number, perPage: number): void {
   const pageCount = Math.max(1, Math.ceil(rows.length / perPage));
   const normalizedPage = page % pageCount;
   const start = normalizedPage * perPage;
@@ -105,12 +105,12 @@ function setupSignalPagination(section: HTMLElement): void {
   const pageCount = Math.ceil(rows.length / perPage);
   if (pageCount <= 1) return;
   signalPage = 0;
-  showSignalPage(section, rows, signalPage, perPage);
+  showSignalPage(rows, signalPage, perPage);
 
   signalTimer = window.setInterval(() => {
     section.classList.add('wallboard-signals-fading');
     window.setTimeout(() => {
-      showSignalPage(section, rows, signalPage + 1, perPage);
+      showSignalPage(rows, signalPage + 1, perPage);
       section.classList.remove('wallboard-signals-fading');
     }, SIGNAL_FADE_MS);
   }, SIGNAL_PAGE_MS);
