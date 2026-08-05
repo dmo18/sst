@@ -121,7 +121,7 @@
       inset: 0;
       width: auto;
       height: auto;
-      grid-template-rows: 48px 42px minmax(0, 1fr);
+      grid-template-rows: 48px 46px minmax(0, 1fr);
     }
 
     .wallboard-v2 .wallboard-priority-v2 > h2 {
@@ -134,26 +134,48 @@
     .wallboard-v2 .wallboard-alert-provider-rail {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 7px;
       min-width: 0;
-      padding: 5px 12px;
-      overflow: hidden;
+      padding: 5px 10px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      scrollbar-width: none;
       border-top: 1px solid var(--border-subtle, rgba(122, 162, 214, 0.18));
       border-bottom: 1px solid var(--border-subtle, rgba(122, 162, 214, 0.18));
       background: rgba(5, 13, 24, 0.9);
     }
 
-    .wallboard-v2 .wallboard-alert-provider-rail > span {
-      flex: 0 0 auto;
-      width: 30px;
-      height: 30px;
-      display: grid;
-      place-items: center;
+    .wallboard-v2 .wallboard-alert-provider-rail::-webkit-scrollbar {
+      display: none;
     }
 
-    .wallboard-v2 .wallboard-alert-provider-rail .provider-icon {
-      width: 28px;
-      height: 28px;
+    .wallboard-v2 .wallboard-alert-provider-chip {
+      flex: 0 0 auto;
+      height: 32px;
+      max-width: 132px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 8px 3px 4px;
+      border: 1px solid rgba(122, 162, 214, 0.22);
+      border-radius: 999px;
+      background: rgba(16, 29, 47, 0.96);
+      color: var(--text-primary, #f4f8ff);
+    }
+
+    .wallboard-v2 .wallboard-alert-provider-chip b {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 11px;
+      line-height: 1;
+    }
+
+    .wallboard-v2 .wallboard-alert-provider-chip .provider-icon {
+      flex: 0 0 auto;
+      width: 24px;
+      height: 24px;
     }
 
     .wallboard-v2 .wallboard-providers,
@@ -173,7 +195,7 @@
 
   @media (max-width: 720px) {
     .wallboard-v2 .wallboard-priority-v2 {
-      grid-template-rows: 44px 38px minmax(0, 1fr);
+      grid-template-rows: 44px 44px minmax(0, 1fr);
     }
 
     .wallboard-v2 .wallboard-priority-v2 > h2 {
@@ -183,17 +205,23 @@
 
     .wallboard-v2 .wallboard-alert-provider-rail {
       gap: 6px;
-      padding: 4px 10px;
+      padding: 5px 8px;
     }
 
-    .wallboard-v2 .wallboard-alert-provider-rail > span {
-      width: 28px;
-      height: 28px;
+    .wallboard-v2 .wallboard-alert-provider-chip {
+      height: 30px;
+      max-width: 116px;
+      gap: 5px;
+      padding: 3px 7px 3px 3px;
     }
 
-    .wallboard-v2 .wallboard-alert-provider-rail .provider-icon {
-      width: 26px;
-      height: 26px;
+    .wallboard-v2 .wallboard-alert-provider-chip b {
+      font-size: 10px;
+    }
+
+    .wallboard-v2 .wallboard-alert-provider-chip .provider-icon {
+      width: 22px;
+      height: 22px;
     }
 
     .wallboard-v2 .wallboard-priority-group > article {
