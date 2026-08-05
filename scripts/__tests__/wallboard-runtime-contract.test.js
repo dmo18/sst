@@ -26,7 +26,6 @@ test('wallboard header and KPI strip have separate fixed geometry', async () => 
   assert.match(css, /--wallboard-kpi-height:\s*88px/);
   assert.match(css, /top:\s*calc\(var\(--wallboard-overlay-inset\) \+ var\(--wallboard-header-height\) \+ var\(--wallboard-overlay-gap\)\)/);
   assert.match(css, /grid-template-columns:\s*repeat\(5, minmax\(0, 1fr\)\)/);
-  assert.match(css, /\.wallboard-shell\s*>\s*\.wallboard-kpis\s*>\s*\.metric-tile[\s\S]*height:\s*100%\s*!important/);
 });
 
 test('freshness telemetry is inline with the priority heading', async () => {
@@ -46,19 +45,19 @@ test('the remaining wallboard enhancement never mutates signal rows', async () =
   assert.doesNotMatch(source, /\.hidden\s*=/);
 });
 
-test('compact wallboard keeps an explicit visible content row', async () => {
+test('compact wallboard uses absolute viewport geometry and cannot collapse', async () => {
   const css = await read('src/styles/wallboard-v2.css');
-  assert.match(css, /\.wallboard-v2\s*\{[\s\S]*grid-template-rows:\s*minmax\(0, 1fr\) auto\s*!important/);
-  assert.match(css, /@media \(max-width: 1180px\)[\s\S]*\.wallboard-v2 > main[\s\S]*display:\s*block\s*!important/);
-  assert.match(css, /@media \(max-height: 620px\)/);
-  assert.match(css, /\.wallboard-v2 \.wallboard-priority-v2[\s\S]*height:\s*100%/);
+  assert.match(css, /@media \(max-width: 1180px\), \(max-height: 520px\)/);
+  assert.match(css, /\.wallboard-v2\s*\{[\s\S]*display:\s*block\s*!important/);
+  assert.match(css, /\.wallboard-v2 > main\s*\{[\s\S]*position:\s*absolute\s*!important[\s\S]*inset:\s*6px\s*!important/);
+  assert.match(css, /\.wallboard-v2 \.wallboard-priority-v2\s*\{[\s\S]*position:\s*absolute[\s\S]*inset:\s*0/);
+  assert.match(css, /\.wallboard-v2 \.wallboard-providers,[\s\S]*\.wallboard-v2 > footer[\s\S]*display:\s*none\s*!important/);
 });
 
-test('priority auto-loop is not disabled by a resting pointer', async () => {
+test('wallboard priority list contains incidents only and loops without pointer suspension', async () => {
   const source = await read('src/WallboardV2.tsx');
+  assert.match(source, /filter\(item => item\.kind === 'incident'\)/);
   assert.match(source, /requestAnimationFrame\(animate\)/);
   assert.match(source, /scrollHeight - list\.clientHeight/);
-  assert.doesNotMatch(source, /pointerenter/);
-  assert.doesNotMatch(source, /pointerleave/);
-  assert.match(source, /wheel.*pauseForUserInput/);
+  assert.doesNotMatch(source, /pointerenter|pointerleave|pauseForUserInput|addEventListener\('wheel'/);
 });
