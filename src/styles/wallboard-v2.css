@@ -1,5 +1,27 @@
 @layer wallboard {
+  .wallboard-v2 {
+    grid-template-rows: minmax(0, 1fr) auto !important;
+    min-width: 0;
+    min-height: 0;
+  }
+
+  .wallboard-v2 > main {
+    grid-row: 1;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+  }
+
+  .wallboard-v2 > footer {
+    grid-row: 2;
+    min-height: 14px;
+  }
+
   .wallboard-v2 .wallboard-priority-v2 {
+    min-width: 0;
+    min-height: 0;
+    height: 100%;
     display: grid;
     grid-template-rows: auto minmax(0, 1fr);
     overflow: hidden;
@@ -15,11 +37,15 @@
   }
 
   .wallboard-v2 .wallboard-priority-list {
+    min-width: 0;
     min-height: 0;
-    overflow: hidden;
+    height: 100%;
+    overflow-x: hidden;
+    overflow-y: hidden;
     scroll-behavior: auto;
     opacity: 1;
     transition: opacity 260ms ease;
+    overscroll-behavior: contain;
   }
 
   .wallboard-v2 .wallboard-priority-list.is-loop-resetting {
@@ -27,6 +53,8 @@
   }
 
   .wallboard-v2 .wallboard-priority-list > article {
+    width: 100%;
+    min-width: 0;
     grid-template-columns: 42px minmax(0, 1fr) 88px;
   }
 
@@ -50,6 +78,68 @@
   .wallboard-v2 .wallboard-priority-list article h3,
   .wallboard-v2 .wallboard-priority-list article p {
     overflow-wrap: anywhere;
+  }
+
+  @media (max-width: 1180px) {
+    .wallboard-v2 {
+      padding: 8px !important;
+      gap: 6px !important;
+    }
+
+    .wallboard-v2 > main {
+      display: block !important;
+      height: 100% !important;
+    }
+
+    .wallboard-v2 .wallboard-priority-v2 {
+      width: 100%;
+      height: 100%;
+    }
+
+    .wallboard-v2 .wallboard-providers {
+      display: none !important;
+    }
+  }
+
+  @media (max-height: 620px) {
+    .wallboard-v2 {
+      padding: 6px !important;
+      gap: 4px !important;
+    }
+
+    .wallboard-v2 > footer {
+      min-height: 11px;
+      font-size: 9px;
+    }
+
+    .wallboard-v2 .wallboard-priority-v2 > h2 {
+      padding-top: 8px;
+      padding-bottom: 8px;
+    }
+
+    .wallboard-v2 .wallboard-priority-list > article {
+      padding-top: 9px;
+      padding-bottom: 9px;
+    }
+  }
+
+  @media (max-width: 720px) {
+    .wallboard-v2 .wallboard-priority-list > article {
+      grid-template-columns: 38px minmax(0, 1fr) 58px;
+      gap: 8px;
+      padding-left: 9px;
+      padding-right: 9px;
+    }
+
+    .wallboard-v2 .wallboard-signal-icon,
+    .wallboard-v2 .wallboard-signal-icon .provider-icon {
+      width: 30px;
+      height: 30px;
+    }
+
+    .wallboard-v2 .wallboard-priority-list article p {
+      display: none;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
