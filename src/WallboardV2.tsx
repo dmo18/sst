@@ -5,9 +5,9 @@ import type { DataLifecycle } from './types';
 import type { IssueConsoleModel } from './statusViewModel';
 
 const EASTERN_TIME_ZONE = 'America/New_York';
-const LOOP_START_DELAY_MS = 2200;
-const LOOP_RESET_DELAY_MS = 1200;
-const LOOP_SPEED_PX_PER_SECOND = 20;
+const LOOP_START_DELAY_MS = 1800;
+const LOOP_RESET_DELAY_MS = 900;
+const LOOP_SPEED_PX_PER_SECOND = 22;
 
 function clockLabel(now: number): string {
   return new Intl.DateTimeFormat('en-US', {
@@ -46,11 +46,6 @@ function usePriorityAutoLoop(listRef: RefObject<HTMLDivElement>): void {
     let resetTimer = 0;
     let lastFrame = performance.now();
     let resumeAt = lastFrame + LOOP_START_DELAY_MS;
-    let userPauseUntil = 0;
-
-    const pauseForUserInput = () => {
-      userPauseUntil = performance.now() + 2600;
-    };
 
     const animate = (now: number) => {
       const maximum = Math.max(0, list.scrollHeight - list.clientHeight);
@@ -59,7 +54,7 @@ function usePriorityAutoLoop(listRef: RefObject<HTMLDivElement>): void {
 
       if (maximum <= 2) {
         if (list.scrollTop !== 0) list.scrollTop = 0;
-      } else if (now >= resumeAt && now >= userPauseUntil && !list.classList.contains('is-loop-resetting')) {
+      } else if (now >= resumeAt && !list.classList.contains('is-loop-resetting')) {
         list.scrollTop = Math.min(maximum, list.scrollTop + elapsed * LOOP_SPEED_PX_PER_SECOND / 1000);
         if (list.scrollTop >= maximum - 1) {
           list.classList.add('is-loop-resetting');
@@ -67,24 +62,17 @@ function usePriorityAutoLoop(listRef: RefObject<HTMLDivElement>): void {
             list.scrollTop = 0;
             list.classList.remove('is-loop-resetting');
             resumeAt = performance.now() + LOOP_RESET_DELAY_MS;
-          }, 260);
+          }, 220);
         }
       }
 
       frame = window.requestAnimationFrame(animate);
     };
 
-    list.addEventListener('wheel', pauseForUserInput, { passive: true });
-    list.addEventListener('touchstart', pauseForUserInput, { passive: true });
-    list.addEventListener('pointerdown', pauseForUserInput, { passive: true });
     frame = window.requestAnimationFrame(animate);
-
     return () => {
       window.cancelAnimationFrame(frame);
       window.clearTimeout(resetTimer);
-      list.removeEventListener('wheel', pauseForUserInput);
-      list.removeEventListener('touchstart', pauseForUserInput);
-      list.removeEventListener('pointerdown', pauseForUserInput);
     };
   }, [listRef]);
 }
@@ -103,10 +91,12 @@ export function WallboardV2({
   const priorityListRef = useRef<HTMLDivElement>(null);
   usePriorityAutoLoop(priorityListRef);
 
-  const signals = useMemo(() => [...(model?.actionQueue || [])].sort((a, b) => {
-    const timeDifference = timestamp(b.updatedAt) - timestamp(a.updatedAt);
-    return timeDifference || a.provider.localeCompare(b.provider) || a.title.localeCompare(b.title);
-  }), [model?.actionQueue]);
+  const signals = useMemo(() => (model?.actionQueue || [])
+    .filter(item => item.kind === 'incident')
+    .sort((a, b) => {
+      const timeDifference = timestamp(b.updatedAt) - timestamp(a.updatedAt);
+      return timeDifference || a.provider.localeCompare(b.provider) || a.title.localeCompare(b.title);
+    }), [model?.actionQueue]);
 
   const providers = useMemo(() => (model?.diagnostics || [])
     .filter(item => item.attention !== 'informational' || item.sourceHealth !== 'healthy')
@@ -139,7 +129,7 @@ export function WallboardV2({
                 <div><b>{item.provider}</b><h3>{item.title}</h3><p>{item.detail}</p></div>
                 <time>{relativeAgeAt(item.updatedAt, now)}</time>
               </article>
-            )) : <div className="empty-state"><b>No immediate operator actions</b></div>}
+            )) : <div className="empty-state"><b>No active vendor incidents</b></div>}
           </div>
         </section>
 
