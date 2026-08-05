@@ -89,6 +89,9 @@ export function App(): JSX.Element {
             const result = await fetchStatus(request.signal);
             if (mounted.current && ownership.current.owns(request, sequence)) {
                 dispatch({ type: 'success', data: result.data });
+                window.dispatchEvent(new CustomEvent('sst:browser-check', {
+                    detail: { checkedAt: Date.now(), generatedAt: result.data.generated_at }
+                }));
                 if (result.freshnessWarning)
                     dispatch({ type: 'failure', message: result.freshnessWarning });
             }
