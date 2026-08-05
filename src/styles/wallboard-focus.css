@@ -38,9 +38,9 @@
     min-height: var(--wallboard-header-height) !important;
     max-height: var(--wallboard-header-height) !important;
     display: grid !important;
-    grid-template-columns: minmax(260px, 1fr) auto auto auto !important;
+    grid-template-columns: minmax(260px, 1fr) auto auto auto auto !important;
     align-items: center !important;
-    gap: 18px !important;
+    gap: 14px !important;
     padding: 10px 14px !important;
     overflow: hidden;
     background: rgba(15, 23, 34, .985);
@@ -82,7 +82,9 @@
   }
 
   .wallboard-shell.wallboard-controls-visible > header,
-  .wallboard-shell.wallboard-controls-visible > .wallboard-kpis {
+  .wallboard-shell.wallboard-controls-visible > .wallboard-kpis,
+  .wallboard-shell.wallboard-controls-pinned-open > header,
+  .wallboard-shell.wallboard-controls-pinned-open > .wallboard-kpis {
     opacity: 1;
     visibility: visible;
     pointer-events: auto;
@@ -90,7 +92,64 @@
     transition-delay: 0s;
   }
 
-  .wallboard-shell > button,
+  .wallboard-shell.wallboard-controls-pinned-closed > header,
+  .wallboard-shell.wallboard-controls-pinned-closed > .wallboard-kpis {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+    transform: translate3d(0, calc(-1 * var(--wallboard-overlay-travel)), 0) !important;
+  }
+
+  .wallboard-overlay-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .wallboard-overlay-action,
+  .wallboard-overlay-restore {
+    min-height: 30px;
+    border: 1px solid rgba(111, 145, 188, .38);
+    border-radius: 7px;
+    padding: 0 9px;
+    background: rgba(9, 17, 28, .9);
+    color: #c9d7e8;
+    font: inherit;
+    font-size: 10px;
+    font-weight: 750;
+    letter-spacing: .03em;
+    cursor: pointer;
+  }
+
+  .wallboard-overlay-action:hover,
+  .wallboard-overlay-action:focus-visible,
+  .wallboard-overlay-restore:hover,
+  .wallboard-overlay-restore:focus-visible {
+    border-color: rgba(92, 171, 255, .72);
+    color: #fff;
+    outline: none;
+  }
+
+  .wallboard-overlay-restore {
+    position: fixed;
+    top: 8px;
+    right: 10px;
+    z-index: 160;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(-8px);
+    transition: opacity 120ms ease, transform 150ms ease, visibility 0s linear 150ms;
+  }
+
+  .wallboard-overlay-restore.is-visible {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateY(0);
+    transition-delay: 0s;
+  }
+
   .wallboard-shell .wallboard-control-peek,
   .wallboard-shell .show-controls,
   .wallboard-shell .wallboard-show-header,
@@ -99,22 +158,30 @@
     display: none !important;
   }
 
-  .wallboard-mini-telemetry {
-    position: fixed;
-    right: 10px;
-    bottom: 7px;
-    z-index: 160;
+  .wallboard-priority > h2 {
     display: flex;
-    gap: 10px;
-    padding: 4px 7px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .wallboard-mini-telemetry {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 9px;
+    margin-left: auto;
+    padding: 3px 6px;
     border: 1px solid rgba(90, 121, 158, .34);
     border-radius: 6px;
-    background: rgba(5, 10, 17, .82);
-    backdrop-filter: blur(8px);
+    background: rgba(5, 10, 17, .68);
     color: #7890ad;
-    font-size: 10px;
+    font-size: 9px;
+    font-weight: 500;
     line-height: 1;
     letter-spacing: .04em;
+    text-transform: none;
+    white-space: nowrap;
     pointer-events: none;
   }
 
@@ -130,18 +197,27 @@
     }
 
     .wallboard-shell > header {
-      grid-template-columns: minmax(0, 1fr) auto auto !important;
-      gap: 10px !important;
+      grid-template-columns: minmax(0, 1fr) auto auto auto !important;
+      gap: 8px !important;
     }
 
     .wallboard-shell > header > div:first-child {
       display: none;
     }
+
+    .wallboard-overlay-actions {
+      gap: 4px;
+    }
+
+    .wallboard-overlay-action {
+      padding: 0 7px;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
     .wallboard-shell > header,
-    .wallboard-shell > .wallboard-kpis {
+    .wallboard-shell > .wallboard-kpis,
+    .wallboard-overlay-restore {
       transition: none;
     }
   }
