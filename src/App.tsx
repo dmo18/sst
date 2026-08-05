@@ -14,6 +14,11 @@ type ProviderConsolidation = {
     providerOverrides: Record<string, Partial<ProviderConfig>>;
 };
 
+type StatusFetchResult = {
+    data: StatusPayload;
+    freshnessWarning: string | null;
+};
+
 const CONSOLIDATION = providerConsolidation as ProviderConsolidation;
 const EXCLUDED_PROVIDER_IDS = new Set(CONSOLIDATION.excludedProviderIds);
 const CATALOG = (providerCatalog as ProviderConfig[])
@@ -23,7 +28,7 @@ const REFRESH_MS = 60000;
 const MAX_PAYLOAD_AGE_MS = 20 * 60 * 1000;
 const MAX_FUTURE_SKEW_MS = 5 * 60 * 1000;
 
-async function fetchStatus(signal: AbortSignal): Promise<StatusPayload> {
+async function fetchStatus(signal: AbortSignal): Promise<StatusFetchResult> {
     const response = await fetch(`${import.meta.env.BASE_URL}status.json?ts=${Date.now()}`, { cache: 'no-store', signal });
     if (!response.ok)
         throw new Error(`status.json returned HTTP ${response.status}`);
@@ -40,9 +45,10 @@ async function fetchStatus(signal: AbortSignal): Promise<StatusPayload> {
         throw new Error('status.json generated_at is invalid');
     if (payloadAgeMs < -MAX_FUTURE_SKEW_MS)
         throw new Error('status.json was generated too far in the future');
-    if (payloadAgeMs > MAX_PAYLOAD_AGE_MS)
-        throw new Error(`status.json is stale (${Math.round(payloadAgeMs / 60000)} minutes old; maximum 20 minutes)`);
-    return payload;
+    const freshnessWarning = payloadAgeMs > MAX_PAYLOAD_AGE_MS
+        ? `status.json is stale (${Math.round(payloadAgeMs / 60000)} minutes old; maximum 20 minutes)`
+        : null;
+    return { data: payload, freshnessWarning };
 }
 
 export function App(): JSX.Element {
@@ -56,9 +62,12 @@ export function App(): JSX.Element {
         const { controller: request, sequence } = slot;
         dispatch({ type: 'request' });
         try {
-            const data = await fetchStatus(request.signal);
-            if (mounted.current && ownership.current.owns(request, sequence))
-                dispatch({ type: 'success', data });
+            const result = await fetchStatus(request.signal);
+            if (mounted.current && ownership.current.owns(request, sequence)) {
+                dispatch({ type: 'success', data: result.data });
+                if (result.freshnessWarning)
+                    dispatch({ type: 'failure', message: result.freshnessWarning });
+            }
         }
         catch (error) {
             if (mounted.current && ownership.current.owns(request, sequence))
