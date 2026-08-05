@@ -54,10 +54,16 @@ test('compact wallboard uses absolute viewport geometry and cannot collapse', as
   assert.match(css, /\.wallboard-v2 \.wallboard-providers,[\s\S]*\.wallboard-v2 > footer[\s\S]*display:\s*none\s*!important/);
 });
 
-test('wallboard priority list contains incidents only and loops without pointer suspension', async () => {
+test('wallboard priority carousel preserves compact details and advances by rows', async () => {
   const source = await read('src/WallboardV2.tsx');
+  const css = await read('src/styles/wallboard-v2.css');
   assert.match(source, /filter\(item => item\.kind === 'incident'\)/);
-  assert.match(source, /requestAnimationFrame\(animate\)/);
-  assert.match(source, /scrollHeight - list\.clientHeight/);
-  assert.doesNotMatch(source, /pointerenter|pointerleave|pauseForUserInput|addEventListener\('wheel'/);
+  assert.match(source, /setInterval\(advance, CAROUSEL_STEP_MS\)/);
+  assert.match(source, /items\[currentIndex\]\.offsetTop/);
+  assert.match(source, /scrollTo\(\{ top: items\[currentIndex\]\.offsetTop, behavior \}\)/);
+  assert.doesNotMatch(source, /requestAnimationFrame|pointerenter|pointerleave|pauseForUserInput/);
+  assert.match(css, /overflow-y:\s*auto/);
+  assert.match(css, /scroll-snap-type:\s*y proximity/);
+  assert.match(css, /-webkit-line-clamp:\s*2/);
+  assert.doesNotMatch(css, /article p\s*\{\s*display:\s*none/);
 });
