@@ -18,8 +18,8 @@
   }
 
   .wallboard-shell > .wallboard-kpis {
-    top: 78px;
-    transform: translateY(-135%);
+    top: 76px;
+    transform: translateY(-150%);
     background: rgba(7, 13, 22, .97);
     backdrop-filter: blur(16px);
   }
@@ -39,7 +39,25 @@
 
   .wallboard-priority {
     min-height: 0;
-    overflow: hidden;
+    overflow-y: hidden;
+    scroll-behavior: smooth;
+    scrollbar-width: none;
+    mask-image: linear-gradient(to bottom, black 0, black calc(100% - 22px), transparent 100%);
+  }
+
+  .wallboard-priority::-webkit-scrollbar {
+    display: none;
+  }
+
+  .wallboard-priority > h2 {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    background: inherit;
+  }
+
+  .wallboard-priority article {
+    min-width: 0;
   }
 
   .wallboard-priority article > .priority-provider-icon {
@@ -57,25 +75,33 @@
     display: none;
   }
 
-  .wallboard-signal-viewport {
-    min-height: 0;
-    height: calc(100% - 54px);
-    overflow: hidden;
-    mask-image: linear-gradient(to bottom, transparent 0, black 22px, black calc(100% - 22px), transparent 100%);
+  .wallboard-mini-telemetry {
+    position: fixed;
+    right: 10px;
+    bottom: 7px;
+    z-index: 130;
+    display: flex;
+    gap: 10px;
+    padding: 4px 7px;
+    border: 1px solid rgba(90, 121, 158, .34);
+    border-radius: 6px;
+    background: rgba(5, 10, 17, .82);
+    backdrop-filter: blur(8px);
+    color: #7890ad;
+    font-size: 10px;
+    line-height: 1;
+    letter-spacing: .04em;
+    pointer-events: none;
   }
 
-  .wallboard-signal-track {
-    will-change: transform;
-  }
-
-  .wallboard-signal-track article {
-    flex: 0 0 auto;
+  .wallboard-mini-telemetry b {
+    color: #d8e6f7;
+    font-weight: 700;
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .wallboard-signal-track {
-      animation: none !important;
-      transform: none !important;
+    .wallboard-priority {
+      scroll-behavior: auto;
     }
   }
 }
