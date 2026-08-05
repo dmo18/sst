@@ -1,0 +1,52 @@
+name: Status Freshness Watch
+
+on:
+  schedule:
+    - cron: "2,17,32,47 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: status-freshness-watch
+  cancel-in-progress: true
+
+jobs:
+  verify-and-recover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check deployed payload age
+        id: freshness
+        env:
+          STATUS_URL: https://dmo18.github.io/sst/status.json
+        run: |
+          node --input-type=module <<'NODE'
+          const response = await fetch(`${process.env.STATUS_URL}?watch=${Date.now()}`, { cache: 'no-store' });
+          if (!response.ok) throw new Error(`status.json returned HTTP ${response.status}`);
+          const payload = await response.json();
+          const generatedAt = Date.parse(payload.generated_at || '');
+          if (!Number.isFinite(generatedAt)) throw new Error('status.json generated_at is invalid');
+          const ageMinutes = Math.floor((Date.now() - generatedAt) / 60000);
+          console.log(`Deployed payload age: ${ageMinutes} minutes`);
+          const stale = ageMinutes > 20;
+          await import('node:fs').then(({ appendFileSync }) => {
+            appendFileSync(process.env.GITHUB_OUTPUT, `stale=${stale}\n`);
+            appendFileSync(process.env.GITHUB_OUTPUT, `age_minutes=${ageMinutes}\n`);
+          });
+          NODE
+      - name: Dispatch recovery refresh
+        if: steps.freshness.outputs.stale == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          AGE_MINUTES: ${{ steps.freshness.outputs.age_minutes }}
+        run: |
+          echo "Payload is ${AGE_MINUTES} minutes old. Dispatching a recovery refresh."
+          curl --fail-with-body --request POST \
+            --header "Accept: application/vnd.github+json" \
+            --header "Authorization: Bearer ${GH_TOKEN}" \
+            --header "X-GitHub-Api-Version: 2022-11-28" \
+            https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/refresh-pages.yml/dispatches \
+            --data '{"ref":"main"}'
