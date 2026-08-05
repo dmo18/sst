@@ -45,3 +45,20 @@ test('the remaining wallboard enhancement never mutates signal rows', async () =
   assert.doesNotMatch(source, /appendChild\(item\.article\)/);
   assert.doesNotMatch(source, /\.hidden\s*=/);
 });
+
+test('compact wallboard keeps an explicit visible content row', async () => {
+  const css = await read('src/styles/wallboard-v2.css');
+  assert.match(css, /\.wallboard-v2\s*\{[\s\S]*grid-template-rows:\s*minmax\(0, 1fr\) auto\s*!important/);
+  assert.match(css, /@media \(max-width: 1180px\)[\s\S]*\.wallboard-v2 > main[\s\S]*display:\s*block\s*!important/);
+  assert.match(css, /@media \(max-height: 620px\)/);
+  assert.match(css, /\.wallboard-v2 \.wallboard-priority-v2[\s\S]*height:\s*100%/);
+});
+
+test('priority auto-loop is not disabled by a resting pointer', async () => {
+  const source = await read('src/WallboardV2.tsx');
+  assert.match(source, /requestAnimationFrame\(animate\)/);
+  assert.match(source, /scrollHeight - list\.clientHeight/);
+  assert.doesNotMatch(source, /pointerenter/);
+  assert.doesNotMatch(source, /pointerleave/);
+  assert.match(source, /wheel.*pauseForUserInput/);
+});
