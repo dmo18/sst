@@ -1,0 +1,65 @@
+name: Clear stale Pages deployment locks
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+concurrency:
+  group: pages-unlock
+  cancel-in-progress: true
+jobs:
+  unlock:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Cancel older Pages deployments that still hold the publish lock
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          api="https://api.github.com/repos/${GITHUB_REPOSITORY}"
+          headers=(
+            -H "Accept: application/vnd.github+json"
+            -H "Authorization: Bearer ${GH_TOKEN}"
+            -H "X-GitHub-Api-Version: 2022-11-28"
+          )
+
+          mapfile -t deployment_shas < <(
+            curl --fail --silent --show-error --location "${headers[@]}" \
+              "${api}/deployments?environment=github-pages&per_page=20" \
+              | jq -r '.[].sha' \
+              | awk '!seen[$0]++'
+          )
+
+          for sha in "${deployment_shas[@]}"; do
+            if [[ "${sha}" == "${GITHUB_SHA}" ]]; then
+              continue
+            fi
+
+            response_file="$(mktemp)"
+            status_code="$(
+              curl --silent --show-error --location \
+                --output "${response_file}" \
+                --write-out '%{http_code}' \
+                --request POST \
+                "${headers[@]}" \
+                "${api}/pages/deployments/${sha}/cancel"
+            )"
+
+            case "${status_code}" in
+              204)
+                echo "Canceled stale Pages deployment ${sha}."
+                ;;
+              404|409)
+                echo "Pages deployment ${sha} no longer needs cancellation (${status_code})."
+                ;;
+              *)
+                cat "${response_file}"
+                echo "Unexpected cancellation response ${status_code} for ${sha}." >&2
+                exit 1
+                ;;
+            esac
+            rm -f "${response_file}"
+          done
