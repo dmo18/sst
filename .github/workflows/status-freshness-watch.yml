@@ -2,7 +2,7 @@ name: Status Freshness Watch
 
 on:
   schedule:
-    - cron: "2,17,32,47 * * * *"
+    - cron: "0,12,24,36,48 * * * *"
   workflow_dispatch:
 
 permissions:
@@ -11,13 +11,41 @@ permissions:
 
 concurrency:
   group: status-freshness-watch
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   verify-and-recover:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      - name: Check for an active Pages release
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+
+          const endpoint = `https://api.github.com/repos/${process.env.GITHUB_REPOSITORY}/actions/workflows/refresh-pages.yml/runs?per_page=20`;
+          const response = await fetch(endpoint, {
+            headers: {
+              accept: 'application/vnd.github+json',
+              authorization: `Bearer ${process.env.GH_TOKEN}`,
+              'x-github-api-version': '2022-11-28'
+            }
+          });
+          if (!response.ok) throw new Error(`Unable to inspect release activity: HTTP ${response.status} ${await response.text()}`);
+
+          const payload = await response.json();
+          const activeStates = new Set(['queued', 'in_progress', 'waiting', 'requested', 'pending']);
+          const activeRuns = (payload.workflow_runs || []).filter(run => activeStates.has(run.status));
+          const active = activeRuns.length > 0;
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `active=${active}\n`);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `active_count=${activeRuns.length}\n`);
+          console.log(active
+            ? `Release already active: ${activeRuns.map(run => `#${run.run_number}:${run.status}`).join(', ')}`
+            : 'No queued or active Pages release.');
+          NODE
       - name: Check deployed payload age
         id: freshness
         env:
@@ -37,13 +65,16 @@ jobs:
             appendFileSync(process.env.GITHUB_OUTPUT, `age_minutes=${ageMinutes}\n`);
           });
           NODE
-      - name: Dispatch recovery refresh
-        if: steps.freshness.outputs.stale == 'true'
+      - name: Defer recovery while a release is active
+        if: steps.freshness.outputs.stale == 'true' && steps.release.outputs.active == 'true'
+        run: echo "Payload is stale, but ${{ steps.release.outputs.active_count }} release run(s) are already queued or active. Recovery dispatch deferred."
+      - name: Dispatch one recovery refresh
+        if: steps.freshness.outputs.stale == 'true' && steps.release.outputs.active != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           AGE_MINUTES: ${{ steps.freshness.outputs.age_minutes }}
         run: |
-          echo "Payload is ${AGE_MINUTES} minutes old. Dispatching a recovery refresh."
+          echo "Payload is ${AGE_MINUTES} minutes old and no release is active. Dispatching one recovery refresh."
           curl --fail-with-body --request POST \
             --header "Accept: application/vnd.github+json" \
             --header "Authorization: Bearer ${GH_TOKEN}" \

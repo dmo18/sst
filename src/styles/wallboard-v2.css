@@ -281,16 +281,12 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .wallboard-v2 .wallboard-priority-list {
-      overflow-y: auto;
-    }
-
     .wallboard-v2 .wallboard-priority-track.is-looping {
-      animation: none;
+      animation: wallboard-priority-marquee var(--wallboard-loop-duration) linear infinite !important;
     }
 
-    .wallboard-v2 .wallboard-priority-copy {
-      display: none;
+    .wallboard-v2 .wallboard-alert-provider-track.is-looping {
+      animation: wallboard-alert-provider-marquee var(--wallboard-provider-loop-duration) linear infinite !important;
     }
   }
 }
