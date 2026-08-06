@@ -8,6 +8,9 @@ import type { ActionItem, IssueConsoleModel } from './statusViewModel';
 const EASTERN_TIME_ZONE = 'America/New_York';
 const LOOP_SPEED_PX_PER_SECOND = 22;
 const PROVIDER_LOOP_SPEED_PX_PER_SECOND = 28;
+const YODECK_WIDTH = 458;
+const YODECK_HEIGHT = 291;
+const LAYOUT_PROBE_ATTEMPTS = 40;
 
 function clockLabel(now: number): string {
   return new Intl.DateTimeFormat('en-US', {
@@ -49,12 +52,11 @@ function usePriorityMarquee(
     const group = groupRef.current;
     if (!viewport || !track || !group) return;
 
-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     let resizeObserver: ResizeObserver | null = null;
 
     const measure = () => {
       const groupHeight = Math.ceil(group.getBoundingClientRect().height);
-      const shouldLoop = !reducedMotion.matches && itemCount > 1 && groupHeight > viewport.clientHeight + 2;
+      const shouldLoop = itemCount > 1 && groupHeight > viewport.clientHeight + 2;
 
       track.classList.remove('is-looping');
       track.style.removeProperty('--wallboard-loop-distance');
@@ -75,12 +77,10 @@ function usePriorityMarquee(
     resizeObserver = new ResizeObserver(scheduleMeasure);
     resizeObserver.observe(viewport);
     resizeObserver.observe(group);
-    reducedMotion.addEventListener('change', scheduleMeasure);
     scheduleMeasure();
 
     return () => {
       resizeObserver?.disconnect();
-      reducedMotion.removeEventListener('change', scheduleMeasure);
       track.classList.remove('is-looping');
     };
   }, [groupRef, itemCount, trackRef, viewportRef]);
@@ -130,6 +130,133 @@ function useProviderMarquee(
       track.classList.remove('is-looping');
     };
   }, [groupRef, itemCount, trackRef, viewportRef]);
+}
+
+function rectsOverlap(first: DOMRect, second: DOMRect): boolean {
+  return first.left < second.right
+    && first.right > second.left
+    && first.top < second.bottom
+    && first.bottom > second.top;
+}
+
+function isVisiblyRendered(element: Element | null): element is HTMLElement {
+  if (!(element instanceof HTMLElement)) return false;
+  const style = window.getComputedStyle(element);
+  return style.display !== 'none'
+    && style.visibility !== 'hidden'
+    && Number(style.opacity || '1') > 0.05
+    && element.getBoundingClientRect().width > 0
+    && element.getBoundingClientRect().height > 0;
+}
+
+function useWallboardLayoutProbe(
+  shellRef: RefObject<HTMLElement>,
+  alertWindowMs: number | null,
+  signalCount: number,
+  providerCount: number
+): void {
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('layoutProbe') !== 'yodeck') return;
+
+    const shell = shellRef.current;
+    if (!shell) return;
+
+    shell.dataset.layoutProbe = 'pending';
+    let attempts = 0;
+    let timer = 0;
+
+    const evaluate = () => {
+      attempts += 1;
+      const reasons: string[] = [];
+      const priority = shell.querySelector<HTMLElement>('.wallboard-priority-v2');
+      const heading = priority?.querySelector<HTMLElement>(':scope > h2') || null;
+      const telemetry = heading?.querySelector<HTMLElement>('.wallboard-mini-telemetry') || null;
+      const providerRail = priority?.querySelector<HTMLElement>('.wallboard-alert-provider-rail') || null;
+      const priorityList = priority?.querySelector<HTMLElement>('.wallboard-priority-list') || null;
+      const priorityTrack = priority?.querySelector<HTMLElement>('.wallboard-priority-track') || null;
+      const priorityGroup = priority?.querySelector<HTMLElement>('.wallboard-priority-group:not(.wallboard-priority-copy)') || null;
+      const providerTrack = priority?.querySelector<HTMLElement>('.wallboard-alert-provider-track') || null;
+      const providerGroup = priority?.querySelector<HTMLElement>('.wallboard-alert-provider-group:not(.wallboard-alert-provider-copy)') || null;
+      const providerPanel = shell.querySelector<HTMLElement>('.wallboard-providers');
+      const footer = shell.querySelector<HTMLElement>(':scope > footer');
+      const overlayHeader = shell.querySelector<HTMLElement>(':scope > header');
+      const overlayKpis = shell.querySelector<HTMLElement>(':scope > .wallboard-kpis');
+      const primaryArticles = Array.from(priority?.querySelectorAll<HTMLElement>('.wallboard-priority-group:not(.wallboard-priority-copy) > article') || []);
+      const emptyState = priority?.querySelector<HTMLElement>('.wallboard-priority-list .empty-state') || null;
+
+      if (Math.abs(window.innerWidth - YODECK_WIDTH) > 2) reasons.push(`viewport-width:${window.innerWidth}`);
+      if (Math.abs(window.innerHeight - YODECK_HEIGHT) > 2) reasons.push(`viewport-height:${window.innerHeight}`);
+      if (!priority || !heading || !providerRail || !priorityList) reasons.push('required-layout-node-missing');
+
+      if (priority && heading && providerRail && priorityList) {
+        const shellRect = shell.getBoundingClientRect();
+        const priorityRect = priority.getBoundingClientRect();
+        const headingRect = heading.getBoundingClientRect();
+        const providerRailRect = providerRail.getBoundingClientRect();
+        const priorityListRect = priorityList.getBoundingClientRect();
+
+        if (shellRect.width < YODECK_WIDTH - 2 || shellRect.height < YODECK_HEIGHT - 2) reasons.push('shell-does-not-fill-viewport');
+        if (priorityRect.width < YODECK_WIDTH - 16 || priorityRect.height < YODECK_HEIGHT - 16) reasons.push('priority-panel-collapsed');
+        if (headingRect.bottom > providerRailRect.top + 2) reasons.push('heading-overlaps-provider-rail');
+        if (providerRailRect.bottom > priorityListRect.top + 2) reasons.push('provider-rail-overlaps-list');
+        if (priorityListRect.height < 80) reasons.push(`priority-list-too-short:${Math.round(priorityListRect.height)}`);
+        if (priorityRect.left < -1 || priorityRect.top < -1 || priorityRect.right > window.innerWidth + 1 || priorityRect.bottom > window.innerHeight + 1) reasons.push('priority-panel-outside-viewport');
+
+        if (isVisiblyRendered(overlayHeader) && rectsOverlap(overlayHeader.getBoundingClientRect(), priorityRect)) reasons.push('header-overlay-obscures-content');
+        if (isVisiblyRendered(overlayKpis) && rectsOverlap(overlayKpis.getBoundingClientRect(), priorityRect)) reasons.push('kpi-overlay-obscures-content');
+      }
+
+      if (providerPanel && window.getComputedStyle(providerPanel).display !== 'none') reasons.push('provider-watch-visible-in-compact-mode');
+      if (footer && window.getComputedStyle(footer).display !== 'none') reasons.push('footer-visible-in-compact-mode');
+      if (document.documentElement.scrollWidth > window.innerWidth + 1) reasons.push(`horizontal-page-overflow:${document.documentElement.scrollWidth}`);
+      if (document.documentElement.scrollHeight > window.innerHeight + 1) reasons.push(`vertical-page-overflow:${document.documentElement.scrollHeight}`);
+      if (!telemetry || !isVisiblyRendered(telemetry)) reasons.push('freshness-telemetry-missing');
+
+      if (signalCount > 0 && primaryArticles.length !== signalCount) reasons.push(`signal-count:${primaryArticles.length}/${signalCount}`);
+      if (signalCount === 0 && !emptyState) reasons.push('empty-state-missing');
+
+      if (alertWindowMs !== null) {
+        const cutoff = Date.now() - alertWindowMs;
+        const outsideWindow = primaryArticles.filter(article => {
+          const updatedAt = Date.parse(article.dataset.updatedAt || '');
+          return !Number.isFinite(updatedAt) || updatedAt < cutoff;
+        });
+        if (outsideWindow.length) reasons.push(`alerts-outside-window:${outsideWindow.length}`);
+      }
+
+      if (priorityList && priorityTrack && priorityGroup && signalCount > 1) {
+        const contentHeight = Math.ceil(priorityGroup.getBoundingClientRect().height);
+        if (contentHeight > priorityList.clientHeight + 2 && !priorityTrack.classList.contains('is-looping')) reasons.push('priority-marquee-not-running');
+      }
+
+      if (providerRail && providerTrack && providerGroup && providerCount > 1) {
+        const contentWidth = Math.ceil(providerGroup.getBoundingClientRect().width);
+        if (contentWidth > providerRail.clientWidth + 2 && !providerTrack.classList.contains('is-looping')) reasons.push('provider-marquee-not-running');
+      }
+
+      const dataReady = signalCount === 0 ? Boolean(emptyState) : primaryArticles.length === signalCount;
+      if (!dataReady || !telemetry || !priority) {
+        shell.dataset.layoutProbeDetail = 'waiting-for-wallboard-data';
+        return;
+      }
+
+      if (reasons.length && attempts < LAYOUT_PROBE_ATTEMPTS) {
+        shell.dataset.layoutProbeDetail = reasons.join('|');
+        return;
+      }
+
+      shell.dataset.layoutProbe = reasons.length ? 'fail' : 'pass';
+      shell.dataset.layoutProbeDetail = reasons.length
+        ? reasons.join('|')
+        : `viewport:${window.innerWidth}x${window.innerHeight};signals:${signalCount};providers:${providerCount}`;
+      window.clearInterval(timer);
+    };
+
+    timer = window.setInterval(evaluate, 250);
+    window.requestAnimationFrame(evaluate);
+
+    return () => window.clearInterval(timer);
+  }, [alertWindowMs, providerCount, shellRef, signalCount]);
 }
 
 function SignalRows({ signals, now, copy = false }: { signals: ActionItem[]; now: number; copy?: boolean }): JSX.Element {
@@ -185,6 +312,7 @@ export function WallboardV2({
   alertWindowMs: number | null;
   onExit: () => void;
 }): JSX.Element {
+  const shellRef = useRef<HTMLElement>(null);
   const priorityViewportRef = useRef<HTMLDivElement>(null);
   const priorityTrackRef = useRef<HTMLDivElement>(null);
   const priorityGroupRef = useRef<HTMLDivElement>(null);
@@ -210,13 +338,14 @@ export function WallboardV2({
 
   usePriorityMarquee(priorityViewportRef, priorityTrackRef, priorityGroupRef, signals.length);
   useProviderMarquee(providerViewportRef, providerTrackRef, providerGroupRef, alertProviders.length);
+  useWallboardLayoutProbe(shellRef, alertWindowMs, signals.length, alertProviders.length);
 
   const providers = useMemo(() => (model?.diagnostics || [])
     .filter(item => item.attention !== 'informational' || item.sourceHealth !== 'healthy')
     .slice(0, 24), [model?.diagnostics]);
 
   return (
-    <section className="wallboard-shell wallboard-v2">
+    <section className="wallboard-shell wallboard-v2" ref={shellRef}>
       <header>
         <div><span>MSP service operations</span><h1>Enterprise service intelligence</h1></div>
         <div className="wallboard-clock"><strong>{clockLabel(now)}</strong><span>{dateLabel(now)} · ET</span></div>
