@@ -4,94 +4,149 @@ Guidance for coding agents working on this repository.
 
 ## Goal
 
-Build a free static MSP status aggregator hosted on GitHub Pages.
+Build and maintain a free, static, first-party-only MSP service-intelligence application hosted on GitHub Pages.
 
-## Constraints
+## Non-negotiable constraints
 
-- No Docker.
 - No server runtime.
 - No database.
-- No paid APIs.
-- No browser side vendor feed calls.
-- No synthetic monitoring.
-- No third party outage scraping.
+- No Docker requirement.
+- No paid API.
+- No credentials or secrets in the repository or browser.
+- No authenticated tenant data.
+- No browser-side vendor feed calls.
+- No synthetic monitoring used as vendor-health evidence.
+- No third-party outage scraping.
+- No crowdsourced outage data as operational truth.
 - Keep GitHub Pages static hosting.
+- Fail closed when source data is missing, malformed, stale, or ambiguous.
 
-## V2 files
+## Current repository facts
 
-```text
-config/providers.json       single provider catalog
-scripts/validate-providers.mjs catalog validator
-scripts/update-status.mjs   official source fetcher
-scripts/build.mjs           release build wrapper
-public/status.json          generated during build and not committed
-src/App.tsx                 React app with catalog fallback
-src/statusViewModel.ts      merges catalog and generated status
-src/IssueConsole.tsx        incident and diagnostics UI
-.github/workflows/refresh-pages.yml deploy workflow
-```
+- Package version: `3.3.0`.
+- Collection pipeline: `3.0.0`.
+- Raw catalog entries: 79.
+- Active providers after consolidation: 78.
+- Active wallboard: `src/WallboardV2.tsx`.
+- Primary compact wallboard target: 458 by 291 pixels.
+- Normal browser refresh interval: 60 seconds while visible.
+- Payload freshness warning threshold: 20 minutes.
 
-## UI rules
+Do not restore obsolete 90-provider assumptions unless the catalog and consolidation files are deliberately changed and validated.
 
-```text
-Incident panel shows active issues only.
-Diagnostic panel shows every configured provider. Diagnostics must cover all 90 providers in config/providers.json.
-Limited, failed, pending, and catalog only providers must still be visible.
-```
-
-Diagnostic rows should show provider, category, status, parser, checked time, source URL, fetch timing, HTTP status, and any error.
-
-## Feed rules
-
-Use only source type names implemented by `scripts/update-status.mjs`:
+## Important files
 
 ```text
-statuspage                    official Statuspage summary API
-rss                           official RSS feed
-google-cloud-incidents        official Google Cloud incidents JSON
-google-workspace-incidents    official Google Workspace incidents JSON
-salesforce-active-incidents   official Salesforce active incidents API
-slack-current-status          official Slack current status API
-heroku-current-status         official Heroku current status API
-connectwise-html              official ConnectWise public status HTML
-backblaze-html                official Backblaze public status HTML
-quickbooks-html               official QuickBooks public status HTML
-limited-official              official source limited by account, location, login, tenant, bot filtering, or missing public detail
-limited-public-page           official public page limited by account, location, login, tenant, bot filtering, or missing public detail
-official-limited              official source limited by account, location, login, tenant, bot filtering, or missing public detail
-limited-microsoft             public Microsoft source with limited detail; Graph tenant access is required for reliable service-health data
-html-limited                  official HTML source limited by account, location, login, tenant, bot filtering, or missing public detail
-okta-html                     official Okta public status page treated as a limited public page
+config/providers.json                    raw provider catalog
+config/provider-consolidation.json       active exclusions and overrides
+scripts/update-status.mjs                collection orchestration
+scripts/update-public-status.mjs         official-source collection
+scripts/structured-source-adapters.mjs   structured adapters
+scripts/ensure-valid-status.mjs          server payload validation
+scripts/production-smoke.mjs             deployed production checks
+src/App.tsx                              lifecycle, refresh, and route selection
+src/IssueConsole.tsx                     operator application
+src/WallboardV2.tsx                      active wallboard
+src/wallboardRoute.ts                    view and alert-window parsing
+src/wallboardDomEnhancements.ts          overlay state and freshness telemetry
+src/statusViewModel.ts                   action queue and UI models
+src/payloadValidation.ts                 browser payload validation
+src/styles/wallboard-focus.css           header and KPI overlay
+src/styles/wallboard-v2.css              compact layout and marquees
+.github/workflows/refresh-pages.yml       Pages build and deployment
+.github/workflows/status-freshness-watch.yml deployed freshness recovery
 ```
 
-Limited providers are intentionally blue because the source is reachable or cataloged but cannot reliably provide unauthenticated, customer-specific, or machine-readable outage state. Do not turn limited providers red/yellow from pings, routes, unofficial outage reports, third party pages, or synthetic probes.
+`src/Wallboard.tsx` is legacy code. Do not add new behavior to it. Confirm imports and tests before removing it.
 
-Do not create incidents from pings, routes, unofficial outage reports, or synthetic probes.
+## Service and source semantics
 
-## Noise filtering
+Service state and source health are independent.
 
-Filter resolved incidents, completed maintenance, old RSS items, deprecations, lifecycle notices, informational notices, and maintenance with no customer impact.
+A provider source can be readable while the vendor state remains unknown. A source can fail while the vendor service remains unconfirmed. Never infer service health from HTTP reachability, ping, route, page color, generic prose, or a collector error.
 
-Show active incidents, degraded availability, service disruption, authentication failures, email failures, MSP platform failures, DNS impact, network impact, and security tool outages.
+Do not create incidents from:
+
+- source failures;
+- parser failures;
+- schema drift;
+- bot challenges;
+- login pages;
+- consent pages;
+- unsupported content types;
+- release notes;
+- marketing posts;
+- resolved history;
+- routine maintenance.
+
+Emergency maintenance remains an incident only when it is in progress and explicitly describes production or customer impact.
+
+## Wallboard contract
+
+The active wallboard must preserve these rules:
+
+- Sort incidents by latest update, newest first.
+- Show provider icons rather than numeric indexes.
+- Exclude maintenance and collection-health failures from Priority signals.
+- Apply the `alerts` URL window to both incident rows and provider chips.
+- Keep payload and browser ages inline with the Priority signals heading.
+- Keep the provider-chip rail fixed above the vertically moving incident list.
+- Loop provider chips horizontally only when needed.
+- Loop incidents vertically only when needed.
+- Preserve readable provider name, title, age, and detail at 458 by 291 pixels.
+- Require no interaction for unattended Yodeck operation.
+- Keep header modes auto, pinned open, and pinned closed.
+
+React owns incident selection, ordering, deduplication, and duplicate loop groups. CSS owns movement. The enhancement module may control only overlay visibility and telemetry.
+
+Never reintroduce:
+
+- a MutationObserver that rewrites the wallboard;
+- post-render incident sorting;
+- cloned live DOM rows;
+- hidden rows controlled by a separate script;
+- runtime stylesheet injection;
+- a second wallboard controller loaded from `index.html`;
+- hover-only visibility as the sole header state.
+
+## Deployment guardrails
+
+GitHub Pages deployment is a separate failure domain from build and test.
+
+- Keep one Pages workflow and one Pages concurrency group.
+- Keep build permissions read-only.
+- Restrict Pages and OIDC write permissions to the deploy job.
+- Do not create separate unlock, cancel, or self-healing workflows that compete with the release workflow.
+- Do not generate repeated commits to retry a stuck Pages deployment.
+- `actions/deploy-pages` has a maximum internal wait of 600000 milliseconds. Larger values are capped.
+- If Pages is stuck, inspect the Pages environment and deployment object before changing code.
+- Scheduled freshness recovery must not interrupt an active release.
+- A successful build does not mean the commit is live.
+- A release is complete only after Pages publication, production smoke checks, and headless rendering succeed.
 
 ## Commands
 
 ```bash
+npm ci
 npm run validate-providers
+npm test
+npm run typecheck
+npm run build:app
 npm run update-status
 npm run build
-npm test
+npm audit --audit-level=high
 ```
 
-`npm run build` validates providers, generates public/status.json without committing it, checks TypeScript, and builds the Vite artifact. Generated status files such as public/status.json are build outputs and must not be committed.
+`npm test` must remain deterministic and must not contact live vendors. `npm run update-status` performs one live official-source generation. Generated `status.json` files are build outputs and must not be committed.
 
-## Do not reintroduce v1 artifacts
+## Documentation requirements
 
-Do not reintroduce Playwright browser scraping, HUD overlays, or fetch-status workflows. The v2 implementation uses the provider catalog, `scripts/update-status.mjs`, generated status JSON, and the static Vite build only.
+Update documentation when behavior changes:
 
-## Deployment
+- `README.md` for the current product and operator contract.
+- `docs/repository-report.md` for architecture.
+- `docs/wallboard-url-options.md` for wallboard routes and viewport behavior.
+- `docs/system-status.md` for current release and operational state.
+- `CHANGELOG.md` for released versions.
 
-```text
-Settings -> Pages -> Source -> GitHub Actions
-.github/workflows/refresh-pages.yml deploys the static dist artifact
-```
+Do not rewrite historical release-scope files as if they described the current runtime.
