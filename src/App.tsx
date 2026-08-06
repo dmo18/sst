@@ -8,6 +8,7 @@ import { WallboardV2 } from './WallboardV2';
 import { buildIssueConsoleModel } from './statusViewModel';
 import { payloadValidationErrors } from './payloadValidation';
 import { RequestOwnership } from './requestOwnership';
+import { readWallboardRoute } from './wallboardRoute';
 import type { ProviderConfig, StatusPayload } from './types';
 
 type ProviderConsolidation = {
@@ -76,13 +77,9 @@ async function fetchStatus(signal: AbortSignal): Promise<StatusFetchResult> {
     return { data: payload, freshnessWarning };
 }
 
-function isWallboardRoute(): boolean {
-    return new URLSearchParams(location.search).get('view') === 'wallboard';
-}
-
 export function App(): JSX.Element {
     const [state, dispatch] = useReducer(dataLifecycleReducer, initialDataLifecycle);
-    const [wallboardMode, setWallboardMode] = useState(isWallboardRoute);
+    const [route, setRoute] = useState(() => readWallboardRoute(location.search));
     const [now, setNow] = useState(() => Date.now());
     const ownership = useRef(new RequestOwnership());
     const mounted = useRef(true);
@@ -127,7 +124,7 @@ export function App(): JSX.Element {
     }, []);
 
     useEffect(() => {
-        const syncRoute = () => setWallboardMode(isWallboardRoute());
+        const syncRoute = () => setRoute(readWallboardRoute(location.search));
         const originalPushState = history.pushState;
         const originalReplaceState = history.replaceState;
 
@@ -154,13 +151,12 @@ export function App(): JSX.Element {
         const search = new URLSearchParams(location.search);
         search.delete('view');
         history.replaceState(null, '', `${location.pathname}${search.size ? `?${search}` : ''}${location.hash}`);
-        setWallboardMode(false);
     };
 
     return (
         <main className="app-frame">
-            {wallboardMode
-                ? <WallboardV2 model={model} lifecycle={state} now={now} onExit={exitWallboard} />
+            {route.wallboardMode
+                ? <WallboardV2 model={model} lifecycle={state} now={now} alertWindowMs={route.alertWindowMs} onExit={exitWallboard} />
                 : <IssueConsole model={model} lifecycle={state} onRefresh={() => void refresh()} />}
         </main>
     );
