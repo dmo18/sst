@@ -10,11 +10,14 @@ test('production HTML does not load a legacy wallboard DOM controller', async ()
   assert.equal((html.match(/<script\b/g) || []).length, 1, 'only the Vite module entry should execute');
 });
 
-test('Pages deployment protects releases and tolerates a slow Pages queue', async () => {
+test('Pages deployment cancels superseded work and has a bounded wait', async () => {
   const workflow = await read('.github/workflows/refresh-pages.yml');
   assert.match(workflow, /concurrency:\s*\n\s*group:\s*pages\s*\n\s*cancel-in-progress:\s*\$\{\{ github\.event_name != 'schedule' \}\}/);
-  assert.match(workflow, /deploy:\s*[\s\S]*timeout-minutes:\s*40/);
-  assert.match(workflow, /uses:\s*actions\/deploy-pages@v4\s*\n\s*with:\s*\n\s*timeout:\s*1800000/);
+  assert.match(workflow, /deploy:\s*[\s\S]*timeout-minutes:\s*15/);
+  assert.match(workflow, /name:\s*Cancel superseded Pages deployment/);
+  assert.match(workflow, /pages\/deployments\/\$\{PREVIOUS_SHA\}\/cancel/);
+  assert.match(workflow, /uses:\s*actions\/deploy-pages@v4\s*\n\s*with:\s*\n\s*timeout:\s*300000/);
+  assert.doesNotMatch(workflow, /timeout:\s*1800000/);
 });
 
 test('wallboard visibility uses explicit automatic and manual states', async () => {
