@@ -20,7 +20,7 @@ test('Pages deployment is serialized, self-healing, and verifies the live alert 
   assert.match(workflow, /deployment_queued[\s\S]*deployment_in_progress/);
   assert.match(workflow, /name:\s*Verify deployed 36-hour wallboard alert window/);
   assert.match(workflow, /alerts=36h&view=wallboard/);
-  assert.match(workflow, /data-alert-window-ms=\\"129600000\\"/);
+  assert.match(workflow, /data-alert-window-ms="129600000"/);
   await assert.rejects(read('.github/workflows/pages-unlock.yml'));
 });
 
