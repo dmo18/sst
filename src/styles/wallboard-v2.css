@@ -285,22 +285,11 @@
       overflow-y: auto;
     }
 
-    .wallboard-v2 .wallboard-priority-track.is-looping,
-    .wallboard-v2 .wallboard-alert-provider-track.is-looping {
+    .wallboard-v2 .wallboard-priority-track.is-looping {
       animation: none;
     }
 
-    .wallboard-v2 .wallboard-priority-copy,
-    .wallboard-v2 .wallboard-alert-provider-copy {
-      display: none;
-    }
-
-    .wallboard-v2 .wallboard-alert-provider-rail {
-      overflow-x: auto;
-      scrollbar-width: none;
-    }
-
-    .wallboard-v2 .wallboard-alert-provider-rail::-webkit-scrollbar {
+    .wallboard-v2 .wallboard-priority-copy {
       display: none;
     }
   }
