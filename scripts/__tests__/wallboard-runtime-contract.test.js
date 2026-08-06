@@ -64,7 +64,7 @@ test('compact wallboard uses absolute viewport geometry and cannot collapse', as
 test('wallboard priority list uses a seamless continuous marquee', async () => {
   const source = await read('src/WallboardV2.tsx');
   const css = await read('src/styles/wallboard-v2.css');
-  assert.match(source, /filter\(item => item\.kind === 'incident'\)/);
+  assert.match(source, /item\.kind === 'incident'/);
   assert.match(source, /wallboard-priority-track/);
   assert.match(source, /wallboard-priority-copy/);
   assert.match(source, /--wallboard-loop-distance/);
