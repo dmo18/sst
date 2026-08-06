@@ -97,12 +97,11 @@ function useProviderMarquee(
     const group = groupRef.current;
     if (!viewport || !track || !group) return;
 
-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     let resizeObserver: ResizeObserver | null = null;
 
     const measure = () => {
       const groupWidth = Math.ceil(group.getBoundingClientRect().width);
-      const shouldLoop = !reducedMotion.matches && itemCount > 1 && groupWidth > viewport.clientWidth + 2;
+      const shouldLoop = itemCount > 1 && groupWidth > viewport.clientWidth + 2;
 
       track.classList.remove('is-looping');
       track.style.removeProperty('--wallboard-provider-loop-distance');
@@ -123,12 +122,10 @@ function useProviderMarquee(
     resizeObserver = new ResizeObserver(scheduleMeasure);
     resizeObserver.observe(viewport);
     resizeObserver.observe(group);
-    reducedMotion.addEventListener('change', scheduleMeasure);
     scheduleMeasure();
 
     return () => {
       resizeObserver?.disconnect();
-      reducedMotion.removeEventListener('change', scheduleMeasure);
       track.classList.remove('is-looping');
     };
   }, [groupRef, itemCount, trackRef, viewportRef]);
