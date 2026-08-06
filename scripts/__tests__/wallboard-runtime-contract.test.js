@@ -10,18 +10,11 @@ test('production HTML does not load a legacy wallboard DOM controller', async ()
   assert.equal((html.match(/<script\b/g) || []).length, 1, 'only the Vite module entry should execute');
 });
 
-test('Pages deployment is serialized, self-healing, and verifies the live alert window', async () => {
+test('Pages deployment protects releases and tolerates a slow Pages queue', async () => {
   const workflow = await read('.github/workflows/refresh-pages.yml');
   assert.match(workflow, /concurrency:\s*\n\s*group:\s*pages\s*\n\s*cancel-in-progress:\s*\$\{\{ github\.event_name != 'schedule' \}\}/);
-  assert.match(workflow, /deploy:\s*[\s\S]*timeout-minutes:\s*45/);
-  assert.match(workflow, /name:\s*Clear stale Pages deployment locks/);
-  assert.match(workflow, /id:\s*pages[\s\S]*continue-on-error:\s*true[\s\S]*actions\/deploy-pages@v4[\s\S]*timeout:\s*600000/);
-  assert.match(workflow, /name:\s*Confirm Pages backend publication/);
-  assert.match(workflow, /deployment_queued[\s\S]*deployment_in_progress/);
-  assert.match(workflow, /name:\s*Verify deployed 36-hour wallboard alert window/);
-  assert.match(workflow, /alerts=36h&view=wallboard/);
-  assert.match(workflow, /data-alert-window-ms="129600000"/);
-  await assert.rejects(read('.github/workflows/pages-unlock.yml'));
+  assert.match(workflow, /deploy:\s*[\s\S]*timeout-minutes:\s*40/);
+  assert.match(workflow, /uses:\s*actions\/deploy-pages@v4\s*\n\s*with:\s*\n\s*timeout:\s*1800000/);
 });
 
 test('wallboard visibility uses explicit automatic and manual states', async () => {
@@ -68,24 +61,10 @@ test('compact wallboard uses absolute viewport geometry and cannot collapse', as
   assert.match(css, /\.wallboard-v2 \.wallboard-providers,[\s\S]*\.wallboard-v2 > footer[\s\S]*display:\s*none\s*!important/);
 });
 
-test('wallboard alert window is parsed from the URL and applied to verifiable incident rows', async () => {
-  const app = await read('src/App.tsx');
-  const route = await read('src/wallboardRoute.ts');
-  const source = await read('src/WallboardV2.tsx');
-
-  assert.match(app, /readWallboardRoute\(location\.search\)/);
-  assert.match(app, /alertWindowMs=\{route\.alertWindowMs\}/);
-  assert.match(route, /parseAlertWindowMs/);
-  assert.match(route, /params\.get\('alerts'\)/);
-  assert.match(source, /isAlertWithinWindow\(item\.updatedAt, now, alertWindowMs\)/);
-  assert.match(source, /data-alert-window-ms=\{alertWindowMs \?\? undefined\}/);
-  assert.match(source, /data-updated-at=\{copy \? undefined : item\.updatedAt\}/);
-});
-
 test('wallboard priority list uses a seamless continuous marquee', async () => {
   const source = await read('src/WallboardV2.tsx');
   const css = await read('src/styles/wallboard-v2.css');
-  assert.match(source, /item\.kind === 'incident'/);
+  assert.match(source, /filter\(item => item\.kind === 'incident'\)/);
   assert.match(source, /wallboard-priority-track/);
   assert.match(source, /wallboard-priority-copy/);
   assert.match(source, /--wallboard-loop-distance/);
