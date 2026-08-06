@@ -61,10 +61,22 @@ test('compact wallboard uses absolute viewport geometry and cannot collapse', as
   assert.match(css, /\.wallboard-v2 \.wallboard-providers,[\s\S]*\.wallboard-v2 > footer[\s\S]*display:\s*none\s*!important/);
 });
 
+test('wallboard alert window is parsed from the URL and applied to incident rows', async () => {
+  const app = await read('src/App.tsx');
+  const route = await read('src/wallboardRoute.ts');
+  const source = await read('src/WallboardV2.tsx');
+
+  assert.match(app, /readWallboardRoute\(location\.search\)/);
+  assert.match(app, /alertWindowMs=\{route\.alertWindowMs\}/);
+  assert.match(route, /parseAlertWindowMs/);
+  assert.match(route, /params\.get\('alerts'\)/);
+  assert.match(source, /isAlertWithinWindow\(item\.updatedAt, now, alertWindowMs\)/);
+});
+
 test('wallboard priority list uses a seamless continuous marquee', async () => {
   const source = await read('src/WallboardV2.tsx');
   const css = await read('src/styles/wallboard-v2.css');
-  assert.match(source, /filter\(item => item\.kind === 'incident'\)/);
+  assert.match(source, /item\.kind === 'incident'/);
   assert.match(source, /wallboard-priority-track/);
   assert.match(source, /wallboard-priority-copy/);
   assert.match(source, /--wallboard-loop-distance/);
