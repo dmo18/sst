@@ -136,7 +136,12 @@ function SignalRows({ signals, now, copy = false }: { signals: ActionItem[]; now
   return (
     <div className={`wallboard-priority-group${copy ? ' wallboard-priority-copy' : ''}`} aria-hidden={copy || undefined}>
       {signals.map(item => (
-        <article key={`${copy ? 'copy:' : ''}${item.id}`} className={`attention-${item.attention}`}>
+        <article
+          key={`${copy ? 'copy:' : ''}${item.id}`}
+          className={`attention-${item.attention}`}
+          data-updated-at={copy ? undefined : item.updatedAt}
+          data-provider-id={copy ? undefined : item.providerId}
+        >
           <span className="wallboard-signal-icon"><ProviderIcon id={item.providerId} name={item.provider} /></span>
           <div><b>{item.provider}</b><h3>{item.title}</h3><p>{item.detail}</p></div>
           <time>{relativeAgeAt(item.updatedAt, now)}</time>
@@ -228,7 +233,10 @@ export function WallboardV2({
       </section>
 
       <main>
-        <section className="wallboard-priority wallboard-priority-v2">
+        <section
+          className="wallboard-priority wallboard-priority-v2"
+          data-alert-window-ms={alertWindowMs ?? undefined}
+        >
           <h2><span>Priority signals</span></h2>
           <div
             className="wallboard-alert-provider-rail"
