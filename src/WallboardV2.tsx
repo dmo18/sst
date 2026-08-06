@@ -6,6 +6,7 @@ import type { ActionItem, IssueConsoleModel } from './statusViewModel';
 
 const EASTERN_TIME_ZONE = 'America/New_York';
 const LOOP_SPEED_PX_PER_SECOND = 22;
+const PROVIDER_LOOP_SPEED_PX_PER_SECOND = 28;
 
 function clockLabel(now: number): string {
   return new Intl.DateTimeFormat('en-US', {
@@ -67,7 +68,58 @@ function usePriorityMarquee(
       track.classList.add('is-looping');
     };
 
-    const scheduleMeasure = () => window.requestAnimationFrame(measure);
+    const scheduleMeasure = () => {
+      window.requestAnimationFrame(measure);
+    };
+    resizeObserver = new ResizeObserver(scheduleMeasure);
+    resizeObserver.observe(viewport);
+    resizeObserver.observe(group);
+    reducedMotion.addEventListener('change', scheduleMeasure);
+    scheduleMeasure();
+
+    return () => {
+      resizeObserver?.disconnect();
+      reducedMotion.removeEventListener('change', scheduleMeasure);
+      track.classList.remove('is-looping');
+    };
+  }, [groupRef, itemCount, trackRef, viewportRef]);
+}
+
+function useProviderMarquee(
+  viewportRef: RefObject<HTMLDivElement>,
+  trackRef: RefObject<HTMLDivElement>,
+  groupRef: RefObject<HTMLDivElement>,
+  itemCount: number
+): void {
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    const track = trackRef.current;
+    const group = groupRef.current;
+    if (!viewport || !track || !group) return;
+
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let resizeObserver: ResizeObserver | null = null;
+
+    const measure = () => {
+      const groupWidth = Math.ceil(group.getBoundingClientRect().width);
+      const shouldLoop = !reducedMotion.matches && itemCount > 1 && groupWidth > viewport.clientWidth + 2;
+
+      track.classList.remove('is-looping');
+      track.style.removeProperty('--wallboard-provider-loop-distance');
+      track.style.removeProperty('--wallboard-provider-loop-duration');
+
+      if (!shouldLoop || groupWidth <= 0) return;
+
+      const durationSeconds = Math.max(10, groupWidth / PROVIDER_LOOP_SPEED_PX_PER_SECOND);
+      track.style.setProperty('--wallboard-provider-loop-distance', `${groupWidth}px`);
+      track.style.setProperty('--wallboard-provider-loop-duration', `${durationSeconds}s`);
+      void track.offsetWidth;
+      track.classList.add('is-looping');
+    };
+
+    const scheduleMeasure = () => {
+      window.requestAnimationFrame(measure);
+    };
     resizeObserver = new ResizeObserver(scheduleMeasure);
     resizeObserver.observe(viewport);
     resizeObserver.observe(group);
@@ -96,6 +148,27 @@ function SignalRows({ signals, now, copy = false }: { signals: ActionItem[]; now
   );
 }
 
+function AlertProviderChips({ providers, copy = false }: { providers: ActionItem[]; copy?: boolean }): JSX.Element {
+  return (
+    <div
+      className={`wallboard-alert-provider-group${copy ? ' wallboard-alert-provider-copy' : ''}`}
+      aria-hidden={copy || undefined}
+    >
+      {providers.map(item => (
+        <span
+          className="wallboard-alert-provider-chip"
+          key={`${copy ? 'copy:' : ''}${item.providerId}`}
+          title={item.provider}
+          aria-label={copy ? undefined : item.provider}
+        >
+          <ProviderIcon id={item.providerId} name={item.provider} />
+          <b>{item.provider}</b>
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export function WallboardV2({
   model,
   lifecycle,
@@ -110,6 +183,9 @@ export function WallboardV2({
   const priorityViewportRef = useRef<HTMLDivElement>(null);
   const priorityTrackRef = useRef<HTMLDivElement>(null);
   const priorityGroupRef = useRef<HTMLDivElement>(null);
+  const providerViewportRef = useRef<HTMLDivElement>(null);
+  const providerTrackRef = useRef<HTMLDivElement>(null);
+  const providerGroupRef = useRef<HTMLDivElement>(null);
 
   const signals = useMemo(() => (model?.actionQueue || [])
     .filter(item => item.kind === 'incident')
@@ -128,6 +204,7 @@ export function WallboardV2({
   }, [signals]);
 
   usePriorityMarquee(priorityViewportRef, priorityTrackRef, priorityGroupRef, signals.length);
+  useProviderMarquee(providerViewportRef, providerTrackRef, providerGroupRef, alertProviders.length);
 
   const providers = useMemo(() => (model?.diagnostics || [])
     .filter(item => item.attention !== 'informational' || item.sourceHealth !== 'healthy')
@@ -153,13 +230,17 @@ export function WallboardV2({
       <main>
         <section className="wallboard-priority wallboard-priority-v2">
           <h2><span>Priority signals</span></h2>
-          <div className="wallboard-alert-provider-rail" aria-label="Providers with active alerts">
-            {alertProviders.map(item => (
-              <span className="wallboard-alert-provider-chip" key={item.providerId} title={item.provider} aria-label={item.provider}>
-                <ProviderIcon id={item.providerId} name={item.provider} />
-                <b>{item.provider}</b>
-              </span>
-            ))}
+          <div
+            className="wallboard-alert-provider-rail"
+            aria-label="Providers with active alerts"
+            ref={providerViewportRef}
+          >
+            {alertProviders.length ? (
+              <div className="wallboard-alert-provider-track" ref={providerTrackRef}>
+                <div ref={providerGroupRef}><AlertProviderChips providers={alertProviders} /></div>
+                <AlertProviderChips providers={alertProviders} copy />
+              </div>
+            ) : null}
           </div>
           <div className="wallboard-priority-list" ref={priorityViewportRef}>
             {signals.length ? (
