@@ -76,9 +76,11 @@ test('wallboard priority list uses a seamless continuous marquee', async () => {
   assert.doesNotMatch(css, /-webkit-line-clamp:\s*2/);
 });
 
-test('compact wallboard continuously loops labeled alert provider chips when needed', async () => {
+test('compact wallboard continuously loops labeled alert provider chips whenever needed', async () => {
   const source = await read('src/WallboardV2.tsx');
   const css = await read('src/styles/wallboard-v2.css');
+  const providerMarquee = source.match(/function useProviderMarquee[\s\S]*?(?=function SignalRows)/)?.[0] || '';
+
   assert.match(source, /useProviderMarquee/);
   assert.match(source, /wallboard-alert-provider-track/);
   assert.match(source, /wallboard-alert-provider-copy/);
@@ -87,10 +89,12 @@ test('compact wallboard continuously loops labeled alert provider chips when nee
   assert.match(source, /groupWidth > viewport\.clientWidth \+ 2/);
   assert.match(source, /<b>\{item\.provider\}<\/b>/);
   assert.match(source, /const seen = new Set<string>\(\)/);
+  assert.doesNotMatch(providerMarquee, /prefers-reduced-motion|reducedMotion/);
   assert.match(css, /@keyframes wallboard-alert-provider-marquee/);
   assert.match(css, /animation:\s*wallboard-alert-provider-marquee var\(--wallboard-provider-loop-duration\) linear infinite/);
   assert.match(css, /translate3d\(calc\(-1 \* var\(--wallboard-provider-loop-distance\)\), 0, 0\)/);
   assert.match(css, /wallboard-alert-provider-track:not\(\.is-looping\) \.wallboard-alert-provider-copy/);
   assert.match(css, /\.wallboard-v2 \.wallboard-alert-provider-chip\s*\{[\s\S]*display:\s*inline-flex/);
   assert.match(css, /\.wallboard-v2 \.wallboard-alert-provider-chip b\s*\{[\s\S]*text-overflow:\s*ellipsis/);
+  assert.doesNotMatch(css, /@media \(prefers-reduced-motion: reduce\)[\s\S]*wallboard-alert-provider/);
 });
