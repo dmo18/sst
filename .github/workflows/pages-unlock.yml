@@ -52,7 +52,7 @@ jobs:
               204)
                 echo "Canceled stale Pages deployment ${sha}."
                 ;;
-              404|409)
+              400|404|409)
                 echo "Pages deployment ${sha} no longer needs cancellation (${status_code})."
                 ;;
               *)
