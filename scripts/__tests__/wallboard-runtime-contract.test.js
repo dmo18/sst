@@ -10,9 +10,9 @@ test('production HTML does not load a legacy wallboard DOM controller', async ()
   assert.equal((html.match(/<script\b/g) || []).length, 1, 'only the Vite module entry should execute');
 });
 
-test('Pages deployment cancels obsolete revisions', async () => {
+test('Pages deployment cancels obsolete releases without interrupting scheduled refreshes', async () => {
   const workflow = await read('.github/workflows/refresh-pages.yml');
-  assert.match(workflow, /concurrency:\s*\n\s*group:\s*pages\s*\n\s*cancel-in-progress:\s*true/);
+  assert.match(workflow, /concurrency:\s*\n\s*group:\s*pages\s*\n\s*cancel-in-progress:\s*\$\{\{ github\.event_name != 'schedule' \}\}/);
 });
 
 test('wallboard visibility uses explicit automatic and manual states', async () => {
