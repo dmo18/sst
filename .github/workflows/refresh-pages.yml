@@ -109,7 +109,7 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 45
     permissions:
       contents: read
       pages: write
@@ -119,10 +119,103 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - id: deployment
+      - name: Clear stale Pages deployment locks
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node --input-type=module <<'NODE'
+          const api = `https://api.github.com/repos/${process.env.GITHUB_REPOSITORY}`;
+          const headers = {
+            accept: 'application/vnd.github+json',
+            authorization: `Bearer ${process.env.GH_TOKEN}`,
+            'x-github-api-version': '2022-11-28'
+          };
+          const active = new Set(['deployment_queued', 'deployment_in_progress']);
+          const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+          const listResponse = await fetch(`${api}/deployments?environment=github-pages&per_page=100`, { headers });
+          if (!listResponse.ok) throw new Error(`Unable to list deployments: HTTP ${listResponse.status} ${await listResponse.text()}`);
+          const deployments = await listResponse.json();
+          const shas = [...new Set(deployments.map(item => item.sha).filter(Boolean))];
+          const cancelled = [];
+
+          for (const sha of shas) {
+            const statusResponse = await fetch(`${api}/pages/deployments/${sha}`, { headers });
+            if (statusResponse.status === 404) continue;
+            if (!statusResponse.ok) throw new Error(`Unable to read Pages deployment ${sha}: HTTP ${statusResponse.status} ${await statusResponse.text()}`);
+            const { status } = await statusResponse.json();
+            if (!active.has(status)) continue;
+
+            const cancelResponse = await fetch(`${api}/pages/deployments/${sha}/cancel`, { method: 'POST', headers });
+            if (!cancelResponse.ok && ![400, 404, 409].includes(cancelResponse.status)) {
+              throw new Error(`Unable to cancel Pages deployment ${sha}: HTTP ${cancelResponse.status} ${await cancelResponse.text()}`);
+            }
+            console.log(`Requested cancellation for stale Pages deployment ${sha} (${status}).`);
+            cancelled.push(sha);
+          }
+
+          const deadline = Date.now() + 120_000;
+          for (const sha of cancelled) {
+            while (Date.now() < deadline) {
+              const response = await fetch(`${api}/pages/deployments/${sha}`, { headers });
+              if (response.status === 404) break;
+              if (!response.ok) throw new Error(`Unable to confirm Pages deployment ${sha}: HTTP ${response.status} ${await response.text()}`);
+              const { status } = await response.json();
+              if (!active.has(status)) {
+                console.log(`Pages deployment ${sha} released its lock with status ${status}.`);
+                break;
+              }
+              await sleep(5_000);
+            }
+          }
+          NODE
+      - id: pages
+        continue-on-error: true
         uses: actions/deploy-pages@v4
         with:
-          timeout: 1800000
+          timeout: 600000
+      - name: Confirm Pages backend publication
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ACTION_OUTCOME: ${{ steps.pages.outcome }}
+        run: |
+          node --input-type=module <<'NODE'
+          const api = `https://api.github.com/repos/${process.env.GITHUB_REPOSITORY}`;
+          const endpoint = `${api}/pages/deployments/${process.env.GITHUB_SHA}`;
+          const headers = {
+            accept: 'application/vnd.github+json',
+            authorization: `Bearer ${process.env.GH_TOKEN}`,
+            'x-github-api-version': '2022-11-28'
+          };
+          const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+          const deadline = Date.now() + 20 * 60_000;
+          let notFoundCount = 0;
+
+          while (Date.now() < deadline) {
+            const response = await fetch(endpoint, { headers });
+            if (response.status === 404) {
+              notFoundCount += 1;
+              if (process.env.ACTION_OUTCOME === 'failure' && notFoundCount >= 6) {
+                throw new Error('deploy-pages failed and no Pages deployment was created for the current commit');
+              }
+              await sleep(10_000);
+              continue;
+            }
+            if (!response.ok) throw new Error(`Unable to read current Pages deployment: HTTP ${response.status} ${await response.text()}`);
+
+            const { status } = await response.json();
+            console.log(`Pages deployment ${process.env.GITHUB_SHA}: ${status}`);
+            if (status === 'succeed') process.exit(0);
+            if (status === 'deployment_failed' || status === 'deployment_cancelled') {
+              throw new Error(`Pages deployment ended with ${status}`);
+            }
+            await sleep(10_000);
+          }
+
+          throw new Error('Pages backend did not finish publishing within the extended wait window');
+          NODE
+      - id: deployment
+        run: echo "page_url=https://dmo18.github.io/sst/" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
@@ -159,6 +252,25 @@ jobs:
           grep -q 'What deserves attention now' /tmp/live-dom.html
           ! grep -q 'Status intelligence unavailable' /tmp/live-dom.html
           ! grep -q 'invalid or unsupported payload' /tmp/live-dom.html
+      - name: Verify deployed 36-hour wallboard alert window
+        env:
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          BROWSER="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
+          test -n "$BROWSER"
+          "$BROWSER" --headless=new --disable-gpu --no-sandbox --disable-dev-shm-usage --user-data-dir="/tmp/wallboard-chrome" --virtual-time-budget=20000 --dump-dom "${PAGE_URL}?alerts=36h&view=wallboard&smoke=${GITHUB_RUN_ID}" > /tmp/wallboard-dom.html
+          grep -q 'Priority signals' /tmp/wallboard-dom.html
+          grep -q 'data-alert-window-ms="129600000"' /tmp/wallboard-dom.html
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+
+          const html = fs.readFileSync('/tmp/wallboard-dom.html', 'utf8');
+          const timestamps = [...html.matchAll(/data-updated-at="([^"]+)"/g)].map(match => Date.parse(match[1]));
+          const cutoff = Date.now() - 36 * 60 * 60 * 1000 - 5 * 60 * 1000;
+          const stale = timestamps.filter(value => !Number.isFinite(value) || value < cutoff);
+          if (stale.length) throw new Error(`Wallboard rendered ${stale.length} incident rows outside the 36-hour window`);
+          console.log(`Verified ${timestamps.length} deployed wallboard incidents inside the 36-hour alert window.`);
+          NODE
       - name: Publish deployed intelligence verification
         env:
           GH_TOKEN: ${{ github.token }}
