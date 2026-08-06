@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, type RefObject } from 'react';
 import { ProviderIcon } from './providerIcon';
 import { relativeAgeAt } from './liveTelemetry';
+import { isAlertWithinWindow } from './wallboardRoute';
 import type { DataLifecycle } from './types';
 import type { ActionItem, IssueConsoleModel } from './statusViewModel';
 
@@ -170,11 +171,13 @@ export function WallboardV2({
   model,
   lifecycle,
   now,
+  alertWindowMs,
   onExit
 }: {
   model: IssueConsoleModel | null;
   lifecycle: DataLifecycle;
   now: number;
+  alertWindowMs: number | null;
   onExit: () => void;
 }): JSX.Element {
   const priorityViewportRef = useRef<HTMLDivElement>(null);
@@ -185,11 +188,11 @@ export function WallboardV2({
   const providerGroupRef = useRef<HTMLDivElement>(null);
 
   const signals = useMemo(() => (model?.actionQueue || [])
-    .filter(item => item.kind === 'incident')
+    .filter(item => item.kind === 'incident' && isAlertWithinWindow(item.updatedAt, now, alertWindowMs))
     .sort((a, b) => {
       const timeDifference = timestamp(b.updatedAt) - timestamp(a.updatedAt);
       return timeDifference || a.provider.localeCompare(b.provider) || a.title.localeCompare(b.title);
-    }), [model?.actionQueue]);
+    }), [alertWindowMs, model?.actionQueue, now]);
 
   const alertProviders = useMemo(() => {
     const seen = new Set<string>();
@@ -245,7 +248,7 @@ export function WallboardV2({
                 <div ref={priorityGroupRef}><SignalRows signals={signals} now={now} /></div>
                 <SignalRows signals={signals} now={now} copy />
               </div>
-            ) : <div className="empty-state"><b>No active vendor incidents</b></div>}
+            ) : <div className="empty-state"><b>{alertWindowMs === null ? 'No active vendor incidents' : 'No vendor incidents in the selected alert window'}</b></div>}
           </div>
         </section>
 
