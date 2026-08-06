@@ -99,6 +99,11 @@
     to { transform: translate3d(0, calc(-1 * var(--wallboard-loop-distance)), 0); }
   }
 
+  @keyframes wallboard-alert-provider-marquee {
+    from { transform: translate3d(0, 0, 0); }
+    to { transform: translate3d(calc(-1 * var(--wallboard-provider-loop-distance)), 0, 0); }
+  }
+
   @media (max-width: 1180px), (max-height: 520px) {
     .wallboard-v2 {
       display: block !important;
@@ -132,21 +137,40 @@
     }
 
     .wallboard-v2 .wallboard-alert-provider-rail {
-      display: flex;
-      align-items: center;
-      gap: 7px;
+      display: block;
       min-width: 0;
-      padding: 5px 10px;
-      overflow-x: auto;
-      overflow-y: hidden;
-      scrollbar-width: none;
+      overflow: hidden;
       border-top: 1px solid var(--border-subtle, rgba(122, 162, 214, 0.18));
       border-bottom: 1px solid var(--border-subtle, rgba(122, 162, 214, 0.18));
       background: rgba(5, 13, 24, 0.9);
     }
 
-    .wallboard-v2 .wallboard-alert-provider-rail::-webkit-scrollbar {
+    .wallboard-v2 .wallboard-alert-provider-track {
+      display: flex;
+      align-items: stretch;
+      width: max-content;
+      min-width: 100%;
+      height: 100%;
+      transform: translate3d(0, 0, 0);
+      will-change: transform;
+    }
+
+    .wallboard-v2 .wallboard-alert-provider-track.is-looping {
+      animation: wallboard-alert-provider-marquee var(--wallboard-provider-loop-duration) linear infinite;
+    }
+
+    .wallboard-v2 .wallboard-alert-provider-track:not(.is-looping) .wallboard-alert-provider-copy {
       display: none;
+    }
+
+    .wallboard-v2 .wallboard-alert-provider-group {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      height: 100%;
+      padding: 5px 7px;
+      box-sizing: border-box;
     }
 
     .wallboard-v2 .wallboard-alert-provider-chip {
@@ -203,9 +227,9 @@
       font-size: 18px;
     }
 
-    .wallboard-v2 .wallboard-alert-provider-rail {
+    .wallboard-v2 .wallboard-alert-provider-group {
       gap: 6px;
-      padding: 5px 8px;
+      padding: 5px 6px;
     }
 
     .wallboard-v2 .wallboard-alert-provider-chip {
@@ -261,11 +285,22 @@
       overflow-y: auto;
     }
 
-    .wallboard-v2 .wallboard-priority-track.is-looping {
+    .wallboard-v2 .wallboard-priority-track.is-looping,
+    .wallboard-v2 .wallboard-alert-provider-track.is-looping {
       animation: none;
     }
 
-    .wallboard-v2 .wallboard-priority-copy {
+    .wallboard-v2 .wallboard-priority-copy,
+    .wallboard-v2 .wallboard-alert-provider-copy {
+      display: none;
+    }
+
+    .wallboard-v2 .wallboard-alert-provider-rail {
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+
+    .wallboard-v2 .wallboard-alert-provider-rail::-webkit-scrollbar {
       display: none;
     }
   }
