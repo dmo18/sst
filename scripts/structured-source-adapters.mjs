@@ -352,6 +352,18 @@ export function parseStatuspageSummary(value, provider = {}, source = {}) {
   if (incidents.length) return { kind: 'issues', incidents, ...extras };
   const indicator = String(json.status?.indicator || '').toLowerCase();
   if (indicator === 'none') return { kind: 'healthy', status: clean(json.status?.description) || `${provider.name || 'Provider'} reports all systems operational`, ...extras };
+  const problemComponents = components.filter(component => !/^(?:operational|available|up|ok|none|good)$/i.test(String(component.status || '')));
+  if (problemComponents.length && indicator && indicator !== 'none') {
+    const status = clean(json.status?.description) || `${provider.name || 'Provider'} reports current component degradation`;
+    const names = uniqueNames(problemComponents.map(component => component.name));
+    return {
+      kind: 'component-state',
+      status,
+      color: /major|critical/i.test(indicator) ? 'red' : 'amber',
+      message: names ? `Current structured component state: ${names}` : 'The official structured source reports current component degradation.',
+      ...extras
+    };
+  }
   if (staleIncidentCount) return { kind: 'limited', message: `${provider.name || 'Provider'} lists ${staleIncidentCount} unresolved incident record${staleIncidentCount === 1 ? '' : 's'} without an official update in the last ${INCIDENT_MAX_AGE_DAYS} days. The records were not presented as current.`, ...extras };
   if (unresolved.length) return { kind: 'healthy', status: `${provider.name || 'Provider'} reports no active US-relevant incidents`, ...extras };
   return null;

@@ -378,6 +378,17 @@ export function publicPageUrl(value) {
 }
 
 export function resolvePublicSource(provider) {
+  if (provider.id === 'kaseya' && publicOverrides.kaseya) {
+    const page = publicOverrides.kaseya;
+    return {
+      ...page,
+      mode: 'feed',
+      url: page.feedCandidates?.[0] || 'https://status.kaseya.com/history.rss',
+      pageUrl: page.url,
+      sourceName: 'Kaseya public status RSS',
+      maxAgeHours: 72
+    };
+  }
   if (publicOverrides[provider.id]) return { ...publicOverrides[provider.id] };
   if (provider.sourceType === 'rss') {
     return { mode: 'feed', url: provider.url, sourceName: `${provider.name} public RSS`, maxAgeHours: provider.maxAgeHours || 168, confirmHealthyFromFeed: true };
@@ -666,19 +677,32 @@ async function parsePublicHtml(provider, source) {
   const requestProvider = { ...provider, url: source.url, sourceType: source.mode };
   const result = await fetchPublicHtml(requestProvider, source);
   const logs = [...(result.logs || [result.log])];
+  let pageBody = result.ok ? result.body : '';
+  let renderedAlready = false;
   if (!result.ok) {
     const feedResult = await tryFeedCandidates(provider, source, '', logs);
     if (feedResult?.source_state === 'available') return feedResult;
-    return providerStatus(provider, source, `Source unavailable: HTTP ${result.status || 'failed'}`, 'blue', false, result.log?.error || result.log?.message, logs, [], [], 'unavailable');
+    if (source.render === true) {
+      const rendered = await renderPublicPage(source);
+      logs.push(rendered.log);
+      if (rendered.ok) {
+        pageBody = rendered.body;
+        renderedAlready = true;
+      } else {
+        return providerStatus(provider, source, `Source unavailable: HTTP ${result.status || 'failed'}`, 'blue', false, rendered.log?.error || result.log?.error || result.log?.message, logs, [], [], 'unavailable');
+      }
+    } else {
+      return providerStatus(provider, source, `Source unavailable: HTTP ${result.status || 'failed'}`, 'blue', false, result.log?.error || result.log?.message, logs, [], [], 'unavailable');
+    }
   }
-  let pageBody = result.body;
   let conclusion = htmlIssueConclusion(provider, source, pageBody);
-  if ((conclusion.kind === 'limited' || (conclusion.kind === 'issue' && isGenericIncidentTitle(conclusion.title))) && source.render === true) {
+  if ((conclusion.kind === 'limited' || (conclusion.kind === 'issue' && isGenericIncidentTitle(conclusion.title))) && source.render === true && !renderedAlready) {
     const rendered = await renderPublicPage(source);
     logs.push(rendered.log);
     if (rendered.ok) {
       pageBody = rendered.body;
       conclusion = htmlIssueConclusion(provider, source, pageBody);
+      renderedAlready = true;
     }
   }
   const fingerprint = schemaFingerprint(pageBody, source.mode);
@@ -686,6 +710,9 @@ async function parsePublicHtml(provider, source) {
   if (feedResult?.incidents?.length) return feedResult;
   const maintenance = structuredMaintenance(provider, source, conclusion);
   const extras = { components: conclusion.components || [], schemaFingerprint: fingerprint };
+  if (conclusion.kind === 'component-state') {
+    return providerStatus(provider, source, conclusion.status || `${provider.name} reports current component degradation`, conclusion.color === 'red' ? 'red' : 'amber', true, conclusion.message || '', logs, [], maintenance, undefined, extras);
+  }
   if (conclusion.kind === 'issues') {
     const incidents = structuredIncidents(provider, source, conclusion);
     if (incidents.length) {
@@ -724,7 +751,8 @@ export async function loadPublicProvider(provider) {
 
 export function reconcileProviderIncidentEvidence(result, now = Date.now()) {
   const incidents = (result?.incidents || []).filter(item => activeIncident(item, now));
-  if (incidents.length || !['major', 'degraded'].includes(result?.service_state)) return { ...result, incidents };
+  const hasCurrentComponentIssue = Array.isArray(result?.component_status) && result.component_status.some(component => !/^(?:operational|available|up|ok|none|good)$/i.test(String(component?.status || '')));
+  if (incidents.length || hasCurrentComponentIssue || !['major', 'degraded'].includes(result?.service_state)) return { ...result, incidents };
   return {
     ...result,
     incidents: [],
