@@ -102,12 +102,12 @@ function toIso(value) {
 
 function boundedUpdates(values) {
   return (Array.isArray(values) ? [...values] : [])
-    .sort((a, b) => Date.parse(b?.updated_at || b?.created_at || b?.display_at || b?.published_at || '') - Date.parse(a?.updated_at || a?.created_at || a?.display_at || a?.published_at || ''))
+    .sort((a, b) => Date.parse(b?.updated_at || b?.created_at || b?.display_at || b?.published_at || b?.datetime || '') - Date.parse(a?.updated_at || a?.created_at || a?.display_at || a?.published_at || a?.datetime || ''))
     .slice(0, 8)
     .map(update => ({
-      status: clean(update?.status || ''),
-      note: clean(update?.body || update?.message || update?.description || ''),
-      at: update?.updated_at || update?.created_at || update?.display_at || update?.published_at || ''
+      status: clean(update?.status || update?.state || ''),
+      note: clean(update?.body || update?.message || update?.description || update?.details || ''),
+      at: update?.updated_at || update?.created_at || update?.display_at || update?.published_at || update?.datetime || ''
     }))
     .filter(update => update.note || update.status || update.at);
 }
@@ -131,7 +131,7 @@ function componentRecords(values) {
 
 function maintenanceState(value) {
   const status = clean(value).toLowerCase();
-  if (/in[_ -]?progress|ongoing|underway|started/.test(status)) return 'in_progress';
+  if (/in[_ -]?progress|ongoing|underway|started|active/.test(status)) return 'in_progress';
   if (/completed|resolved|cancelled|canceled|finished/.test(status)) return 'completed';
   if (/scheduled|planned|upcoming|not[_ -]?started|maintenance/.test(status)) return 'scheduled';
   return 'unknown';
@@ -168,27 +168,24 @@ const statuspageCandidates = {
   '1password': ['https://status.1password.com/api/v2/summary.json', '1Password'],
   duo: ['https://status.duo.com/api/v2/summary.json', 'Duo'],
   jumpcloud: ['https://status.jumpcloud.com/api/v2/summary.json', 'JumpCloud'],
-  auth0: ['https://status.auth0.com/api/v2/summary.json', 'Auth0'],
   lastpass: ['https://status.lastpass.com/api/v2/summary.json', 'LastPass'],
   jamf: ['https://status.jamf.com/api/v2/summary.json', 'Jamf'],
   addigy: ['https://status.addigy.com/api/v2/summary.json', 'Addigy'],
   atera: ['https://status.atera.com/api/v2/summary.json', 'Atera'],
   huntress: ['https://status.huntress.com/api/v2/summary.json', 'Huntress'],
   eset: ['https://status.eset.com/api/v2/summary.json', 'ESET'],
-  mimecast: ['https://status.mimecast.com/api/v2/summary.json', 'Mimecast'],
   barracuda: ['https://status.barracuda.com/api/v2/summary.json', 'Barracuda'],
   knowbe4: ['https://status.knowbe4.com/api/v2/summary.json', 'KnowBe4'],
   sharefile: ['https://status.sharefile.com/api/v2/summary.json', 'ShareFile'],
-  ultradns: ['https://status.ultradns.com/api/v2/summary.json', 'UltraDNS'],
   godaddy: ['https://status.godaddy.com/api/v2/summary.json', 'GoDaddy'],
   linode: ['https://status.linode.com/api/v2/summary.json', 'Linode'],
-  vercel: ['https://status.vercel.com/api/v2/summary.json', 'Vercel'],
+  vercel: ['https://www.vercel-status.com/api/v2/summary.json', 'Vercel'],
   nextiva: ['https://status.nextiva.com/api/v2/summary.json', 'Nextiva'],
   twilio: ['https://status.twilio.com/api/v2/summary.json', 'Twilio'],
   discord: ['https://discordstatus.com/api/v2/summary.json', 'Discord'],
   'elastic-cloud': ['https://status.elastic.co/api/v2/summary.json', 'Elastic Cloud'],
   hubspot: ['https://status.hubspot.com/api/v2/summary.json', 'HubSpot'],
-  notion: ['https://status.notion.so/api/v2/summary.json', 'Notion'],
+  notion: ['https://www.notion-status.com/api/v2/summary.json', 'Notion'],
   asana: ['https://status.asana.com/api/v2/summary.json', 'Asana'],
   'monday-com': ['https://status.monday.com/api/v2/summary.json', 'monday.com'],
   docusign: ['https://status.docusign.com/api/v2/summary.json', 'DocuSign']
@@ -197,6 +194,31 @@ const statuspageCandidates = {
 export const structuredSourceOverrides = Object.fromEntries(
   Object.entries(statuspageCandidates).map(([id, [url, name]]) => [id, statuspageSource(url, name)])
 );
+
+structuredSourceOverrides.auth0 = {
+  mode: 'status-html',
+  url: 'https://status.auth0.com/?environment=Production&region=US',
+  pageUrl: 'https://status.auth0.com/',
+  sourceName: 'Auth0 official public cloud status page',
+  render: true,
+  regionScope: 'us'
+};
+
+structuredSourceOverrides.mimecast = {
+  mode: 'statusio-json',
+  url: 'https://9498199887151372.hostedstatus.com/1.0/status/5d849b1c02e65b3ec45369d4',
+  pageUrl: 'https://status.mimecast.com/',
+  sourceName: 'Mimecast official Status.io JSON',
+  regionScope: 'us'
+};
+
+structuredSourceOverrides.ultradns = {
+  mode: 'statusio-json',
+  url: 'https://1545563159838271.hostedstatus.com/1.0/status/5f80d63ea1c48e04c1dfa100',
+  pageUrl: 'https://status.ultradns.com/',
+  sourceName: 'UltraDNS official Status.io JSON',
+  regionScope: 'us'
+};
 
 structuredSourceOverrides.superops = {
   mode: 'betterstack-json',
@@ -300,6 +322,96 @@ export function parseStatuspageSummary(value, provider = {}, source = {}) {
   if (indicator === 'none') return { kind: 'healthy', status: clean(json.status?.description) || `${provider.name || 'Provider'} reports all systems operational`, ...extras };
   if (staleIncidentCount) return { kind: 'limited', message: `${provider.name || 'Provider'} lists ${staleIncidentCount} unresolved incident record${staleIncidentCount === 1 ? '' : 's'} without an official update in the last ${INCIDENT_MAX_AGE_DAYS} days. The records were not presented as current.`, ...extras };
   if (unresolved.length) return { kind: 'healthy', status: `${provider.name || 'Provider'} reports no active US-relevant incidents`, ...extras };
+  return null;
+}
+
+function statusioComponentRecords(result) {
+  const raw = [];
+  for (const group of Array.isArray(result?.status) ? result.status : []) {
+    const groupName = clean(group?.name || group?.container_name || '');
+    for (const component of Array.isArray(group?.containers) ? group.containers : Array.isArray(group?.components) ? group.components : []) {
+      raw.push({
+        name: component?.name || component?.container_name || component?.id,
+        status: component?.status || component?.status_name || component?.state,
+        group_name: groupName
+      });
+    }
+  }
+  return componentRecords(raw);
+}
+
+function statusioMaintenance(result, source) {
+  const records = [];
+  const groups = [
+    ...(Array.isArray(result?.maintenance?.active) ? result.maintenance.active : []),
+    ...(Array.isArray(result?.maintenance?.upcoming) ? result.maintenance.upcoming : [])
+  ];
+  for (const event of groups) {
+    const title = clean(event?.name || event?.title || 'Scheduled maintenance');
+    const note = clean(event?.details || event?.message || event?.description || 'The provider has scheduled maintenance.').slice(0, 900);
+    if (!title || isEditorial(title, note) || !isUsRelevant(title, note, source.regionScope)) continue;
+    records.push({
+      id: String(event?.id || event?._id || ''),
+      title,
+      note,
+      status: maintenanceState(event?.status || event?.state || (groups === result?.maintenance?.active ? 'active' : 'scheduled')),
+      startsAt: event?.start_time || event?.start || event?.scheduled_for || event?.datetime || '',
+      endsAt: event?.end_time || event?.end || event?.scheduled_until || '',
+      announcedAt: event?.created_at || event?.datetime || '',
+      latestUpdate: event?.updated_at || event?.datetime || event?.created_at || '',
+      affectedService: uniqueNames([...(event?.components || []), ...(event?.containers || [])].map(item => item?.name || item?.container_name || item)),
+      url: source.pageUrl || source.url,
+      updates: boundedUpdates(event?.messages || event?.updates || [])
+    });
+  }
+  return records;
+}
+
+export function parseStatusioJson(value, provider = {}, source = {}) {
+  const json = safeJson(value);
+  const result = json?.result;
+  if (!result || typeof result !== 'object' || !result.status_overall) return null;
+
+  const components = statusioComponentRecords(result)
+    .filter(component => isUsRelevant(component.name, component.group || '', source.regionScope));
+  const maintenance = statusioMaintenance(result, source);
+  const incidents = [];
+
+  for (const incident of Array.isArray(result.incidents) ? result.incidents : []) {
+    const updates = boundedUpdates(incident?.messages || incident?.updates || []);
+    const latest = updates[0] || {};
+    const title = clean(incident?.name || incident?.title);
+    const note = clean(latest.note || incident?.details || incident?.message || incident?.description).slice(0, 900);
+    const status = clean(incident?.status || incident?.state || latest.status || 'active');
+    const affectedService = uniqueNames([...(incident?.components || []), ...(incident?.containers || [])].map(item => item?.name || item?.container_name || item));
+    if (!title || isGenericTitle(title) || isEditorial(title, note) || isPlannedOnly(title, note, status)) continue;
+    if (!isUsRelevant(title, `${note} ${affectedService}`, source.regionScope)) continue;
+    const firstDetected = incident?.started_at || incident?.created_at || incident?.datetime || updates.at(-1)?.at || '';
+    const latestUpdate = incident?.updated_at || latest.at || firstDetected;
+    if (!incidentEvidenceIsCurrent({ title, note, status, firstDetected, latestUpdate }, Date.now(), INCIDENT_MAX_AGE_DAYS, { requireTimestamp: Boolean(firstDetected || latestUpdate) })) continue;
+    incidents.push({
+      id: String(incident?.id || incident?._id || ''),
+      title,
+      note: note || `${status} update from the official status page.`,
+      status,
+      firstDetected,
+      latestUpdate,
+      affectedService,
+      color: colorFor(`${title} ${note} ${status}`),
+      url: source.pageUrl || source.url,
+      updates
+    });
+  }
+
+  const extras = { maintenance, components };
+  if (incidents.length) return { kind: 'issues', incidents, ...extras };
+  const overall = clean(result.status_overall?.status || result.status_overall?.name || result.status_overall?.message);
+  if (/operational|all systems (?:are )?(?:operational|normal)|all services (?:are )?(?:operating normally|operational)/i.test(overall)) {
+    return { kind: 'healthy', status: overall || `${provider.name || 'Provider'} reports all systems operational`, ...extras };
+  }
+  if (/planned maintenance|scheduled maintenance/i.test(overall) && maintenance.length) {
+    return { kind: 'healthy', status: `${provider.name || 'Provider'} reports scheduled maintenance only`, ...extras };
+  }
   return null;
 }
 
@@ -461,6 +573,7 @@ export function parseStatusioPage(value, provider = {}, source = {}) {
 export function structuredSourceConclusion(provider, value, source = {}) {
   const mode = source.mode || structuredSourceOverrides[provider?.id]?.mode || '';
   if (mode === 'statuspage-json') return parseStatuspageSummary(value, provider, { ...structuredSourceOverrides[provider?.id], ...source });
+  if (mode === 'statusio-json') return parseStatusioJson(value, provider, { ...structuredSourceOverrides[provider?.id], ...source });
   if (mode === 'betterstack-json') return parseBetterStackIndex(value, provider, { ...structuredSourceOverrides[provider?.id], ...source });
   if (mode === 'statusio-html') return parseStatusioPage(value, provider, { ...structuredSourceOverrides[provider?.id], ...source });
   return null;
