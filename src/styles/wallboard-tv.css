@@ -10,18 +10,18 @@
 
 @media (max-width: 520px) and (max-height: 360px) {
   .wallboard-v2 .wallboard-priority-v2 {
-    grid-template-rows: 38px 38px minmax(0, 1fr) !important;
+    grid-template-rows: 36px 36px minmax(0, 1fr) !important;
     border-radius: 8px !important;
   }
 
   .wallboard-v2 .wallboard-priority-v2 > h2 {
-    min-height: 38px !important;
+    min-height: 36px !important;
     padding: 0 10px !important;
     gap: 8px !important;
-    font-size: 16px !important;
+    font-size: 17px !important;
     font-weight: 820 !important;
     line-height: 1 !important;
-    letter-spacing: .025em !important;
+    letter-spacing: .02em !important;
     background: rgba(8, 14, 24, .98) !important;
   }
 
@@ -40,18 +40,18 @@
   }
 
   .wallboard-v2 .wallboard-alert-provider-rail {
-    min-height: 38px !important;
+    min-height: 36px !important;
     background: rgba(5, 13, 24, .98) !important;
   }
 
   .wallboard-v2 .wallboard-alert-provider-group {
     gap: 6px !important;
-    padding: 4px 6px !important;
+    padding: 3px 6px !important;
   }
 
   .wallboard-v2 .wallboard-alert-provider-chip {
     height: 30px !important;
-    max-width: 122px !important;
+    max-width: 132px !important;
     gap: 5px !important;
     padding: 3px 7px 3px 3px !important;
     border-color: rgba(143, 177, 222, .28) !important;
@@ -64,8 +64,8 @@
   }
 
   .wallboard-v2 .wallboard-alert-provider-chip b {
-    font-size: 10.5px !important;
-    font-weight: 800 !important;
+    font-size: 11px !important;
+    font-weight: 820 !important;
     line-height: 1 !important;
     letter-spacing: -.01em !important;
   }
@@ -75,10 +75,10 @@
   }
 
   .wallboard-v2 .wallboard-priority-group > article {
-    min-height: 84px !important;
-    grid-template-columns: 34px minmax(0, 1fr) 54px !important;
+    min-height: 90px !important;
+    grid-template-columns: 36px minmax(0, 1fr) 58px !important;
     gap: 8px !important;
-    padding: 7px 8px !important;
+    padding: 8px !important;
     align-items: center !important;
     align-content: center !important;
     border-bottom-color: rgba(143, 177, 222, .18) !important;
@@ -98,23 +98,23 @@
 
   .wallboard-v2 .wallboard-signal-icon,
   .wallboard-v2 .wallboard-signal-icon .provider-icon {
-    width: 32px !important;
-    height: 32px !important;
+    width: 34px !important;
+    height: 34px !important;
   }
 
   .wallboard-v2 .wallboard-priority-group article > div {
     min-width: 0 !important;
     display: grid !important;
     align-content: center !important;
-    gap: 2px !important;
+    gap: 3px !important;
   }
 
   .wallboard-v2 .wallboard-priority-group article b {
     color: var(--blue-bright, #8cc7ff) !important;
-    font-size: 11px !important;
-    font-weight: 800 !important;
+    font-size: 12px !important;
+    font-weight: 820 !important;
     line-height: 1 !important;
-    letter-spacing: .005em !important;
+    letter-spacing: .002em !important;
   }
 
   .wallboard-v2 .wallboard-priority-group article h3 {
@@ -123,9 +123,9 @@
     overflow: hidden !important;
     -webkit-box-orient: vertical !important;
     -webkit-line-clamp: 2 !important;
-    font-size: 15px !important;
-    font-weight: 800 !important;
-    line-height: 1.12 !important;
+    font-size: 16.5px !important;
+    font-weight: 820 !important;
+    line-height: 1.1 !important;
     letter-spacing: -.025em !important;
     text-wrap: balance;
   }
@@ -137,9 +137,9 @@
   .wallboard-v2 .wallboard-priority-group article time {
     align-self: center !important;
     padding: 0 !important;
-    color: #b8c8dc !important;
-    font-size: 10.5px !important;
-    font-weight: 760 !important;
+    color: #c4d3e6 !important;
+    font-size: 11.5px !important;
+    font-weight: 780 !important;
     line-height: 1.05 !important;
     text-align: right !important;
     white-space: nowrap !important;
@@ -151,7 +151,7 @@
     place-items: center !important;
     padding: 18px !important;
     color: var(--text-soft, #dce8f7) !important;
-    font-size: 14px !important;
+    font-size: 15px !important;
     line-height: 1.25 !important;
     text-align: center !important;
   }
