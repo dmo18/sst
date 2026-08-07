@@ -81,6 +81,7 @@ export function App(): JSX.Element {
     const [state, dispatch] = useReducer(dataLifecycleReducer, initialDataLifecycle);
     const [route, setRoute] = useState(() => readWallboardRoute(location.search));
     const [now, setNow] = useState(() => Date.now());
+    const [lastBrowserCheckAt, setLastBrowserCheckAt] = useState<number | null>(null);
     const ownership = useRef(new RequestOwnership());
     const mounted = useRef(true);
 
@@ -93,10 +94,9 @@ export function App(): JSX.Element {
         try {
             const result = await fetchStatus(request.signal);
             if (mounted.current && ownership.current.owns(request, sequence)) {
+                const checkedAt = Date.now();
                 dispatch({ type: 'success', data: result.data });
-                window.dispatchEvent(new CustomEvent('sst:browser-check', {
-                    detail: { checkedAt: Date.now(), generatedAt: result.data.generated_at }
-                }));
+                setLastBrowserCheckAt(checkedAt);
                 if (result.freshnessWarning)
                     dispatch({ type: 'failure', message: result.freshnessWarning });
             }
@@ -156,7 +156,7 @@ export function App(): JSX.Element {
     return (
         <main className="app-frame">
             {route.wallboardMode
-                ? <WallboardV2 model={model} lifecycle={state} now={now} alertWindowMs={route.alertWindowMs} onExit={exitWallboard} />
+                ? <WallboardV2 model={model} lifecycle={state} now={now} browserCheckedAt={lastBrowserCheckAt} alertWindowMs={route.alertWindowMs} onExit={exitWallboard} />
                 : <IssueConsole model={model} lifecycle={state} onRefresh={() => void refresh()} />}
         </main>
     );

@@ -61,7 +61,9 @@ The primary compact deployment target is a Yodeck tile that is 458 pixels wide b
 - Payload age and browser-check age appear inline with the Priority signals heading.
 - The full header and KPI strip are overlays that can auto-hide, remain pinned open, or remain minimized.
 - Header mode is stored in browser local storage.
-- The incident and provider marquees are React-owned. They do not clone or reorder live DOM nodes after render.
+- React owns incident selection, marquee groups, header state, overlay controls, and freshness telemetry.
+- `src/styles/wallboard-v2.css` owns the dedicated wallboard overlay, compact layout, and marquee presentation.
+- There is no secondary imperative wallboard DOM controller.
 
 ### Alert window
 
@@ -103,21 +105,23 @@ npm run build
 npm audit --audit-level=high
 ```
 
-`npm test` uses deterministic fixtures and does not contact vendors. `npm run update-status` performs one live first-party collection. Generated payload files are build outputs and must not be committed.
+`npm test` uses deterministic fixtures and does not contact vendors. `npm run update-status` performs one live first-party collection. Generated payload files are build outputs and must not be committed. `npm run build:app` also generates `public/deploy-version.txt` from the current workflow SHA and run ID before Vite creates the deployment artifact.
 
 ## CI and deployment
 
 - `.github/workflows/test.yml` runs pull-request validation, tests, type checking, the application build, and a high-severity dependency audit.
 - `.github/workflows/refresh-pages.yml` generates the live payload, validates it, builds the site, uploads one Pages artifact, deploys it, and runs production smoke and browser checks after publication.
-- `.github/workflows/status-freshness-watch.yml` checks the deployed payload age and dispatches one refresh when the payload is older than 20 minutes.
+- The release path verifies the deployed commit identity and uses Chrome DevTools device metrics to test the wallboard at an actual 458 by 291 CSS viewport.
+- `.github/workflows/status-freshness-watch.yml` checks the deployed payload age and dispatches one refresh when the payload is older than 20 minutes and no release is active.
 
-Only the deploy job receives Pages and OIDC write permissions. The build job is read-only. A single Pages concurrency group is intended to prevent overlapping releases.
+Only the deploy job receives Pages and OIDC write permissions. The build job is read-only. A single Pages concurrency group prevents overlapping releases.
 
 ## Documentation
 
 - [Current system status](docs/system-status.md)
 - [Repository architecture report](docs/repository-report.md)
 - [Wallboard URL and Yodeck options](docs/wallboard-url-options.md)
+- [Open issues and stabilization register](docs/open-issues.md)
 - [Contribution requirements](CONTRIBUTING.md)
 - [Coding-agent constraints](CLAUDE.md)
 - [Release history](CHANGELOG.md)

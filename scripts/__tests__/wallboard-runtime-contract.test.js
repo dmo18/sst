@@ -36,39 +36,59 @@ test('freshness recovery never dispatches over an active release', async () => {
   assert.match(workflow, /group:\s*status-freshness-watch\s*\n\s*cancel-in-progress:\s*false/);
 });
 
-test('wallboard visibility uses explicit automatic and manual states', async () => {
-  const css = await read('src/styles/wallboard-focus.css');
-  assert.match(css, /\.wallboard-shell\.wallboard-controls-visible\s*>\s*header/);
-  assert.match(css, /\.wallboard-shell\.wallboard-controls-visible\s*>\s*\.wallboard-kpis/);
-  assert.match(css, /\.wallboard-shell\.wallboard-controls-pinned-open\s*>\s*header/);
-  assert.match(css, /\.wallboard-shell\.wallboard-controls-pinned-closed\s*>\s*header/);
+test('wallboard controls and persistence are React-owned', async () => {
+  const source = await read('src/WallboardV2.tsx');
+  const main = await read('src/main.tsx');
+  const css = await read('src/styles/wallboard-v2.css');
+
+  assert.match(source, /const HEADER_MODE_KEY = 'sst-wallboard-header-mode'/);
+  assert.match(source, /type HeaderMode = 'auto' \| 'open' \| 'closed'/);
+  assert.match(source, /localStorage\.setItem\(HEADER_MODE_KEY, mode\)/);
+  assert.match(source, /useWallboardControls/);
+  assert.match(source, /wallboard-overlay-actions/);
+  assert.match(source, /wallboard-overlay-restore/);
+  assert.match(source, /wallboard-controls-visible/);
+  assert.match(source, /wallboard-controls-pinned-open/);
+  assert.match(source, /wallboard-controls-pinned-closed/);
+  assert.doesNotMatch(source, /document\.createElement|appendChild|replaceChildren|MutationObserver/);
+  assert.doesNotMatch(main, /wallboardDomEnhancements|wallboard-focus\.css/);
+
+  assert.match(css, /\.wallboard-v2\.wallboard-controls-visible\s*>\s*header/);
+  assert.match(css, /\.wallboard-v2\.wallboard-controls-visible\s*>\s*\.wallboard-kpis/);
+  assert.match(css, /\.wallboard-v2\.wallboard-controls-pinned-open\s*>\s*header/);
+  assert.match(css, /\.wallboard-v2\.wallboard-controls-pinned-closed\s*>\s*header/);
   assert.doesNotMatch(css, /\.wallboard-shell:hover/);
-  assert.doesNotMatch(css, /data-header-collapsed/);
 });
 
-test('wallboard header and KPI strip have separate fixed geometry', async () => {
-  const css = await read('src/styles/wallboard-focus.css');
+test('wallboard overlay geometry and telemetry live in the dedicated stylesheet', async () => {
+  const source = await read('src/WallboardV2.tsx');
+  const app = await read('src/App.tsx');
+  const main = await read('src/main.tsx');
+  const css = await read('src/styles/wallboard-v2.css');
+
+  assert.match(main, /styles\/wallboard-v2\.css/);
+  assert.doesNotMatch(main, /styles\/wallboard-focus\.css/);
   assert.match(css, /--wallboard-header-height:\s*72px/);
   assert.match(css, /--wallboard-kpi-height:\s*88px/);
   assert.match(css, /top:\s*calc\(var\(--wallboard-overlay-inset\) \+ var\(--wallboard-header-height\) \+ var\(--wallboard-overlay-gap\)\)/);
   assert.match(css, /grid-template-columns:\s*repeat\(5, minmax\(0, 1fr\)\)/);
+  assert.match(css, /\.wallboard-v2 \.wallboard-mini-telemetry/);
+
+  assert.match(source, /className="wallboard-mini-telemetry"/);
+  assert.match(source, /Payload <b>\{compactAgeLabel\(model\?\.generatedAt, now\)\}<\/b>/);
+  assert.match(source, /Browser <b>\{compactAgeLabel\(browserCheckedAt, now\)\}<\/b>/);
+  assert.match(app, /const \[lastBrowserCheckAt, setLastBrowserCheckAt\]/);
+  assert.match(app, /setLastBrowserCheckAt\(checkedAt\)/);
+  assert.match(app, /browserCheckedAt=\{lastBrowserCheckAt\}/);
+  assert.doesNotMatch(app, /sst:browser-check/);
 });
 
-test('freshness telemetry is inline with the priority heading', async () => {
-  const source = await read('src/wallboardDomEnhancements.ts');
-  const css = await read('src/styles/wallboard-focus.css');
-  assert.match(source, /\.wallboard-priority > h2/);
-  assert.match(source, /heading\.appendChild\(telemetry\)/);
-  assert.match(css, /\.wallboard-priority\s*>\s*h2[\s\S]*display:\s*flex/);
-  assert.doesNotMatch(css, /\.wallboard-mini-telemetry[\s\S]*position:\s*fixed/);
-});
-
-test('the remaining wallboard enhancement never mutates signal rows', async () => {
-  const source = await read('src/wallboardDomEnhancements.ts');
-  assert.doesNotMatch(source, /MutationObserver/);
-  assert.doesNotMatch(source, /querySelectorAll[^\n]*article/);
-  assert.doesNotMatch(source, /appendChild\(item\.article\)/);
-  assert.doesNotMatch(source, /\.hidden\s*=/);
+test('legacy wallboard implementation and imperative enhancement files are removed', async () => {
+  await assert.rejects(() => read('src/Wallboard.tsx'), /ENOENT/);
+  await assert.rejects(() => read('src/wallboard.ts'), /ENOENT/);
+  await assert.rejects(() => read('src/wallboardDomEnhancements.ts'), /ENOENT/);
+  await assert.rejects(() => read('src/styles/wallboard-focus.css'), /ENOENT/);
+  await assert.rejects(() => read('src/__tests__/wallboard.test.ts'), /ENOENT/);
 });
 
 test('compact wallboard uses absolute viewport geometry and cannot collapse', async () => {
@@ -154,4 +174,21 @@ test('the 458x291 production probe checks compact geometry, filtering, and marqu
   assert.match(workflow, /node scripts\/verify-yodeck-wallboard\.mjs/);
   assert.doesNotMatch(workflow, /--window-size=458,291/);
   assert.match(workflow, /view=wallboard&alerts=36h&layoutProbe=yodeck/);
+});
+
+test('deployment identity is generated at build time and verified in production', async () => {
+  const packageJson = await read('package.json');
+  const gitignore = await read('.gitignore');
+  const writer = await read('scripts/write-deploy-version.mjs');
+  const smoke = await read('scripts/production-smoke.mjs');
+
+  assert.match(packageJson, /build:app[^\n]*write-deploy-version\.mjs/);
+  assert.match(gitignore, /public\/deploy-version\.txt/);
+  assert.match(writer, /process\.env\.GITHUB_SHA \|\| 'local'/);
+  assert.match(writer, /process\.env\.GITHUB_RUN_ID \|\| 'local'/);
+  assert.match(writer, /deploy-version\.txt/);
+  assert.match(smoke, /deploy-version\.txt/);
+  assert.match(smoke, /deployMetadata\.commit !== process\.env\.GITHUB_SHA/);
+  assert.match(smoke, /deployMetadata\.run_id !== process\.env\.GITHUB_RUN_ID/);
+  await assert.rejects(() => read('public/deploy-version.txt'), /ENOENT/);
 });

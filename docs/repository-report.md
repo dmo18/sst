@@ -18,17 +18,17 @@ Retrieval is bounded by global and per-origin concurrency, timeouts, streamed re
 
 ### Runtime application
 
-- `src/App.tsx`: data lifecycle, payload refresh, route selection, and operator or wallboard rendering.
+- `src/App.tsx`: data lifecycle, payload refresh, browser-check timestamp, route selection, and operator or wallboard rendering.
 - `src/IssueConsole.tsx`: operator workspace.
-- `src/WallboardV2.tsx`: active wallboard implementation.
+- `src/WallboardV2.tsx`: sole active wallboard implementation, including overlay state, freshness telemetry, alert filtering, and marquee ownership.
 - `src/wallboardRoute.ts`: wallboard mode and `alerts` duration parsing.
-- `src/wallboardDomEnhancements.ts`: bounded overlay state and inline freshness telemetry.
 - `src/statusViewModel.ts`: command-center and action-queue model.
 - `src/payloadValidation.ts`: browser payload validation.
 - `src/types.ts`: payload and UI contracts.
-- `src/styles/`: application, mobile, ultra-HD, wallboard overlay, and compact wallboard styles.
+- `src/styles/wallboard-v2.css`: dedicated wallboard overlay, compact geometry, provider rail, incident list, and marquee presentation.
+- `src/styles/command-center.css`: shared application tokens and generic base primitives used by operator and wallboard surfaces.
 
-`src/Wallboard.tsx` remains as legacy code but is not selected by `App.tsx`.
+The legacy `src/Wallboard.tsx`, `src/wallboard.ts`, `src/wallboardDomEnhancements.ts`, `src/styles/wallboard-focus.css`, and the legacy wallboard test have been removed. There is one wallboard implementation and one dedicated wallboard stylesheet.
 
 ### Collection and normalization
 
@@ -48,21 +48,25 @@ Retrieval is bounded by global and per-origin concurrency, timeouts, streamed re
 
 - `scripts/__tests__/`: collector, parser, maintenance, freshness, workflow, visual, and payload tests.
 - `src/__tests__/`: lifecycle, view-model, telemetry, icons, wallboard route, and browser validation tests.
-- `scripts/production-smoke.mjs`: deployed asset and payload verification.
+- `scripts/production-smoke.mjs`: deployed asset, payload, and release-identity verification.
+- `scripts/verify-yodeck-wallboard.mjs`: Chrome DevTools Protocol verification at an exact 458 by 291 CSS viewport, including DOM and screenshot evidence.
+- `scripts/write-deploy-version.mjs`: generated deployment identity from `GITHUB_SHA` and `GITHUB_RUN_ID`.
 - `scripts/validate-browser-payload.mjs`: browser contract validation outside the browser.
 - `scripts/validate-providers.mjs`: catalog and metadata validation.
 
-The current suite contains 139 deterministic tests.
+The deterministic suite includes structural contracts that prevent the removed imperative wallboard controller, split wallboard stylesheet, legacy wallboard component, and checked-in deployment marker from returning.
 
 ### Automation
 
 - `.github/workflows/test.yml`: pull-request validation without live vendor retrieval.
-- `.github/workflows/refresh-pages.yml`: scheduled, push, and manual status generation plus Pages deployment.
-- `.github/workflows/status-freshness-watch.yml`: deployed-payload age check and bounded recovery dispatch.
+- `.github/workflows/refresh-pages.yml`: scheduled, push, and manual status generation plus Pages deployment and post-deploy verification.
+- `.github/workflows/status-freshness-watch.yml`: deployed-payload age check and bounded recovery dispatch that defers while a release is active.
+
+The Pages release path uses one `pages-release` concurrency group with in-progress cancellation disabled. Every release event runs tests, type checking, dependency audit, live collection, payload validation, build, Pages publication, production smoke, normal browser rendering, and exact Yodeck verification.
 
 ## Runtime behavior
 
-The browser requests only static assets and `status.json`. It refreshes the payload once per minute while visible. A payload older than 20 minutes produces a freshness warning. Browser check and payload ages are continuously updated without implying streaming vendor data.
+The browser requests only static assets and `status.json`. It refreshes the payload once per minute while visible. A payload older than 20 minutes produces a freshness warning. Browser check and payload ages are maintained in React state and rendered directly into the wallboard without a DOM enhancement module.
 
 The operator application exposes incidents, provider diagnostics, source reliability, request evidence, maintenance intelligence, timeline history, and cautious communication drafts.
 
@@ -70,16 +74,29 @@ The active wallboard presents newest-first vendor incidents and a provider watch
 
 ## Wallboard ownership contract
 
-React owns incident ordering, provider deduplication, list duplication for seamless loops, and alert-window filtering. CSS owns marquee movement and compact geometry. `wallboardDomEnhancements.ts` may only control overlay visibility and freshness telemetry.
+React owns:
 
-The enhancement module must not:
+- incident filtering and ordering;
+- provider deduplication;
+- duplicate groups for seamless loops;
+- header mode and local-storage persistence;
+- overlay control rendering;
+- payload and browser freshness telemetry;
+- the Yodeck layout-probe state.
 
-- use a MutationObserver;
-- query and replace incident articles;
-- reorder signal rows;
-- hide incident rows;
-- clone live rendered rows;
-- inject competing wallboard styles.
+`wallboard-v2.css` owns wallboard-specific geometry, overlay presentation, compact breakpoints, and marquee animation. Shared application design tokens and generic base wallboard primitives may remain in `command-center.css`.
+
+The runtime must not add a MutationObserver, query and replace rendered signal articles, clone live DOM nodes, inject runtime styles, or load a second wallboard controller.
+
+## Deployment identity
+
+`public/deploy-version.txt` is no longer a checked-in marker. `scripts/write-deploy-version.mjs` generates it during `npm run build:app` with:
+
+- the workflow commit from `GITHUB_SHA`;
+- the workflow run ID from `GITHUB_RUN_ID`;
+- an ISO generation timestamp.
+
+`production-smoke.mjs` retrieves the deployed marker and rejects a release when the deployed commit or run ID differs from the workflow being verified. This separates "artifact built" from "the intended revision is actually live".
 
 ## Security posture
 
@@ -92,6 +109,8 @@ The enhancement module must not:
 - Build permissions are read-only.
 - Pages and OIDC write permissions are restricted to the deploy job.
 
-## Current operational caveat
+## Current operational state
 
-The source tree at main builds and validates successfully, but the latest Pages deploy failed inside `actions/deploy-pages@v4`. The last confirmed production release is commit `9f7702b708ad57597221678751b5cf0f59eaf787`. See [system-status.md](system-status.md) for the current release state and known risks.
+GitHub Actions and Pages recovered from the 2026-08-06 platform incident. Controlled production workflow run `31137204360` successfully deployed commit `428b231f454a9df65687da51b0c4b3aeb6eb2545` and passed the complete build, production smoke, normal headless browser, exact 458 by 291 Yodeck, artifact-upload, and deployment-status path.
+
+The remaining Step 1 evidence is two consecutive successful scheduled releases without freshness-watch interference. The Step 2 architectural cleanup described above is implemented on its isolated branch and must pass PR checks and the same production release gate before it is considered live. See [system-status.md](system-status.md) and [open-issues.md](open-issues.md).

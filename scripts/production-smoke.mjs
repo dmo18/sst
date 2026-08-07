@@ -24,6 +24,28 @@ for (const url of [...scripts, ...styles]) {
   if (!response.ok || body.byteLength === 0) throw new Error(`asset failed: ${url}`);
 }
 
+const deployVersionUrl = new URL('deploy-version.txt', base);
+deployVersionUrl.searchParams.set('smoke', String(cacheBust));
+const deployVersionResponse = await fetch(deployVersionUrl, { redirect: 'follow', cache: 'no-store' });
+const deployVersionText = await deployVersionResponse.text();
+console.log(`DEPLOY_VERSION ${deployVersionResponse.status} ${deployVersionText.trim().replaceAll('\n', ' | ')}`);
+if (!deployVersionResponse.ok) throw new Error(`deploy-version.txt failed with HTTP ${deployVersionResponse.status}`);
+
+const deployMetadata = Object.fromEntries(deployVersionText
+  .trim()
+  .split(/\r?\n/)
+  .map(line => {
+    const separator = line.indexOf(':');
+    return separator > 0 ? [line.slice(0, separator).trim(), line.slice(separator + 1).trim()] : [line.trim(), ''];
+  }));
+
+if (process.env.GITHUB_SHA && deployMetadata.commit !== process.env.GITHUB_SHA)
+  throw new Error(`deployed commit ${deployMetadata.commit || 'missing'} does not match workflow commit ${process.env.GITHUB_SHA}`);
+if (process.env.GITHUB_RUN_ID && deployMetadata.run_id !== process.env.GITHUB_RUN_ID)
+  throw new Error(`deployed run ${deployMetadata.run_id || 'missing'} does not match workflow run ${process.env.GITHUB_RUN_ID}`);
+if (!Number.isFinite(Date.parse(deployMetadata.generated_at || '')))
+  throw new Error('deployed generated_at marker is invalid');
+
 const statusUrl = new URL('status.json', base);
 statusUrl.searchParams.set('smoke', String(cacheBust));
 const statusResponse = await fetch(statusUrl, { redirect: 'follow', cache: 'no-store' });

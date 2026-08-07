@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, type RefObject } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { ProviderIcon } from './providerIcon';
 import { relativeAgeAt } from './liveTelemetry';
 import { isAlertWithinWindow } from './wallboardRoute';
@@ -11,6 +11,11 @@ const PROVIDER_LOOP_SPEED_PX_PER_SECOND = 28;
 const YODECK_WIDTH = 458;
 const YODECK_HEIGHT = 291;
 const LAYOUT_PROBE_ATTEMPTS = 40;
+const HEADER_MODE_KEY = 'sst-wallboard-header-mode';
+const CONTROLS_AUTO_HIDE_MS = 3200;
+const RESTORE_PEEK_MS = 2400;
+
+type HeaderMode = 'auto' | 'open' | 'closed';
 
 function clockLabel(now: number): string {
   return new Intl.DateTimeFormat('en-US', {
@@ -38,6 +43,124 @@ function titleCase(value: string): string {
 function timestamp(value?: string): number {
   const parsed = Date.parse(value || '');
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function compactAgeLabel(value: string | number | null | undefined, now: number): string {
+  const parsed = typeof value === 'number' ? value : Date.parse(value || '');
+  if (!Number.isFinite(parsed) || parsed <= 0) return 'unknown';
+  const seconds = Math.max(0, Math.floor((now - parsed) / 1000));
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m`;
+  return `${Math.floor(minutes / 60)}h`;
+}
+
+function readHeaderMode(): HeaderMode {
+  try {
+    const value = localStorage.getItem(HEADER_MODE_KEY);
+    return value === 'open' || value === 'closed' ? value : 'auto';
+  }
+  catch {
+    return 'auto';
+  }
+}
+
+function persistHeaderMode(mode: HeaderMode): void {
+  try {
+    localStorage.setItem(HEADER_MODE_KEY, mode);
+  }
+  catch {
+    // Storage can be unavailable on locked-down signage browsers. Runtime behavior still works in memory.
+  }
+}
+
+function useWallboardControls(): {
+  headerMode: HeaderMode;
+  controlsVisible: boolean;
+  restoreVisible: boolean;
+  setHeaderMode: (mode: HeaderMode) => void;
+} {
+  const [headerMode, setHeaderModeState] = useState<HeaderMode>(() => readHeaderMode());
+  const [controlsVisible, setControlsVisible] = useState(() => readHeaderMode() === 'open');
+  const [restoreVisible, setRestoreVisible] = useState(false);
+  const controlsTimer = useRef<number | null>(null);
+  const restoreTimer = useRef<number | null>(null);
+
+  const clearControlsTimer = useCallback(() => {
+    if (controlsTimer.current !== null) window.clearTimeout(controlsTimer.current);
+    controlsTimer.current = null;
+  }, []);
+
+  const clearRestoreTimer = useCallback(() => {
+    if (restoreTimer.current !== null) window.clearTimeout(restoreTimer.current);
+    restoreTimer.current = null;
+  }, []);
+
+  const setHeaderMode = useCallback((mode: HeaderMode) => {
+    clearControlsTimer();
+    clearRestoreTimer();
+    persistHeaderMode(mode);
+    setHeaderModeState(mode);
+    setRestoreVisible(false);
+
+    if (mode === 'open') {
+      setControlsVisible(true);
+      return;
+    }
+
+    if (mode === 'closed') {
+      setControlsVisible(false);
+      return;
+    }
+
+    setControlsVisible(true);
+    controlsTimer.current = window.setTimeout(() => {
+      setControlsVisible(false);
+      controlsTimer.current = null;
+    }, CONTROLS_AUTO_HIDE_MS);
+  }, [clearControlsTimer, clearRestoreTimer]);
+
+  const revealControls = useCallback(() => {
+    clearControlsTimer();
+    clearRestoreTimer();
+
+    if (headerMode === 'closed') {
+      setControlsVisible(false);
+      setRestoreVisible(true);
+      restoreTimer.current = window.setTimeout(() => {
+        setRestoreVisible(false);
+        restoreTimer.current = null;
+      }, RESTORE_PEEK_MS);
+      return;
+    }
+
+    setRestoreVisible(false);
+    setControlsVisible(true);
+    if (headerMode === 'auto') {
+      controlsTimer.current = window.setTimeout(() => {
+        setControlsVisible(false);
+        controlsTimer.current = null;
+      }, CONTROLS_AUTO_HIDE_MS);
+    }
+  }, [clearControlsTimer, clearRestoreTimer, headerMode]);
+
+  useEffect(() => {
+    window.addEventListener('pointermove', revealControls, { passive: true });
+    window.addEventListener('pointerdown', revealControls, { passive: true });
+    window.addEventListener('keydown', revealControls);
+    return () => {
+      window.removeEventListener('pointermove', revealControls);
+      window.removeEventListener('pointerdown', revealControls);
+      window.removeEventListener('keydown', revealControls);
+    };
+  }, [revealControls]);
+
+  useEffect(() => () => {
+    clearControlsTimer();
+    clearRestoreTimer();
+  }, [clearControlsTimer, clearRestoreTimer]);
+
+  return { headerMode, controlsVisible, restoreVisible, setHeaderMode };
 }
 
 function usePriorityMarquee(
@@ -303,12 +426,14 @@ export function WallboardV2({
   model,
   lifecycle,
   now,
+  browserCheckedAt,
   alertWindowMs,
   onExit
 }: {
   model: IssueConsoleModel | null;
   lifecycle: DataLifecycle;
   now: number;
+  browserCheckedAt: number | null;
   alertWindowMs: number | null;
   onExit: () => void;
 }): JSX.Element {
@@ -319,6 +444,7 @@ export function WallboardV2({
   const providerViewportRef = useRef<HTMLDivElement>(null);
   const providerTrackRef = useRef<HTMLDivElement>(null);
   const providerGroupRef = useRef<HTMLDivElement>(null);
+  const { headerMode, controlsVisible, restoreVisible, setHeaderMode } = useWallboardControls();
 
   const signals = useMemo(() => (model?.actionQueue || [])
     .filter(item => item.kind === 'incident' && isAlertWithinWindow(item.updatedAt, now, alertWindowMs))
@@ -344,12 +470,31 @@ export function WallboardV2({
     .filter(item => item.attention !== 'informational' || item.sourceHealth !== 'healthy')
     .slice(0, 24), [model?.diagnostics]);
 
+  const shellClassName = [
+    'wallboard-shell',
+    'wallboard-v2',
+    controlsVisible ? 'wallboard-controls-visible' : '',
+    headerMode === 'open' ? 'wallboard-controls-pinned-open' : '',
+    headerMode === 'closed' ? 'wallboard-controls-pinned-closed' : ''
+  ].filter(Boolean).join(' ');
+
   return (
-    <section className="wallboard-shell wallboard-v2" ref={shellRef}>
+    <section className={shellClassName} data-header-mode={headerMode} ref={shellRef}>
       <header>
         <div><span>MSP service operations</span><h1>Enterprise service intelligence</h1></div>
         <div className="wallboard-clock"><strong>{clockLabel(now)}</strong><span>{dateLabel(now)} · ET</span></div>
         <div className="wallboard-connection"><span className={`connection-indicator lifecycle-${lifecycle.phase}`} /><b>{titleCase(lifecycle.phase)}</b><small>{relativeAgeAt(model?.generatedAt, now)}</small></div>
+        <div className="wallboard-overlay-actions">
+          <button
+            type="button"
+            className="wallboard-overlay-action wallboard-overlay-pin"
+            aria-pressed={headerMode === 'open'}
+            onClick={() => setHeaderMode(headerMode === 'open' ? 'auto' : 'open')}
+          >
+            {headerMode === 'open' ? 'Auto hide' : 'Pin open'}
+          </button>
+          <button type="button" className="wallboard-overlay-action" onClick={() => setHeaderMode('closed')}>Minimize</button>
+        </div>
         <button className="ui-button ui-button-secondary" type="button" onClick={onExit}>Exit wallboard</button>
       </header>
 
@@ -366,7 +511,13 @@ export function WallboardV2({
           className="wallboard-priority wallboard-priority-v2"
           data-alert-window-ms={alertWindowMs ?? undefined}
         >
-          <h2><span>Priority signals</span></h2>
+          <h2>
+            <span>Priority signals</span>
+            <span className="wallboard-mini-telemetry" aria-label="Wallboard freshness telemetry">
+              <span>Payload <b>{compactAgeLabel(model?.generatedAt, now)}</b></span>
+              <span>Browser <b>{compactAgeLabel(browserCheckedAt, now)}</b></span>
+            </span>
+          </h2>
           <div
             className="wallboard-alert-provider-rail"
             aria-label="Providers with active alerts"
@@ -396,6 +547,14 @@ export function WallboardV2({
       </main>
 
       <footer><span>{model?.version || 'loading'}</span><span>{model?.collection?.run_id || 'legacy run'}</span><span>First-party public sources · fail closed</span></footer>
+
+      <button
+        type="button"
+        className={`wallboard-overlay-restore${restoreVisible ? ' is-visible' : ''}`}
+        onClick={() => setHeaderMode('auto')}
+      >
+        Show header
+      </button>
     </section>
   );
 }

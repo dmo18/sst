@@ -43,21 +43,21 @@ scripts/update-status.mjs                collection orchestration
 scripts/update-public-status.mjs         official-source collection
 scripts/structured-source-adapters.mjs   structured adapters
 scripts/ensure-valid-status.mjs          server payload validation
-scripts/production-smoke.mjs             deployed production checks
-src/App.tsx                              lifecycle, refresh, and route selection
+scripts/production-smoke.mjs             deployed production and commit-identity checks
+scripts/verify-yodeck-wallboard.mjs      exact 458 by 291 CDP wallboard verification
+scripts/write-deploy-version.mjs         generated release identity
+src/App.tsx                              lifecycle, refresh, route, and browser-check state
 src/IssueConsole.tsx                     operator application
-src/WallboardV2.tsx                      active wallboard
+src/WallboardV2.tsx                      sole wallboard, overlay, telemetry, and marquee owner
 src/wallboardRoute.ts                    view and alert-window parsing
-src/wallboardDomEnhancements.ts          overlay state and freshness telemetry
 src/statusViewModel.ts                   action queue and UI models
 src/payloadValidation.ts                 browser payload validation
-src/styles/wallboard-focus.css           header and KPI overlay
-src/styles/wallboard-v2.css              compact layout and marquees
+src/styles/wallboard-v2.css              dedicated wallboard overlay, compact layout, and marquees
 .github/workflows/refresh-pages.yml       Pages build and deployment
 .github/workflows/status-freshness-watch.yml deployed freshness recovery
 ```
 
-`src/Wallboard.tsx` is legacy code. Do not add new behavior to it. Confirm imports and tests before removing it.
+The legacy `src/Wallboard.tsx`, `src/wallboard.ts`, `src/wallboardDomEnhancements.ts`, and `src/styles/wallboard-focus.css` have been removed. Do not recreate a second wallboard implementation or imperative wallboard controller.
 
 ## Service and source semantics
 
@@ -97,7 +97,7 @@ The active wallboard must preserve these rules:
 - Require no interaction for unattended Yodeck operation.
 - Keep header modes auto, pinned open, and pinned closed.
 
-React owns incident selection, ordering, deduplication, and duplicate loop groups. CSS owns movement. The enhancement module may control only overlay visibility and telemetry.
+React owns incident selection, ordering, deduplication, duplicate loop groups, header state, overlay controls, and freshness telemetry. `wallboard-v2.css` owns wallboard-specific geometry and movement. Shared application tokens and generic base wallboard primitives may remain in `command-center.css`.
 
 Never reintroduce:
 
@@ -106,8 +106,9 @@ Never reintroduce:
 - cloned live DOM rows;
 - hidden rows controlled by a separate script;
 - runtime stylesheet injection;
-- a second wallboard controller loaded from `index.html`;
-- hover-only visibility as the sole header state.
+- a second wallboard controller loaded from `index.html` or `main.tsx`;
+- hover-only visibility as the sole header state;
+- a second dedicated wallboard stylesheet with overlapping ownership.
 
 ## Deployment guardrails
 
@@ -122,7 +123,10 @@ GitHub Pages deployment is a separate failure domain from build and test.
 - If Pages is stuck, inspect the Pages environment and deployment object before changing code.
 - Scheduled freshness recovery must not interrupt an active release.
 - A successful build does not mean the commit is live.
-- A release is complete only after Pages publication, production smoke checks, and headless rendering succeed.
+- A release is complete only after Pages publication, production smoke checks, headless rendering, and the exact Yodeck check succeed.
+- `public/deploy-version.txt` is generated during the build and must not be committed.
+- Production smoke must verify that the deployed commit and run IDs match `GITHUB_SHA` and `GITHUB_RUN_ID`.
+- The exact Yodeck test must use Chrome DevTools device metrics rather than assuming `--window-size` equals the CSS viewport.
 
 ## Commands
 
@@ -137,7 +141,7 @@ npm run build
 npm audit --audit-level=high
 ```
 
-`npm test` must remain deterministic and must not contact live vendors. `npm run update-status` performs one live official-source generation. Generated `status.json` files are build outputs and must not be committed.
+`npm test` must remain deterministic and must not contact live vendors. `npm run update-status` performs one live official-source generation. Generated `status.json` and `deploy-version.txt` files are build outputs and must not be committed.
 
 ## Documentation requirements
 
@@ -147,6 +151,7 @@ Update documentation when behavior changes:
 - `docs/repository-report.md` for architecture.
 - `docs/wallboard-url-options.md` for wallboard routes and viewport behavior.
 - `docs/system-status.md` for current release and operational state.
-- `CHANGELOG.md` for released versions.
+- `docs/open-issues.md` for stabilization and architectural acceptance criteria.
+- `CHANGELOG.md` for released and unreleased changes.
 
 Do not rewrite historical release-scope files as if they described the current runtime.

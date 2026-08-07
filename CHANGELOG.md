@@ -4,6 +4,25 @@ All notable changes to the Service Heads-Up Console are recorded here.
 
 The project uses semantic versioning. Dates are shown in ISO format. The newest released version must match `package.json`.
 
+## Unreleased
+
+### Wallboard and deployment stabilization
+
+- Added rolling wallboard alert windows such as `alerts=36h` and applied the same filtered incident set to the incident list and provider rail.
+- Added continuously looping labeled provider chips and incident rows for unattended compact wallboards.
+- Added exact 458 by 291 Yodeck production verification using Chrome DevTools device metrics instead of relying on browser window-size flags.
+- Serialized Pages releases, disabled in-progress release cancellation, and prevented freshness recovery from dispatching over an active release.
+- Restored full test, TypeScript, dependency-audit, payload, build, production-smoke, browser-render, and Yodeck validation to every release event.
+
+### Architecture cleanup
+
+- Removed the unused legacy `Wallboard` implementation and its obsolete settings, rotation, pagination, and tests.
+- Removed the imperative wallboard DOM enhancement module and moved overlay state, controls, local-storage persistence, and freshness telemetry into React.
+- Consolidated dedicated wallboard overlay, compact, and marquee styling into `wallboard-v2.css`.
+- Replaced the checked-in deployment marker with build-generated commit, workflow-run, and generation metadata.
+- Added production smoke validation that rejects a live deployment when its generated commit or run ID does not match the workflow being verified.
+- Added regression contracts preventing the removed legacy wallboard ownership paths and checked-in deployment marker from returning.
+
 ## [3.3.0] - 2026-08-02
 
 ### Fixed
