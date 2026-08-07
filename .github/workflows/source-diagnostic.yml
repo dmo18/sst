@@ -1,0 +1,129 @@
+name: Source diagnostic
+
+on:
+  push:
+    branches:
+      - agent/source-parity-full-review
+    paths:
+      - .github/workflows/source-diagnostic.yml
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Probe unresolved official status endpoints
+        shell: bash
+        run: |
+          set +e
+
+          hosts=(
+            status.crowdstrike.com
+            status.proofpoint.com
+            status.8x8.com
+            status.intermedia.net
+            status.kaseya.net
+            status.backblaze.com
+            status.lastpass.com
+          )
+
+          echo '=== DNS ==='
+          for host in "${hosts[@]}"; do
+            echo "--- ${host}"
+            dig +short CNAME "${host}"
+            dig +short A "${host}" | head -n 4
+          done
+
+          probe() {
+            url="$1"
+            echo
+            echo "=== ${url} ==="
+            rm -f /tmp/probe-headers /tmp/probe-body
+            curl -L -sS --max-time 12 \
+              -A 'Mozilla/5.0 (compatible; ServiceOpsStatusProbe/1.0)' \
+              -D /tmp/probe-headers \
+              -o /tmp/probe-body \
+              "${url}"
+            rc=$?
+            echo "curl_rc=${rc}"
+            if [ -f /tmp/probe-headers ]; then
+              grep -Ei '^(HTTP/|content-type:|content-length:|server:|location:|x-powered-by:|cf-ray:|via:)' /tmp/probe-headers | tail -n 12
+            fi
+            if [ -f /tmp/probe-body ]; then
+              echo "bytes=$(wc -c < /tmp/probe-body)"
+              echo -n 'prefix='
+              head -c 700 /tmp/probe-body | tr '\n\r\t' '   '
+              echo
+              echo -n 'platform_markers='
+              grep -Eio 'StatusCast|Atlassian Statuspage|statuspage.io|Better Stack|Instatus|incident.io|Status.io|hostedstatus|__NEXT_DATA__|Cloudflare' /tmp/probe-body | sort -u | tr '\n' ' '
+              echo
+              echo -n 'script_src='
+              grep -Eio '<script[^>]+src=["'"'][^"'"']+' /tmp/probe-body | head -n 6 | tr '\n' ' '
+              echo
+            fi
+          }
+
+          urls=(
+            'https://status.crowdstrike.com/'
+            'https://status.crowdstrike.com/summary.json'
+            'https://status.crowdstrike.com/status.json'
+            'https://status.crowdstrike.com/components.json'
+            'https://status.crowdstrike.com/unresolved.json'
+            'https://status.crowdstrike.com/api/v2/summary.json'
+            'https://status.crowdstrike.com/history.rss'
+            'https://status.crowdstrike.com/index.json'
+
+            'https://status.proofpoint.com/'
+            'https://status.proofpoint.com/summary.json'
+            'https://status.proofpoint.com/status.json'
+            'https://status.proofpoint.com/components.json'
+            'https://status.proofpoint.com/unresolved.json'
+            'https://status.proofpoint.com/api/v2/summary.json'
+            'https://status.proofpoint.com/history.rss'
+            'https://status.proofpoint.com/index.json'
+
+            'https://status.8x8.com/'
+            'https://status.8x8.com/summary.json'
+            'https://status.8x8.com/status.json'
+            'https://status.8x8.com/components.json'
+            'https://status.8x8.com/unresolved.json'
+            'https://8x8status.statuscast.com/summary.json'
+            'https://8x8status.statuscast.com/status.json'
+
+            'https://status.intermedia.net/'
+            'https://status.intermedia.net/summary.json'
+            'https://status.intermedia.net/status.json'
+            'https://status.intermedia.net/components.json'
+            'https://status.intermedia.net/unresolved.json'
+            'https://status.intermedia.net/api/v2/summary.json'
+            'https://status.intermedia.net/history.rss'
+            'https://status.intermedia.net/index.json'
+
+            'https://status.kaseya.net/'
+            'https://status.kaseya.net/api/v2/summary.json'
+            'https://status.kaseya.net/api/v2/status.json'
+            'https://status.kaseya.net/history.rss'
+            'https://status.kaseya.net/summary.json'
+            'https://status.kaseya.net/status.json'
+
+            'https://status.backblaze.com/'
+            'https://status.backblaze.com/summary.json'
+            'https://status.backblaze.com/status.json'
+            'https://status.backblaze.com/api/v2/summary.json'
+            'https://status.backblaze.com/index.json'
+            'https://status.backblaze.com/history.rss'
+
+            'https://status.lastpass.com/'
+            'https://status.lastpass.com/history.rss'
+            'https://status.lastpass.com/index.json'
+            'https://status.lastpass.com/summary.json'
+            'https://status.lastpass.com/status.json'
+          )
+
+          for url in "${urls[@]}"; do
+            probe "${url}"
+          done
