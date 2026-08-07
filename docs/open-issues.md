@@ -1,6 +1,6 @@
 # Open issues and stabilization register
 
-Last reviewed: 2026-08-06
+Last reviewed: 2026-08-06 20:56 Eastern Time
 
 This file is the temporary authoritative backlog because GitHub Issues is disabled for this repository. After Issues is enabled in repository settings, each open item below should become a GitHub issue and this file should link to those records.
 
@@ -19,6 +19,8 @@ This file is the temporary authoritative backlog because GitHub Issues is disabl
 - [x] Upload the exact Yodeck DOM and screenshot as release evidence.
 
 ### Completion evidence still required
+
+Recovery validation was re-triggered after GitHub reported Actions and Pages operational and webhook throughput restored on 2026-08-06.
 
 - [ ] One controlled production release completes all build, deploy, smoke, browser, and Yodeck checks.
 - [ ] Two consecutive scheduled releases complete successfully without cancellation or freshness-recovery interference.
