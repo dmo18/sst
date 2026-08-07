@@ -18,6 +18,7 @@ test('wallboard alert windows parse minute, hour, and day durations', () => {
 });
 
 test('browser refresh intervals parse bounded second, minute, and hour durations', () => {
+  assert.equal(DEFAULT_BROWSER_REFRESH_MS, 3 * 60 * 1000);
   assert.equal(parseRefreshIntervalMs('15s'), 15 * 1000);
   assert.equal(parseRefreshIntervalMs('45s'), 45 * 1000);
   assert.equal(parseRefreshIntervalMs('1.5m'), 90 * 1000);
