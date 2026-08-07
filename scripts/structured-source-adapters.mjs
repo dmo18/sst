@@ -246,7 +246,7 @@ structuredSourceOverrides.halopsa = {
 };
 
 structuredSourceOverrides.ringcentral = {
-  mode: 'ringcentral-html',
+  mode: 'status-html',
   url: 'https://status.ringcentral.com/',
   sourceName: 'RingCentral official public status dashboard',
   render: true,
@@ -254,7 +254,7 @@ structuredSourceOverrides.ringcentral = {
 };
 
 structuredSourceOverrides.salesforce = {
-  mode: 'salesforce-html',
+  mode: 'status-html',
   url: 'https://status.salesforce.com/current',
   sourceName: 'Salesforce Trust public status page',
   render: true,
@@ -262,7 +262,7 @@ structuredSourceOverrides.salesforce = {
 };
 
 structuredSourceOverrides.backblaze = {
-  mode: 'backblaze-html',
+  mode: 'status-html',
   url: 'https://status.backblaze.com/',
   sourceName: 'Backblaze official public status page',
   render: true,
@@ -450,18 +450,20 @@ export function parseStatusioJson(value, provider = {}, source = {}) {
 export function parseRingCentralPage(value, provider = {}) {
   const text = clean(value);
   if (!text) return null;
-  if (/No issues are being reported/i.test(text)) return { kind: 'healthy', status: 'RingCentral reports no issues', maintenance: [], components: [] };
   const active = /A portion of customers may be experiencing[\s\S]{0,1200}/i.exec(text);
-  if (!active) return null;
-  return {
-    kind: 'issue',
-    title: 'RingCentral customer-impacting service issue',
-    note: clean(active[0]).slice(0, 900),
-    status: 'active',
-    color: colorFor(active[0]),
-    affectedService: 'RingCentral services',
-    url: 'https://status.ringcentral.com/'
-  };
+  if (active) {
+    return {
+      kind: 'issue',
+      title: 'RingCentral customer-impacting service issue',
+      note: clean(active[0]).slice(0, 900),
+      status: 'active',
+      color: colorFor(active[0]),
+      affectedService: 'RingCentral services',
+      url: 'https://status.ringcentral.com/'
+    };
+  }
+  if (/No issues are being reported/i.test(text)) return { kind: 'healthy', status: 'RingCentral reports no issues', maintenance: [], components: [] };
+  return null;
 }
 
 export function parseSalesforcePage(value, provider = {}) {
@@ -490,6 +492,22 @@ export function parseSalesforcePage(value, provider = {}) {
     if (incidents.length >= 12) break;
   }
   if (incidents.length) return { kind: 'issues', incidents, maintenance: [], components: [] };
+
+  const fallback = /(Feature Degradation|Performance Degradation|Service Degradation|Feature Disruption|Service Disruption|Partial Outage|Major Outage|Service Outage)\s+([\s\S]{1,500}?)\s+Ongoing\b/i.exec(current);
+  if (fallback) {
+    const subject = clean(fallback[1]);
+    const details = clean(fallback[2]);
+    return {
+      kind: 'issue',
+      title: `${subject}: ${details || 'Salesforce service impact'}`.slice(0, 220),
+      note: details || `${provider.name || 'Salesforce'} reports an ongoing ${subject.toLowerCase()}.`,
+      status: 'ongoing',
+      affectedService: details,
+      color: /major outage|service outage/i.test(subject) ? 'red' : 'amber',
+      url: 'https://status.salesforce.com/current'
+    };
+  }
+
   if (/ID\s+Subject\s+Instances\s+Services\s+Status/i.test(current)) return { kind: 'healthy', status: 'Salesforce reports no active service-impacting incident', maintenance: [], components: [] };
   return null;
 }
@@ -727,13 +745,13 @@ export function parseStatusioPage(value, provider = {}, source = {}) {
 
 export function structuredSourceConclusion(provider, value, source = {}) {
   const mode = source.mode || structuredSourceOverrides[provider?.id]?.mode || '';
+  if (provider?.id === 'ringcentral') return parseRingCentralPage(value, provider, { ...structuredSourceOverrides[provider?.id], ...source });
+  if (provider?.id === 'salesforce') return parseSalesforcePage(value, provider, { ...structuredSourceOverrides[provider?.id], ...source });
+  if (provider?.id === 'backblaze') return parseBackblazePage(value, provider, { ...structuredSourceOverrides[provider?.id], ...source });
   if (mode === 'statuspage-json') return parseStatuspageSummary(value, provider, { ...structuredSourceOverrides[provider?.id], ...source });
   if (mode === 'statusio-json') return parseStatusioJson(value, provider, { ...structuredSourceOverrides[provider?.id], ...source });
   if (mode === 'betterstack-json') return parseBetterStackIndex(value, provider, { ...structuredSourceOverrides[provider?.id], ...source });
   if (mode === 'statusio-html') return parseStatusioPage(value, provider, { ...structuredSourceOverrides[provider?.id], ...source });
-  if (mode === 'ringcentral-html') return parseRingCentralPage(value, provider, { ...structuredSourceOverrides[provider?.id], ...source });
-  if (mode === 'salesforce-html') return parseSalesforcePage(value, provider, { ...structuredSourceOverrides[provider?.id], ...source });
-  if (mode === 'backblaze-html') return parseBackblazePage(value, provider, { ...structuredSourceOverrides[provider?.id], ...source });
   if (mode === 'vultr-json') return parseVultrStatus(value, provider, { ...structuredSourceOverrides[provider?.id], ...source });
   return null;
 }
