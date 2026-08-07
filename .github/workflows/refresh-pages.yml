@@ -166,15 +166,9 @@ jobs:
         run: |
           BROWSER="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
           test -n "$BROWSER"
+          export BROWSER
           WALLBOARD_URL="${PAGE_URL%/}/?view=wallboard&alerts=36h&layoutProbe=yodeck&smoke=${GITHUB_RUN_ID}"
-          "$BROWSER" --headless=new --disable-gpu --no-sandbox --disable-dev-shm-usage --hide-scrollbars --force-device-scale-factor=1 --window-size=458,291 --user-data-dir=/tmp/yodeck-dom-profile --virtual-time-budget=20000 --dump-dom "$WALLBOARD_URL" > /tmp/yodeck-wallboard.html
-          grep -Eo 'data-layout-probe(-detail)?="[^"]*"' /tmp/yodeck-wallboard.html || true
-          grep -q 'data-layout-probe="pass"' /tmp/yodeck-wallboard.html
-          grep -qi 'Priority signals' /tmp/yodeck-wallboard.html
-          grep -q 'data-alert-window-ms="129600000"' /tmp/yodeck-wallboard.html
-          ! grep -q 'Status intelligence unavailable' /tmp/yodeck-wallboard.html
-          "$BROWSER" --headless=new --disable-gpu --no-sandbox --disable-dev-shm-usage --hide-scrollbars --force-device-scale-factor=1 --window-size=458,291 --user-data-dir=/tmp/yodeck-shot-profile --virtual-time-budget=20000 --screenshot=/tmp/yodeck-wallboard.png "$WALLBOARD_URL"
-          test "$(stat -c%s /tmp/yodeck-wallboard.png)" -gt 3000
+          node scripts/verify-yodeck-wallboard.mjs "$WALLBOARD_URL" /tmp/yodeck-wallboard.html /tmp/yodeck-wallboard.png
       - name: Upload Yodeck verification artifacts
         if: always()
         uses: actions/upload-artifact@v4

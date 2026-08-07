@@ -22,9 +22,9 @@ test('Pages deployment is serialized, fully validated, and bounded', async () =>
   assert.match(workflow, /name:\s*Audit production dependencies[\s\S]*run:\s*npm audit --audit-level=high/);
   assert.match(workflow, /uses:\s*actions\/deploy-pages@v4\s*\n\s*with:\s*\n\s*timeout:\s*600000/);
   assert.match(workflow, /name:\s*Verify 458x291 Yodeck wallboard contract/);
-  assert.match(workflow, /--window-size=458,291/);
+  assert.match(workflow, /node scripts\/verify-yodeck-wallboard\.mjs/);
+  assert.doesNotMatch(workflow, /--window-size=458,291/);
   assert.match(workflow, /view=wallboard&alerts=36h&layoutProbe=yodeck/);
-  assert.match(workflow, /data-layout-probe="pass"/);
 });
 
 test('freshness recovery never dispatches over an active release', async () => {
@@ -128,6 +128,7 @@ test('compact wallboard continuously loops labeled alert provider chips whenever
 test('the 458x291 production probe checks compact geometry, filtering, and marquee state', async () => {
   const source = await read('src/WallboardV2.tsx');
   const workflow = await read('.github/workflows/refresh-pages.yml');
+  const verifier = await read('scripts/verify-yodeck-wallboard.mjs');
 
   assert.match(source, /const YODECK_WIDTH = 458/);
   assert.match(source, /const YODECK_HEIGHT = 291/);
@@ -140,7 +141,17 @@ test('the 458x291 production probe checks compact geometry, filtering, and marqu
   assert.match(source, /priority-marquee-not-running/);
   assert.match(source, /provider-marquee-not-running/);
   assert.match(source, /shell\.dataset\.layoutProbe = reasons\.length \? 'fail' : 'pass'/);
-  assert.match(workflow, /--window-size=458,291/);
-  assert.match(workflow, /data-layout-probe="pass"/);
-  assert.match(workflow, /data-alert-window-ms="129600000"/);
+
+  assert.match(verifier, /const WIDTH = 458/);
+  assert.match(verifier, /const HEIGHT = 291/);
+  assert.match(verifier, /Emulation\.setDeviceMetricsOverride/);
+  assert.match(verifier, /viewport\.width !== WIDTH \|\| viewport\.height !== HEIGHT/);
+  assert.match(verifier, /YODECK_LAYOUT_PROBE/);
+  assert.match(verifier, /probe\.state !== 'pass'/);
+  assert.match(verifier, /alertWindowMs !== '129600000'/);
+  assert.match(verifier, /Page\.captureScreenshot/);
+
+  assert.match(workflow, /node scripts\/verify-yodeck-wallboard\.mjs/);
+  assert.doesNotMatch(workflow, /--window-size=458,291/);
+  assert.match(workflow, /view=wallboard&alerts=36h&layoutProbe=yodeck/);
 });
