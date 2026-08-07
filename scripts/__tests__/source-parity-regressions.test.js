@@ -47,3 +47,10 @@ test('explicit current Statuspage health wins over stale unresolved history', ()
   assert.equal(result.kind, 'healthy');
   assert.equal(result.status, 'All Systems Operational');
 });
+
+test('browser maintenance filtering reconciles the summary it exposes', () => {
+  const app = fs.readFileSync(path.join(root, 'src', 'App.tsx'), 'utf8');
+
+  assert.match(app, /maintenance_count:\s*emergencyMaintenance\.length/);
+  assert.match(app, /ongoing_maintenance_count:\s*emergencyMaintenance\.filter\(item => item\.status === 'in_progress'\)\.length/);
+});
