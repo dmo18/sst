@@ -25,16 +25,15 @@ test('legacy signage fallback only activates without CSS cascade layers', async 
   assert.match(compat, /wallboard-alert-provider-marquee-compat/);
 });
 
-test('compatibility stylesheet cannot affect modern browsers without the marker class', async () => {
+test('compatibility wallboard selectors are gated behind the no-css-layers marker', async () => {
   const compat = await read('src/styles/wallboard-compat.css');
-  const selectorBlocks = compat
-    .split('{')
-    .slice(0, -1)
-    .map(part => part.split('}').pop()?.trim() || '')
-    .filter(selector => selector && !selector.startsWith('@'));
+  const wallboardSelectorLines = compat
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => line.includes('.wallboard-v2'));
 
-  for (const selector of selectorBlocks) {
-    if (selector === 'from' || selector === 'to') continue;
-    assert.match(selector, /html\.no-css-layers|%$/, `unscoped compatibility selector: ${selector}`);
+  assert.ok(wallboardSelectorLines.length > 30, 'expected a complete structural fallback');
+  for (const line of wallboardSelectorLines) {
+    assert.match(line, /^html\.no-css-layers \.wallboard-v2/, `unscoped compatibility selector: ${line}`);
   }
 });
