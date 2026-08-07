@@ -4,8 +4,8 @@ import { fileURLToPath } from 'node:url';
 const root = fileURLToPath(new URL('..', import.meta.url));
 const catalogPath = path.join(root, 'config', 'providers.json');
 const consolidationPath = path.join(root, 'config', 'provider-consolidation.json');
-const expectedRawProviderCount = 79;
-const expectedActiveProviderCount = 78;
+const expectedRawProviderCount = 80;
+const expectedActiveProviderCount = 79;
 const allowedSourceTypes = new Set([
     'statuspage',
     'rss',
@@ -124,6 +124,20 @@ if (activeIds.has('datto')) errors.push('Datto must be absorbed into Kaseya, not
 const kaseya = activeCatalog.find(provider => provider.id === 'kaseya');
 if (!kaseya || !Array.isArray(kaseya.services) || !kaseya.services.includes('Autotask PSA')) {
     errors.push('Kaseya must include Autotask PSA in its consolidated services.');
+}
+const github = activeCatalog.find(provider => provider.id === 'github');
+if (!github) {
+    errors.push('GitHub must be present in the active provider catalog.');
+}
+else {
+    if (github.url !== 'https://www.githubstatus.com/api/v2/summary.json')
+        errors.push('GitHub must use the official GitHub Status summary API.');
+    if (github.sourceType !== 'statuspage')
+        errors.push('GitHub must use the structured Statuspage adapter.');
+    if (github.criticality !== 'high' || (github.priority || 0) < 85)
+        errors.push('GitHub must remain a high-criticality provider.');
+    if (!Array.isArray(github.services) || !github.services.includes('Actions') || !github.services.includes('GitHub Pages'))
+        errors.push('GitHub must explicitly monitor Actions and GitHub Pages.');
 }
 for (const [url, providers] of sharedUrls)
     if (providers.length > 1)

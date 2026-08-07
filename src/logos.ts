@@ -11,6 +11,10 @@ const brandedLogoFiles: Record<string, string> = {
   zoom: 'zoom.svg'
 };
 
+const generatedLabels: Record<string, string> = {
+  github: 'GH'
+};
+
 function initials(name: string): string {
   const words = name
     .replace(/[^a-zA-Z0-9 ]+/g, ' ')
@@ -34,7 +38,7 @@ function assetBaseUrl(): string {
 }
 
 export function generatedProviderIcon(providerId: string, providerName: string): string {
-  const label = initials(providerName || providerId);
+  const label = generatedLabels[providerId] ?? initials(providerName || providerId);
   const hue = hueFor(providerId || providerName);
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img"><rect width="64" height="64" rx="14" fill="hsl(${hue} 62% 34%)"/><rect x="2" y="2" width="60" height="60" rx="12" fill="none" stroke="hsl(${hue} 72% 72%)" stroke-width="2"/><text x="32" y="39" text-anchor="middle" font-family="system-ui, sans-serif" font-size="22" font-weight="750" fill="white">${label}</text></svg>`;
   return `data:image/svg+xml,${encodeURIComponent(svg)}`;

@@ -27,6 +27,11 @@ test('multi-word provider names use readable initials', () => {
   assert.match(icon, />GW<\/text>/);
 });
 
+test('GitHub uses an immediately recognizable GH label', () => {
+  const icon = decodeURIComponent(generatedProviderIcon('github', 'GitHub'));
+  assert.match(icon, />GH<\/text>/);
+});
+
 test('icon fallback is always a local generated data URL', () => {
   assert.equal(providerIconFallback('microsoft365', 'Microsoft 365'), generatedProviderIcon('microsoft365', 'Microsoft 365'));
 });
