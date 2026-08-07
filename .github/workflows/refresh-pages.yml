@@ -18,6 +18,7 @@ jobs:
     timeout-minutes: 20
     outputs:
       status_description: ${{ steps.verify-status.outputs.description }}
+      status_state: ${{ steps.verify-status.outputs.state }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -31,7 +32,7 @@ jobs:
       - name: Run TypeScript checking
         run: npm run typecheck
       - name: Audit production dependencies
-        run: npm audit --audit-level=high
+        run: npm audit --omit=dev --audit-level=high
       - name: Retrieve prior snapshot (optional)
         run: curl --fail --silent --show-error --max-time 10 https://dmo18.github.io/sst/status.json -o public/previous-status.json || true
       - run: npm run update-status
@@ -94,11 +95,12 @@ jobs:
           if (collection.request_count !== collection.successful_request_count + collection.failed_request_count) throw new Error('collection request total is inconsistent');
           if (collection.quality_score !== calculatedQuality || calculatedQuality < 0 || calculatedQuality > 100) throw new Error(`collection quality does not reconcile to ${calculatedQuality}`);
           if (!Number.isFinite(collection.origin_count) || collection.origin_count <= 0) throw new Error('collection origin_count is invalid');
-          if (!Number.isFinite(collection.duration_ms) || collection.duration_ms < 0) throw new Error('collection duration is invalid');
+          if (!Number.isFinite(collection.duration_ms) || collection.duration_ms < 0) throw new Error('collection duration_ms is invalid');
 
           const description = `${liveSourceCount}/${total} live (${coverage}%); quality ${collection.quality_score}; ${collection.blind_spot_count} blind`;
-          fs.appendFileSync(process.env.GITHUB_OUTPUT, `description=${description}\n`);
-          console.log(`V3 deployment contract passed: ${description}; ${collection.origin_count} origins; ${collection.request_count} requests; p95 ${collection.p95_request_ms}ms.`);
+          const state = liveSourceCount === total && calculatedBlind === 0 && fallbackCount === 0 ? 'success' : 'failure';
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `description=${description}\nstate=${state}\n`);
+          console.log(`V3 deployment contract passed: ${description}; source status ${state}; ${collection.origin_count} origins; ${collection.request_count} requests; p95 ${collection.p95_request_ms}ms.`);
           NODE
       - run: npm run build:app
       - uses: actions/configure-pages@v5
@@ -183,6 +185,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           STATUS_DESCRIPTION: ${{ needs.build.outputs.status_description }}
+          STATUS_STATE: ${{ needs.build.outputs.status_state }}
           PAGE_URL: ${{ steps.deployment.outputs.page_url }}
         run: |
           node --input-type=module <<'NODE'
@@ -196,12 +199,12 @@ jobs:
               'x-github-api-version': '2022-11-28'
             },
             body: JSON.stringify({
-              state: 'success',
+              state: process.env.STATUS_STATE,
               context: 'status-data/live-coverage',
               description: process.env.STATUS_DESCRIPTION,
               target_url: `${process.env.PAGE_URL.replace(/\/?$/, '/')}status.json`
             })
           });
           if (!response.ok) throw new Error(`Status publication failed: HTTP ${response.status} ${await response.text()}`);
-          console.log(`Published status-data/live-coverage: ${process.env.STATUS_DESCRIPTION}`);
+          console.log(`Published status-data/live-coverage as ${process.env.STATUS_STATE}: ${process.env.STATUS_DESCRIPTION}`);
           NODE
