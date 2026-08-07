@@ -18,5 +18,9 @@ jobs:
       - run: npm test
       - run: npm run typecheck
       - run: npm run build:app
+      - name: Report dependency patch metadata
+        run: |
+          npm view nanoid@3.3.17 version dist.tarball dist.integrity
+          npm view postcss@8.5.23 version dist.tarball dist.integrity
       - name: Audit production dependencies
         run: npm audit --omit=dev --audit-level=high
