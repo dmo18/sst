@@ -68,15 +68,17 @@ The primary compact deployment target is a Yodeck tile that is 458 pixels wide b
 
 - Priority incidents are sorted by latest vendor update, newest first.
 - Provider icons replace numeric row indexes.
-- A persistent provider-chip rail identifies every provider represented by the visible incident set.
+- Active provider icons and provider names share the compact top rail.
 - The provider rail loops horizontally when it overflows.
 - The incident list loops vertically and continuously when it overflows.
 - Routine maintenance and collector-health failures are excluded from Priority signals.
-- Payload age and browser-check age appear inline with the Priority signals heading.
+- Payload age and browser-check age remain fixed at the right side of the compact top rail.
+- Incident rows retain provider name, update age, title, and complete vendor detail text.
 - The full header and KPI strip are overlays that can auto-hide, remain pinned open, or remain minimized.
 - Header mode is stored in browser local storage.
 - React owns incident selection, marquee groups, header state, overlay controls, and freshness telemetry.
 - `src/styles/wallboard-v2.css` owns the dedicated wallboard overlay, compact layout, and marquee presentation.
+- `src/styles/wallboard-tv.css` applies the 458 by 291 TV-specific readability tuning without changing the incident data model.
 - There is no secondary imperative wallboard DOM controller.
 
 ### Alert window
@@ -89,7 +91,21 @@ Use the `alerts` parameter to limit wallboard incidents by their latest vendor u
 ?view=wallboard&alerts=2d
 ```
 
-The accepted range is one minute through 30 days. The same filtered incident set drives the vertical incident list and the horizontal provider rail. See [docs/wallboard-url-options.md](docs/wallboard-url-options.md).
+The accepted range is one minute through 30 days. The same filtered incident set drives the vertical incident list and the horizontal provider rail.
+
+### Browser refresh interval
+
+Use the `refresh` parameter to control how often wallboard mode fetches and validates the deployed `status.json` payload while the page is visible:
+
+```text
+?view=wallboard&alerts=24h&refresh=30s
+?view=wallboard&alerts=24h&refresh=1m
+?view=wallboard&alerts=24h&refresh=5m
+```
+
+The accepted range is 15 seconds through one hour using `s`, `m`, or `h`. Missing or invalid values use the existing one-minute default. This controls the in-app browser payload check only. It does not change GitHub Actions collection cadence and it is separate from Yodeck's optional full-page Refresh Interval setting.
+
+See [docs/wallboard-url-options.md](docs/wallboard-url-options.md) or the [deployed online help](https://dmo18.github.io/sst/help.html).
 
 ## Data trust and security
 
@@ -132,6 +148,7 @@ Only the deploy job receives Pages and OIDC write permissions. The build job is 
 
 ## Documentation
 
+- [Deployed online help](https://dmo18.github.io/sst/help.html)
 - [Current system status](docs/system-status.md)
 - [Repository architecture report](docs/repository-report.md)
 - [Wallboard URL and Yodeck options](docs/wallboard-url-options.md)

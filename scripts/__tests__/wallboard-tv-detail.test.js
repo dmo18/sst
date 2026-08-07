@@ -20,6 +20,7 @@ test('458x291 TV mode preserves complete incident detail with readable spacing',
   assert.match(css, /@media \(max-width: 520px\) and \(max-height: 360px\)/);
   assert.match(css, /grid-template-rows:\s*40px minmax\(0, 1fr\)/);
   assert.match(css, /grid-template-columns:\s*28px minmax\(0, 1fr\)/);
+  assert.match(css, /wallboard-priority-group > article\s*\{[\s\S]*gap:\s*11px/);
   assert.match(css, /wallboard-priority-group > article\s*\{[\s\S]*min-height:\s*118px/);
   assert.match(css, /wallboard-priority-group > article\s*\{[\s\S]*padding:\s*10px 9px 12px/);
   assert.match(css, /wallboard-priority-group > article\s*\{[\s\S]*border-bottom:\s*4px solid/);

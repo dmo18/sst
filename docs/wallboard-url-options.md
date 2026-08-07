@@ -2,6 +2,12 @@
 
 Wallboard mode is configured through URL query parameters so a non-interactive display can be configured once and left running.
 
+The deployed online help is available at:
+
+```text
+https://dmo18.github.io/sst/help.html
+```
+
 ## Base URL
 
 ```text
@@ -35,6 +41,32 @@ Rules:
 
 The filter uses the action item's latest update timestamp. It does not use the incident's first detection time.
 
+## Browser refresh interval
+
+Use `refresh=NUMBERs`, `refresh=NUMBERm`, or `refresh=NUMBERh` to control how often wallboard mode fetches and validates the deployed `status.json` payload while the page is visible.
+
+Examples:
+
+```text
+?view=wallboard&alerts=24h&refresh=30s
+?view=wallboard&alerts=24h&refresh=1m
+?view=wallboard&alerts=24h&refresh=5m
+?view=wallboard&alerts=24h&refresh=1h
+```
+
+Rules:
+
+- Minimum: 15 seconds.
+- Maximum: one hour.
+- Decimal values are accepted when the resulting duration remains in range.
+- Missing or invalid values fall back to one minute.
+- The interval only applies while wallboard mode is active.
+- Hidden browser tabs do not perform the scheduled payload check until the page is visible again.
+- Changing the URL option changes the in-app browser payload polling cadence, not GitHub Actions collection cadence.
+- Yodeck's own full-page Refresh Interval is separate and is not required for this option.
+
+The compact telemetry label `Browser` is the age since the most recent successful browser payload check. It is not the configured interval itself. For example, with `refresh=1m`, `Browser 25s` means the current browser successfully checked the payload 25 seconds ago and will make the next scheduled check on its one-minute cadence.
+
 ## Primary Yodeck viewport
 
 The primary compact deployment target is:
@@ -49,12 +81,13 @@ At that size the wallboard enters compact mode:
 - Provider Watch is hidden.
 - The footer is hidden.
 - Priority signals fills the tile.
-- The title row is compact.
-- Payload age and browser-check age remain inline in the title row.
-- A fixed provider-chip rail sits below the title.
+- The visible Priority signals text label is replaced by the active-provider rail.
+- Provider icons and provider names share that top rail.
+- Payload age and browser-check age remain fixed at the right side of the top rail.
 - The provider rail loops horizontally when its content exceeds the available width.
 - The incident list loops vertically when its content exceeds the available height.
-- Incident details remain present.
+- Incident rows retain provider icon, provider name, update age, title, and complete vendor detail text.
+- Compact TV spacing is tuned separately in `src/styles/wallboard-tv.css` while React keeps ownership of the incident data and marquee state.
 - The page requires no pointer, keyboard, or touch interaction during normal operation.
 
 ## Header and KPI overlay
@@ -110,7 +143,7 @@ The fallback restores:
 
 - fixed full-viewport wallboard geometry;
 - compact 458 by 291 layout behavior;
-- Priority signals heading and telemetry;
+- Priority signals structure and telemetry;
 - provider-chip rail;
 - incident row grid;
 - provider and incident marquees;
@@ -135,16 +168,16 @@ Do not add Yodeck-side scripts, DOM manipulation, alternate status endpoints, or
 
 ## Recommended Yodeck URLs
 
-For a 24-hour operational window:
+For a 24-hour operational window with the default one-minute browser check made explicit:
 
 ```text
-https://dmo18.github.io/sst/?view=wallboard&alerts=24h
+https://dmo18.github.io/sst/?view=wallboard&alerts=24h&refresh=1m
 ```
 
-For a 36-hour operational window:
+For a 36-hour operational window with a 30-second browser check:
 
 ```text
-https://dmo18.github.io/sst/?view=wallboard&alerts=36h
+https://dmo18.github.io/sst/?view=wallboard&alerts=36h&refresh=30s
 ```
 
-The automated production contract uses the 36-hour form together with `layoutProbe=yodeck` for exact 458 by 291 verification. The `layoutProbe` parameter is for automated verification and is not required for normal signage use.
+The automated production contract uses the 36-hour alert-window form together with `layoutProbe=yodeck` for exact 458 by 291 verification. The `layoutProbe` parameter is for automated verification and is not required for normal signage use.

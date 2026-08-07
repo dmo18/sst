@@ -8,7 +8,7 @@ import { WallboardV2 } from './WallboardV2';
 import { buildIssueConsoleModel } from './statusViewModel';
 import { payloadValidationErrors } from './payloadValidation';
 import { RequestOwnership } from './requestOwnership';
-import { readWallboardRoute } from './wallboardRoute';
+import { DEFAULT_BROWSER_REFRESH_MS, readWallboardRoute } from './wallboardRoute';
 import type { ProviderConfig, StatusPayload } from './types';
 
 type ProviderConsolidation = {
@@ -26,7 +26,6 @@ const EXCLUDED_PROVIDER_IDS = new Set(CONSOLIDATION.excludedProviderIds);
 const CATALOG = (providerCatalog as ProviderConfig[])
     .filter(provider => !EXCLUDED_PROVIDER_IDS.has(provider.id))
     .map(provider => ({ ...provider, ...(CONSOLIDATION.providerOverrides[provider.id] || {}) }));
-const REFRESH_MS = 60000;
 const MAX_PAYLOAD_AGE_MS = 20 * 60 * 1000;
 const MAX_FUTURE_SKEW_MS = 5 * 60 * 1000;
 const EMERGENCY_MAINTENANCE = /\b(?:emergency|unplanned|critical|urgent)\b/i;
@@ -84,6 +83,7 @@ export function App(): JSX.Element {
     const [lastBrowserCheckAt, setLastBrowserCheckAt] = useState<number | null>(null);
     const ownership = useRef(new RequestOwnership());
     const mounted = useRef(true);
+    const browserRefreshMs = route.wallboardMode ? route.refreshIntervalMs : DEFAULT_BROWSER_REFRESH_MS;
 
     const refresh = useCallback(async () => {
         const slot = ownership.current.begin();
@@ -114,9 +114,9 @@ export function App(): JSX.Element {
         mounted.current = true;
         void refresh();
         const id = window.setInterval(() => { if (!document.hidden)
-            void refresh(); }, REFRESH_MS);
+            void refresh(); }, browserRefreshMs);
         return () => { mounted.current = false; window.clearInterval(id); ownership.current.cancel(); };
-    }, [refresh]);
+    }, [browserRefreshMs, refresh]);
 
     useEffect(() => {
         const tick = window.setInterval(() => setNow(Date.now()), 1000);
