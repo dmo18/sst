@@ -87,7 +87,7 @@ patch('scripts/public-source-repairs.mjs', [
       const nextRegion = tail.search(/\\b(?:EMEA|APAC)\\b/i);
       const americas = nextRegion > 0 ? tail.slice(0, nextRegion) : tail.slice(0, 10000);
       const problem = /\\b(?:Investigating|Monitoring|Identified|Performance Issue|Service Outage|Outage)\\b/i.exec(americas);
-      if (problem) return { kind: 'limited', message: `8x8 Americas currently reports ${problem[0]}; a specific incident record was not derived from the service matrix.` };
+      if (problem) return { kind: 'limited', message: '8x8 Americas currently reports ' + problem[0] + '; a specific incident record was not derived from the service matrix.' };
       const normalCount = (americas.match(/\\bNormal\\b/gi) || []).length;
       return normalCount >= 5 ? healthy('8x8 Americas services report normal status') : null;
     }
