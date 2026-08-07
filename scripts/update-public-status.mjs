@@ -674,7 +674,7 @@ async function parsePublicHtml(provider, source) {
   let pageBody = result.body;
   let conclusion = htmlIssueConclusion(provider, source, pageBody);
   if ((conclusion.kind === 'limited' || (conclusion.kind === 'issue' && isGenericIncidentTitle(conclusion.title))) && source.render === true) {
-    const rendered = renderPublicPage(source);
+    const rendered = await renderPublicPage(source);
     logs.push(rendered.log);
     if (rendered.ok) {
       pageBody = rendered.body;

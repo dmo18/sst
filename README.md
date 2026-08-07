@@ -100,10 +100,11 @@ Use the `refresh` parameter to control how often wallboard mode fetches and vali
 ```text
 ?view=wallboard&alerts=24h&refresh=30s
 ?view=wallboard&alerts=24h&refresh=1m
+?view=wallboard&alerts=24h&refresh=3m
 ?view=wallboard&alerts=24h&refresh=5m
 ```
 
-The accepted range is 15 seconds through one hour using `s`, `m`, or `h`. Missing or invalid values use the existing one-minute default. This controls the in-app browser payload check only. It does not change GitHub Actions collection cadence and it is separate from Yodeck's optional full-page Refresh Interval setting.
+The accepted range is 15 seconds through one hour using `s`, `m`, or `h`. Missing or invalid values use the three-minute default. This controls the in-app browser payload check only. It does not change GitHub Actions collection cadence and it is separate from Yodeck's optional full-page Refresh Interval setting.
 
 See [docs/wallboard-url-options.md](docs/wallboard-url-options.md) or the [deployed online help](https://dmo18.github.io/sst/help.html).
 

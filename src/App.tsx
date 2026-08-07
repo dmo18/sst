@@ -31,7 +31,7 @@ const MAX_FUTURE_SKEW_MS = 5 * 60 * 1000;
 const EMERGENCY_MAINTENANCE = /\b(?:emergency|unplanned|critical|urgent)\b/i;
 const PRODUCTION_IMPACT = /\b(?:production|outage|service interruption|service disruption|customer impact|customers? (?:are|may be) affected|degraded service)\b/i;
 
-function operationalPayload(payload: StatusPayload): StatusPayload {
+export function operationalPayload(payload: StatusPayload): StatusPayload {
     const emergencyMaintenance = (payload.maintenance || []).filter(item => {
         const text = `${item.title || ''} ${item.note || ''} ${item.status || ''}`;
         return item.status === 'in_progress' && EMERGENCY_MAINTENANCE.test(text) && PRODUCTION_IMPACT.test(text);
@@ -43,6 +43,11 @@ function operationalPayload(payload: StatusPayload): StatusPayload {
 
     return {
         ...payload,
+        summary: {
+            ...payload.summary,
+            maintenance_count: emergencyMaintenance.length,
+            ongoing_maintenance_count: emergencyMaintenance.filter(item => item.status === 'in_progress').length
+        },
         maintenance: emergencyMaintenance,
         providers: payload.providers.map(provider => ({
             ...provider,

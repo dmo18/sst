@@ -50,6 +50,7 @@ Examples:
 ```text
 ?view=wallboard&alerts=24h&refresh=30s
 ?view=wallboard&alerts=24h&refresh=1m
+?view=wallboard&alerts=24h&refresh=3m
 ?view=wallboard&alerts=24h&refresh=5m
 ?view=wallboard&alerts=24h&refresh=1h
 ```
@@ -59,13 +60,13 @@ Rules:
 - Minimum: 15 seconds.
 - Maximum: one hour.
 - Decimal values are accepted when the resulting duration remains in range.
-- Missing or invalid values fall back to one minute.
+- Missing or invalid values fall back to three minutes.
 - The interval only applies while wallboard mode is active.
 - Hidden browser tabs do not perform the scheduled payload check until the page is visible again.
 - Changing the URL option changes the in-app browser payload polling cadence, not GitHub Actions collection cadence.
 - Yodeck's own full-page Refresh Interval is separate and is not required for this option.
 
-The compact telemetry label `Browser` is the age since the most recent successful browser payload check. It is not the configured interval itself. For example, with `refresh=1m`, `Browser 25s` means the current browser successfully checked the payload 25 seconds ago and will make the next scheduled check on its one-minute cadence.
+The compact telemetry label `Browser` is the age since the most recent successful browser payload check. It is not the configured interval itself. For example, with `refresh=3m`, `Browser 25s` means the current browser successfully checked the payload 25 seconds ago and will make the next scheduled check on its three-minute cadence.
 
 ## Primary Yodeck viewport
 
@@ -168,10 +169,10 @@ Do not add Yodeck-side scripts, DOM manipulation, alternate status endpoints, or
 
 ## Recommended Yodeck URLs
 
-For a 24-hour operational window with the default one-minute browser check made explicit:
+For a 24-hour operational window with the default three-minute browser check made explicit:
 
 ```text
-https://dmo18.github.io/sst/?view=wallboard&alerts=24h&refresh=1m
+https://dmo18.github.io/sst/?view=wallboard&alerts=24h&refresh=3m
 ```
 
 For a 36-hour operational window with a 30-second browser check:
