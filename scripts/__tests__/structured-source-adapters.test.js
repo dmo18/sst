@@ -71,8 +71,8 @@ const githubStatusFixture = {
       status: 'investigating',
       impact: 'major',
       shortlink: 'https://www.githubstatus.com/incidents/example',
-      created_at: '2026-08-02T14:00:00Z',
-      updated_at: '2026-08-02T14:22:00Z',
+      created_at: '2026-08-02T13:00:00Z',
+      updated_at: '2026-08-02T13:22:00Z',
       components: [
         { id: 'actions', name: 'Actions' },
         { id: 'pages', name: 'GitHub Pages' }
@@ -81,7 +81,7 @@ const githubStatusFixture = {
         {
           status: 'investigating',
           body: 'We are investigating delayed Actions jobs and GitHub Pages deployments.',
-          created_at: '2026-08-02T14:22:00Z'
+          created_at: '2026-08-02T13:22:00Z'
         }
       ]
     }
@@ -113,8 +113,8 @@ test('GitHub Status JSON preserves Actions and Pages incident evidence', () => {
   assert.equal(conclusion.incidents[0].id, 'github-actions-pages');
   assert.equal(conclusion.incidents[0].title, 'Incident with GitHub Actions and GitHub Pages');
   assert.equal(conclusion.incidents[0].affectedService, 'Actions, GitHub Pages');
-  assert.equal(conclusion.incidents[0].firstDetected, '2026-08-02T14:00:00Z');
-  assert.equal(conclusion.incidents[0].latestUpdate, '2026-08-02T14:22:00Z');
+  assert.equal(conclusion.incidents[0].firstDetected, '2026-08-02T13:00:00Z');
+  assert.equal(conclusion.incidents[0].latestUpdate, '2026-08-02T13:22:00Z');
   assert.match(conclusion.incidents[0].note, /delayed Actions jobs and GitHub Pages deployments/i);
   assert.equal(conclusion.incidents[0].color, 'red');
   assert.equal(conclusion.components.find(component => component.name === 'Actions')?.status, 'partial_outage');
