@@ -49,7 +49,7 @@ test('Status.io JSON reports healthy current state and component evidence', () =
   const fixture = {
     result: {
       status_overall: {
-        updated: '2026-08-07T21:00:00Z',
+        updated: '2026-08-02T13:30:00Z',
         status: 'Operational',
         status_code: 100
       },
@@ -94,15 +94,15 @@ test('Status.io JSON preserves a current incident as specific structured evidenc
           id: 'incident-1',
           name: 'US mail processing delays',
           status: 'Investigating',
-          created_at: '2026-08-07T20:00:00Z',
-          updated_at: '2026-08-07T20:30:00Z',
+          created_at: '2026-08-02T12:30:00Z',
+          updated_at: '2026-08-02T13:30:00Z',
           details: 'Customers in the United States may see delayed mail processing.',
           components: [{ name: 'Mail Processing' }],
           messages: [
             {
               status: 'Investigating',
               details: 'Engineering is investigating delayed processing for US customers.',
-              datetime: '2026-08-07T20:30:00Z'
+              datetime: '2026-08-02T13:30:00Z'
             }
           ]
         }
@@ -114,6 +114,6 @@ test('Status.io JSON preserves a current incident as specific structured evidenc
   assert.equal(result.kind, 'issues');
   assert.equal(result.incidents.length, 1);
   assert.equal(result.incidents[0].title, 'US mail processing delays');
-  assert.equal(result.incidents[0].latestUpdate, '2026-08-07T20:30:00Z');
+  assert.equal(result.incidents[0].latestUpdate, '2026-08-02T13:30:00Z');
   assert.match(result.incidents[0].affectedService, /Mail Processing/);
 });
