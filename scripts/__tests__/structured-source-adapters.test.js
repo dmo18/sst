@@ -56,6 +56,39 @@ const statuspageFixture = {
   scheduled_maintenances: [{ id: 'maintenance-1', name: 'US maintenance', status: 'in_progress' }]
 };
 
+const githubStatusFixture = {
+  page: { id: 'github-status', name: 'GitHub', url: 'https://www.githubstatus.com/' },
+  status: { indicator: 'major', description: 'Major Service Outage' },
+  components: [
+    { id: 'actions', name: 'Actions', status: 'partial_outage' },
+    { id: 'pages', name: 'GitHub Pages', status: 'degraded_performance' },
+    { id: 'git', name: 'Git Operations', status: 'operational' }
+  ],
+  incidents: [
+    {
+      id: 'github-actions-pages',
+      name: 'Incident with GitHub Actions and GitHub Pages',
+      status: 'investigating',
+      impact: 'major',
+      shortlink: 'https://www.githubstatus.com/incidents/example',
+      created_at: '2026-08-02T13:00:00Z',
+      updated_at: '2026-08-02T13:22:00Z',
+      components: [
+        { id: 'actions', name: 'Actions' },
+        { id: 'pages', name: 'GitHub Pages' }
+      ],
+      incident_updates: [
+        {
+          status: 'investigating',
+          body: 'We are investigating delayed Actions jobs and GitHub Pages deployments.',
+          created_at: '2026-08-02T13:22:00Z'
+        }
+      ]
+    }
+  ],
+  scheduled_maintenances: []
+};
+
 test('Statuspage JSON retains lifecycle, components, timestamps, and US scope', () => {
   const conclusion = parseStatuspageSummary(JSON.stringify(statuspageFixture), { id: 'cloudflare', name: 'Cloudflare' }, { regionScope: 'us' });
   assert.equal(conclusion.kind, 'issues');
@@ -68,6 +101,24 @@ test('Statuspage JSON retains lifecycle, components, timestamps, and US scope', 
   assert.equal(conclusion.incidents[0].affectedService, 'Workers API, US-East');
   assert.match(conclusion.incidents[0].note, /error rates are recovering/i);
   assert.equal(conclusion.incidents[0].color, 'red');
+});
+
+test('GitHub Status JSON preserves Actions and Pages incident evidence', () => {
+  const source = structuredSourceOverrides.github;
+  const conclusion = parseStatuspageSummary(JSON.stringify(githubStatusFixture), { id: 'github', name: 'GitHub' }, source);
+  assert.equal(source.mode, 'statuspage-json');
+  assert.equal(source.url, 'https://www.githubstatus.com/api/v2/summary.json');
+  assert.equal(conclusion.kind, 'issues');
+  assert.equal(conclusion.incidents.length, 1);
+  assert.equal(conclusion.incidents[0].id, 'github-actions-pages');
+  assert.equal(conclusion.incidents[0].title, 'Incident with GitHub Actions and GitHub Pages');
+  assert.equal(conclusion.incidents[0].affectedService, 'Actions, GitHub Pages');
+  assert.equal(conclusion.incidents[0].firstDetected, '2026-08-02T13:00:00Z');
+  assert.equal(conclusion.incidents[0].latestUpdate, '2026-08-02T13:22:00Z');
+  assert.match(conclusion.incidents[0].note, /delayed Actions jobs and GitHub Pages deployments/i);
+  assert.equal(conclusion.incidents[0].color, 'red');
+  assert.equal(conclusion.components.find(component => component.name === 'Actions')?.status, 'partial_outage');
+  assert.equal(conclusion.components.find(component => component.name === 'GitHub Pages')?.status, 'degraded_performance');
 });
 
 test('Statuspage JSON confirms healthy only from an explicit none indicator', () => {
@@ -207,6 +258,8 @@ test('Status.io page parser hides non-US-only incidents and ignores scheduled ma
 test('structured overrides prefer official first-party JSON and rendered Status.io pages', () => {
   assert.equal(structuredSourceOverrides.cloudflare.mode, 'statuspage-json');
   assert.equal(structuredSourceOverrides.cloudflare.url, 'https://www.cloudflarestatus.com/api/v2/summary.json');
+  assert.equal(structuredSourceOverrides.github.mode, 'statuspage-json');
+  assert.equal(structuredSourceOverrides.github.url, 'https://www.githubstatus.com/api/v2/summary.json');
   assert.equal(structuredSourceOverrides.superops.mode, 'betterstack-json');
   assert.equal(structuredSourceOverrides.superops.url, 'https://status.superops.com/index.json');
   assert.equal(structuredSourceOverrides.connectwise.mode, 'statusio-html');
@@ -238,4 +291,29 @@ test('loadPublicProvider publishes structured Statuspage incident details', asyn
   assert.equal(result.incidents[0].affected_service, 'Workers API, US-East');
   assert.equal(result.incidents[0].status, 'monitoring');
   assert.equal(result.incidents[0].url, 'https://stspg.io/us-1');
+});
+
+test('loadPublicProvider publishes GitHub Actions and Pages incidents', async () => {
+  globalThis.fetch = async url => String(url) === 'https://www.githubstatus.com/api/v2/summary.json'
+    ? response(JSON.stringify(githubStatusFixture))
+    : response('Not found', 404, 'text/plain');
+
+  const provider = {
+    id: 'github',
+    name: 'GitHub',
+    category: 'DevOps',
+    priority: 90,
+    sourceType: 'statuspage',
+    url: 'https://www.githubstatus.com/api/v2/summary.json'
+  };
+  const source = resolvePublicSource(provider);
+  const result = await loadPublicProvider(provider);
+
+  assert.equal(source.mode, 'statuspage-json');
+  assert.equal(result.source_type, 'statuspage-json');
+  assert.equal(result.incidents.length, 1);
+  assert.equal(result.incidents[0].title, 'Incident with GitHub Actions and GitHub Pages');
+  assert.equal(result.incidents[0].affected_service, 'Actions, GitHub Pages');
+  assert.equal(result.incidents[0].status, 'investigating');
+  assert.equal(result.incidents[0].url, 'https://www.githubstatus.com/incidents/example');
 });

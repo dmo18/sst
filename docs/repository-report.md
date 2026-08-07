@@ -2,7 +2,9 @@
 
 ## Product and trust model
 
-This repository builds a static MSP operations command center from free public sources owned by the monitored vendors. The active catalog contains 78 providers after consolidation from 79 raw entries. Collection pipeline version `3.0.0` separates service state from source health and publishes provider, request, evidence, freshness, parser, quality, and blind-spot metrics.
+This repository builds a static MSP operations command center from free public sources owned by monitored vendors. The current production catalog contains 78 active providers after consolidation from 79 raw entries. PR 69 increases that to 79 active providers from 80 raw entries by adding GitHub through the official GitHub Status source.
+
+Collection pipeline version `3.0.0` separates service state from source health and publishes provider, request, evidence, freshness, parser, quality, and blind-spot metrics.
 
 The system fails closed:
 
@@ -64,6 +66,30 @@ The deterministic suite includes structural contracts that prevent the removed i
 
 The Pages release path uses one `pages-release` concurrency group with in-progress cancellation disabled. Every release event runs tests, type checking, dependency audit, live collection, payload validation, build, Pages publication, production smoke, normal browser rendering, and exact Yodeck verification.
 
+## GitHub monitoring architecture
+
+PR 69 adds one GitHub provider record with high criticality and priority 90. The provider uses the public first-party source:
+
+```text
+https://www.githubstatus.com/api/v2/summary.json
+```
+
+The structured Statuspage adapter preserves:
+
+- unresolved incident title and lifecycle;
+- first detection and latest update timestamps;
+- latest official incident note;
+- official incident link;
+- affected components;
+- component-level current states;
+- scheduled maintenance as a separate record type.
+
+The declared service scope includes Git Operations, API Requests, Actions, GitHub Pages, Webhooks, Pull Requests, and Issues.
+
+A readable GitHub Status response may support an operational or incident conclusion. A failed or unreadable response produces only a source-health gap. Repository API failures, failed workflows, deployment failures, and synthetic requests are not GitHub service evidence.
+
+The branch includes deterministic coverage for GitHub provider metadata, structured incident and component parsing, provider loading, and the generated `GH` icon label.
+
 ## Runtime behavior
 
 The browser requests only static assets and `status.json`. It refreshes the payload once per minute while visible. A payload older than 20 minutes produces a freshness warning. Browser check and payload ages are maintained in React state and rendered directly into the wallboard without a DOM enhancement module.
@@ -90,13 +116,13 @@ The runtime must not add a MutationObserver, query and replace rendered signal a
 
 ## Deployment identity
 
-`public/deploy-version.txt` is no longer a checked-in marker. `scripts/write-deploy-version.mjs` generates it during `npm run build:app` with:
+`public/deploy-version.txt` is generated during `npm run build:app` with:
 
 - the workflow commit from `GITHUB_SHA`;
 - the workflow run ID from `GITHUB_RUN_ID`;
 - an ISO generation timestamp.
 
-`production-smoke.mjs` retrieves the deployed marker and rejects a release when the deployed commit or run ID differs from the workflow being verified. This separates "artifact built" from "the intended revision is actually live".
+`production-smoke.mjs` retrieves the deployed marker and rejects a release when the deployed commit or run ID differs from the workflow being verified. This separates artifact creation from proof that the intended revision is actually live.
 
 ## Security posture
 
@@ -108,9 +134,12 @@ The runtime must not add a MutationObserver, query and replace rendered signal a
 - No browser-side vendor collection occurs.
 - Build permissions are read-only.
 - Pages and OIDC write permissions are restricted to the deploy job.
+- GitHub monitoring uses the public GitHub Status source and does not require repository credentials.
 
 ## Current operational state
 
-GitHub Actions and Pages recovered from the 2026-08-06 platform incident. Controlled production workflow run `31137204360` successfully deployed commit `428b231f454a9df65687da51b0c4b3aeb6eb2545` and passed the complete build, production smoke, normal headless browser, exact 458 by 291 Yodeck, artifact-upload, and deployment-status path.
+Step 1 stabilization and Step 2 architecture cleanup are complete on main. PR 71 merged the consolidated React-owned wallboard architecture, generated deployment identity, and exact viewport verification changes. Multiple subsequent scheduled production releases have passed, including runs 606, 607, 608, 610, and 611. Freshness-watch run 29 also completed successfully.
 
-The remaining Step 1 evidence is two consecutive successful scheduled releases without freshness-watch interference. The Step 2 architectural cleanup described above is implemented on its isolated branch and must pass PR checks and the same production release gate before it is considered live. See [system-status.md](system-status.md) and [open-issues.md](open-issues.md).
+PR 69 has been rebuilt on the current main baseline and now contains only the GitHub-monitoring functional changes plus current documentation. It must still pass pull-request validation, merge, and complete the production release gate before GitHub monitoring is considered live.
+
+See [system-status.md](system-status.md) and [open-issues.md](open-issues.md) for current completion state.

@@ -29,7 +29,21 @@ config/providers.json
   -> GitHub Pages
 ```
 
-The catalog contains 79 raw entries and 78 active providers after consolidation. Shared official sources are reused where appropriate. The collection contract is pipeline version `3.0.0` and includes provider coverage, request counts, request latency, quality, evidence, parser identity, source freshness, and blind-spot metrics.
+The catalog contains 80 raw entries and 79 active providers after consolidation. Shared official sources are reused where appropriate. The collection contract is pipeline version `3.0.0` and includes provider coverage, request counts, request latency, quality, evidence, parser identity, source freshness, and blind-spot metrics.
+
+### GitHub platform monitoring
+
+GitHub is monitored as a high-criticality DevOps provider through the official public GitHub Status summary API. The structured source preserves incident lifecycle, timestamps, official links, affected components, and current component states. The monitored service scope explicitly includes:
+
+- Git Operations
+- API Requests
+- Actions
+- GitHub Pages
+- Webhooks
+- Pull Requests
+- Issues
+
+GitHub incidents can appear in Priority signals and Provider Watch like other vendor incidents. Monitoring uses only the public first-party GitHub Status source and requires no repository token, account access, synthetic probing, or browser-side vendor request. A failed GitHub Status retrieval is treated as an observation gap, not as proof of a GitHub outage.
 
 ## Operator application
 

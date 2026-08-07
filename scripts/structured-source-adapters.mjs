@@ -151,6 +151,7 @@ function statuspageSource(url, name, regionScope = 'us') {
 
 const statuspageCandidates = {
   cloudflare: ['https://www.cloudflarestatus.com/api/v2/summary.json', 'Cloudflare'],
+  github: ['https://www.githubstatus.com/api/v2/summary.json', 'GitHub'],
   openai: ['https://status.openai.com/api/v2/summary.json', 'OpenAI'],
   anthropic: ['https://status.claude.com/api/v2/summary.json', 'Anthropic'],
   sentinelone: ['https://status.sentinelone.com/api/v2/summary.json', 'SentinelOne'],

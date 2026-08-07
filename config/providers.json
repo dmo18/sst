@@ -672,6 +672,33 @@
     "url": "https://status.docker.com/api/v2/summary.json"
   },
   {
+    "id": "github",
+    "name": "GitHub",
+    "category": "DevOps",
+    "priority": 90,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://www.githubstatus.com/api/v2/summary.json",
+    "criticality": "high",
+    "tags": [
+      "devops",
+      "source-control",
+      "ci-cd",
+      "hosting"
+    ],
+    "services": [
+      "Git Operations",
+      "API Requests",
+      "Actions",
+      "GitHub Pages",
+      "Webhooks",
+      "Pull Requests",
+      "Issues"
+    ],
+    "client_impact": "May affect source control, CI/CD, GitHub Pages, webhooks, pull requests, and repository administration.",
+    "technician_action": "Check GitHub Actions, Pages, API, and Git Operations status before retrying deployments or changing repository workflows."
+  },
+  {
     "id": "elastic-cloud",
     "name": "Elastic Cloud",
     "category": "Search / Observability",
