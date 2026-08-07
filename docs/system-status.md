@@ -1,22 +1,22 @@
 # Current system status
 
-Status timestamp: 2026-08-07 14:36 Eastern Time
+Status timestamp: 2026-08-07 14:46 Eastern Time
 
-This report records the current repository, production, and release state after Step 1 stabilization and Step 2 architecture cleanup completed their validation gates. GitHub provider monitoring is the only active feature release still in progress.
+This report records the current repository, production, and release state after Step 1 stabilization, Step 2 architecture cleanup, and GitHub provider monitoring completed their validation and production gates.
 
 ## Executive status
 
 | Area | Status | Notes |
 | --- | --- | --- |
 | Repository access | Healthy | Connected GitHub access supports repository, pull-request, workflow, deployment inspection, and repository writes. |
-| Main branch | Healthy | Current main head is `1d1bb2c13ee787d0fd7c706c1e79140fe9baadee`. |
-| Application validation | Healthy | Current production releases run provider validation, deterministic tests, TypeScript, dependency audit, live collection, payload validation, build, deployment, production smoke, normal browser render, and exact Yodeck verification. |
-| GitHub Pages publication | Healthy | Scheduled release run 611 completed successfully on 2026-08-07. |
-| Scheduled reliability proof | Complete | Multiple scheduled releases have completed successfully, including runs 606, 607, 608, 610, and 611. |
-| Freshness recovery | Healthy | Freshness-watch run 29 completed successfully alongside the latest scheduled release cycle. |
+| Main branch | Healthy | GitHub monitoring merged at commit `2f5dc9c1f644982b4f31e58839d6070a5388d719`. |
+| Application validation | Healthy | Provider validation, deterministic tests, TypeScript, dependency audit, live collection, payload validation, build, deployment, production smoke, normal browser render, and exact Yodeck verification are green. |
+| GitHub Pages publication | Healthy | Production release run 612 published the GitHub-monitoring merge successfully. |
+| Scheduled reliability proof | Complete | Scheduled releases 606, 607, 608, 610, and 611 completed successfully. |
+| Freshness recovery | Healthy | Freshness-watch run 29 completed successfully alongside the scheduled release cycle. |
 | Step 1 stabilization | Complete | Release serialization, freshness coordination, production smoke, exact viewport testing, and scheduled reliability evidence are complete. |
-| Step 2 architecture cleanup | Complete | PR 71 merged to main and the consolidated React-owned wallboard architecture is live. |
-| GitHub provider monitoring | In progress | PR 69 is being refreshed on current main and validated before merge. |
+| Step 2 architecture cleanup | Complete | PR 71 merged and the consolidated React-owned wallboard architecture is live. |
+| GitHub provider monitoring | Complete | PR 69 passed PR checks, merged, and passed the full production release gate in run 612. |
 
 ## Repository identity
 
@@ -26,8 +26,7 @@ This report records the current repository, production, and release state after 
 - Package: `msp-status-hud`
 - Package version: `3.3.0`
 - Runtime: React 18, TypeScript 5.7, Vite 6, Node 22+
-- Current production catalog before PR 69: 78 active providers after consolidation from 79 raw entries
-- Catalog after PR 69: 79 active providers after consolidation from 80 raw entries
+- Production catalog: 79 active providers after consolidation from 80 raw entries
 - Collection pipeline version: `3.0.0`
 - Hosting: GitHub Pages
 - Backend: none
@@ -57,7 +56,7 @@ The release path verifies:
 - Yodeck DOM and screenshot artifact upload;
 - deployed commit and run identity.
 
-Scheduled releases 606, 607, 608, 610, and 611 completed successfully. The prior requirement for two consecutive successful scheduled releases is therefore satisfied.
+Scheduled releases 606, 607, 608, 610, and 611 completed successfully, satisfying the prior consecutive scheduled-release requirement.
 
 ## Completed Step 2 architecture cleanup
 
@@ -91,9 +90,11 @@ Production provides:
 
 ## GitHub provider monitoring
 
-PR 69 adds GitHub as a high-criticality DevOps provider using the official public GitHub Status summary API.
+PR 69, `Monitor GitHub platform status`, merged at commit `2f5dc9c1f644982b4f31e58839d6070a5388d719` after pull-request run 311 passed provider validation, deterministic tests, TypeScript checking, application build, and dependency audit.
 
-The intended contract is:
+Production release run 612 then completed successfully, including live first-party collection, browser payload compatibility, collection reconciliation, Pages publication, production smoke, normal headless browser rendering, exact 458 by 291 Yodeck verification, verification artifact upload, and deployed-intelligence status publication.
+
+GitHub is now a high-criticality DevOps provider using the official public GitHub Status summary API. The contract is:
 
 - first-party and unauthenticated collection only;
 - structured Statuspage JSON adapter;
@@ -102,21 +103,8 @@ The intended contract is:
 - source failure treated only as an observation gap;
 - repository API failures, failed workflows, and synthetic requests never treated as GitHub service-health evidence.
 
-PR 69 has been reconstructed on top of the current main baseline so it no longer carries stale pre-Step-2 source state. It remains incomplete until its deterministic PR checks pass and the merge release completes the normal production gate.
+## Remaining work
 
-## Remaining risks and work
+No stabilization, Step 2, or GitHub-monitoring engineering item remains open in this register.
 
-### GitHub provider release
-
-PR 69 must pass deterministic pull-request checks, merge cleanly, and complete the production release path before GitHub monitoring is considered live.
-
-### Repository issue tracking
-
-Repository Issues remain unused for the current backlog. `docs/open-issues.md` remains the small authoritative register until issue tracking is enabled and any remaining work is migrated.
-
-## Completion order
-
-1. Pass PR 69 pull-request validation.
-2. Merge PR 69.
-3. Confirm the merged revision completes the full Pages, production smoke, browser, and exact Yodeck release gate.
-4. Mark GitHub provider monitoring complete in `docs/open-issues.md` and this document.
+Repository issue tracking remains an administrative task. See `docs/open-issues.md`.
