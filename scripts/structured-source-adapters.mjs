@@ -245,6 +245,38 @@ structuredSourceOverrides.halopsa = {
   regionScope: 'us'
 };
 
+structuredSourceOverrides.ringcentral = {
+  mode: 'status-html',
+  url: 'https://status.ringcentral.com/',
+  sourceName: 'RingCentral official public status dashboard',
+  render: true,
+  regionScope: 'us'
+};
+
+structuredSourceOverrides.salesforce = {
+  mode: 'status-html',
+  url: 'https://status.salesforce.com/current',
+  sourceName: 'Salesforce Trust public status page',
+  render: true,
+  regionScope: 'us'
+};
+
+structuredSourceOverrides.backblaze = {
+  mode: 'status-html',
+  url: 'https://status.backblaze.com/',
+  sourceName: 'Backblaze official public status page',
+  render: true,
+  regionScope: 'us'
+};
+
+structuredSourceOverrides.vultr = {
+  mode: 'vultr-json',
+  url: 'https://status.vultr.com/status.json',
+  pageUrl: 'https://status.vultr.com/',
+  sourceName: 'Vultr official public status JSON',
+  regionScope: 'us'
+};
+
 export function parseStatuspageSummary(value, provider = {}, source = {}) {
   const json = safeJson(value);
   if (!json || typeof json !== 'object' || !Array.isArray(json.incidents) || !json.status) return null;
@@ -343,10 +375,10 @@ function statusioComponentRecords(result) {
 function statusioMaintenance(result, source) {
   const records = [];
   const groups = [
-    ...(Array.isArray(result?.maintenance?.active) ? result.maintenance.active : []),
-    ...(Array.isArray(result?.maintenance?.upcoming) ? result.maintenance.upcoming : [])
+    ...(Array.isArray(result?.maintenance?.active) ? result.maintenance.active.map(event => ({ event, defaultState: 'active' })) : []),
+    ...(Array.isArray(result?.maintenance?.upcoming) ? result.maintenance.upcoming.map(event => ({ event, defaultState: 'scheduled' })) : [])
   ];
-  for (const event of groups) {
+  for (const { event, defaultState } of groups) {
     const title = clean(event?.name || event?.title || 'Scheduled maintenance');
     const note = clean(event?.details || event?.message || event?.description || 'The provider has scheduled maintenance.').slice(0, 900);
     if (!title || isEditorial(title, note) || !isUsRelevant(title, note, source.regionScope)) continue;
@@ -354,7 +386,7 @@ function statusioMaintenance(result, source) {
       id: String(event?.id || event?._id || ''),
       title,
       note,
-      status: maintenanceState(event?.status || event?.state || (groups === result?.maintenance?.active ? 'active' : 'scheduled')),
+      status: maintenanceState(event?.status || event?.state || defaultState),
       startsAt: event?.start_time || event?.start || event?.scheduled_for || event?.datetime || '',
       endsAt: event?.end_time || event?.end || event?.scheduled_until || '',
       announcedAt: event?.created_at || event?.datetime || '',
@@ -413,6 +445,147 @@ export function parseStatusioJson(value, provider = {}, source = {}) {
     return { kind: 'healthy', status: `${provider.name || 'Provider'} reports scheduled maintenance only`, ...extras };
   }
   return null;
+}
+
+export function parseRingCentralPage(value, provider = {}) {
+  const text = clean(value);
+  if (!text) return null;
+  const active = /A portion of customers may be experiencing[\s\S]{0,1200}/i.exec(text);
+  if (active) {
+    return {
+      kind: 'issue',
+      title: 'RingCentral customer-impacting service issue',
+      note: clean(active[0]).slice(0, 900),
+      status: 'active',
+      color: colorFor(active[0]),
+      affectedService: 'RingCentral services',
+      url: 'https://status.ringcentral.com/'
+    };
+  }
+  if (/No issues are being reported/i.test(text)) return { kind: 'healthy', status: 'RingCentral reports no issues', maintenance: [], components: [] };
+  return null;
+}
+
+export function parseSalesforcePage(value, provider = {}) {
+  const text = clean(value);
+  const start = text.search(/Current Status/i);
+  if (start < 0) return null;
+  const tail = text.slice(start);
+  const end = tail.search(/Recently Viewed Instances/i);
+  const current = end > 0 ? tail.slice(0, end) : tail.slice(0, 30000);
+  const pattern = /\b(\d{6,})\s+(Feature Degradation|Performance Degradation|Service Degradation|Feature Disruption|Service Disruption|Partial Outage|Major Outage|Service Outage)\s+([\s\S]{1,1200}?)\s+Ongoing\b/gi;
+  const incidents = [];
+  for (const match of current.matchAll(pattern)) {
+    const id = match[1];
+    const subject = clean(match[2]);
+    const details = clean(match[3]);
+    if (!id || !subject || /informational/i.test(details)) continue;
+    incidents.push({
+      id,
+      title: `${subject} (${id})`,
+      note: details || `${provider.name || 'Salesforce'} reports an ongoing ${subject.toLowerCase()}.`,
+      status: 'ongoing',
+      affectedService: details,
+      color: /major outage|service outage/i.test(subject) ? 'red' : 'amber',
+      url: `https://status.salesforce.com/incidents/${id}`
+    });
+    if (incidents.length >= 12) break;
+  }
+  if (incidents.length) return { kind: 'issues', incidents, maintenance: [], components: [] };
+
+  const fallback = /(Feature Degradation|Performance Degradation|Service Degradation|Feature Disruption|Service Disruption|Partial Outage|Major Outage|Service Outage)\s+([\s\S]{1,500}?)\s+Ongoing\b/i.exec(current);
+  if (fallback) {
+    const subject = clean(fallback[1]);
+    const details = clean(fallback[2]);
+    return {
+      kind: 'issue',
+      title: `${subject}: ${details || 'Salesforce service impact'}`.slice(0, 220),
+      note: details || `${provider.name || 'Salesforce'} reports an ongoing ${subject.toLowerCase()}.`,
+      status: 'ongoing',
+      affectedService: details,
+      color: /major outage|service outage/i.test(subject) ? 'red' : 'amber',
+      url: 'https://status.salesforce.com/current'
+    };
+  }
+
+  if (/ID\s+Subject\s+Instances\s+Services\s+Status/i.test(current)) return { kind: 'healthy', status: 'Salesforce reports no active service-impacting incident', maintenance: [], components: [] };
+  return null;
+}
+
+export function parseBackblazePage(value, provider = {}) {
+  const text = clean(value);
+  if (!text) return null;
+  if (/System Status[\s\S]{0,500}All systems operational|All systems operational(?:\.\s*Nothing to report\.)?/i.test(text)) {
+    return { kind: 'healthy', status: 'Backblaze reports all systems operational', maintenance: [], components: [] };
+  }
+  return null;
+}
+
+function vultrWindow(value, label) {
+  const match = new RegExp(`${label}:\\s*(20\\d{2}-\\d{2}-\\d{2}\\s+\\d{2}:\\d{2}:\\d{2}\\s+UTC)`, 'i').exec(String(value || ''));
+  return match ? toIso(match[1]) : '';
+}
+
+export function parseVultrStatus(value, provider = {}, source = {}) {
+  const json = safeJson(value);
+  if (!json || typeof json !== 'object' || !json.regions || typeof json.regions !== 'object') return null;
+  const incidents = [];
+  const maintenance = [];
+  const seen = new Set();
+  const alerts = [
+    ...(Array.isArray(json.service_alerts) ? json.service_alerts.map(alert => ({ alert, region: null })) : []),
+    ...Object.values(json.regions).flatMap(region => Array.isArray(region?.alerts) ? region.alerts.map(alert => ({ alert, region })) : [])
+  ];
+
+  for (const { alert, region } of alerts) {
+    if (region && source.regionScope !== 'global' && String(region.country || '').toUpperCase() !== 'US') continue;
+    if (/resolved|completed|closed/i.test(String(alert?.status || ''))) continue;
+    const id = String(alert?.id || `${region?.location || 'global'}:${alert?.subject || ''}`);
+    if (seen.has(id)) continue;
+    seen.add(id);
+    const title = clean(alert?.subject || alert?.title || 'Vultr service notice');
+    const updates = boundedUpdates(alert?.entries || alert?.updates || []);
+    const latest = updates[0] || {};
+    const note = clean(latest.note || alert?.message || alert?.description || '').slice(0, 900);
+    const location = clean(region?.location || alert?.region || '');
+    const combined = `${title} ${note}`;
+    const planned = /scheduled maintenance|maintenance window|network upgrade|storage infrastructure upgrades/i.test(combined) && !/partial outage|service outage|unexpected outage|unplanned|emergency/i.test(combined);
+    if (planned) {
+      maintenance.push({
+        id,
+        title,
+        note: note || 'Vultr reports scheduled maintenance.',
+        status: maintenanceState(alert?.status || 'scheduled'),
+        startsAt: vultrWindow(note, 'Start Time') || alert?.start_date || '',
+        endsAt: vultrWindow(note, 'End Time'),
+        announcedAt: alert?.start_date || '',
+        latestUpdate: latest.at || alert?.updated_at || alert?.start_date || '',
+        affectedService: location,
+        url: source.pageUrl || source.url,
+        updates
+      });
+      continue;
+    }
+    const firstDetected = alert?.start_date || updates.at(-1)?.at || '';
+    const latestUpdate = alert?.updated_at || latest.at || firstDetected;
+    if (!incidentEvidenceIsCurrent({ title, note, status: alert?.status || 'active', firstDetected, latestUpdate }, Date.now(), INCIDENT_MAX_AGE_DAYS, { requireTimestamp: Boolean(firstDetected || latestUpdate) })) continue;
+    incidents.push({
+      id,
+      title: location ? `${title} - ${location}` : title,
+      note: note || 'Vultr reports an active service issue.',
+      status: clean(alert?.status || 'active'),
+      firstDetected,
+      latestUpdate,
+      affectedService: location,
+      color: colorFor(combined),
+      url: source.pageUrl || source.url,
+      updates
+    });
+  }
+
+  const extras = { maintenance, components: [] };
+  if (incidents.length) return { kind: 'issues', incidents: incidents.slice(0, 12), ...extras };
+  return { kind: 'healthy', status: `${provider.name || 'Vultr'} reports no active US service incidents`, ...extras };
 }
 
 function relationshipIds(record, name) {
@@ -572,9 +745,13 @@ export function parseStatusioPage(value, provider = {}, source = {}) {
 
 export function structuredSourceConclusion(provider, value, source = {}) {
   const mode = source.mode || structuredSourceOverrides[provider?.id]?.mode || '';
+  if (provider?.id === 'ringcentral') return parseRingCentralPage(value, provider, { ...structuredSourceOverrides[provider?.id], ...source });
+  if (provider?.id === 'salesforce') return parseSalesforcePage(value, provider, { ...structuredSourceOverrides[provider?.id], ...source });
+  if (provider?.id === 'backblaze') return parseBackblazePage(value, provider, { ...structuredSourceOverrides[provider?.id], ...source });
   if (mode === 'statuspage-json') return parseStatuspageSummary(value, provider, { ...structuredSourceOverrides[provider?.id], ...source });
   if (mode === 'statusio-json') return parseStatusioJson(value, provider, { ...structuredSourceOverrides[provider?.id], ...source });
   if (mode === 'betterstack-json') return parseBetterStackIndex(value, provider, { ...structuredSourceOverrides[provider?.id], ...source });
   if (mode === 'statusio-html') return parseStatusioPage(value, provider, { ...structuredSourceOverrides[provider?.id], ...source });
+  if (mode === 'vultr-json') return parseVultrStatus(value, provider, { ...structuredSourceOverrides[provider?.id], ...source });
   return null;
 }
