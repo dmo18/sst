@@ -16,70 +16,19 @@ jobs:
     timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
-      - name: Probe replacement structured sources
+      - name: Inspect Backblaze static app
         shell: bash
         run: |
           set +e
-
-          probe() {
-            url="$1"
-            echo
-            echo "=== ${url} ==="
-            rm -f /tmp/probe-headers /tmp/probe-body
-            curl -L -sS --max-time 15 --http1.1 \
-              -A 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/140.0 Safari/537.36' \
-              -H 'Accept: application/json,text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' \
-              -H 'Accept-Language: en-US,en;q=0.9' \
-              -D /tmp/probe-headers \
-              -o /tmp/probe-body \
-              "${url}"
-            rc=$?
-            echo "curl_rc=${rc}"
-            if [ -f /tmp/probe-headers ]; then
-              grep -Ei '^(HTTP/|content-type:|content-length:|server:|location:|x-powered-by:|cf-ray:|via:)' /tmp/probe-headers | tail -n 12
-            fi
-            if [ -f /tmp/probe-body ]; then
-              echo "bytes=$(wc -c < /tmp/probe-body)"
-              echo -n 'prefix='
-              head -c 1400 /tmp/probe-body | tr '\n\r\t' '   '
-              echo
-            fi
-          }
-
-          urls=(
-            'https://status.kaseya.com/api/v2/summary.json'
-            'https://status.kaseya.com/api/v2/status.json'
-            'https://status.kaseya.com/api/v2/incidents/unresolved.json'
-            'https://status.kaseya.com/api/v2/components.json'
-
-            'https://status.lastpass.com/api/v1/status.json'
-            'https://status.lastpass.com/api/v1/incidents.json'
-            'https://status.lastpass.com/history.rss'
-
-            'https://proofpointsa.statuspage.io/api/v2/summary.json'
-            'https://proofpointsa.statuspage.io/api/v2/status.json'
-            'https://proofpointsa.statuspage.io/history.rss'
-
-            'https://8x8status.status.page/'
-            'https://8x8status.status.page/summary.json'
-            'https://8x8status.status.page/status.json'
-            'https://8x8status.status.page/components.json'
-            'https://8x8status.status.page/unresolved.json'
-            'https://8x8status.statuscast.com/'
-            'https://8x8status.statuscast.com/summary.json'
-
-            'https://status.backblaze.com/'
-            'https://api.firehydrant.io/v1/nunc_connections/6qosk759h9bab'
-          )
-
-          for url in "${urls[@]}"; do
-            probe "${url}"
-          done
-
-          echo
-          echo '=== Backblaze script assets ==='
           curl -L -sS --max-time 15 'https://status.backblaze.com/' -o /tmp/backblaze.html
-          grep -oE 'src="[^"]+"' /tmp/backblaze.html | sed 's/^src="//;s/"$//' | while read -r src; do
+          echo '=== Backblaze HTML ==='
+          cat /tmp/backblaze.html
+          echo
+          echo '=== Backblaze JS assets ==='
+          grep -oE 'src="[^"]+"' /tmp/backblaze.html | sed 's/^src="//;s/"$//' > /tmp/backblaze-assets.txt
+          cat /tmp/backblaze-assets.txt
+          while read -r src; do
+            [ -n "$src" ] || continue
             case "$src" in
               http*) asset="$src" ;;
               /*) asset="https://status.backblaze.com${src}" ;;
@@ -88,5 +37,43 @@ jobs:
             echo "--- ${asset}"
             curl -L -sS --max-time 15 "$asset" -o /tmp/backblaze.js
             echo "asset_bytes=$(wc -c < /tmp/backblaze.js)"
-            grep -Eo 'https://[^"'"' ]+|/v1/nunc_connections[^"'"' ]*|nunc_connections|firehydrant[^"'"' ]*|status[^"'"' ]*\.json' /tmp/backblaze.js | head -n 80
+            echo 'firehydrant markers:'
+            grep -oE '.{0,180}firehydrant.{0,260}' /tmp/backblaze.js | head -n 25 || true
+            echo 'nunc markers:'
+            grep -oE '.{0,180}nunc.{0,260}' /tmp/backblaze.js | head -n 25 || true
+            echo 'data path markers:'
+            grep -oE '.{0,180}/data/.{0,260}' /tmp/backblaze.js | head -n 25 || true
+            echo 'api path markers:'
+            grep -oE '.{0,180}/api/.{0,260}' /tmp/backblaze.js | head -n 25 || true
+          done < /tmp/backblaze-assets.txt
+
+      - name: Render unresolved official pages
+        shell: bash
+        run: |
+          set +e
+          BROWSER="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
+          echo "browser=${BROWSER}"
+          for item in \
+            'backblaze|https://status.backblaze.com/' \
+            'proofpoint|https://proofpoint.my.site.com/community/s/proofpoint-current-incidents' \
+            'crowdstrike|https://supportportal.crowdstrike.com/s/' \
+            'intermedia|https://exchange.intermedia.net/ControlPanel/Login?ClientType=ControlPanel'; do
+            name="${item%%|*}"
+            url="${item#*|}"
+            echo
+            echo "=== render ${name}: ${url} ==="
+            timeout 35s "$BROWSER" \
+              --headless=new --disable-gpu --no-sandbox --disable-dev-shm-usage \
+              --user-data-dir="/tmp/source-${name}" \
+              --virtual-time-budget=20000 \
+              --dump-dom "$url" > "/tmp/${name}.html" 2> "/tmp/${name}.err"
+            echo "exit=$? bytes=$(wc -c < /tmp/${name}.html)"
+            echo 'stderr:'
+            tail -n 20 "/tmp/${name}.err"
+            echo 'visible text markers:'
+            sed -E 's/<script[^>]*>[^<]*<\/script>/ /g; s/<style[^>]*>[^<]*<\/style>/ /g; s/<[^>]+>/ /g; s/&nbsp;/ /g; s/&amp;/\&/g' "/tmp/${name}.html" \
+              | tr '\n\r\t' '   ' \
+              | sed -E 's/ +/ /g' \
+              | head -c 12000
+            echo
           done
