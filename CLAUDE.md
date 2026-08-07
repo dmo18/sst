@@ -25,12 +25,13 @@ Build and maintain a free, static, first-party-only MSP service-intelligence app
 
 - Package version: `3.3.0`.
 - Collection pipeline: `3.0.0`.
-- Raw catalog entries: 79.
-- Active providers after consolidation: 78.
+- Raw catalog entries: 80.
+- Active providers after consolidation: 79.
 - Active wallboard: `src/WallboardV2.tsx`.
 - Primary compact wallboard target: 458 by 291 pixels.
 - Normal browser refresh interval: 60 seconds while visible.
 - Payload freshness warning threshold: 20 minutes.
+- GitHub is a high-criticality DevOps provider sourced from the official GitHub Status summary API.
 
 Do not restore obsolete 90-provider assumptions unless the catalog and consolidation files are deliberately changed and validated.
 
@@ -80,6 +81,18 @@ Do not create incidents from:
 - routine maintenance.
 
 Emergency maintenance remains an incident only when it is in progress and explicitly describes production or customer impact.
+
+### GitHub monitoring contract
+
+GitHub monitoring must remain first-party and unauthenticated.
+
+- Source: `https://www.githubstatus.com/api/v2/summary.json`.
+- Adapter: structured Statuspage JSON.
+- Criticality: high.
+- Explicit service scope: Git Operations, API Requests, Actions, GitHub Pages, Webhooks, Pull Requests, and Issues.
+- Preserve incident titles, lifecycle, first detection, latest update, official links, affected components, and component states.
+- A GitHub source failure is an observation gap, not proof that GitHub is down.
+- Do not use repository API failures, workflow failures, synthetic probes, or this repository's deployment state as GitHub incident evidence.
 
 ## Wallboard contract
 
