@@ -1,36 +1,23 @@
 # Current system status
 
-Audit timestamp: 2026-08-06 11:13 Eastern Time
+Status date: 2026-08-06 Eastern Time
 
-This report records the repository and production state after a repository-wide file inventory and subsystem review. No runtime source, collector logic, styling, or workflow behavior was changed by this documentation audit.
+This report records the current production baseline, the completed Step 1 controlled release proof, and the isolated Step 2 architectural cleanup awaiting its own validation gate.
 
 ## Executive status
 
 | Area | Status | Notes |
 | --- | --- | --- |
-| Repository access | Healthy | The connected GitHub app has admin, maintain, push, triage, and pull access to `dmo18/sst`. |
-| Main branch | Builds successfully | Current head before this documentation commit: `706452fc8d3e320912ca3f1b00143e71ddb45290`. |
-| Application tests | Healthy | The current-head build job passed provider validation, 139 deterministic tests, TypeScript checking, dependency audit, live collection, payload validation, collection reconciliation, Vite build, and artifact upload. |
-| GitHub Pages deployment | Degraded | The current-head deploy job failed inside `actions/deploy-pages@v4` after five minutes. Post-deploy smoke and browser checks were skipped. |
-| Last successful production release | Healthy but behind main | Workflow run `31112155899` successfully deployed commit `9f7702b708ad57597221678751b5cf0f59eaf787` and passed production smoke and headless-browser checks. |
-| Wallboard alert-window code | Present and tested | `alerts=36h` is parsed by `src/wallboardRoute.ts` and applied to incident selection in `src/WallboardV2.tsx`. |
-| Compact Yodeck target | Documented | Primary target is 458 by 291 pixels. A dedicated production screenshot assertion at that exact size is still recommended. |
-
-## Repository audit scope
-
-Every tracked path was enumerated through the GitHub tree and directory APIs. The review covered:
-
-- Root configuration and metadata.
-- Provider catalog and consolidation configuration.
-- Every active Markdown document.
-- React entry points, operator UI, wallboard implementations, route parsing, payload validation, lifecycle, telemetry, icons, types, and view models.
-- All application styles, including mobile, ultra-HD, wallboard overlay, and compact wallboard layers.
-- Collector, parser, source-intelligence, incident-freshness, repair, validation, build, and production-smoke scripts.
-- Script and application test suites.
-- GitHub Actions workflows.
-- Public static assets and the last successful Pages artifact.
-
-SVG logo assets were inventoried as static assets. Historical release documentation was reviewed but preserved as historical material.
+| Repository access | Healthy | Connected GitHub access supports repository, pull-request, workflow, and deployment inspection and writes. |
+| Main branch production baseline | Healthy | Commit `428b231f454a9df65687da51b0c4b3aeb6eb2545` was deployed by workflow run `31137204360`. |
+| Application validation | Healthy | The controlled release passed provider validation, deterministic tests, TypeScript, production dependency audit, live collection, payload validation, collection reconciliation, and application build. |
+| GitHub Pages publication | Healthy | The controlled release completed `actions/deploy-pages@v4` successfully after the GitHub platform incident recovered. |
+| Production smoke and browser render | Healthy | Deployed assets, payload, collection contract, and the normal enterprise workspace render passed. |
+| Exact Yodeck contract | Healthy | Chrome DevTools device metrics established an actual 458 by 291 CSS viewport and the deployed wallboard passed its layout contract. |
+| Wallboard 36-hour route | Healthy | `alerts=36h` is parsed and applied to incident rows and the provider rail. |
+| Step 1 final evidence | In progress | One controlled release is proven. Two consecutive successful scheduled releases are still required. |
+| Step 2 source cleanup | Implemented, not yet production | The isolated branch removes legacy wallboard ownership, moves overlay and telemetry state into React, consolidates dedicated wallboard CSS, and generates deployment identity during build. |
+| GitHub provider monitoring | Draft | PR 69 remains isolated from stabilization and Step 2. |
 
 ## Repository identity
 
@@ -40,136 +27,114 @@ SVG logo assets were inventoried as static assets. Historical release documentat
 - Package: `msp-status-hud`
 - Package version: `3.3.0`
 - Runtime: React 18, TypeScript 5.7, Vite 6, Node 22+
-- Active provider catalog: 78 providers after consolidation from 79 raw entries
+- Production provider catalog: 78 active providers after consolidation from 79 raw entries
 - Collection pipeline version: `3.0.0`
 - Hosting: GitHub Pages
 - Backend: none
 - Database: none
 - Runtime secrets: none
 
-## Last successful deployed artifact
+## Controlled production proof
 
-The Pages artifact from successful workflow run `31112155899` was downloaded and inspected directly.
+Workflow run `31137204360` deployed commit `428b231f454a9df65687da51b0c4b3aeb6eb2545` and completed the entire release path successfully:
 
-- Deployed source commit: `9f7702b708ad57597221678751b5cf0f59eaf787`
-- Payload generated at: `2026-08-06T14:43:06.928Z`
-- Provider total: 78
-- Live readable sources: 64
-- Live-source coverage: 82 percent
-- Collection quality score: 72
-- Blind spots: 13
-- Requests: 93 total, 76 successful, 17 failed
-- Active incident records in the payload: 6
-- Maintenance records in the payload: 35
-- Change records: 3
+- dependency installation;
+- provider catalog validation;
+- deterministic tests;
+- TypeScript checking;
+- production dependency audit;
+- live first-party collection;
+- browser payload validation;
+- collection and freshness reconciliation;
+- Vite application build;
+- Pages artifact upload;
+- GitHub Pages deployment;
+- deployed asset and payload smoke testing;
+- normal headless browser rendering;
+- exact 458 by 291 Yodeck verification;
+- Yodeck DOM and screenshot artifact upload;
+- deployed intelligence status publication.
 
-The payload contains one N-able incident whose latest update was about 47 hours old at generation time. That record remains valid payload history, but the `alerts=36h` wallboard route is designed to exclude it from the rendered wallboard because the filter uses `latest_update` through the action-queue model.
+This closes the single controlled-release portion of Step 1.
 
-## Implemented wallboard work
+## Yodeck verification
 
-The active wallboard is `src/WallboardV2.tsx`. Current behavior includes:
+The previous test used Chrome `--window-size=458,291`, but the GitHub runner produced a CSS viewport of 500 by 148. The application probe correctly rejected that as an invalid test environment.
 
-- Newest-first incident sorting by latest vendor update.
-- Provider icons in incident rows instead of numeric indexes.
-- Routine maintenance excluded from the operational application unless emergency work is in progress and explicitly affects production.
-- Collector failures and unreadable-source notices excluded from Priority signals.
-- Continuous vertical marquee using two React-rendered incident groups.
-- Continuous horizontal marquee using two React-rendered provider-chip groups.
-- Provider chips include both icon and provider name.
-- Compact mode removes Provider Watch and the footer so Priority signals uses the available tile.
-- Inline payload-age and browser-check telemetry in the Priority signals heading.
-- Full header and KPI strip controlled as one overlay.
-- Header modes: auto hide, pinned open, and pinned closed.
-- A small Show header control when the overlay is pinned closed.
-- Browser local storage persistence for the selected header mode.
-- URL-controlled rolling incident windows such as `alerts=36h`.
-- Shared filtering for both the incident marquee and provider rail.
-- Responsive compact geometry that activates at widths below 1180 pixels or heights below 520 pixels.
+The release path now uses `scripts/verify-yodeck-wallboard.mjs` and Chrome DevTools Protocol `Emulation.setDeviceMetricsOverride` to establish and verify:
 
-The provider and incident marquees are implemented in React with `ResizeObserver` measurement and CSS transforms. The enhancement module is limited to overlay state and freshness telemetry. It does not reorder, clone, hide, or relocate incident rows.
+- `window.innerWidth === 458`;
+- `window.innerHeight === 291`;
+- device pixel ratio 1;
+- Priority signals rendered;
+- the 36-hour alert window applied;
+- compact panel geometry valid;
+- no header or KPI obstruction;
+- no page overflow;
+- freshness telemetry present;
+- provider and incident marquees active when their content overflows;
+- no out-of-window incident articles;
+- a nonempty DOM artifact and PNG screenshot.
 
-## Primary Yodeck contract
+## Active wallboard behavior
 
-The expected Yodeck region is:
+`src/WallboardV2.tsx` is the sole active wallboard. Production currently provides:
 
-- Width: 458 pixels
-- Height: 291 pixels
-- Interaction: none during normal operation
-- Content priority: Priority signals first
-- Provider rail: always visible below the heading, horizontally looping only when needed
-- Incident list: continuously and smoothly looping when needed
-- Header and KPI overlay: hidden by default in unattended operation and manually restorable
-- Alert details: retained, but the compact layout must prevent one long record from permanently hiding the remaining incidents
+- newest-first vendor incident sorting;
+- provider icons and labels;
+- routine maintenance and collector-failure exclusion from Priority signals;
+- rolling URL alert windows such as `alerts=36h`;
+- a horizontally looping provider rail;
+- a vertically looping incident list;
+- continuous unattended movement even when the display reports reduced motion;
+- inline payload and browser freshness ages;
+- auto, pinned-open, and pinned-closed overlay modes;
+- local persistence of header mode;
+- compact geometry optimized for the 458 by 291 Yodeck tile.
 
-## Build and test status
+## Step 2 architectural cleanup
 
-For current head `706452fc8d3e320912ca3f1b00143e71ddb45290`, the build job completed successfully and included:
+The isolated `agent/step2-architecture-cleanup` branch implements the following source changes without mixing in the GitHub provider addition:
 
-- `npm ci`
-- `npm run validate-providers`
-- 139 deterministic tests
-- `npm run typecheck`
-- `npm audit --audit-level=high`
-- one live `npm run update-status`
-- browser payload validation
-- collection and freshness reconciliation
-- `npm run build:app`
-- Pages artifact upload
+1. Removes the unused `src/Wallboard.tsx` implementation.
+2. Removes its obsolete `src/wallboard.ts` rotation and pagination helper plus legacy tests.
+3. Removes `src/wallboardDomEnhancements.ts`.
+4. Moves wallboard header mode, pointer and keyboard reveal behavior, restore control, and freshness telemetry into React state in `WallboardV2` and `App`.
+5. Removes `src/styles/wallboard-focus.css` and consolidates dedicated wallboard overlay and compact behavior in `src/styles/wallboard-v2.css`.
+6. Retains only shared design tokens and generic base primitives in `command-center.css`.
+7. Removes the stale checked-in `public/deploy-version.txt` marker.
+8. Generates `deploy-version.txt` during `npm run build:app` from `GITHUB_SHA`, `GITHUB_RUN_ID`, and generation time.
+9. Extends production smoke testing to reject a deployment whose live commit or run ID does not match the workflow being verified.
+10. Adds deterministic regression contracts preventing the deleted legacy ownership paths from returning.
 
-This indicates that the current source tree is internally consistent and buildable. It does not prove that the current head is live because the dependent Pages deploy step failed.
+Step 2 is not production-complete until its PR checks, merge release, normal browser render, deployment identity check, and exact Yodeck verification all pass.
 
-## Deployment status and root cause boundary
+## Remaining Step 1 evidence
 
-The latest run failed only at `actions/deploy-pages@v4`. The action remained in `deployment_in_progress` until its configured five-minute limit expired. The build artifact was already complete and valid.
+Two consecutive scheduled `Deploy ServiceOps Enterprise Workspace` releases must complete successfully after stabilization, with no cancellation and no freshness-watch interference. This is intentionally evidence-based rather than inferred from the controlled push release.
 
-Important boundaries:
+## Remaining risks
 
-- This is not a TypeScript failure.
-- This is not a unit-test failure.
-- This is not a provider-validation failure.
-- This is not a payload-validation failure.
-- This is not a Vite-build failure.
-- The current main branch is not confirmed live.
-- The previous successful deployment remains the production baseline.
+### Scheduled reliability proof
 
-The deploy action supports a maximum internal wait of 600000 milliseconds. Settings above that value are silently capped. Repeated commits or competing recovery workflows should not be used to work around a Pages deployment that remains in progress.
+The new serialized release path has passed one complete controlled production release. Two consecutive schedules remain the final operational reliability proof.
 
-## Known technical risks
+### Step 2 production validation
 
-### 1. Pages release reliability
+The architectural cleanup changes runtime ownership boundaries. It is protected by deterministic contracts but still requires PR and production verification before closure.
 
-The current workflow attempts to inspect and cancel the immediately superseded Pages deployment before publishing. The latest deployment still failed inside the Pages action. This path needs one controlled repair after the Pages environment state is inspected, not repeated release commits.
+### GitHub Issues disabled
 
-### 2. Two wallboard components
+Repository Issues remain disabled. `docs/open-issues.md` is the temporary authoritative backlog until the repository feature is enabled and the remaining items are migrated.
 
-Both `src/Wallboard.tsx` and `src/WallboardV2.tsx` remain in the repository. `App.tsx` uses `WallboardV2`. The older component is a maintenance risk and should be removed after confirming that no tests or imports require it.
+### GitHub monitoring not yet merged
 
-### 3. Layered wallboard CSS
+Draft PR 69 adds GitHub Status as a high-criticality provider. Keeping it separate prevents provider-catalog changes from obscuring stabilization or architecture-cleanup evidence.
 
-Wallboard behavior is distributed across `command-center.css`, `wallboard-focus.css`, and `wallboard-v2.css`. The current runtime contract prevents the earlier global DOM corruption, but style ownership is still more complex than ideal.
+## Completion order
 
-### 4. Deployment marker is stale
-
-`public/deploy-version.txt` contains an old hard-coded commit marker and is not a reliable source of the deployed revision. It should be generated from `GITHUB_SHA` during the build or removed.
-
-### 5. Exact Yodeck regression coverage
-
-The contract tests verify selectors, marquees, compact geometry, and filtering, but the repository does not yet have a deterministic 458 by 291 screenshot or DOM-geometry assertion in the normal test suite.
-
-### 6. Freshness recovery can amplify deployment problems
-
-The freshness watcher dispatches a new refresh when deployed data is older than 20 minutes. During a Pages platform stall, this can add pressure unless the Pages workflow concurrency policy remains strictly serialized.
-
-## Recommended next actions
-
-1. Freeze wallboard feature changes until deployment reliability is restored.
-2. Inspect the GitHub Pages environment and current deployment object before changing workflow code.
-3. Reduce the release workflow to one build, one deploy, and one bounded post-deploy verification path.
-4. Add an exact 458 by 291 compact-wallboard regression check.
-5. Remove the unused legacy wallboard component after import and test confirmation.
-6. Generate deployment identity during the build instead of using the stale checked-in marker.
-7. Keep this status document updated after each release or major operational incident.
-
-## Documentation changes in this audit
-
-This audit updates the current README, repository architecture report, wallboard URL guide, coding-agent guidance, and contribution guide, and adds this system-status report. The historical 2.5.0 release-scope file and release changelog remain historical records.
+1. Pass Step 2 pull-request checks.
+2. Merge Step 2 and pass the full production release gate.
+3. Verify two consecutive scheduled releases without freshness-watch interference.
+4. Update this status document and `docs/open-issues.md` with the final run IDs.
+5. Then rebase and validate the isolated GitHub-monitoring PR against the stabilized architecture.
