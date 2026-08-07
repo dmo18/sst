@@ -6,7 +6,7 @@ const MAX_ALERT_WINDOW_MS = 30 * DAY_MS;
 const MIN_BROWSER_REFRESH_MS = 15 * SECOND_MS;
 const MAX_BROWSER_REFRESH_MS = HOUR_MS;
 
-export const DEFAULT_BROWSER_REFRESH_MS = MINUTE_MS;
+export const DEFAULT_BROWSER_REFRESH_MS = 3 * MINUTE_MS;
 
 export interface WallboardRouteState {
   wallboardMode: boolean;
