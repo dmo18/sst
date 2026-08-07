@@ -24,9 +24,9 @@ test('provider-specific source policies select the strongest current official so
       return [id, source.mode, source.url, source.render === true];
     }),
     [
-      ['ringcentral', 'ringcentral-html', 'https://status.ringcentral.com/', true],
-      ['salesforce', 'salesforce-html', 'https://status.salesforce.com/current', true],
-      ['backblaze', 'backblaze-html', 'https://status.backblaze.com/', true],
+      ['ringcentral', 'status-html', 'https://status.ringcentral.com/', true],
+      ['salesforce', 'status-html', 'https://status.salesforce.com/current', true],
+      ['backblaze', 'status-html', 'https://status.backblaze.com/', true],
       ['vultr', 'vultr-json', 'https://status.vultr.com/status.json', false]
     ]
   );
