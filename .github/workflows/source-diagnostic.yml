@@ -59,10 +59,7 @@ jobs:
               head -c 700 /tmp/probe-body | tr '\n\r\t' '   '
               echo
               echo -n 'platform_markers='
-              grep -Eio 'StatusCast|Atlassian Statuspage|statuspage.io|Better Stack|Instatus|incident.io|Status.io|hostedstatus|__NEXT_DATA__|Cloudflare' /tmp/probe-body | sort -u | tr '\n' ' '
-              echo
-              echo -n 'script_src='
-              grep -Eio '<script[^>]+src=["'"'][^"'"']+' /tmp/probe-body | head -n 6 | tr '\n' ' '
+              grep -Eio 'StatusCast|Atlassian Statuspage|statuspage.io|Better Stack|Instatus|incident.io|Status.io|hostedstatus|__NEXT_DATA__|Cloudflare|FireHydrant|Rootly' /tmp/probe-body | sort -u | tr '\n' ' '
               echo
             fi
           }
