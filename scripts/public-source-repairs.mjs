@@ -12,6 +12,34 @@ export const additionalPublicOverrides = {
     sourceName: 'RingCentral public status dashboard',
     render: true
   },
+  crowdstrike: {
+    mode: 'status-html',
+    url: 'https://status.crowdstrike.com/',
+    sourceName: 'CrowdStrike public status page',
+    render: true,
+    regionScope: 'us'
+  },
+  proofpoint: {
+    mode: 'status-html',
+    url: 'https://status.proofpoint.com/',
+    sourceName: 'Proofpoint public status page',
+    render: true,
+    regionScope: 'us'
+  },
+  '8x8': {
+    mode: 'status-html',
+    url: 'https://status.8x8.com/',
+    sourceName: '8x8 public service status page',
+    render: true,
+    regionScope: 'us'
+  },
+  intermedia: {
+    mode: 'status-html',
+    url: 'https://status.intermedia.net/',
+    sourceName: 'Intermedia public service status page',
+    render: true,
+    regionScope: 'us'
+  },
   sophos: {
     mode: 'status-html',
     url: 'https://sophoscentral.status.page/',
@@ -76,13 +104,11 @@ export const additionalPublicOverrides = {
     sourceName: 'Syncro public status page'
   },
   kaseya: {
-    mode: 'status-html',
-    url: 'https://status.kaseya.com/',
-    feedCandidates: [
-      'https://status.kaseya.com/history.rss',
-      'https://status.kaseya.com/history.atom'
-    ],
-    sourceName: 'Kaseya public status page',
+    mode: 'feed',
+    url: 'https://status.kaseya.com/history.rss',
+    pageUrl: 'https://status.kaseya.com/',
+    sourceName: 'Kaseya public status RSS',
+    maxAgeHours: 72,
     regionScope: 'us'
   },
   okta: {
@@ -252,6 +278,20 @@ export function providerSpecificConclusion(provider, html) {
       if (/No issues are being reported/i.test(text)) return healthy('RingCentral reports no issues');
       return null;
     }
+    case '8x8': {
+      const statusStart = text.search(/Service Status/i);
+      if (statusStart < 0) return null;
+      const status = text.slice(statusStart, statusStart + 24000);
+      const americasStart = status.search(/\bAmericas\b/i);
+      if (americasStart < 0) return null;
+      const tail = status.slice(americasStart);
+      const nextRegion = tail.search(/\b(?:EMEA|APAC)\b/i);
+      const americas = nextRegion > 0 ? tail.slice(0, nextRegion) : tail.slice(0, 10000);
+      const problem = /\b(?:Investigating|Monitoring|Identified|Performance Issue|Service Outage|Outage)\b/i.exec(americas);
+      if (problem) return { kind: 'limited', message: '8x8 Americas currently reports ' + problem[0] + '; a specific incident record was not derived from the service matrix.' };
+      const normalCount = (americas.match(/\bNormal\b/gi) || []).length;
+      return normalCount >= 5 ? healthy('8x8 Americas services report normal status') : null;
+    }
     case 'sophos':
       return /All systems normal/i.test(text) ? healthy('Sophos reports all systems normal') : null;
     case 'bitdefender-gravityzone':
@@ -351,12 +391,12 @@ export async function renderPublicPage(source) {
       '--no-sandbox',
       '--disable-dev-shm-usage',
       '--hide-scrollbars',
-      '--virtual-time-budget=12000',
+      '--virtual-time-budget=20000',
       '--dump-dom',
       source.url
     ], {
       encoding: 'utf8',
-      timeout: 25000,
+      timeout: 35000,
       maxBuffer: 5 * 1024 * 1024
     });
     const body = result.stdout || '';
