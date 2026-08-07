@@ -378,6 +378,17 @@ export function publicPageUrl(value) {
 }
 
 export function resolvePublicSource(provider) {
+  if (provider.id === 'kaseya' && publicOverrides.kaseya) {
+    const page = publicOverrides.kaseya;
+    return {
+      ...page,
+      mode: 'feed',
+      url: page.feedCandidates?.[0] || 'https://status.kaseya.com/history.rss',
+      pageUrl: page.url,
+      sourceName: 'Kaseya public status RSS',
+      maxAgeHours: 72
+    };
+  }
   if (publicOverrides[provider.id]) return { ...publicOverrides[provider.id] };
   if (provider.sourceType === 'rss') {
     return { mode: 'feed', url: provider.url, sourceName: `${provider.name} public RSS`, maxAgeHours: provider.maxAgeHours || 168, confirmHealthyFromFeed: true };

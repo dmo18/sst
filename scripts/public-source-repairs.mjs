@@ -104,11 +104,13 @@ export const additionalPublicOverrides = {
     sourceName: 'Syncro public status page'
   },
   kaseya: {
-    mode: 'feed',
-    url: 'https://status.kaseya.com/history.rss',
-    pageUrl: 'https://status.kaseya.com/',
-    sourceName: 'Kaseya public status RSS',
-    maxAgeHours: 72,
+    mode: 'status-html',
+    url: 'https://status.kaseya.com/',
+    feedCandidates: [
+      'https://status.kaseya.com/history.rss',
+      'https://status.kaseya.com/history.atom'
+    ],
+    sourceName: 'Kaseya public status page',
     regionScope: 'us'
   },
   okta: {
@@ -265,9 +267,28 @@ function oktaConclusion(html) {
   };
 }
 
+function eightByEightConclusion(text) {
+  const statusStart = text.search(/Service Status/i);
+  if (statusStart < 0) return null;
+  const status = text.slice(statusStart, statusStart + 24000);
+  const americasStart = status.search(/\bAmericas\b/i);
+  if (americasStart < 0) return null;
+  const tail = status.slice(americasStart);
+  const nextRegion = tail.search(/\b(?:EMEA|APAC)\b/i);
+  const americas = nextRegion > 0 ? tail.slice(0, nextRegion) : tail.slice(0, 10000);
+  const problem = /\b(?:Investigating|Monitoring|Identified|Performance Issue|Service Outage|Outage)\b/i.exec(americas);
+  if (problem) return { kind: 'limited', message: '8x8 Americas currently reports ' + problem[0] + '; a specific incident record was not derived from the service matrix.' };
+  const normalCount = (americas.match(/\bNormal\b/gi) || []).length;
+  return normalCount >= 5 ? healthy('8x8 Americas services report normal status') : null;
+}
+
 export function providerSpecificConclusion(provider, html) {
   const text = cleanRenderedText(html);
   if (!text) return null;
+  if (provider.id === '8x8') {
+    const scoped = eightByEightConclusion(text);
+    if (scoped) return scoped;
+  }
   const detailed = providerIncidentConclusion(provider, html);
   if (detailed) return detailed;
 
