@@ -46,8 +46,8 @@ footer { margin-top: 20px; color: #7f93aa; font-size: .9rem; }
 <div class="grid">
 <section class="full">
 <h2>Recommended 46 inch TV URL</h2>
-<pre>https://dmo18.github.io/sst/?view=wallboard&amp;alerts=24h&amp;refresh=1m</pre>
-<p>The current one-minute browser check remains the default, so <code>refresh=1m</code> is optional. Keeping it explicit in the signage URL makes the intended configuration easy to audit.</p>
+<pre>https://dmo18.github.io/sst/?view=wallboard&amp;alerts=24h&amp;refresh=3m</pre>
+<p>The three-minute browser check is the default, so <code>refresh=3m</code> is optional. Keeping it explicit in the signage URL makes the intended configuration easy to audit.</p>
 </section>
 
 <section>
@@ -65,11 +65,11 @@ footer { margin-top: 20px; color: #7f93aa; font-size: .9rem; }
 <h2>Browser refresh interval</h2>
 <p>Use <code>refresh=</code> to control how often wallboard mode fetches and validates the deployed <code>status.json</code> payload while the page is visible.</p>
 <div class="table">
-<div class="row"><b>Examples</b><span><code>refresh=30s</code>, <code>refresh=1m</code>, <code>refresh=5m</code>, <code>refresh=1h</code></span></div>
+<div class="row"><b>Examples</b><span><code>refresh=30s</code>, <code>refresh=1m</code>, <code>refresh=3m</code>, <code>refresh=5m</code>, <code>refresh=1h</code></span></div>
 <div class="row"><b>Minimum</b><span>15 seconds</span></div>
 <div class="row"><b>Maximum</b><span>1 hour</span></div>
-<div class="row"><b>Default</b><span>1 minute</span></div>
-<div class="row"><b>Invalid value</b><span>Falls back to the 1-minute default.</span></div>
+<div class="row"><b>Default</b><span>3 minutes</span></div>
+<div class="row"><b>Invalid value</b><span>Falls back to the 3-minute default.</span></div>
 </div>
 <p class="note"><b>Browser</b> in the wallboard telemetry is the age of the most recent successful browser payload check. The <code>refresh</code> URL option controls when the next check is attempted.</p>
 </section>
@@ -110,7 +110,7 @@ footer { margin-top: 20px; color: #7f93aa; font-size: .9rem; }
 </div>
 
 <footer>
-<p><a href="./?view=wallboard&amp;alerts=24h&amp;refresh=1m">Open the recommended wallboard</a> | <a href="https://github.com/dmo18/sst/blob/main/docs/wallboard-url-options.md">Repository wallboard documentation</a> | <a href="https://github.com/dmo18/sst">Project source</a></p>
+<p><a href="./?view=wallboard&amp;alerts=24h&amp;refresh=3m">Open the recommended wallboard</a> | <a href="https://github.com/dmo18/sst/blob/main/docs/wallboard-url-options.md">Repository wallboard documentation</a> | <a href="https://github.com/dmo18/sst">Project source</a></p>
 </footer>
 </main>
 </body>
