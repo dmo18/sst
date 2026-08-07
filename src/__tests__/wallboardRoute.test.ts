@@ -1,6 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { isAlertWithinWindow, parseAlertWindowMs, readWallboardRoute } from '../wallboardRoute.ts';
+import {
+  DEFAULT_BROWSER_REFRESH_MS,
+  isAlertWithinWindow,
+  parseAlertWindowMs,
+  parseRefreshIntervalMs,
+  readWallboardRoute
+} from '../wallboardRoute.ts';
 
 test('wallboard alert windows parse minute, hour, and day durations', () => {
   assert.equal(parseAlertWindowMs('90m'), 90 * 60 * 1000);
@@ -11,14 +17,27 @@ test('wallboard alert windows parse minute, hour, and day durations', () => {
   assert.equal(parseAlertWindowMs('36'), null);
 });
 
-test('wallboard route reads the alert window from the URL', () => {
-  assert.deepEqual(readWallboardRoute('?alerts=36h&view=wallboard'), {
+test('browser refresh intervals parse bounded second, minute, and hour durations', () => {
+  assert.equal(parseRefreshIntervalMs('15s'), 15 * 1000);
+  assert.equal(parseRefreshIntervalMs('45s'), 45 * 1000);
+  assert.equal(parseRefreshIntervalMs('1.5m'), 90 * 1000);
+  assert.equal(parseRefreshIntervalMs('1h'), 60 * 60 * 1000);
+  assert.equal(parseRefreshIntervalMs('14s'), DEFAULT_BROWSER_REFRESH_MS);
+  assert.equal(parseRefreshIntervalMs('61m'), DEFAULT_BROWSER_REFRESH_MS);
+  assert.equal(parseRefreshIntervalMs('60'), DEFAULT_BROWSER_REFRESH_MS);
+  assert.equal(parseRefreshIntervalMs(null), DEFAULT_BROWSER_REFRESH_MS);
+});
+
+test('wallboard route reads alert and browser refresh options from the URL', () => {
+  assert.deepEqual(readWallboardRoute('?alerts=36h&view=wallboard&refresh=30s'), {
     wallboardMode: true,
-    alertWindowMs: 36 * 60 * 60 * 1000
+    alertWindowMs: 36 * 60 * 60 * 1000,
+    refreshIntervalMs: 30 * 1000
   });
   assert.deepEqual(readWallboardRoute('?view=operator&alerts=36h'), {
     wallboardMode: false,
-    alertWindowMs: 36 * 60 * 60 * 1000
+    alertWindowMs: 36 * 60 * 60 * 1000,
+    refreshIntervalMs: DEFAULT_BROWSER_REFRESH_MS
   });
 });
 
