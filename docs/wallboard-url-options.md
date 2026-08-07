@@ -18,6 +18,7 @@ Examples:
 
 ```text
 ?view=wallboard&alerts=90m
+?view=wallboard&alerts=24h
 ?view=wallboard&alerts=36h
 ?view=wallboard&alerts=2d
 ```
@@ -90,12 +91,60 @@ The provider rail and incident list use separate React-owned loop tracks:
 - Each loop activates only when its content exceeds the available viewport.
 - Each loop renders a second copy so the reset occurs at the duplicate boundary.
 - The provider rail continues looping on unattended displays.
-- The vertical incident loop respects reduced-motion settings and becomes manually scrollable when reduced motion is enabled.
+- The incident list continues looping on unattended displays, including reduced-motion signage environments, so the compact wallboard does not strand lower rows off-screen.
 
-## Recommended Yodeck URL
+## Browser compatibility
+
+The normal wallboard presentation uses CSS Cascade Layers. Modern Chromium uses `src/styles/wallboard-v2.css` directly and keeps the approved compact presentation unchanged.
+
+A physical Yodeck player exposed a compatibility case where an older Chromium build could load the page and data but fail to apply layered wallboard structure. Two symptoms were observed:
+
+1. In a smaller Yodeck region the page could appear blank.
+2. When made full-screen the data could appear as vertically stacked KPI blocks instead of the compact Priority signals view.
+
+The repository now includes a capability-gated fallback for that case.
+
+Before React mounts, `src/main.tsx` checks whether `CSSLayerBlockRule` exists. If it does not, the root HTML element receives the `no-css-layers` class. `src/styles/wallboard-compat.css` is loaded after the normal wallboard stylesheet and contains unlayered structural rules scoped only to `html.no-css-layers`.
+
+The fallback restores:
+
+- fixed full-viewport wallboard geometry;
+- compact 458 by 291 layout behavior;
+- Priority signals heading and telemetry;
+- provider-chip rail;
+- incident row grid;
+- provider and incident marquees;
+- header and KPI overlay visibility;
+- compact breakpoint behavior.
+
+The fallback does not create a second wallboard implementation. React still owns the data, filtering, state, ordering, controls, and rendering tree. Modern browsers do not match the compatibility selectors.
+
+PR 74, `Fix Yodeck wallboard rendering on pre-layer Chromium`, merged at commit `33f7d873a3a22000030beec23091027b4fc9cee8`. Production release run 614 completed successfully after the merge.
+
+## Yodeck troubleshooting
+
+Use the wallboard URL directly and first determine whether the player is failing to load data or only failing to present the intended layout.
+
+A page that shows current KPI values or incident text is loading application data. If those values appear as large vertical blocks rather than the compact Priority signals wallboard, treat the problem as browser presentation compatibility rather than a status-data failure.
+
+A completely blank small region combined with a visible but collapsed full-screen page is also consistent with the legacy CSS compatibility case addressed by PR 74.
+
+After a new production deployment, force the Yodeck player or playlist to reload so it receives the latest built JavaScript and CSS assets.
+
+Do not add Yodeck-side scripts, DOM manipulation, alternate status endpoints, or browser-side vendor collection to work around a presentation problem. The repository compatibility path is intentionally self-contained.
+
+## Recommended Yodeck URLs
+
+For a 24-hour operational window:
+
+```text
+https://dmo18.github.io/sst/?view=wallboard&alerts=24h
+```
+
+For a 36-hour operational window:
 
 ```text
 https://dmo18.github.io/sst/?view=wallboard&alerts=36h
 ```
 
-This configuration displays only incidents updated during the last 36 hours and keeps the provider rail synchronized with that filtered set.
+The automated production contract uses the 36-hour form together with `layoutProbe=yodeck` for exact 458 by 291 verification. The `layoutProbe` parameter is for automated verification and is not required for normal signage use.

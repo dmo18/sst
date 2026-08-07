@@ -1,22 +1,23 @@
 # Current system status
 
-Status timestamp: 2026-08-07 14:46 Eastern Time
+Status timestamp: 2026-08-07 15:21 Eastern Time
 
-This report records the current repository, production, and release state after Step 1 stabilization, Step 2 architecture cleanup, and GitHub provider monitoring completed their validation and production gates.
+This report records the current repository, production, and release state after Step 1 stabilization, Step 2 architecture cleanup, GitHub provider monitoring, and the Yodeck legacy-browser compatibility fix completed their validation and production gates.
 
 ## Executive status
 
 | Area | Status | Notes |
 | --- | --- | --- |
 | Repository access | Healthy | Connected GitHub access supports repository, pull-request, workflow, deployment inspection, and repository writes. |
-| Main branch | Healthy | GitHub monitoring merged at commit `2f5dc9c1f644982b4f31e58839d6070a5388d719`. |
+| Main branch | Healthy | Yodeck compatibility fix merged at commit `33f7d873a3a22000030beec23091027b4fc9cee8`. |
 | Application validation | Healthy | Provider validation, deterministic tests, TypeScript, dependency audit, live collection, payload validation, build, deployment, production smoke, normal browser render, and exact Yodeck verification are green. |
-| GitHub Pages publication | Healthy | Production release run 612 published the GitHub-monitoring merge successfully. |
+| GitHub Pages publication | Healthy | Production release run 614 published the Yodeck compatibility merge successfully. |
 | Scheduled reliability proof | Complete | Scheduled releases 606, 607, 608, 610, and 611 completed successfully. |
 | Freshness recovery | Healthy | Freshness-watch run 29 completed successfully alongside the scheduled release cycle. |
 | Step 1 stabilization | Complete | Release serialization, freshness coordination, production smoke, exact viewport testing, and scheduled reliability evidence are complete. |
 | Step 2 architecture cleanup | Complete | PR 71 merged and the consolidated React-owned wallboard architecture is live. |
 | GitHub provider monitoring | Complete | PR 69 passed PR checks, merged, and passed the full production release gate in run 612. |
+| Yodeck legacy-browser compatibility | Complete | PR 74 passed pull-request checks, merged, and passed the full production release gate in run 614. |
 
 ## Repository identity
 
@@ -67,11 +68,12 @@ The current architecture:
 1. Uses `src/WallboardV2.tsx` as the sole wallboard implementation.
 2. Removes `src/Wallboard.tsx`, `src/wallboard.ts`, and `src/wallboardDomEnhancements.ts`.
 3. Keeps wallboard header state, overlay controls, freshness telemetry, filtering, ordering, and marquee ownership in React.
-4. Uses `src/styles/wallboard-v2.css` as the dedicated wallboard stylesheet.
-5. Generates `public/deploy-version.txt` during the build rather than tracking it in source.
-6. Verifies deployed commit and workflow identity in production smoke testing.
-7. Uses Chrome DevTools device metrics for an actual 458 by 291 CSS viewport.
-8. Includes regression contracts preventing the removed legacy ownership paths from returning.
+4. Uses `src/styles/wallboard-v2.css` as the dedicated modern-browser wallboard stylesheet.
+5. Uses `src/styles/wallboard-compat.css` only as a gated compatibility fallback for browsers without CSS Cascade Layer support.
+6. Generates `public/deploy-version.txt` during the build rather than tracking it in source.
+7. Verifies deployed commit and workflow identity in production smoke testing.
+8. Uses Chrome DevTools device metrics for an actual 458 by 291 CSS viewport.
+9. Includes regression contracts preventing the removed legacy ownership paths from returning.
 
 ## Active wallboard behavior
 
@@ -86,7 +88,32 @@ Production provides:
 - inline payload and browser freshness ages;
 - auto, pinned-open, and pinned-closed overlay modes;
 - local persistence of header mode;
-- compact geometry optimized for the 458 by 291 Yodeck tile.
+- compact geometry optimized for the 458 by 291 Yodeck tile;
+- a legacy signage fallback that preserves the same wallboard structure when CSS Cascade Layers are unavailable.
+
+## Yodeck compatibility fix
+
+PR 74, `Fix Yodeck wallboard rendering on pre-layer Chromium`, addressed a player-specific compatibility failure observed on the physical TV.
+
+The failure had two visible modes:
+
+- when the web page occupied a smaller Yodeck region, the wallboard could become blank;
+- when the page occupied the full display, data loaded but the wallboard structure collapsed into vertically stacked KPI blocks instead of the compact Priority signals presentation.
+
+The application and payload were healthy. The root cause was CSS feature compatibility. Core wallboard structure is intentionally kept inside CSS Cascade Layers. On a Chromium build without Cascade Layer support, those layered rules can be ignored while unlayered responsive rules remain active. At small widths, that could leave `.wallboard-shell { display: none; }` active without the layered wallboard override. At larger widths, the page remained visible but lost the intended wallboard geometry.
+
+The production fix:
+
+1. Detects Cascade Layer support through `CSSLayerBlockRule` before React renders.
+2. Adds `no-css-layers` to the root HTML element only when that browser feature is unavailable.
+3. Loads `src/styles/wallboard-compat.css` after the existing wallboard stylesheet.
+4. Scopes every compatibility selector to `html.no-css-layers` so modern Chromium keeps the existing presentation unchanged.
+5. Recreates the structural wallboard geometry, compact breakpoints, overlay behavior, provider rail, incident rows, and marquee animation without using `@layer`.
+6. Adds deterministic regression coverage requiring the fallback to remain gated and unlayered.
+
+PR 74 pull-request checks completed successfully before merge. The fix merged at commit `33f7d873a3a22000030beec23091027b4fc9cee8`. Production release run 614 then completed successfully, including the existing 458 by 291 Yodeck verification and the full Pages release gate.
+
+The approved visual contract remains unchanged for modern browsers. The fallback exists only to allow older signage Chromium builds to present the same compact Priority signals experience instead of a blank or collapsed layout.
 
 ## GitHub provider monitoring
 
@@ -105,6 +132,6 @@ GitHub is now a high-criticality DevOps provider using the official public GitHu
 
 ## Remaining work
 
-No stabilization, Step 2, or GitHub-monitoring engineering item remains open in this register.
+No stabilization, Step 2, GitHub-monitoring, or Yodeck compatibility engineering item remains open in this register.
 
 Repository issue tracking remains an administrative task. See `docs/open-issues.md`.

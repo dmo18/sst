@@ -27,10 +27,12 @@ Retrieval is bounded by global and per-origin concurrency, timeouts, streamed re
 - `src/statusViewModel.ts`: command-center and action-queue model.
 - `src/payloadValidation.ts`: browser payload validation.
 - `src/types.ts`: payload and UI contracts.
-- `src/styles/wallboard-v2.css`: dedicated wallboard overlay, compact geometry, provider rail, incident list, and marquee presentation.
+- `src/main.tsx`: application entrypoint plus the legacy signage capability check that adds `no-css-layers` only when `CSSLayerBlockRule` is unavailable.
+- `src/styles/wallboard-v2.css`: dedicated modern-browser wallboard overlay, compact geometry, provider rail, incident list, and marquee presentation.
+- `src/styles/wallboard-compat.css`: unlayered structural fallback for signage browsers that do not support CSS Cascade Layers. Every selector is gated by `html.no-css-layers`.
 - `src/styles/command-center.css`: shared application tokens and generic base primitives used by operator and wallboard surfaces.
 
-The legacy `src/Wallboard.tsx`, `src/wallboard.ts`, `src/wallboardDomEnhancements.ts`, `src/styles/wallboard-focus.css`, and the legacy wallboard test have been removed. There is one wallboard implementation and one dedicated wallboard stylesheet.
+The legacy `src/Wallboard.tsx`, `src/wallboard.ts`, `src/wallboardDomEnhancements.ts`, `src/styles/wallboard-focus.css`, and the legacy wallboard test have been removed. There is one React wallboard implementation. The compatibility stylesheet is not a second wallboard implementation or controller. It only reproduces structural CSS for browsers that cannot parse the layered stylesheet.
 
 ### Collection and normalization
 
@@ -48,15 +50,16 @@ The legacy `src/Wallboard.tsx`, `src/wallboard.ts`, `src/wallboardDomEnhancement
 
 ### Validation and tests
 
-- `scripts/__tests__/`: collector, parser, maintenance, freshness, workflow, visual, and payload tests.
+- `scripts/__tests__/`: collector, parser, maintenance, freshness, workflow, visual, compatibility, and payload tests.
 - `src/__tests__/`: lifecycle, view-model, telemetry, icons, wallboard route, and browser validation tests.
+- `scripts/__tests__/wallboard-compatibility.test.js`: contract that requires the legacy signage fallback to remain unlayered, marker-scoped, and structurally complete for compact wallboard use.
 - `scripts/production-smoke.mjs`: deployed asset, payload, and release-identity verification.
 - `scripts/verify-yodeck-wallboard.mjs`: Chrome DevTools Protocol verification at an exact 458 by 291 CSS viewport, including DOM and screenshot evidence.
 - `scripts/write-deploy-version.mjs`: generated deployment identity from `GITHUB_SHA` and `GITHUB_RUN_ID`.
 - `scripts/validate-browser-payload.mjs`: browser contract validation outside the browser.
 - `scripts/validate-providers.mjs`: catalog and metadata validation.
 
-The deterministic suite includes structural contracts that prevent the removed imperative wallboard controller, split wallboard stylesheet, legacy wallboard component, and checked-in deployment marker from returning.
+The deterministic suite includes structural contracts that prevent the removed imperative wallboard controller, legacy wallboard component, and checked-in deployment marker from returning. It also verifies that the compatibility fallback cannot affect modern browsers unless the `no-css-layers` marker is present.
 
 ### Automation
 
@@ -110,9 +113,45 @@ React owns:
 - payload and browser freshness telemetry;
 - the Yodeck layout-probe state.
 
-`wallboard-v2.css` owns wallboard-specific geometry, overlay presentation, compact breakpoints, and marquee animation. Shared application design tokens and generic base wallboard primitives may remain in `command-center.css`.
+`wallboard-v2.css` owns the normal wallboard-specific geometry, overlay presentation, compact breakpoints, and marquee animation for browsers with CSS Cascade Layer support. Shared application design tokens and generic base wallboard primitives may remain in `command-center.css`.
+
+`wallboard-compat.css` is a compatibility-only structural fallback. It is loaded after `wallboard-v2.css`, contains no `@layer` block, and scopes its selectors to `html.no-css-layers`. `main.tsx` adds that marker only when `CSSLayerBlockRule` is unavailable. This keeps the approved modern Chromium presentation unchanged while allowing older signage Chromium builds to receive equivalent structural rules.
 
 The runtime must not add a MutationObserver, query and replace rendered signal articles, clone live DOM nodes, inject runtime styles, or load a second wallboard controller.
+
+## Yodeck legacy-browser compatibility
+
+### Observed failure
+
+The physical Yodeck deployment exposed a browser compatibility gap that the normal modern-Chromium production probe did not reproduce.
+
+When the web page occupied a small Yodeck region, the region could render blank. When the same page was made full-screen, the application and data loaded, but the UI collapsed into vertically stacked KPI blocks instead of the intended compact Priority signals wallboard.
+
+This established that networking, GitHub Pages, React startup, `status.json`, and route parsing were functioning. The failure was presentation-specific.
+
+### Root cause
+
+The primary wallboard structural rules are inside CSS Cascade Layers. An older Chromium build without Cascade Layer support can ignore those layered blocks. Unlayered responsive CSS can still apply, including the mobile rule that hides `.wallboard-shell` below 900 pixels. Without the layered wallboard override, a small signage region can therefore become blank. At larger widths the page can remain visible while losing the intended grid and compact wallboard geometry.
+
+### Compatibility design
+
+PR 74 introduced a narrow fallback instead of changing the normal wallboard architecture:
+
+1. `main.tsx` checks for `CSSLayerBlockRule` before mounting React.
+2. Browsers without that capability receive `html.no-css-layers`.
+3. `wallboard-compat.css` provides unlayered structural rules only beneath that marker.
+4. The fallback reproduces fixed wallboard geometry, compact media queries, provider and incident layouts, overlay visibility, and marquee keyframes.
+5. Modern browsers never match those selectors and continue using the existing layered wallboard presentation.
+
+This design preserves the single React wallboard ownership model. The fallback has no separate state, data path, rendering tree, or DOM controller.
+
+### Validation and production evidence
+
+PR 74, `Fix Yodeck wallboard rendering on pre-layer Chromium`, passed pull-request checks and merged into `main` at commit `33f7d873a3a22000030beec23091027b4fc9cee8`.
+
+Production release run 614 completed successfully after the merge. The release included the full first-party collection and payload gate, production smoke, normal browser rendering, exact 458 by 291 Yodeck verification, artifact publication, and deployment identity verification.
+
+The production verification still uses modern Chromium, so the physical TV remains the acceptance point for the legacy fallback itself. The automated contract ensures that the existing modern layout is not changed and that the fallback remains structurally present for browsers without Cascade Layer support.
 
 ## Deployment identity
 
@@ -135,6 +174,7 @@ The runtime must not add a MutationObserver, query and replace rendered signal a
 - Build permissions are read-only.
 - Pages and OIDC write permissions are restricted to the deploy job.
 - GitHub monitoring uses the public GitHub Status source and does not require repository credentials.
+- The Yodeck compatibility path introduces no network endpoint, credential, persistence layer, or data-source change.
 
 ## Current operational state
 
@@ -142,6 +182,8 @@ Step 1 stabilization and Step 2 architecture cleanup are complete on main. PR 71
 
 PR 69 merged GitHub monitoring at commit `2f5dc9c1f644982b4f31e58839d6070a5388d719`. Pull-request run 311 passed the deterministic gate, and production release run 612 passed live collection, payload reconciliation, Pages publication, production smoke, normal browser rendering, exact 458 by 291 Yodeck verification, artifact upload, and deployed-intelligence verification.
 
-GitHub monitoring is therefore live and production-validated.
+PR 74 merged the Yodeck legacy-browser compatibility fallback at commit `33f7d873a3a22000030beec23091027b4fc9cee8`. Pull-request checks passed before merge, and production release run 614 completed successfully.
 
-See [system-status.md](system-status.md) and [open-issues.md](open-issues.md) for current completion state.
+GitHub monitoring and the Yodeck compatibility fix are therefore live and production-validated through the repository release gate.
+
+See [system-status.md](system-status.md), [wallboard-url-options.md](wallboard-url-options.md), and [open-issues.md](open-issues.md) for current completion and deployment guidance.
