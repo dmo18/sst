@@ -2,7 +2,7 @@
 
 Last reviewed: 2026-08-07
 
-This file is the temporary authoritative backlog until repository Issues is enabled and any remaining work is migrated into issue records.
+This file is the temporary authoritative backlog until repository Issues is enabled and any remaining administrative work is migrated into issue records.
 
 ## Completed stabilization work
 
@@ -38,45 +38,37 @@ Scheduled production runs 606, 607, 608, 610, and 611 completed successfully. Fr
 - [x] Merge Step 2 through PR 71.
 - [x] Complete the post-merge production release path and exact Yodeck verification.
 
-## Active engineering work
+### GitHub platform monitoring
 
-### 1. Complete GitHub platform monitoring
-
-PR 69 adds GitHub as a high-criticality DevOps provider using the official public GitHub Status summary API.
-
-Completed in source:
-
-- [x] Add the GitHub provider entry.
+- [x] Add GitHub as a high-criticality DevOps provider.
 - [x] Use the public first-party GitHub Status summary API.
-- [x] Declare high criticality and technician guidance.
 - [x] Monitor Git Operations, API Requests, Actions, GitHub Pages, Webhooks, Pull Requests, and Issues.
 - [x] Preserve structured incident lifecycle, timestamps, official links, affected components, and component states.
 - [x] Keep GitHub source health separate from GitHub service health.
 - [x] Add deterministic provider metadata, structured incident, provider-loading, and icon validation.
-- [x] Refresh the feature branch onto the current main architecture without restoring pre-Step-2 files.
-- [x] Reconcile current repository and system documentation.
+- [x] Refresh the feature work onto the current main architecture without restoring pre-Step-2 files.
+- [x] Pass PR 69 pull-request validation in run 311.
+- [x] Merge PR 69 at commit `2f5dc9c1f644982b4f31e58839d6070a5388d719`.
+- [x] Complete the full Pages production release in run 612.
+- [x] Pass production smoke and deployed payload verification.
+- [x] Pass normal headless browser rendering.
+- [x] Pass exact 458 by 291 Yodeck verification.
+- [x] Publish the 79-active-provider payload from 80 raw catalog entries.
 
-Completion evidence still required:
+## Active engineering work
 
-- [ ] PR 69 pull-request checks complete successfully.
-- [ ] PR 69 is merged.
-- [ ] The merged revision completes the full Pages release path.
-- [ ] Production smoke verifies the deployed revision and payload.
-- [ ] Exact 458 by 291 Yodeck verification remains green.
-- [ ] The deployed payload includes GitHub within 79 active providers after consolidation from 80 raw entries.
+No stabilization, Step 2, or GitHub-monitoring engineering item remains open in this register.
 
 ## Administrative work
 
-### 2. Enable GitHub Issues
+### 1. Enable GitHub Issues
 
 Enable repository Issues in Settings, General, Features, Issues.
 
-### 3. Migrate the remaining register
+### 2. Migrate future backlog tracking
 
-After Issues is enabled, create issue records for any still-open work, assign priority and owner, add acceptance criteria, and link production evidence before closure.
+After Issues is enabled, create issue records for future work, assign priority and owner, add acceptance criteria, and link production evidence before closure.
 
 ## Change control
 
-Step 1 and Step 2 are complete. New work should preserve the current single-wallboard React ownership model, the static first-party-only trust model, the serialized Pages release path, fail-closed source semantics, and exact Yodeck verification.
-
-GitHub monitoring is the only active feature release recorded here. It is not complete until PR validation, merge, and production release evidence all succeed.
+Step 1, Step 2, and GitHub monitoring are complete. New work should preserve the current single-wallboard React ownership model, the static first-party-only trust model, the serialized Pages release path, fail-closed source semantics, and exact Yodeck verification.
