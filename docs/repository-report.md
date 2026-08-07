@@ -2,7 +2,7 @@
 
 ## Product and trust model
 
-This repository builds a static MSP operations command center from free public sources owned by monitored vendors. The current production catalog contains 78 active providers after consolidation from 79 raw entries. PR 69 increases that to 79 active providers from 80 raw entries by adding GitHub through the official GitHub Status source.
+This repository builds a static MSP operations command center from free public sources owned by monitored vendors. The production catalog contains 79 active providers after consolidation from 80 raw entries, including GitHub through the official GitHub Status source.
 
 Collection pipeline version `3.0.0` separates service state from source health and publishes provider, request, evidence, freshness, parser, quality, and blind-spot metrics.
 
@@ -68,7 +68,7 @@ The Pages release path uses one `pages-release` concurrency group with in-progre
 
 ## GitHub monitoring architecture
 
-PR 69 adds one GitHub provider record with high criticality and priority 90. The provider uses the public first-party source:
+GitHub is a production provider with high criticality and priority 90. It uses the public first-party source:
 
 ```text
 https://www.githubstatus.com/api/v2/summary.json
@@ -88,7 +88,7 @@ The declared service scope includes Git Operations, API Requests, Actions, GitHu
 
 A readable GitHub Status response may support an operational or incident conclusion. A failed or unreadable response produces only a source-health gap. Repository API failures, failed workflows, deployment failures, and synthetic requests are not GitHub service evidence.
 
-The branch includes deterministic coverage for GitHub provider metadata, structured incident and component parsing, provider loading, and the generated `GH` icon label.
+Deterministic coverage validates GitHub provider metadata, structured incident and component parsing, provider loading, and the generated `GH` icon label.
 
 ## Runtime behavior
 
@@ -138,8 +138,10 @@ The runtime must not add a MutationObserver, query and replace rendered signal a
 
 ## Current operational state
 
-Step 1 stabilization and Step 2 architecture cleanup are complete on main. PR 71 merged the consolidated React-owned wallboard architecture, generated deployment identity, and exact viewport verification changes. Multiple subsequent scheduled production releases have passed, including runs 606, 607, 608, 610, and 611. Freshness-watch run 29 also completed successfully.
+Step 1 stabilization and Step 2 architecture cleanup are complete on main. PR 71 merged the consolidated React-owned wallboard architecture, generated deployment identity, and exact viewport verification changes. Scheduled production runs 606, 607, 608, 610, and 611 passed, and freshness-watch run 29 completed successfully.
 
-PR 69 has been rebuilt on the current main baseline and now contains only the GitHub-monitoring functional changes plus current documentation. It must still pass pull-request validation, merge, and complete the production release gate before GitHub monitoring is considered live.
+PR 69 merged GitHub monitoring at commit `2f5dc9c1f644982b4f31e58839d6070a5388d719`. Pull-request run 311 passed the deterministic gate, and production release run 612 passed live collection, payload reconciliation, Pages publication, production smoke, normal browser rendering, exact 458 by 291 Yodeck verification, artifact upload, and deployed-intelligence verification.
+
+GitHub monitoring is therefore live and production-validated.
 
 See [system-status.md](system-status.md) and [open-issues.md](open-issues.md) for current completion state.
