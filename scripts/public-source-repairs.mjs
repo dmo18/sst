@@ -1,6 +1,9 @@
 import fs from 'node:fs';
-import { spawnSync } from 'node:child_process';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import { incidentDetailOverrides, providerIncidentConclusion } from './incident-detail-repairs.mjs';
+
+const execFileAsync = promisify(execFile);
 
 export const additionalPublicOverrides = {
   ringcentral: {
@@ -319,7 +322,7 @@ function chromeExecutable() {
   ].filter(Boolean).find(candidate => fs.existsSync(candidate));
 }
 
-export function renderPublicPage(source) {
+export async function renderPublicPage(source) {
   const startedAt = new Date().toISOString();
   const startedMs = Date.now();
   const chrome = chromeExecutable();
@@ -341,36 +344,54 @@ export function renderPublicPage(source) {
     };
   }
 
-  const result = spawnSync(chrome, [
-    '--headless=new',
-    '--disable-gpu',
-    '--no-sandbox',
-    '--disable-dev-shm-usage',
-    '--hide-scrollbars',
-    '--virtual-time-budget=12000',
-    '--dump-dom',
-    source.url
-  ], {
-    encoding: 'utf8',
-    timeout: 25000,
-    maxBuffer: 5 * 1024 * 1024
-  });
-  const body = result.stdout || '';
-  const ok = result.status === 0 && body.length >= 500;
-  const error = result.error?.message || (result.signal ? `Renderer terminated by ${result.signal}` : '');
-  return {
-    ok,
-    body,
-    log: {
-      timestamp: startedAt,
-      completed_at: new Date().toISOString(),
-      duration_ms: Date.now() - startedMs,
-      url: source.url,
-      source_type: 'rendered-html',
+  try {
+    const result = await execFileAsync(chrome, [
+      '--headless=new',
+      '--disable-gpu',
+      '--no-sandbox',
+      '--disable-dev-shm-usage',
+      '--hide-scrollbars',
+      '--virtual-time-budget=12000',
+      '--dump-dom',
+      source.url
+    ], {
+      encoding: 'utf8',
+      timeout: 25000,
+      maxBuffer: 5 * 1024 * 1024
+    });
+    const body = result.stdout || '';
+    const ok = body.length >= 500;
+    return {
       ok,
-      status: ok ? 'rendered public page' : 'render failed',
-      message: ok ? `Rendered ${new TextEncoder().encode(body).byteLength} bytes from the public page.` : 'The public page could not be rendered into readable HTML.',
-      error
-    }
-  };
+      body,
+      log: {
+        timestamp: startedAt,
+        completed_at: new Date().toISOString(),
+        duration_ms: Date.now() - startedMs,
+        url: source.url,
+        source_type: 'rendered-html',
+        ok,
+        status: ok ? 'rendered public page' : 'render failed',
+        message: ok ? `Rendered ${new TextEncoder().encode(body).byteLength} bytes from the public page.` : 'The public page could not be rendered into readable HTML.',
+        error: ''
+      }
+    };
+  } catch (error) {
+    const body = typeof error?.stdout === 'string' ? error.stdout : '';
+    return {
+      ok: false,
+      body,
+      log: {
+        timestamp: startedAt,
+        completed_at: new Date().toISOString(),
+        duration_ms: Date.now() - startedMs,
+        url: source.url,
+        source_type: 'rendered-html',
+        ok: false,
+        status: 'render failed',
+        message: 'The public page could not be rendered into readable HTML.',
+        error: error?.message || String(error)
+      }
+    };
+  }
 }
