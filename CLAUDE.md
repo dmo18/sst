@@ -29,7 +29,7 @@ Build and maintain a free, static, first-party-only MSP service-intelligence app
 - Active providers after consolidation: 79.
 - Active wallboard: `src/WallboardV2.tsx`.
 - Primary compact wallboard target: 458 by 291 pixels.
-- Normal browser refresh interval: 60 seconds while visible.
+- Normal browser refresh interval: 180 seconds while visible.
 - Payload freshness warning threshold: 20 minutes.
 - GitHub is a high-criticality DevOps provider sourced from the official GitHub Status summary API.
 
@@ -82,6 +82,10 @@ Do not create incidents from:
 
 Emergency maintenance remains an incident only when it is in progress and explicitly describes production or customer impact.
 
+A structurally valid fallback record is not live source coverage. `valid_status_percent` describes payload record validity only. `coverage_percent` and `live_source_coverage_percent` describe current successfully captured first-party observations.
+
+The `status-data/live-coverage` commit status must be successful only when every active provider has live current official source coverage, no provider is blind, and no limited fallback record was needed. A truthful degraded source status must not block publication of an otherwise valid fail-closed payload.
+
 ### GitHub monitoring contract
 
 GitHub monitoring must remain first-party and unauthenticated.
@@ -102,7 +106,7 @@ The active wallboard must preserve these rules:
 - Show provider icons rather than numeric indexes.
 - Exclude maintenance and collection-health failures from Priority signals.
 - Apply the `alerts` URL window to both incident rows and provider chips.
-- Keep payload and browser ages inline with the Priority signals heading.
+- Keep payload and browser ages visible in the compact top rail.
 - Keep the provider-chip rail fixed above the vertically moving incident list.
 - Loop provider chips horizontally only when needed.
 - Loop incidents vertically only when needed.
@@ -140,6 +144,7 @@ GitHub Pages deployment is a separate failure domain from build and test.
 - `public/deploy-version.txt` is generated during the build and must not be committed.
 - Production smoke must verify that the deployed commit and run IDs match `GITHUB_SHA` and `GITHUB_RUN_ID`.
 - The exact Yodeck test must use Chrome DevTools device metrics rather than assuming `--window-size` equals the CSS viewport.
+- Production dependency audit should use `npm audit --omit=dev --audit-level=high`; build-only tooling remains covered by lockfile updates and normal dependency maintenance without misrepresenting it as deployed runtime code.
 
 ## Commands
 
@@ -151,7 +156,7 @@ npm run typecheck
 npm run build:app
 npm run update-status
 npm run build
-npm audit --audit-level=high
+npm audit --omit=dev --audit-level=high
 ```
 
 `npm test` must remain deterministic and must not contact live vendors. `npm run update-status` performs one live official-source generation. Generated `status.json` and `deploy-version.txt` files are build outputs and must not be committed.
