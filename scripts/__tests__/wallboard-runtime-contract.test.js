@@ -19,7 +19,10 @@ test('Pages deployment is serialized, fully validated, and bounded', async () =>
   assert.doesNotMatch(workflow, /github\.event_name != 'schedule'/);
   assert.match(workflow, /name:\s*Run deterministic tests[\s\S]*run:\s*npm test/);
   assert.match(workflow, /name:\s*Run TypeScript checking[\s\S]*run:\s*npm run typecheck/);
-  assert.match(workflow, /name:\s*Audit production dependencies[\s\S]*run:\s*npm audit --audit-level=high/);
+  assert.match(workflow, /name:\s*Audit production dependencies[\s\S]*run:\s*npm audit --omit=dev --audit-level=high/);
+  assert.match(workflow, /status_state:\s*\$\{\{ steps\.verify-status\.outputs\.state \}\}/);
+  assert.match(workflow, /liveSourceCount === total && calculatedBlind === 0 && fallbackCount === 0 \? 'success' : 'failure'/);
+  assert.match(workflow, /state:\s*process\.env\.STATUS_STATE/);
   assert.match(workflow, /uses:\s*actions\/deploy-pages@v4\s*\n\s*with:\s*\n\s*timeout:\s*600000/);
   assert.match(workflow, /name:\s*Verify 458x291 Yodeck wallboard contract/);
   assert.match(workflow, /node scripts\/verify-yodeck-wallboard\.mjs/);
