@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { incidentDetailOverrides, providerIncidentConclusion } from './incident-detail-repairs.mjs';
+import { fullReviewConclusion, fullReviewOverrides } from './full-review-source-adapters.mjs';
 
 const execFileAsync = promisify(execFile);
 
@@ -140,6 +141,7 @@ export const additionalPublicOverrides = {
 };
 
 Object.assign(additionalPublicOverrides, incidentDetailOverrides);
+Object.assign(additionalPublicOverrides, fullReviewOverrides);
 
 function cleanRenderedText(value) {
   return String(value || '')
@@ -285,6 +287,8 @@ function eightByEightConclusion(text) {
 export function providerSpecificConclusion(provider, html) {
   const text = cleanRenderedText(html);
   if (!text) return null;
+  const reviewed = fullReviewConclusion(provider, html);
+  if (reviewed) return reviewed;
   if (provider.id === '8x8') {
     const scoped = eightByEightConclusion(text);
     if (scoped) return scoped;

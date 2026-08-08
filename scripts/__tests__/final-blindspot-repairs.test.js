@@ -18,17 +18,16 @@ const provider = (id, name = id) => ({
   url: `https://invalid.example/${id}`
 });
 
-test('Kaseya uses a readable 72-hour official history feed without false healthy confirmation', () => {
+test('Kaseya uses its current official Statuspage JSON instead of a history-only feed', () => {
   const source = resolvePublicSource(provider('kaseya', 'Kaseya'));
-  assert.equal(source.mode, 'feed');
-  assert.equal(source.url, 'https://status.kaseya.com/history.rss');
+  assert.equal(source.mode, 'statuspage-json');
+  assert.equal(source.url, 'https://status.kaseya.com/api/v2/summary.json');
   assert.equal(source.pageUrl, 'https://status.kaseya.com/');
-  assert.equal(source.maxAgeHours, 72);
-  assert.notEqual(source.confirmHealthyFromFeed, true);
+  assert.equal(source.regionScope, 'us');
 });
 
 test('fetch-blocked first-party pages are eligible for bounded browser rendering', () => {
-  for (const id of ['crowdstrike', 'proofpoint', '8x8', 'intermedia']) {
+  for (const id of ['crowdstrike', 'proofpoint', 'intermedia']) {
     const source = resolvePublicSource(provider(id));
     assert.equal(source.mode, 'status-html');
     assert.equal(source.render, true, `${id} should have browser fallback`);
