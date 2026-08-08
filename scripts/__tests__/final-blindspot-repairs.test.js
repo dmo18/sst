@@ -26,12 +26,19 @@ test('Kaseya uses its current official Statuspage JSON instead of a history-only
   assert.equal(source.regionScope, 'us');
 });
 
-test('fetch-blocked first-party pages are eligible for bounded browser rendering', () => {
-  for (const id of ['crowdstrike', 'proofpoint', 'intermedia']) {
+test('provider transport policy distinguishes browser fallback from authenticated status access references', () => {
+  const proofpoint = resolvePublicSource(provider('proofpoint', 'Proofpoint'));
+  assert.equal(proofpoint.mode, 'status-html');
+  assert.equal(proofpoint.render, true, 'Proofpoint should have browser fallback');
+  assert.match(proofpoint.url, /^https:\/\//);
+
+  for (const id of ['crowdstrike', 'intermedia']) {
     const source = resolvePublicSource(provider(id));
-    assert.equal(source.mode, 'status-html');
-    assert.equal(source.render, true, `${id} should have browser fallback`);
+    assert.equal(source.mode, 'status-access-reference');
+    assert.equal(source.healthAccess, 'authenticated');
+    assert.notEqual(source.render, true);
     assert.match(source.url, /^https:\/\//);
+    assert.match(source.pageUrl, /^https:\/\//);
   }
 
   const collector = fs.readFileSync(path.join(root, 'scripts', 'update-public-status.mjs'), 'utf8');
