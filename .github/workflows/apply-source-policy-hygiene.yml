@@ -1,0 +1,38 @@
+name: Apply source policy hygiene
+
+on:
+  push:
+    branches:
+      - agent/source-parity-full-review
+    paths:
+      - .github/workflows/apply-source-policy-hygiene.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/source-parity-full-review
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Apply source policy hygiene
+        run: node scripts/apply-source-policy-hygiene.mjs
+      - name: Validate provider catalog
+        run: node scripts/validate-providers.mjs
+      - name: Commit source policy hygiene
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add config/providers.json scripts/validate-providers.mjs scripts/structured-source-adapters.mjs scripts/public-source-repairs.mjs scripts/update-public-status.mjs
+          if git diff --cached --quiet; then
+            echo "No policy hygiene diff to commit."
+            exit 0
+          fi
+          git commit -m "Remove obsolete source policy aliases"
+          git push origin HEAD:agent/source-parity-full-review
