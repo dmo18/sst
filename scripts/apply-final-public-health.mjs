@@ -32,7 +32,7 @@ const catalogPath = 'config/providers.json';
 const catalog = JSON.parse(fs.readFileSync(catalogPath, 'utf8'));
 const updates = {
   stripe: {
-    sourceType: 'statuspage-json',
+    sourceType: 'statuspage',
     url: 'https://www.stripestatus.com/api/v2/summary.json',
     message: 'Current Stripe service health is read from the official Stripe Statuspage JSON summary.'
   },
