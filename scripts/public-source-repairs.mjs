@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { incidentDetailOverrides, providerIncidentConclusion } from './incident-detail-repairs.mjs';
+import { fullReviewConclusion, fullReviewOverrides } from './full-review-source-adapters.mjs';
 
 const execFileAsync = promisify(execFile);
 
@@ -11,34 +12,6 @@ export const additionalPublicOverrides = {
     url: 'https://status.ringcentral.com/',
     sourceName: 'RingCentral public status dashboard',
     render: true
-  },
-  crowdstrike: {
-    mode: 'status-html',
-    url: 'https://status.crowdstrike.com/',
-    sourceName: 'CrowdStrike public status page',
-    render: true,
-    regionScope: 'us'
-  },
-  proofpoint: {
-    mode: 'status-html',
-    url: 'https://status.proofpoint.com/',
-    sourceName: 'Proofpoint public status page',
-    render: true,
-    regionScope: 'us'
-  },
-  '8x8': {
-    mode: 'status-html',
-    url: 'https://status.8x8.com/',
-    sourceName: '8x8 public service status page',
-    render: true,
-    regionScope: 'us'
-  },
-  intermedia: {
-    mode: 'status-html',
-    url: 'https://status.intermedia.net/',
-    sourceName: 'Intermedia public service status page',
-    render: true,
-    regionScope: 'us'
   },
   sophos: {
     mode: 'status-html',
@@ -103,16 +76,6 @@ export const additionalPublicOverrides = {
     feedCandidates: ['https://www.syncrostatus.com/state_feed/feed.atom'],
     sourceName: 'Syncro public status page'
   },
-  kaseya: {
-    mode: 'status-html',
-    url: 'https://status.kaseya.com/',
-    feedCandidates: [
-      'https://status.kaseya.com/history.rss',
-      'https://status.kaseya.com/history.atom'
-    ],
-    sourceName: 'Kaseya public status page',
-    regionScope: 'us'
-  },
   okta: {
     mode: 'status-html',
     url: 'https://status.okta.com/',
@@ -130,16 +93,11 @@ export const additionalPublicOverrides = {
     url: 'https://status.zendesk.com/',
     sourceName: 'Zendesk public status page',
     render: true
-  },
-  backblaze: {
-    mode: 'status-html',
-    url: 'https://status.backblaze.com/',
-    sourceName: 'Backblaze public status page',
-    render: true
   }
 };
 
 Object.assign(additionalPublicOverrides, incidentDetailOverrides);
+Object.assign(additionalPublicOverrides, fullReviewOverrides);
 
 function cleanRenderedText(value) {
   return String(value || '')
@@ -285,6 +243,8 @@ function eightByEightConclusion(text) {
 export function providerSpecificConclusion(provider, html) {
   const text = cleanRenderedText(html);
   if (!text) return null;
+  const reviewed = fullReviewConclusion(provider, html);
+  if (reviewed) return reviewed;
   if (provider.id === '8x8') {
     const scoped = eightByEightConclusion(text);
     if (scoped) return scoped;

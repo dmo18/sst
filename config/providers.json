@@ -281,8 +281,8 @@
     "category": "Storage",
     "priority": 58,
     "enabled": true,
-    "sourceType": "backblaze-html",
-    "url": "https://status.backblaze.com/"
+    "sourceType": "firehydrant-json",
+    "url": "https://status.backblaze.com/data/payload.json"
   },
   {
     "id": "slack",
@@ -362,8 +362,8 @@
     "category": "Identity / Access",
     "priority": 78,
     "enabled": true,
-    "sourceType": "statuspage",
-    "url": "https://status.lastpass.com/api/v2/summary.json"
+    "sourceType": "rootly-json",
+    "url": "https://status.lastpass.com/api/v1/status.json"
   },
   {
     "id": "jamf",
@@ -443,8 +443,9 @@
     "category": "Security",
     "priority": 86,
     "enabled": true,
-    "sourceType": "statuspage",
-    "url": "https://status.crowdstrike.com/api/v2/summary.json"
+    "sourceType": "authenticated-status-reference",
+    "url": "https://www.crowdstrike.com/en-us/contact-us/",
+    "message": "CrowdStrike current technical notices and Tech Alerts require authenticated Support Portal access; the public source verifies the official access channel without inferring Falcon service health."
   },
   {
     "id": "huntress",
@@ -506,8 +507,8 @@
     "category": "Security / Email",
     "priority": 78,
     "enabled": true,
-    "sourceType": "statuspage",
-    "url": "https://status.proofpoint.com/api/v2/summary.json"
+    "sourceType": "rendered-official",
+    "url": "https://proofpoint.my.site.com/community/s/proofpoint-current-incidents"
   },
   {
     "id": "mimecast",
@@ -623,8 +624,8 @@
     "category": "VoIP",
     "priority": 60,
     "enabled": true,
-    "sourceType": "statuspage",
-    "url": "https://status.8x8.com/api/v2/summary.json"
+    "sourceType": "statuscast-json",
+    "url": "https://8x8status.status.page/summary.json"
   },
   {
     "id": "nextiva",
@@ -641,8 +642,9 @@
     "category": "VoIP",
     "priority": 60,
     "enabled": true,
-    "sourceType": "statuspage",
-    "url": "https://status.intermedia.net/api/v2/summary.json"
+    "sourceType": "authenticated-status-reference",
+    "url": "https://support.intermedia.com/",
+    "message": "Intermedia current System Status is displayed after authenticated HostPilot login; the public support source verifies the official access channel without inferring service health."
   },
   {
     "id": "twilio",

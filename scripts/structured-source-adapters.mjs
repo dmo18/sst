@@ -168,7 +168,6 @@ const statuspageCandidates = {
   '1password': ['https://status.1password.com/api/v2/summary.json', '1Password'],
   duo: ['https://status.duo.com/api/v2/summary.json', 'Duo'],
   jumpcloud: ['https://status.jumpcloud.com/api/v2/summary.json', 'JumpCloud'],
-  lastpass: ['https://status.lastpass.com/api/v2/summary.json', 'LastPass'],
   jamf: ['https://status.jamf.com/api/v2/summary.json', 'Jamf'],
   addigy: ['https://status.addigy.com/api/v2/summary.json', 'Addigy'],
   atera: ['https://status.atera.com/api/v2/summary.json', 'Atera'],

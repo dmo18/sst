@@ -40,11 +40,14 @@ function collectionMetrics(providers) {
   const successfulRequestCount = providers.reduce((sum, provider) => sum + Number(provider.collection_success_count || 0), 0);
   const failedRequestCount = providers.reduce((sum, provider) => sum + Number(provider.collection_failure_count || 0), 0);
   const quality = providers.map(provider => Number(provider.data_quality_score)).filter(Number.isFinite);
+  const authGated = providers.filter(provider => provider.health_access === 'authenticated').length;
   return {
     actionable_provider_count: providers.filter(provider => ['critical', 'action'].includes(provider.attention)).length,
     healthy_source_count: providers.filter(provider => provider.source_health === 'healthy').length,
     watch_source_count: providers.filter(provider => provider.source_health === 'watch').length,
     blind_spot_count: providers.filter(provider => provider.source_health === 'blind').length,
+    auth_gated_provider_count: authGated,
+    public_health_source_count: providers.length - authGated,
     average_data_quality_score: average(quality),
     request_count: requestCount,
     successful_request_count: successfulRequestCount,
@@ -196,7 +199,7 @@ export function normalizeStatusPayload(payload, previous = null, now = payload?.
       requirement: 'Every provider must publish an explicit status record, but only successfully captured current official sources count as coverage.',
       valid_source_states: [...validSourceStates],
       normalized_provider_count: normalizedCount,
-      coverage_definition: 'coverage_percent and live_source_coverage_percent are the percentage of providers with a successfully captured current official source. Limited, stale, and fallback records do not count as coverage.',
+      coverage_definition: 'coverage_percent and live_source_coverage_percent are the percentage of providers with a successfully captured current official source or current official status-access channel. Limited, stale, and fallback records do not count as coverage. Providers whose current health is vendor-authenticated remain service_state unknown and are counted separately by auth_gated_provider_count; they are never operational confirmation.',
       record_validity_definition: 'valid_status_percent measures structurally valid records and must not be presented as live provider coverage.',
       evidence_definition: 'source_confidence describes the quality and readability of the first-party source, not the severity or health of the vendor service.',
       collection_definition: 'source_health and data_quality_score describe the collector observation, freshness, evidence tier, and parser reliability. They never replace vendor service state.'

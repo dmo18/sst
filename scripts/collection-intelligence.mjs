@@ -201,6 +201,8 @@ export function buildCollectionIntelligence(providers, incidents, maintenance, s
   const healthy = enrichedProviders.filter(provider => provider.source_health === 'healthy').length;
   const watch = enrichedProviders.filter(provider => provider.source_health === 'watch').length;
   const blind = enrichedProviders.filter(provider => provider.source_health === 'blind').length;
+  const authGated = enrichedProviders.filter(provider => provider.health_access === 'authenticated').length;
+  const publiclyObservable = enrichedProviders.length - authGated;
   const requestCount = allLogs.length;
   const successfulRequests = allLogs.filter(log => log.ok === true).length;
   const failedRequests = allLogs.filter(log => log.ok === false).length;
@@ -213,6 +215,8 @@ export function buildCollectionIntelligence(providers, incidents, maintenance, s
       healthy_source_count: healthy,
       watch_source_count: watch,
       blind_spot_count: blind,
+      auth_gated_provider_count: authGated,
+      public_health_source_count: publiclyObservable,
       average_data_quality_score: qualityScore,
       request_count: requestCount,
       successful_request_count: successfulRequests,
@@ -241,7 +245,9 @@ export function buildCollectionIntelligence(providers, incidents, maintenance, s
       quality_score: qualityScore,
       healthy_source_count: healthy,
       watch_source_count: watch,
-      blind_spot_count: blind
+      blind_spot_count: blind,
+      auth_gated_provider_count: authGated,
+      public_health_source_count: publiclyObservable
     }
   };
 }

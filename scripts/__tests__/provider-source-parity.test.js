@@ -26,7 +26,7 @@ test('provider-specific source policies select the strongest current official so
     [
       ['ringcentral', 'status-html', 'https://status.ringcentral.com/', true],
       ['salesforce', 'status-html', 'https://status.salesforce.com/current', true],
-      ['backblaze', 'status-html', 'https://status.backblaze.com/', true],
+      ['backblaze', 'firehydrant-json', 'https://status.backblaze.com/data/payload.json', false],
       ['vultr', 'vultr-json', 'https://status.vultr.com/status.json', false]
     ]
   );

@@ -87,11 +87,6 @@ const publicOverrides = {
     url: 'https://status.connectwise.com/',
     sourceName: 'ConnectWise public status page'
   },
-  backblaze: {
-    mode: 'status-html',
-    url: 'https://status.backblaze.com/',
-    sourceName: 'Backblaze public status page'
-  },
   'quickbooks-online': {
     mode: 'status-html',
     url: 'https://status.quickbooks.intuit.com/',
@@ -348,6 +343,8 @@ function providerStatus(provider, source, status, color, ok, message, logs, inci
     maintenance,
     component_status: extras.components || [],
     schema_fingerprint: extras.schemaFingerprint || '',
+    ...(extras.healthAccess ? { health_access: extras.healthAccess } : {}),
+    ...(typeof extras.healthObservable === 'boolean' ? { health_observable: extras.healthObservable } : {}),
     ...sourceEvidence(source.mode, resolvedSourceState, ok)
   };
 }
@@ -378,17 +375,6 @@ export function publicPageUrl(value) {
 }
 
 export function resolvePublicSource(provider) {
-  if (provider.id === 'kaseya' && publicOverrides.kaseya) {
-    const page = publicOverrides.kaseya;
-    return {
-      ...page,
-      mode: 'feed',
-      url: page.feedCandidates?.[0] || 'https://status.kaseya.com/history.rss',
-      pageUrl: page.url,
-      sourceName: 'Kaseya public status RSS',
-      maxAgeHours: 72
-    };
-  }
   if (publicOverrides[provider.id]) return { ...publicOverrides[provider.id] };
   if (provider.sourceType === 'rss') {
     return { mode: 'feed', url: provider.url, sourceName: `${provider.name} public RSS`, maxAgeHours: provider.maxAgeHours || 168, confirmHealthyFromFeed: true };
@@ -538,7 +524,7 @@ function feedAvailableWithoutHealthConclusion(provider, source, logs, maintenanc
   );
 }
 
-async function parsePublicFeed(provider, source) {
+export async function parsePublicFeed(provider, source) {
   const requestProvider = { ...provider, url: source.url, sourceType: source.mode };
   const result = await fetchSource(requestProvider, 'application/rss+xml, application/atom+xml, application/xml, text/xml, text/plain, */*');
   const logs = result.logs || [result.log];
@@ -727,6 +713,7 @@ async function parsePublicHtml(provider, source) {
     const incident = makeIncident(provider, source, conclusion);
     return providerStatus(provider, source, conclusion.title, conclusion.color, true, '', logs, [incident], maintenance, undefined, extras);
   }
+  if (conclusion.kind === 'access-gated') return providerStatus(provider, source, conclusion.status || `${provider.name} current health requires authenticated vendor access`, 'blue', true, conclusion.message || 'The public source confirms the official authenticated status channel. No operational conclusion was inferred.', logs, [], maintenance, 'available', { ...extras, healthAccess: 'authenticated', healthObservable: false });
   if (conclusion.kind === 'healthy') return providerStatus(provider, source, conclusion.status || `${provider.name} reports normal service`, 'green', true, '', logs, [], maintenance, undefined, extras);
   if (feedResult?.source_state === 'available') return feedResult;
   return providerStatus(provider, source, 'Limited official source', 'blue', false, conclusion.message, logs, [], maintenance, 'limited', extras);
