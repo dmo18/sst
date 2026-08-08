@@ -6,6 +6,7 @@ import {
   colorFromText,
   compareSnapshots,
   fetchSource,
+  readBoundedBody,
   safeIncidentUrl,
   summarizeProviders,
   validatePayload
@@ -46,12 +47,14 @@ const publicOverrides = {
     confirmHealthyFromFeed: true
   },
   entra: {
-    mode: 'feed',
-    url: 'https://rssfeed.azure.status.microsoft/en-us/status/feed/',
+    mode: 'azure-status-html',
+    url: 'https://azure.status.microsoft/en-us/status',
     pageUrl: 'https://azure.status.microsoft/en-us/status',
-    sourceName: 'Azure public status RSS',
-    maxAgeHours: 336,
-    includePattern: /Microsoft Entra ID|Azure Active Directory|\bEntra\b|identity|authentication|sign-?in/i
+    sourceName: 'Azure official public status page',
+    regionScope: 'us',
+    timeoutMs: 20000,
+    maxResponseBytes: 10 * 1024 * 1024,
+    discoverFeeds: false
   },
   'google-workspace': {
     mode: 'feed',
@@ -614,16 +617,125 @@ function htmlIssueConclusion(provider, source, html) {
   return { kind: 'limited', message: 'The official page loaded but did not expose a stable readable current health conclusion.' };
 }
 
-export function entraConclusion(text) {
+function tableSection(html, zoneName) {
+  const source = String(html || '');
+  const pattern = new RegExp('\\<table\\b[^>]*data-zone-name=["\\']' + zoneName + '["\\'][^>]*\\>', 'i');
+  const start = pattern.exec(source);
+  if (!start) return '';
+  const end = source.indexOf('</table>', start.index + start[0].length);
+  return end >= 0 ? source.slice(start.index, end + 8) : '';
+}
+
+function tagBlocks(value, tagName) {
+  const pattern = new RegExp('<' + tagName + '\\b[^>]*>[\\s\\S]*?</' + tagName + '>', 'gi');
+  return [...String(value || '').matchAll(pattern)].map(match => match[0]);
+}
+
+function azureStatusLabel(cell) {
+  const label = /data-label=["']([^"']+)["']/i.exec(String(cell || ''))?.[1];
+  return cleanText(label || cell);
+}
+
+function isUsAzureHeader(value) {
+  const header = cleanText(value).replace(/^\\*+/, '').trim();
+  return /non-regional/i.test(header) || /\\bUS(?:\\s+\\d+)?\\b/i.test(header);
+}
+
+function azureEntraRow(html) {
+  const americas = tableSection(html, 'americas');
+  if (!americas) return null;
+  const headers = tagBlocks(americas, 'th').map(cleanText);
+  const row = tagBlocks(americas, 'tr').find(block => /Microsoft Entra ID(?:\s*\(formerly Azure AD\))?/i.test(cleanText(block)));
+  if (!row) return null;
+  const cells = tagBlocks(row, 'td');
+  if (cells.length < 2) return null;
+  const statuses = cells.slice(1).map((cell, index) => ({
+    region: headers[index + 1] || (index === 0 ? '*Non-Regional' : 'Unknown region'),
+    status: azureStatusLabel(cell)
+  }));
+  const relevant = statuses.filter(item => isUsAzureHeader(item.region));
+  return { row, statuses, relevant: relevant.length ? relevant : statuses.slice(0, 1) };
+}
+
+export function entraConclusion(value) {
+  const html = String(value || '');
+  if (/<table\\b/i.test(html)) {
+    const parsed = azureEntraRow(html);
+    if (!parsed) return { kind: 'limited', message: 'The Azure public status page did not expose a readable Microsoft Entra ID row in the Americas table.' };
+    const applicable = parsed.relevant.filter(item => !/^(?:not available|n\\/?a|unknown|)$/i.test(item.status));
+    const critical = applicable.filter(item => /\\b(?:critical|major|outage|unavailable|down)\\b/i.test(item.status));
+    const degraded = applicable.filter(item => /\\b(?:warning|degrad|information|partial|impact|issue)\\b/i.test(item.status));
+    const components = parsed.relevant.map(item => ({ name: item.region, status: item.status }));
+    if (critical.length) return {
+      kind: 'component-state',
+      color: 'red',
+      status: 'Microsoft Entra ID public status reports a critical US issue',
+      message: critical.map(item => item.region + ': ' + item.status).join('; '),
+      components
+    };
+    if (degraded.length) return {
+      kind: 'component-state',
+      color: 'amber',
+      status: 'Microsoft Entra ID public status reports a US service issue',
+      message: degraded.map(item => item.region + ': ' + item.status).join('; '),
+      components
+    };
+    const healthy = applicable.filter(item => /^(?:good|operational|available|normal|ok)$/i.test(item.status));
+    if (healthy.length && healthy.length === applicable.length) return {
+      kind: 'healthy',
+      status: 'Microsoft Entra ID public status is Good across currently reported US scope',
+      components
+    };
+    return { kind: 'limited', message: 'The Microsoft Entra ID Americas row was found, but its current US status could not be determined safely.', components };
+  }
+
+  const text = cleanText(html);
   const marker = /Microsoft Entra ID(?:\s*\(formerly Azure AD\))?/i.exec(text);
   if (!marker) return { kind: 'limited', message: 'The Azure public status page did not expose a readable Microsoft Entra ID row.' };
   const row = text.slice(marker.index, marker.index + 500);
   const tail = text.slice(marker.index + marker[0].length, marker.index + marker[0].length + 180);
   const firstStatus = /\b(Good|Information|Warning|Critical|Major|Outage|Degraded|Not available|N\/A)\b/i.exec(tail)?.[1]?.toLowerCase();
-  if (firstStatus && /critical|major|outage/.test(firstStatus)) return { kind: 'issue', color: 'red', title: 'Microsoft Entra ID public status reports a critical issue', note: cleanText(row).slice(0, 500) };
-  if (firstStatus && /warning|degraded|information/.test(firstStatus)) return { kind: 'issue', color: 'amber', title: 'Microsoft Entra ID public status reports an issue', note: cleanText(row).slice(0, 500) };
-  if (firstStatus === 'good') return { kind: 'healthy', status: 'Microsoft Entra ID public status is Good' };
+  if (firstStatus && /critical|major|outage/.test(firstStatus)) return { kind: 'component-state', color: 'red', status: 'Microsoft Entra ID public status reports a critical issue', message: cleanText(row).slice(0, 500), components: [{ name: '*Non-Regional', status: firstStatus }] };
+  if (firstStatus && /warning|degraded|information/.test(firstStatus)) return { kind: 'component-state', color: 'amber', status: 'Microsoft Entra ID public status reports an issue', message: cleanText(row).slice(0, 500), components: [{ name: '*Non-Regional', status: firstStatus }] };
+  if (firstStatus === 'good') return { kind: 'healthy', status: 'Microsoft Entra ID public status is Good', components: [{ name: '*Non-Regional', status: 'Good' }] };
   return { kind: 'limited', message: 'The Microsoft Entra ID row was found, but its current status could not be determined.' };
+}
+
+async function parseAzureEntraStatus(provider, source) {
+  const startedAt = new Date().toISOString();
+  const startedMs = Date.now();
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), source.timeoutMs || 20000);
+  let response;
+  try {
+    response = await fetch(source.url, {
+      signal: controller.signal,
+      redirect: 'follow',
+      headers: { accept: 'text/html, text/plain, */*', 'user-agent': 'msp-status-hud/3.3.0' }
+    });
+    const contentType = response.headers.get('content-type') || '';
+    if (!response.ok) {
+      const log = { timestamp: startedAt, completed_at: new Date().toISOString(), duration_ms: Date.now() - startedMs, url: source.url, source_type: source.mode, ok: false, status: 'HTTP ' + response.status, message: (response.statusText || 'HTTP failure') + '; content-type=' + contentType, error: '', attempt: 1, content_type: contentType };
+      return providerStatus(provider, source, 'Source unavailable: HTTP ' + response.status, 'blue', false, log.message, [log], [], [], 'unavailable');
+    }
+    if (!/^(?:text\/html|text\/plain)(?:;|$)/i.test(contentType)) throw Object.assign(new Error('Unsupported content-type ' + (contentType || 'missing') + ' for Azure status HTML'), { permanent: true });
+    const body = await readBoundedBody(response, source.maxResponseBytes || 10 * 1024 * 1024, controller.signal);
+    const bytes = new TextEncoder().encode(body).byteLength;
+    const log = { timestamp: startedAt, completed_at: new Date().toISOString(), duration_ms: Date.now() - startedMs, url: source.url, source_type: source.mode, ok: true, status: 'HTTP ' + response.status, message: (response.statusText || 'OK') + '; content-type=' + contentType + '; bytes=' + bytes, error: '', attempt: 1, content_type: contentType };
+    const conclusion = entraConclusion(body);
+    const extras = { components: conclusion.components || [], schemaFingerprint: schemaFingerprint(body, source.mode) };
+    if (conclusion.kind === 'component-state') return providerStatus(provider, source, conclusion.status, conclusion.color === 'red' ? 'red' : 'amber', true, conclusion.message || '', [log], [], [], 'available', extras);
+    if (conclusion.kind === 'healthy') return providerStatus(provider, source, conclusion.status, 'green', true, '', [log], [], [], 'available', extras);
+    return providerStatus(provider, source, 'Limited official source', 'blue', false, conclusion.message || 'The Azure public status page did not expose a safe Entra conclusion.', [log], [], [], 'limited', extras);
+  } catch (error) {
+    const aborted = controller.signal.aborted || error?.name === 'AbortError';
+    const contentType = response?.headers.get('content-type') || '';
+    const message = String(error?.message || error);
+    const log = { timestamp: startedAt, completed_at: new Date().toISOString(), duration_ms: Date.now() - startedMs, url: source.url, source_type: source.mode, ok: false, status: aborted ? 'fetch aborted' : 'fetch failed', message: 'Fetch failed before a readable Azure status page was returned.', error: message, attempt: 1, content_type: contentType };
+    return providerStatus(provider, source, 'Source unavailable', 'blue', false, message, [log], [], [], 'unavailable');
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 async function tryFeedCandidates(provider, source, html, pageLogs) {
@@ -729,6 +841,7 @@ export async function loadPublicProvider(provider) {
   try {
     if (source.mode === 'limited') return limitedStatus(provider, source);
     if (source.mode === 'feed') return await parsePublicFeed(provider, source);
+    if (source.mode === 'azure-status-html') return await parseAzureEntraStatus(provider, source);
     return await parsePublicHtml(provider, source);
   } catch (error) {
     const message = error?.message || String(error);
