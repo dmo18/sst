@@ -22,7 +22,12 @@ const allowedSourceTypes = new Set([
     'official-limited',
     'limited-microsoft',
     'html-limited',
-    'okta-html'
+    'okta-html',
+    'rootly-json',
+    'statuscast-json',
+    'firehydrant-json',
+    'rendered-official',
+    'authenticated-status-reference'
 ]);
 const limitedSourceTypes = new Set(['limited-official', 'limited-public-page', 'official-limited', 'html-limited', 'okta-html']);
 function fail(message, context) {

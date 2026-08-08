@@ -87,11 +87,6 @@ const publicOverrides = {
     url: 'https://status.connectwise.com/',
     sourceName: 'ConnectWise public status page'
   },
-  backblaze: {
-    mode: 'status-html',
-    url: 'https://status.backblaze.com/',
-    sourceName: 'Backblaze public status page'
-  },
   'quickbooks-online': {
     mode: 'status-html',
     url: 'https://status.quickbooks.intuit.com/',

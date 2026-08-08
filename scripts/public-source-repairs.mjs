@@ -13,34 +13,6 @@ export const additionalPublicOverrides = {
     sourceName: 'RingCentral public status dashboard',
     render: true
   },
-  crowdstrike: {
-    mode: 'status-html',
-    url: 'https://status.crowdstrike.com/',
-    sourceName: 'CrowdStrike public status page',
-    render: true,
-    regionScope: 'us'
-  },
-  proofpoint: {
-    mode: 'status-html',
-    url: 'https://status.proofpoint.com/',
-    sourceName: 'Proofpoint public status page',
-    render: true,
-    regionScope: 'us'
-  },
-  '8x8': {
-    mode: 'status-html',
-    url: 'https://status.8x8.com/',
-    sourceName: '8x8 public service status page',
-    render: true,
-    regionScope: 'us'
-  },
-  intermedia: {
-    mode: 'status-html',
-    url: 'https://status.intermedia.net/',
-    sourceName: 'Intermedia public service status page',
-    render: true,
-    regionScope: 'us'
-  },
   sophos: {
     mode: 'status-html',
     url: 'https://sophoscentral.status.page/',
@@ -104,16 +76,6 @@ export const additionalPublicOverrides = {
     feedCandidates: ['https://www.syncrostatus.com/state_feed/feed.atom'],
     sourceName: 'Syncro public status page'
   },
-  kaseya: {
-    mode: 'status-html',
-    url: 'https://status.kaseya.com/',
-    feedCandidates: [
-      'https://status.kaseya.com/history.rss',
-      'https://status.kaseya.com/history.atom'
-    ],
-    sourceName: 'Kaseya public status page',
-    regionScope: 'us'
-  },
   okta: {
     mode: 'status-html',
     url: 'https://status.okta.com/',
@@ -130,12 +92,6 @@ export const additionalPublicOverrides = {
     mode: 'status-html',
     url: 'https://status.zendesk.com/',
     sourceName: 'Zendesk public status page',
-    render: true
-  },
-  backblaze: {
-    mode: 'status-html',
-    url: 'https://status.backblaze.com/',
-    sourceName: 'Backblaze public status page',
     render: true
   }
 };
