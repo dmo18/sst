@@ -1,0 +1,38 @@
+name: Apply Entra final reliability
+
+on:
+  push:
+    branches:
+      - agent/entra-final-reliability
+    paths:
+      - .github/workflows/apply-entra-final-reliability.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/entra-final-reliability
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Apply Entra repair
+        run: node scripts/apply-entra-final-reliability.mjs
+      - name: Validate provider catalog
+        run: node scripts/validate-providers.mjs
+      - name: Commit Entra repair
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add scripts/update-public-status.mjs config/providers.json scripts/validate-providers.mjs
+          if git diff --cached --quiet; then
+            echo "No Entra repair diff to commit."
+            exit 0
+          fi
+          git commit -m "Use Azure public status table for Entra health"
+          git push origin HEAD:agent/entra-final-reliability
