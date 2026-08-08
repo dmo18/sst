@@ -38,6 +38,22 @@ export const fullReviewOverrides = {
     sourceName: 'Backblaze official FireHydrant payload',
     regionScope: 'us'
   },
+  stripe: {
+    mode: 'statuspage-json',
+    url: 'https://www.stripestatus.com/api/v2/summary.json',
+    pageUrl: 'https://www.stripestatus.com/',
+    sourceName: 'Stripe official Statuspage JSON',
+    regionScope: 'global'
+  },
+  paypal: {
+    mode: 'status-html',
+    url: 'https://www.paypal-status.com/product/production',
+    pageUrl: 'https://www.paypal-status.com/product/production',
+    sourceName: 'PayPal production status page',
+    render: true,
+    discoverFeeds: false,
+    regionScope: 'global'
+  },
   crowdstrike: {
     mode: 'status-access-reference',
     url: 'https://www.crowdstrike.com/en-us/contact-us/',
@@ -375,10 +391,47 @@ export function parseAuthenticatedStatusReference(value, provider = {}) {
   return null;
 }
 
+export function parsePayPalProductionStatus(value) {
+  const text = clean(value);
+  if (!/\bPayPal Status Page\b/i.test(text) || !/\bProduction Sandbox Services\b/i.test(text)) return null;
+
+  if (/\bAll Production Systems Operational\b/i.test(text)) {
+    return {
+      kind: 'healthy',
+      status: 'All Production Systems Operational',
+      components: [{ name: 'PayPal Production', status: 'Operational' }],
+      maintenance: []
+    };
+  }
+
+  const start = text.search(/\bProduction Sandbox Services\b/i);
+  const end = text.search(/\bView history\b/i);
+  const currentSection = start >= 0 ? text.slice(start, end > start ? end : start + 12000) : text.slice(0, 12000);
+  const legend = currentSection.search(/\bOperational Major Outage Degraded Performance Maintenance Bulletin\b/i);
+  const statusSection = legend > 0 ? currentSection.slice(0, legend) : currentSection;
+  const explicit = /\b(?:Production Systems? (?:Degraded|Unavailable)|Service (?:Outage|Disruption)|Major Outage|Degraded Performance|Partial Outage)\b/i.exec(statusSection);
+  if (explicit) {
+    return {
+      kind: 'component-state',
+      status: 'PayPal production status reports current service impact',
+      color: /major outage|unavailable|service outage/i.test(explicit[0]) ? 'red' : 'amber',
+      message: clean(statusSection.slice(Math.max(0, explicit.index - 500), Math.min(statusSection.length, explicit.index + 1600))),
+      components: [{ name: 'PayPal Production', status: explicit[0] }],
+      maintenance: []
+    };
+  }
+
+  return {
+    kind: 'limited',
+    message: 'The PayPal production status page rendered, but did not expose an explicit current operational or service-impact state.'
+  };
+}
+
 export function fullReviewConclusion(provider, value) {
   const source = fullReviewOverrides[provider?.id];
   if (!source) return null;
-  if (provider.id === 'kaseya' || provider.id === 'lastpass') return parseStatuspageSummary(value, provider, source);
+  if (provider.id === 'kaseya' || provider.id === 'lastpass' || provider.id === 'stripe') return parseStatuspageSummary(value, provider, source);
+  if (provider.id === 'paypal') return parsePayPalProductionStatus(value);
   if (provider.id === '8x8') return parseStatusCastSummary(value, provider, source);
   if (provider.id === 'proofpoint') return parseProofpointCurrentIncidents(value, provider);
   if (provider.id === 'backblaze') return parseFireHydrantPayload(value, provider, source);
