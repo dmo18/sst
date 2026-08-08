@@ -1,0 +1,39 @@
+name: Apply final public health conclusions
+
+on:
+  push:
+    branches:
+      - agent/final-public-health-conclusions
+    paths:
+      - .github/workflows/apply-final-public-health.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/final-public-health-conclusions
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: node scripts/apply-final-public-health.mjs
+      - run: npm ci
+      - run: npm run validate-providers
+      - run: npm test
+      - name: Commit repair
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add scripts/full-review-source-adapters.mjs config/providers.json
+          if git diff --cached --quiet; then
+            echo "No repair diff to commit."
+            exit 0
+          fi
+          git commit -m "Use current public health sources for PayPal and Stripe"
+          git push origin HEAD:agent/final-public-health-conclusions
