@@ -8,6 +8,7 @@ import {
   entraConclusion,
   loadPublicProvider,
   parseFeedEntries,
+  parsePublicFeed,
   publicPageUrl,
   resolvePublicSource,
   scopeFeedEntries
@@ -127,15 +128,40 @@ test('Entra feed ignores unrelated Azure incidents', async () => {
   assert.match(result.incidents[0].title, /Entra ID/);
 });
 
-test('verified public source overrides use free first-party pages', () => {
-  for (const id of ['ringcentral', 'sophos', 'bitdefender-gravityzone', 'bitwarden', 'cove-data-protection', 'crashplan', 'fortinet', 'keeper', 'malwarebytes', 'superops', 'syncro', 'kaseya', 'okta', 'salesforce', 'zendesk', 'backblaze']) {
+test('verified public source overrides use current first-party sources', () => {
+  const expectedModes = {
+    ringcentral: 'status-html',
+    sophos: 'status-html',
+    'bitdefender-gravityzone': 'status-html',
+    bitwarden: 'status-html',
+    'cove-data-protection': 'status-html',
+    crashplan: 'status-html',
+    fortinet: 'status-html',
+    keeper: 'status-html',
+    malwarebytes: 'status-html',
+    superops: 'betterstack-json',
+    syncro: 'status-html',
+    kaseya: 'statuspage-json',
+    okta: 'status-html',
+    salesforce: 'status-html',
+    zendesk: 'status-html',
+    backblaze: 'firehydrant-json',
+    proofpoint: 'status-html',
+    '8x8': 'statuscast-json',
+    lastpass: 'statuspage-json',
+    crowdstrike: 'status-access-reference',
+    intermedia: 'status-access-reference'
+  };
+  for (const [id, expectedMode] of Object.entries(expectedModes)) {
     const source = additionalPublicOverrides[id];
     assert.ok(source);
-    assert.equal(source.mode, id === 'superops' ? 'betterstack-json' : 'status-html');
+    assert.equal(source.mode, expectedMode);
     assert.match(source.url, /^https:\/\//);
   }
   assert.equal(additionalPublicOverrides.kaseya.regionScope, 'us');
   assert.equal(additionalPublicOverrides.okta.regionScope, 'us');
+  assert.equal(additionalPublicOverrides.crowdstrike.healthAccess, 'authenticated');
+  assert.equal(additionalPublicOverrides.intermedia.healthAccess, 'authenticated');
 });
 
 test('provider-specific status conclusions prefer current health over historical text', () => {
@@ -303,7 +329,7 @@ test('Kaseya includes Autotask and filters non-US-only feed incidents', async ()
         <item><title>Global Kaseya outage</title><description>Worldwide service impact</description><pubDate>Thu, 31 Jul 2026 15:00:00 GMT</pubDate><guid>https://status.kaseya.com/incidents/global</guid></item>
       </channel></rss>`, 200, 'application/rss+xml')
     : response('Forbidden', 403, 'text/html');
-  const result = await loadPublicProvider({
+  const provider = {
     id: 'kaseya',
     name: 'Kaseya',
     category: 'MSP Platforms',
@@ -311,6 +337,14 @@ test('Kaseya includes Autotask and filters non-US-only feed incidents', async ()
     services: ['Autotask PSA', 'Datto RMM'],
     sourceType: 'statuspage',
     url: 'https://status.kaseya.com/api/v2/summary.json'
+  };
+  const result = await parsePublicFeed(provider, {
+    mode: 'feed',
+    url: 'https://status.kaseya.com/history.rss',
+    pageUrl: 'https://status.kaseya.com/',
+    sourceName: 'Kaseya public status RSS regression fixture',
+    maxAgeHours: 168,
+    regionScope: 'us'
   });
   assert.equal(result.incidents.length, 2);
   assert.equal(result.incidents.some(item => /UK cell/i.test(item.title)), false);

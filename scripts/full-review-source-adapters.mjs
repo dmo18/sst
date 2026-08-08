@@ -37,6 +37,22 @@ export const fullReviewOverrides = {
     feedCandidates: ['https://status.backblaze.com/data/rss.xml'],
     sourceName: 'Backblaze official FireHydrant payload',
     regionScope: 'us'
+  },
+  crowdstrike: {
+    mode: 'status-access-reference',
+    url: 'https://www.crowdstrike.com/en-us/contact-us/',
+    pageUrl: 'https://supportportal.crowdstrike.com/',
+    sourceName: 'CrowdStrike official support access page',
+    healthAccess: 'authenticated',
+    regionScope: 'us'
+  },
+  intermedia: {
+    mode: 'status-access-reference',
+    url: 'https://support.intermedia.com/',
+    pageUrl: 'https://cp.intermedia.net/ControlPanel/Login?ClientType=ControlPanel',
+    sourceName: 'Intermedia official system-status access page',
+    healthAccess: 'authenticated',
+    regionScope: 'us'
   }
 };
 
@@ -334,6 +350,31 @@ export function parseProofpointCurrentIncidents(value, provider = {}) {
   return null;
 }
 
+export function parseAuthenticatedStatusReference(value, provider = {}) {
+  const text = clean(value);
+  if (provider.id === 'crowdstrike') {
+    const confirmsPortal = /Log in to the CrowdStrike Support portal/i.test(text);
+    const confirmsAlerts = /subscribe to Tech Alerts/i.test(text);
+    if (!confirmsPortal || !confirmsAlerts) return null;
+    return {
+      kind: 'access-gated',
+      status: 'Current CrowdStrike service notices require authenticated Support Portal access',
+      message: 'CrowdStrike confirms that technical support and Tech Alerts are delivered through its authenticated Support Portal. The public source confirms the current official access path; no Falcon operational conclusion is inferred from the public page.'
+    };
+  }
+  if (provider.id === 'intermedia') {
+    const confirmsStatus = /System Status/i.test(text);
+    const confirmsLogin = /status dashboard can be seen on the homepage of your control panel when you log in/i.test(text);
+    if (!confirmsStatus || !confirmsLogin) return null;
+    return {
+      kind: 'access-gated',
+      status: 'Current Intermedia system status requires authenticated HostPilot access',
+      message: 'Intermedia confirms that its system-status dashboard is displayed after logging in to HostPilot. The public support page confirms the current official access path; no Intermedia operational conclusion is inferred from the public page.'
+    };
+  }
+  return null;
+}
+
 export function fullReviewConclusion(provider, value) {
   const source = fullReviewOverrides[provider?.id];
   if (!source) return null;
@@ -341,5 +382,6 @@ export function fullReviewConclusion(provider, value) {
   if (provider.id === '8x8') return parseStatusCastSummary(value, provider, source);
   if (provider.id === 'proofpoint') return parseProofpointCurrentIncidents(value, provider);
   if (provider.id === 'backblaze') return parseFireHydrantPayload(value, provider, source);
+  if (provider.id === 'crowdstrike' || provider.id === 'intermedia') return parseAuthenticatedStatusReference(value, provider);
   return null;
 }

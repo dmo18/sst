@@ -91,6 +91,8 @@ export interface ProviderStatus {
   active_incident_count?: number;
   maintenance_count?: number;
   problem_component_count?: number;
+  health_access?: 'public' | 'authenticated';
+  health_observable?: boolean;
 }
 
 export interface IncidentUpdate {
@@ -206,6 +208,8 @@ export interface StatusSummary {
   healthy_source_count?: number;
   watch_source_count?: number;
   blind_spot_count?: number;
+  auth_gated_provider_count?: number;
+  public_health_source_count?: number;
   average_data_quality_score?: number;
   request_count?: number;
   successful_request_count?: number;
@@ -236,6 +240,8 @@ export interface CollectionRun {
   healthy_source_count: number;
   watch_source_count: number;
   blind_spot_count: number;
+  auth_gated_provider_count?: number;
+  public_health_source_count?: number;
 }
 
 export interface StatusPayload {

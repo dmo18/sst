@@ -45,9 +45,9 @@ test('Kaseya current Statuspage degradation remains specific structured incident
     scheduled_maintenances: []
   }));
 
-  assert.equal(result.kind, 'issues');
-  assert.equal(result.incidents.length, 1);
-  assert.match(result.incidents[0].title, /Datto SaaS Protection/);
+  assert.equal(result.kind, 'component-state');
+  assert.match(result.status, /Partially Degraded Service/);
+  assert.match(result.message, /Datto SaaS Protection Backups/);
 });
 
 test('LastPass Rootly status JSON confirms current operational service without a failed legacy request', () => {
@@ -185,6 +185,16 @@ test('Backblaze FireHydrant current US incident remains structured service-impac
   assert.equal(result.incidents.length, 1);
   assert.equal(result.incidents[0].affectedService, 'US East Region');
   assert.equal(result.incidents[0].color, 'amber');
+});
+
+test('authenticated vendor health channels are live official references without false operational conclusions', () => {
+  const crowdstrike = fullReviewConclusion({ id: 'crowdstrike', name: 'CrowdStrike' }, '<main>Log in to the CrowdStrike Support portal to create and manage your support cases, subscribe to Tech Alerts and Release notes, and access our knowledge base.</main>');
+  assert.equal(crowdstrike.kind, 'access-gated');
+  assert.match(crowdstrike.status, /authenticated Support Portal access/i);
+
+  const intermedia = fullReviewConclusion({ id: 'intermedia', name: 'Intermedia' }, '<main><h2>System Status</h2><p>Intermedia\'s status dashboard can be seen on the homepage of your control panel when you log in.</p></main>');
+  assert.equal(intermedia.kind, 'access-gated');
+  assert.match(intermedia.status, /authenticated HostPilot access/i);
 });
 
 test('Proofpoint rendered current-incidents page accepts explicit no-current state', () => {
