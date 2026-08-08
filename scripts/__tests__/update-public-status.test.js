@@ -57,12 +57,13 @@ test('Microsoft 365 uses the free official public RSS feed', () => {
   assert.equal(source.confirmHealthyFromFeed, true);
 });
 
-test('Entra uses the free Azure public RSS feed with identity filtering', () => {
+test('Entra uses the current Azure public status table instead of the latency-prone RSS feed', () => {
   const source = resolvePublicSource({ id: 'entra', url: 'https://invalid.example', sourceType: 'limited-microsoft' });
-  assert.equal(source.mode, 'feed');
-  assert.equal(source.url, 'https://rssfeed.azure.status.microsoft/en-us/status/feed/');
-  assert.equal(source.includePattern.test('Microsoft Entra ID authentication issue'), true);
-  assert.equal(source.includePattern.test('Azure Storage issue'), false);
+  assert.equal(source.mode, 'azure-status-html');
+  assert.equal(source.url, 'https://azure.status.microsoft/en-us/status');
+  assert.equal(source.discoverFeeds, false);
+  assert.equal(source.timeoutMs, 20000);
+  assert.equal(source.maxResponseBytes, 10 * 1024 * 1024);
 });
 
 test('feed parser keeps active incidents and rejects resolved history', () => {
@@ -85,10 +86,25 @@ test('feed discovery resolves relative RSS and Atom links', () => {
   ]);
 });
 
-test('Entra uses its first row status and ignores neighboring services', () => {
-  assert.equal(entraConclusion('Identity Microsoft Entra ID (formerly Azure AD) Good Enterprise State Roaming Warning').kind, 'healthy');
-  const issue = entraConclusion('Identity Microsoft Entra ID (formerly Azure AD) Warning Current Impact');
-  assert.equal(issue.kind, 'issue');
+test('Entra uses the current Americas table and ignores neighboring services', () => {
+  const healthy = entraConclusion(`
+    <table data-zone-name="americas">
+      <thead><tr><th>Products and services</th><th>*Non-Regional</th><th>East US</th></tr></thead>
+      <tbody>
+        <tr><td>Microsoft Entra ID (formerly Azure AD)</td><td><span data-label="Good"></span></td><td><span data-label="Good"></span></td></tr>
+        <tr><td>Enterprise State Roaming</td><td><span data-label="Good"></span></td><td><span data-label="Warning"></span></td></tr>
+      </tbody>
+    </table>
+  `);
+  assert.equal(healthy.kind, 'healthy');
+
+  const issue = entraConclusion(`
+    <table data-zone-name="americas">
+      <thead><tr><th>Products and services</th><th>*Non-Regional</th><th>East US</th></tr></thead>
+      <tbody><tr><td>Microsoft Entra ID (formerly Azure AD)</td><td><span data-label="Good"></span></td><td><span data-label="Warning"></span></td></tr></tbody>
+    </table>
+  `);
+  assert.equal(issue.kind, 'component-state');
   assert.equal(issue.color, 'amber');
 });
 
@@ -110,22 +126,29 @@ test('readable generic history feed is live without false operational status', a
   assert.match(result.message, /does not confirm current component health/);
 });
 
-test('Entra feed ignores unrelated Azure incidents', async () => {
+test('legacy Entra RSS parsing remains scoped when exercised explicitly', async () => {
+  const originalFetch = globalThis.fetch;
   globalThis.fetch = async () => response(`<?xml version="1.0"?><rss><channel>
     <item><title>Azure Storage outage</title><description>Investigating</description><pubDate>Thu, 30 Jul 2026 23:00:00 GMT</pubDate></item>
     <item><title>Microsoft Entra ID authentication degradation</title><description>Investigating sign-in failures</description><pubDate>Thu, 30 Jul 2026 23:00:00 GMT</pubDate></item>
   </channel></rss>`, 200, 'application/rss+xml');
-  const result = await loadPublicProvider({
-    id: 'entra',
-    name: 'Entra ID',
-    category: 'Identity',
-    priority: 125,
-    sourceType: 'limited-microsoft',
-    url: 'https://status.cloud.microsoft/api/'
-  });
-  assert.equal(result.source_state, 'available');
-  assert.equal(result.incidents.length, 1);
-  assert.match(result.incidents[0].title, /Entra ID/);
+  try {
+    const provider = { id: 'entra', name: 'Entra ID', category: 'Identity', priority: 125, services: ['Identity'] };
+    const result = await parsePublicFeed(provider, {
+      mode: 'feed',
+      url: 'https://rssfeed.azure.status.microsoft/en-us/status/feed/',
+      pageUrl: 'https://azure.status.microsoft/en-us/status',
+      sourceName: 'Azure public status RSS regression fixture',
+      maxAgeHours: 336,
+      includePattern: /Microsoft Entra ID|Azure Active Directory|\bEntra\b|identity|authentication|sign-?in/i,
+      regionScope: 'us'
+    });
+    assert.equal(result.source_state, 'available');
+    assert.equal(result.incidents.length, 1);
+    assert.match(result.incidents[0].title, /Entra ID/);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test('verified public source overrides use current first-party sources', () => {

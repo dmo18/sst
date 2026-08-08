@@ -23,9 +23,9 @@
     "category": "Identity",
     "priority": 125,
     "enabled": true,
-    "sourceType": "limited-microsoft",
-    "url": "https://status.cloud.microsoft/api/",
-    "message": "Public Microsoft status data is limited; reliable service health requires authenticated tenant Microsoft Graph service communications.",
+    "sourceType": "azure-status-html",
+    "url": "https://azure.status.microsoft/en-us/status",
+    "message": "Current Microsoft Entra ID status is read directly from the official Azure public status Americas table.",
     "criticality": "high",
     "tags": [
       "identity",
