@@ -13,41 +13,36 @@ permissions:
 jobs:
   probe:
     runs-on: ubuntu-latest
-    timeout-minutes: 6
+    timeout-minutes: 4
     steps:
       - uses: actions/checkout@v4
-      - name: Probe official Microsoft public status sources
+      - name: Inspect Entra status row in Azure public status page
         shell: bash
         run: |
-          set +e
-          endpoints=(
-            'https://rssfeed.azure.status.microsoft/en-us/status/feed/'
-            'https://status.cloud.microsoft/api/feed/mac'
-            'https://status.cloud.microsoft/api/'
-            'https://azure.status.microsoft/en-us/status'
-          )
-          for url in "${endpoints[@]}"; do
-            echo
-            echo "=== ${url} ==="
-            for i in 1 2 3; do
-              rm -f /tmp/h /tmp/b
-              start=$(date +%s%3N)
-              curl -L -sS --max-time 30 --connect-timeout 8 --http1.1 \
-                -A 'msp-status-hud/3.3.0' \
-                -D /tmp/h -o /tmp/b "$url"
-              rc=$?
-              end=$(date +%s%3N)
-              echo "attempt=${i} rc=${rc} ms=$((end-start)) bytes=$(wc -c < /tmp/b 2>/dev/null || echo 0)"
-              grep -Ei '^(HTTP/|content-type:|content-length:|location:|server:)' /tmp/h | tail -n 8 || true
-              [ "$rc" -eq 0 ] || continue
-              echo -n 'entra markers: '
-              grep -Eio 'Microsoft Entra ID|Azure Active Directory|Entra|identity|authentication|sign-in' /tmp/b | sort -u | tr '\n' ' '; echo
-              if echo "$url" | grep -q 'azure.status.microsoft/en-us/status$'; then
-                echo 'endpoint markers:'
-                grep -Eo 'https://[^"'"'<> ]+|/[A-Za-z0-9._~!$&()*+,;=:@%/?#-]+\.(json|js)|/api/[A-Za-z0-9._~!$&()*+,;=:@%/?#-]+' /tmp/b \
-                  | grep -Ei 'status|health|incident|impact|api|data|json|feed' | sort -u | head -n 120 || true
-                echo 'script sources:'
-                grep -Eio '<script[^>]+src=["'"'][^"'"']+' /tmp/b | head -n 40 || true
-              fi
-            done
-          done
+          set -e
+          node --input-type=module <<'NODE'
+          const url = 'https://azure.status.microsoft/en-us/status';
+          const started = Date.now();
+          const response = await fetch(url, {
+            signal: AbortSignal.timeout(15000),
+            headers: { 'user-agent': 'msp-status-hud/3.3.0', accept: 'text/html' }
+          });
+          const html = await response.text();
+          console.log(`status=${response.status} ms=${Date.now()-started} bytes=${Buffer.byteLength(html)}`);
+          const patterns = ['Microsoft Entra ID', 'Azure Active Directory'];
+          for (const pattern of patterns) {
+            let cursor = 0;
+            let count = 0;
+            while (count < 12) {
+              const index = html.toLowerCase().indexOf(pattern.toLowerCase(), cursor);
+              if (index < 0) break;
+              console.log(`\n=== ${pattern} occurrence ${count + 1} at ${index} ===`);
+              console.log(html.slice(Math.max(0, index - 2500), Math.min(html.length, index + 3500)));
+              cursor = index + pattern.length;
+              count += 1;
+            }
+          }
+          const currentImpactIndex = html.toLowerCase().indexOf('current impact');
+          console.log(`\ncurrentImpactIndex=${currentImpactIndex}`);
+          if (currentImpactIndex >= 0) console.log(html.slice(currentImpactIndex, currentImpactIndex + 12000));
+          NODE
