@@ -22,6 +22,21 @@ export const fullReviewOverrides = {
     pageUrl: 'https://status.8x8.com/',
     sourceName: '8x8 official StatusCast JSON',
     regionScope: 'us'
+  },
+  proofpoint: {
+    mode: 'status-html',
+    url: 'https://proofpoint.my.site.com/community/s/proofpoint-current-incidents',
+    sourceName: 'Proofpoint official current incidents page',
+    render: true,
+    regionScope: 'us'
+  },
+  backblaze: {
+    mode: 'firehydrant-json',
+    url: 'https://status.backblaze.com/data/payload.json',
+    pageUrl: 'https://status.backblaze.com/',
+    feedCandidates: ['https://status.backblaze.com/data/rss.xml'],
+    sourceName: 'Backblaze official FireHydrant payload',
+    regionScope: 'us'
   }
 };
 
@@ -39,6 +54,7 @@ function clean(value) {
     .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/gi, '$1')
     .replace(/<script[\s\S]*?<\/script>/gi, ' ')
     .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<svg[\s\S]*?<\/svg>/gi, ' ')
     .replace(/<[^>]+>/g, ' ')
     .replace(/&nbsp;|&#160;/gi, ' ')
     .replace(/&amp;/gi, '&')
@@ -56,6 +72,11 @@ function toIso(value) {
   return Number.isFinite(parsed) ? new Date(parsed).toISOString() : '';
 }
 
+function timeValue(value) {
+  const parsed = Date.parse(value || '');
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 function statusCastUpdates(incident) {
   const posts = Array.isArray(incident?.Posts) ? incident.Posts : [];
   return posts
@@ -65,14 +86,14 @@ function statusCastUpdates(incident) {
       at: toIso(post?.DateCreated || post?.DateUpdated || post?.Date || post?.CreatedAt || '')
     }))
     .filter(update => update.status || update.note || update.at)
-    .sort((a, b) => Date.parse(b.at || '') - Date.parse(a.at || ''))
+    .sort((a, b) => timeValue(b.at) - timeValue(a.at))
     .slice(0, 8);
 }
 
 function explicitNonUsOnly(value) {
   const text = clean(value);
   const us = /\b(?:united states|u\.s\.|usa|us|north america|americas|global|worldwide|all regions|multiple regions)\b/i.test(text);
-  const nonUs = /\b(?:emea|europe|european|uk|united kingdom|apac|asia(?: pacific)?|australia|new zealand|canada|latin america|latam|middle east|africa|japan|singapore|india|brazil)\b/i.test(text);
+  const nonUs = /\b(?:emea|europe|european|eu central|uk|united kingdom|apac|asia(?: pacific)?|australia|new zealand|canada|ca east|latin america|latam|middle east|africa|japan|singapore|india|brazil)\b/i.test(text);
   return nonUs && !us;
 }
 
@@ -168,10 +189,157 @@ export function parseStatusCastSummary(value, provider = {}, source = {}) {
   return null;
 }
 
+function fireHydrantTimeline(incident) {
+  const timeline = Array.isArray(incident?.timeline) ? incident.timeline : [];
+  return timeline
+    .map(event => {
+      const details = event?.details && typeof event.details === 'object' ? event.details : {};
+      const status = clean(details.currentMilestone || details.milestone || event?.type || incident?.currentMilestone || '');
+      const note = clean(details.note || details.summary || details.description || event?.summary || event?.description || '');
+      const at = toIso(event?.occurredAt || event?.time || event?.createdAt || event?.updatedAt || '');
+      return { status, note, at };
+    })
+    .filter(update => update.status || update.note || update.at)
+    .sort((a, b) => timeValue(b.at) - timeValue(a.at))
+    .slice(0, 8);
+}
+
+function fireHydrantComponentConditions(incident) {
+  const raw = incident?.componentConditions;
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return [];
+  return Object.entries(raw).map(([name, status]) => ({ name: clean(name), status: clean(status) })).filter(item => item.name);
+}
+
+function fireHydrantColor(value) {
+  const text = clean(value);
+  return /\b(?:unavailable|offline|major|critical|complete outage|down)\b/i.test(text) ? 'red' : 'amber';
+}
+
+function fireHydrantMaintenance(json) {
+  const records = Array.isArray(json?.scheduledMaintenances) ? json.scheduledMaintenances : [];
+  return records.map(item => {
+    const components = item?.componentConditions && typeof item.componentConditions === 'object'
+      ? Object.keys(item.componentConditions).map(clean).filter(Boolean)
+      : [];
+    return {
+      id: String(item?.id || ''),
+      title: clean(item?.name || 'Backblaze scheduled maintenance'),
+      note: clean(item?.summary || item?.description || ''),
+      status: timeValue(item?.startsAt) <= Date.now() && timeValue(item?.endsAt) >= Date.now() ? 'in_progress' : 'scheduled',
+      startsAt: toIso(item?.startsAt || ''),
+      endsAt: toIso(item?.endsAt || ''),
+      latestUpdate: toIso(item?.updatedAt || item?.createdAt || ''),
+      affectedService: components.join(', '),
+      url: 'https://status.backblaze.com/'
+    };
+  });
+}
+
+export function parseFireHydrantPayload(value, provider = {}, source = {}) {
+  const json = safeJson(value);
+  if (!json || typeof json !== 'object' || !json.config || !Array.isArray(json.components) || !json.conditions) return null;
+
+  const rawIncidents = Array.isArray(json.incidents) ? json.incidents : [];
+  const active = rawIncidents.filter(incident => !incident?.timestamps?.resolved && !/\bresolved\b/i.test(clean(incident?.currentMilestone || incident?.status || '')));
+  const incidents = [];
+  let explicitNonUsCount = 0;
+
+  for (const incident of active) {
+    const components = fireHydrantComponentConditions(incident);
+    const componentText = components.map(item => `${item.name} ${item.status}`).join(' ');
+    const title = clean(incident?.name || incident?.title || incident?.summary || '');
+    const timeline = fireHydrantTimeline(incident);
+    const latest = timeline[0] || {};
+    const note = clean(latest.note || incident?.summary || incident?.description || '');
+    const status = clean(latest.status || incident?.currentMilestone || incident?.status || 'active');
+    const combined = `${title} ${note} ${status} ${componentText}`;
+    if (explicitNonUsOnly(combined) && source.regionScope !== 'global') {
+      explicitNonUsCount += 1;
+      continue;
+    }
+    const firstDetected = toIso(incident?.timestamps?.started || incident?.startedAt || incident?.createdAt || timeline.at(-1)?.at || '');
+    const latestUpdate = toIso(latest.at || incident?.updatedAt || incident?.timestamps?.started || '');
+    incidents.push({
+      id: String(incident?.id || ''),
+      title: title || `${provider.name || 'Backblaze'} service incident`,
+      note: note || `${provider.name || 'Backblaze'} reports an active service incident.`,
+      status: status || 'active',
+      firstDetected,
+      latestUpdate,
+      affectedService: components.map(item => item.name).join(', ') || provider.name || 'Backblaze services',
+      color: fireHydrantColor(combined),
+      url: source.pageUrl || source.url,
+      updates: timeline
+    });
+  }
+
+  const maintenance = fireHydrantMaintenance(json);
+  const components = json.components.map(item => ({
+    name: clean(item?.name || ''),
+    status: clean(item?.customerCondition || item?.condition || item?.status || 'operational')
+  })).filter(item => item.name);
+
+  if (incidents.length) return { kind: 'issues', incidents: incidents.slice(0, 12), maintenance, components };
+  if (explicitNonUsCount === active.length && active.length > 0) {
+    return { kind: 'healthy', status: `${provider.name || 'Backblaze'} reports no active US-relevant service incidents`, maintenance, components };
+  }
+
+  const explicitProblems = components.filter(component => !/^(?:operational|available|up|ok|none|good)$/i.test(component.status));
+  if (explicitProblems.length) {
+    const message = explicitProblems.map(component => `${component.name}: ${component.status}`).join('; ');
+    return {
+      kind: 'component-state',
+      status: `${provider.name || 'Backblaze'} reports current component degradation`,
+      color: fireHydrantColor(message),
+      message,
+      maintenance,
+      components
+    };
+  }
+
+  const operationalMessage = clean(json.config?.operationalMessage || '');
+  if (/\b(?:all systems operational|nothing to report|all services operational|operating normally)\b/i.test(operationalMessage)) {
+    return { kind: 'healthy', status: operationalMessage, maintenance, components };
+  }
+
+  if (rawIncidents.length === 0 && components.length > 0) {
+    return { kind: 'healthy', status: `${provider.name || 'Backblaze'} reports no active service incidents`, maintenance, components };
+  }
+
+  return null;
+}
+
+export function parseProofpointCurrentIncidents(value, provider = {}) {
+  const text = clean(value);
+  if (!/\bProofpoint Current Incidents\b/i.test(text)) return null;
+  if (/\bNo current identified incidents\b/i.test(text)) {
+    return { kind: 'healthy', status: 'Proofpoint reports no current identified incidents', maintenance: [], components: [] };
+  }
+  if (/\b(?:communication error|page has an error|error loading|sorry to interrupt)\b/i.test(text) && !serviceImpact(text)) return null;
+
+  const marker = text.search(/\bProofpoint Current Incidents\b/i);
+  const current = marker >= 0 ? text.slice(marker + 'Proofpoint Current Incidents'.length, marker + 20000) : text;
+  if (serviceImpact(current)) {
+    const issue = /\b(?:major outage|partial outage|outage|unavailable|degrad(?:ed|ation|ing)|service disruption|performance issue|investigating|identified|monitoring)\b/i.exec(current);
+    const excerpt = clean(current.slice(Math.max(0, (issue?.index || 0) - 600), Math.min(current.length, (issue?.index || 0) + 1800)));
+    return {
+      kind: 'component-state',
+      status: 'Proofpoint reports current service-impacting incident activity',
+      color: statusCastColor(current),
+      message: excerpt || 'Proofpoint reports current service-impacting incident activity.',
+      maintenance: [],
+      components: [{ name: provider.name || 'Proofpoint', status: issue?.[0] || 'service impact' }]
+    };
+  }
+  return null;
+}
+
 export function fullReviewConclusion(provider, value) {
   const source = fullReviewOverrides[provider?.id];
   if (!source) return null;
   if (provider.id === 'kaseya' || provider.id === 'lastpass') return parseStatuspageSummary(value, provider, source);
   if (provider.id === '8x8') return parseStatusCastSummary(value, provider, source);
+  if (provider.id === 'proofpoint') return parseProofpointCurrentIncidents(value, provider);
+  if (provider.id === 'backblaze') return parseFireHydrantPayload(value, provider, source);
   return null;
 }
