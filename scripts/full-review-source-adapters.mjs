@@ -407,13 +407,15 @@ export function parsePayPalProductionStatus(value) {
   const start = text.search(/\bProduction Sandbox Services\b/i);
   const end = text.search(/\bView history\b/i);
   const currentSection = start >= 0 ? text.slice(start, end > start ? end : start + 12000) : text.slice(0, 12000);
-  const explicit = /\b(?:Production Systems? (?:Degraded|Unavailable)|Service (?:Outage|Disruption)|Major Outage|Degraded Performance|Partial Outage)\b/i.exec(currentSection);
+  const legend = currentSection.search(/\bOperational Major Outage Degraded Performance Maintenance Bulletin\b/i);
+  const statusSection = legend > 0 ? currentSection.slice(0, legend) : currentSection;
+  const explicit = /\b(?:Production Systems? (?:Degraded|Unavailable)|Service (?:Outage|Disruption)|Major Outage|Degraded Performance|Partial Outage)\b/i.exec(statusSection);
   if (explicit) {
     return {
       kind: 'component-state',
       status: 'PayPal production status reports current service impact',
       color: /major outage|unavailable|service outage/i.test(explicit[0]) ? 'red' : 'amber',
-      message: clean(currentSection.slice(Math.max(0, explicit.index - 500), Math.min(currentSection.length, explicit.index + 1600))),
+      message: clean(statusSection.slice(Math.max(0, explicit.index - 500), Math.min(statusSection.length, explicit.index + 1600))),
       components: [{ name: 'PayPal Production', status: explicit[0] }],
       maintenance: []
     };
