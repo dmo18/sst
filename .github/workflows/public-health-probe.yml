@@ -16,73 +16,54 @@ jobs:
     timeout-minutes: 6
     steps:
       - uses: actions/checkout@v4
-      - name: Probe PayPal current production health pages
+      - name: Probe current Stripe Statuspage API
         shell: bash
         run: |
           set -e
           for url in \
-            'https://www.paypal-status.com/' \
-            'https://www.paypal-status.com/product/production' \
-            'https://www.paypal-status.com/api/production' \
-            'https://www.paypal-status.com/incident/production'; do
+            'https://www.stripestatus.com/api/v2/summary.json' \
+            'https://www.stripestatus.com/api/v2/status.json' \
+            'https://www.stripestatus.com/api/v2/components.json' \
+            'https://www.stripestatus.com/api/v2/incidents/unresolved.json'; do
             echo "=== ${url} ==="
             curl -L -sS --max-time 15 -A 'msp-status-hud/3.3.0' -D /tmp/h -o /tmp/b "$url"
             grep -Ei '^(HTTP/|content-type:|content-length:|location:)' /tmp/h | tail -n 8
             echo "bytes=$(wc -c < /tmp/b)"
-            cat /tmp/b | head -c 12000
+            head -c 14000 /tmp/b
             echo
           done
 
-      - name: Probe Stripe status application and candidate endpoints
+      - name: Inspect PayPal application data paths
         shell: bash
         run: |
-          set +e
-          urls=(
-            'https://status.stripe.com/'
-            'https://status.stripe.com/current/atom.xml'
-            'https://status.stripe.com/current/rss.xml'
-            'https://status.stripe.com/api/v2/summary.json'
-            'https://status.stripe.com/api/v2/status.json'
-            'https://status.stripe.com/summary.json'
-            'https://status.stripe.com/status.json'
-            'https://status.stripe.com/data.json'
-            'https://status.stripe.com/current.json'
-            'https://status.stripe.com/incidents.json'
-            'https://status.stripe.com/reachability'
-          )
-          for url in "${urls[@]}"; do
-            echo
-            echo "=== ${url} ==="
-            rm -f /tmp/h /tmp/b
-            start=$(date +%s%3N)
-            curl -L -sS --max-time 15 --http1.1 \
-              -A 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/140.0 Safari/537.36' \
-              -D /tmp/h -o /tmp/b "$url"
-            rc=$?
-            end=$(date +%s%3N)
-            echo "rc=${rc} ms=$((end-start)) bytes=$(wc -c < /tmp/b 2>/dev/null || echo 0)"
-            grep -Ei '^(HTTP/|content-type:|content-length:|location:|server:)' /tmp/h | tail -n 8 || true
-            echo -n 'prefix='
-            head -c 5000 /tmp/b 2>/dev/null | tr '\n\r\t' '   '
-            echo
-          done
+          set -e
+          curl -L -sS --max-time 15 -A 'Mozilla/5.0' 'https://www.paypal-status.com/bundle.js' -o /tmp/paypal.js
+          echo "bundle_bytes=$(wc -c < /tmp/paypal.js)"
+          grep -Eo '.{0,220}(fetch\(|axios|/api/|/status|/product|/incident|operational|degrad|outage|production).{0,420}' /tmp/paypal.js | head -n 140 || true
 
-      - name: Inspect Stripe JavaScript assets for current status data paths
+      - name: Render PayPal production status
         shell: bash
         run: |
           set +e
-          curl -L -sS --max-time 15 -A 'Mozilla/5.0' 'https://status.stripe.com/' -o /tmp/stripe.html
-          echo '=== script sources ==='
-          grep -oE 'src="[^"]+"' /tmp/stripe.html | sed 's/^src="//;s/"$//' | head -n 30 | tee /tmp/assets
-          while read -r src; do
-            [ -n "$src" ] || continue
-            case "$src" in
-              http*) url="$src" ;;
-              /*) url="https://status.stripe.com${src}" ;;
-              *) url="https://status.stripe.com/${src}" ;;
-            esac
-            echo "=== asset ${url} ==="
-            curl -L -sS --max-time 15 -A 'Mozilla/5.0' "$url" -o /tmp/asset
-            echo "bytes=$(wc -c < /tmp/asset)"
-            grep -Eo '.{0,200}(atom\.xml|rss\.xml|current|incident|outage|operational|degrad|status|api/|graphql|fetch\().{0,360}' /tmp/asset | head -n 80 || true
-          done < /tmp/assets
+          BROWSER="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
+          timeout 32s "$BROWSER" \
+            --headless=new --disable-gpu --no-sandbox --disable-dev-shm-usage \
+            --user-data-dir=/tmp/paypal-production \
+            --virtual-time-budget=18000 \
+            --dump-dom 'https://www.paypal-status.com/product/production' > /tmp/paypal.html 2> /tmp/paypal.err
+          echo "exit=$? bytes=$(wc -c < /tmp/paypal.html)"
+          tail -n 12 /tmp/paypal.err
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const html = fs.readFileSync('/tmp/paypal.html','utf8');
+          const text = html
+            .replace(/<script[\s\S]*?<\/script>/gi,' ')
+            .replace(/<style[\s\S]*?<\/style>/gi,' ')
+            .replace(/<svg[\s\S]*?<\/svg>/gi,' ')
+            .replace(/<[^>]+>/g,' ')
+            .replace(/&nbsp;|&#160;/gi,' ')
+            .replace(/&amp;/gi,'&')
+            .replace(/\s+/g,' ')
+            .trim();
+          console.log(text.slice(0,20000));
+          NODE
