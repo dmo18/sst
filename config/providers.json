@@ -806,7 +806,8 @@
     "priority": 60,
     "enabled": true,
     "sourceType": "statuspage",
-    "url": "https://status.stripe.com/api/v2/summary.json"
+    "url": "https://www.stripestatus.com/api/v2/summary.json",
+    "message": "Current Stripe service health is read from the official Stripe Statuspage JSON summary."
   },
   {
     "id": "paypal",
@@ -814,7 +815,8 @@
     "category": "Payments",
     "priority": 60,
     "enabled": true,
-    "sourceType": "statuspage",
-    "url": "https://www.paypal-status.com/api/v2/summary.json"
+    "sourceType": "rendered-official",
+    "url": "https://www.paypal-status.com/product/production",
+    "message": "Current PayPal production health is read from the official rendered Production status page."
   }
 ]
