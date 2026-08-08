@@ -3,6 +3,11 @@ import fs from 'node:fs';
 const path = 'scripts/__tests__/update-public-status.test.js';
 let source = fs.readFileSync(path, 'utf8');
 
+const oldSourceTest = `test('Entra uses the free Azure public RSS feed with identity filtering', () => {\n  const source = resolvePublicSource({ id: 'entra', url: 'https://invalid.example', sourceType: 'limited-microsoft' });\n  assert.equal(source.mode, 'feed');\n  assert.equal(source.url, 'https://rssfeed.azure.status.microsoft/en-us/status/feed/');\n  assert.equal(source.includePattern.test('Microsoft Entra ID authentication issue'), true);\n  assert.equal(source.includePattern.test('Azure Storage issue'), false);\n});`;
+const newSourceTest = `test('Entra uses the current Azure public status table instead of the latency-prone RSS feed', () => {\n  const source = resolvePublicSource({ id: 'entra', url: 'https://invalid.example', sourceType: 'limited-microsoft' });\n  assert.equal(source.mode, 'azure-status-html');\n  assert.equal(source.url, 'https://azure.status.microsoft/en-us/status');\n  assert.equal(source.discoverFeeds, false);\n  assert.equal(source.timeoutMs, 20000);\n  assert.equal(source.maxResponseBytes, 10 * 1024 * 1024);\n});`;
+if (!source.includes(oldSourceTest)) throw new Error('Missing legacy Entra source test');
+source = source.replace(oldSourceTest, newSourceTest);
+
 const oldRowTest = `test('Entra uses its first row status and ignores neighboring services', () => {\n  assert.equal(entraConclusion('Identity Microsoft Entra ID (formerly Azure AD) Good Enterprise State Roaming Warning').kind, 'healthy');\n  const issue = entraConclusion('Identity Microsoft Entra ID (formerly Azure AD) Warning Current Impact');\n  assert.equal(issue.kind, 'issue');\n  assert.equal(issue.color, 'amber');\n});`;
 const newRowTest = `test('Entra uses the current Americas table and ignores neighboring services', () => {\n  const healthy = entraConclusion(\`\n    <table data-zone-name="americas">\n      <thead><tr><th>Products and services</th><th>*Non-Regional</th><th>East US</th></tr></thead>\n      <tbody>\n        <tr><td>Microsoft Entra ID (formerly Azure AD)</td><td><span data-label="Good"></span></td><td><span data-label="Good"></span></td></tr>\n        <tr><td>Enterprise State Roaming</td><td><span data-label="Good"></span></td><td><span data-label="Warning"></span></td></tr>\n      </tbody>\n    </table>\n  \`);\n  assert.equal(healthy.kind, 'healthy');\n\n  const issue = entraConclusion(\`\n    <table data-zone-name="americas">\n      <thead><tr><th>Products and services</th><th>*Non-Regional</th><th>East US</th></tr></thead>\n      <tbody><tr><td>Microsoft Entra ID (formerly Azure AD)</td><td><span data-label="Good"></span></td><td><span data-label="Warning"></span></td></tr></tbody>\n    </table>\n  \`);\n  assert.equal(issue.kind, 'component-state');\n  assert.equal(issue.color, 'amber');\n});`;
 if (!source.includes(oldRowTest)) throw new Error('Missing legacy Entra row test');
@@ -14,4 +19,4 @@ if (!source.includes(oldFeedTest)) throw new Error('Missing legacy Entra feed te
 source = source.replace(oldFeedTest, newFeedTest);
 
 fs.writeFileSync(path, source);
-console.log('Updated Entra test contracts.');
+console.log('Updated Entra source and parser test contracts.');
