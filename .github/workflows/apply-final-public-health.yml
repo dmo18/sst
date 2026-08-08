@@ -37,3 +37,5 @@ jobs:
           fi
           git commit -m "Use current public health sources for PayPal and Stripe"
           git push origin HEAD:agent/final-public-health-conclusions
+
+# Source types remain catalog-compatible while runtime uses structured source modes.
