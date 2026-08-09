@@ -1,0 +1,38 @@
+name: Apply Auth0 server status adapter
+
+on:
+  push:
+    branches:
+      - agent/final-public-health-conclusions
+    paths:
+      - .github/workflows/apply-auth0-next-data.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/final-public-health-conclusions
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: node scripts/apply-auth0-next-data.mjs
+      - run: npm ci
+      - run: npm run validate-providers
+      - run: npm test
+      - run: npm run typecheck
+      - run: npm run build:app
+      - run: npm audit --omit=dev --audit-level=high
+      - name: Commit adapter
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add config/providers.json scripts/structured-source-adapters.mjs scripts/source-intelligence.mjs scripts/validate-providers.mjs scripts/__tests__/auth0-next-data.test.js
+          git commit -m "Use Auth0 server structured current status"
+          git push origin HEAD:agent/final-public-health-conclusions
