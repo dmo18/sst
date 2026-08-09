@@ -16,5 +16,11 @@ for (const expression of [
 ]) {
   source = source.replaceAll('${' + expression + '}', '\\${' + expression + '}');
 }
+
+source = source.replace(
+  "  const subscribeAnchor = text.search(/\\\\bProduction Sandbox\\\\s+Subscribe\\\\b/i);\n  const servicesAnchor = text.search(/\\\\bProduction Sandbox Services\\\\b/i);\n  const start = subscribeAnchor >= 0 ? subscribeAnchor : servicesAnchor;",
+  "  const subscribeAnchor = text.search(/\\\\bProduction Sandbox\\\\s+Subscribe\\\\b/i);\n  const productionAnchor = text.search(/\\\\bProduction Sandbox\\\\b/i);\n  const servicesAnchor = text.search(/\\\\bProduction Sandbox Services\\\\b/i);\n  const start = subscribeAnchor >= 0 ? subscribeAnchor : productionAnchor >= 0 ? productionAnchor : servicesAnchor;"
+);
+
 fs.writeFileSync(path, source);
-console.log('Escaped generated-code interpolations in deep review patch.');
+console.log('Escaped generated-code interpolations and corrected PayPal production anchoring.');
