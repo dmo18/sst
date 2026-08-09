@@ -1,0 +1,60 @@
+name: Probe Auth0 and QuickBooks sources
+
+on:
+  push:
+    branches:
+      - agent/final-public-health-conclusions
+    paths:
+      - .github/workflows/probe-auth0-quickbooks.yml
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Probe QuickBooks Statuspage APIs
+        shell: bash
+        run: |
+          set +e
+          for url in \
+            'https://status.quickbooks.intuit.com/api/v2/summary.json' \
+            'https://status.quickbooks.intuit.com/api/v2/status.json' \
+            'https://status.quickbooks.intuit.com/api/v2/components.json' \
+            'https://status.quickbooks.intuit.com/api/v2/incidents/unresolved.json'; do
+            echo "=== ${url} ==="
+            rm -f /tmp/h /tmp/b
+            curl -L -sS --max-time 15 -A 'msp-status-hud/3.3.0' -D /tmp/h -o /tmp/b "$url"
+            echo "rc=$? bytes=$(wc -c < /tmp/b 2>/dev/null || echo 0)"
+            grep -Ei '^(HTTP/|content-type:|content-length:|location:)' /tmp/h | tail -n 8 || true
+            head -c 16000 /tmp/b 2>/dev/null
+            echo
+          done
+      - name: Render Auth0 US public cloud status
+        shell: bash
+        run: |
+          set +e
+          BROWSER="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
+          timeout 32s "$BROWSER" \
+            --headless=new --disable-gpu --no-sandbox --disable-dev-shm-usage \
+            --user-data-dir=/tmp/auth0-status \
+            --virtual-time-budget=18000 \
+            --dump-dom 'https://status.auth0.com/?environment=Production&region=US' > /tmp/auth0.html 2> /tmp/auth0.err
+          echo "exit=$? bytes=$(wc -c < /tmp/auth0.html)"
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const html = fs.readFileSync('/tmp/auth0.html', 'utf8');
+          const text = html
+            .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+            .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+            .replace(/<svg[\s\S]*?<\/svg>/gi, ' ')
+            .replace(/<[^>]+>/g, ' ')
+            .replace(/&nbsp;|&#160;/gi, ' ')
+            .replace(/&amp;/gi, '&')
+            .replace(/\s+/g, ' ')
+            .trim();
+          console.log(text.slice(0, 24000));
+          NODE
