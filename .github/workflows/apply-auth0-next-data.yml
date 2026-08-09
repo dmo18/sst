@@ -23,6 +23,7 @@ jobs:
           node-version: "22"
           cache: npm
       - run: node scripts/apply-auth0-next-data.mjs
+      - run: node scripts/fix-auth0-contract-test.mjs
       - run: npm ci
       - run: npm run validate-providers
       - run: npm test
@@ -33,8 +34,8 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add config/providers.json scripts/structured-source-adapters.mjs scripts/source-intelligence.mjs scripts/validate-providers.mjs scripts/__tests__/auth0-next-data.test.js
+          git add config/providers.json scripts/structured-source-adapters.mjs scripts/source-intelligence.mjs scripts/validate-providers.mjs scripts/__tests__/auth0-next-data.test.js scripts/__tests__/source-parity-structured.test.js
           git commit -m "Use Auth0 server structured current status"
           git push origin HEAD:agent/final-public-health-conclusions
 
-# Retry after fixing generated adapter source serialization.
+# Retry after aligning the source parity contract with the stronger server snapshot adapter.
