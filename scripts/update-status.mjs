@@ -800,7 +800,7 @@ export function validatePayload(payload) {
         if (!['operational', 'degraded', 'major', 'unknown'].includes(provider.service_state)) errors.push(`invalid service state ${provider.id}`);
         if (!['available', 'limited', 'unavailable', 'disabled', 'pending', 'stale'].includes(provider.source_state)) errors.push(`invalid source state ${provider.id}`);
         if (provider.source_health !== undefined && !['healthy', 'watch', 'blind'].includes(provider.source_health)) errors.push(`invalid source health ${provider.id}`);
-        if (provider.truth_basis !== undefined && !['vendor-incident', 'confirmed-operational', 'observed-no-conclusion', 'last-known-official', 'limited-official', 'no-current-observation'].includes(provider.truth_basis)) errors.push(`invalid truth basis ${provider.id}`);
+        if (provider.truth_basis !== undefined && !['vendor-incident', 'vendor-component', 'observed-affected-no-detail', 'confirmed-operational', 'observed-no-conclusion', 'last-known-official', 'limited-official', 'no-current-observation'].includes(provider.truth_basis)) errors.push(`invalid truth basis ${provider.id}`);
         if (typeof provider.ok !== 'boolean' || !Number.isFinite(provider.priority) || !/^https?:/.test(provider.source)) errors.push(`invalid provider ${provider.id}`);
         if (provider.data_quality_score !== undefined && (!Number.isFinite(provider.data_quality_score) || provider.data_quality_score < 0 || provider.data_quality_score > 100)) errors.push(`invalid quality score ${provider.id}`);
         for (const field of ['source_latency_ms', 'collection_attempt_count', 'collection_success_count', 'collection_failure_count', 'freshness_seconds', 'active_incident_count', 'maintenance_count', 'problem_component_count'])
