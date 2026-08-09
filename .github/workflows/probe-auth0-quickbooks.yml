@@ -33,6 +33,20 @@ jobs:
             head -c 16000 /tmp/b 2>/dev/null
             echo
           done
+      - name: Inspect Auth0 server HTML and data paths
+        shell: bash
+        run: |
+          set +e
+          curl -L -sS --max-time 15 -A 'msp-status-hud/3.3.0' 'https://status.auth0.com/?environment=Production&region=US' -o /tmp/auth0-source.html
+          echo "source_bytes=$(wc -c < /tmp/auth0-source.html)"
+          echo '=== visible/key phrases in raw source ==='
+          grep -Eo '.{0,240}(All Regions Operational|All Systems Operational|Current Status|US-1|US-3|Operational|Partial Disruption|Service Disruption).{0,500}' /tmp/auth0-source.html | head -n 120 || true
+          echo '=== candidate endpoints ==='
+          grep -Eo '/[A-Za-z0-9_./?=&%-]*(api|status|incident|region|health)[A-Za-z0-9_./?=&%-]*' /tmp/auth0-source.html | sort -u | head -n 180 || true
+          echo '=== script sources ==='
+          grep -oE 'src="[^"]+"' /tmp/auth0-source.html | sed 's/^src="//;s/"$//' | head -n 80 || true
+          echo '=== next/serialized markers ==='
+          grep -Eo '.{0,180}(__NEXT_DATA__|self\.__next_f|buildId|pageProps|environment|region).{0,700}' /tmp/auth0-source.html | head -n 160 || true
       - name: Render Auth0 US public cloud status
         shell: bash
         run: |
@@ -58,3 +72,5 @@ jobs:
             .trim();
           console.log(text.slice(0, 24000));
           NODE
+
+# Expanded to inspect server-rendered data paths after Chromium returned a client exception.
