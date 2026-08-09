@@ -23,13 +23,17 @@ test('retired Stripe history feed is not a production source policy path', () =>
   assert.equal(policy.includes('https://www.stripestatus.com/history.atom'), false);
 });
 
-test('temporary PayPal and Stripe diagnostics never ship', () => {
+test('temporary review diagnostics and patch tooling never ship', () => {
   for (const relativePath of [
     '.github/workflows/public-health-probe.yml',
     '.github/workflows/apply-final-public-health.yml',
     '.github/workflows/apply-paypal-legend-safety.yml',
+    '.github/workflows/apply-deep-review-repairs.yml',
+    '.github/workflows/fix-and-apply-deep-review.yml',
     'scripts/apply-final-public-health.mjs',
-    'scripts/apply-paypal-legend-safety.mjs'
+    'scripts/apply-paypal-legend-safety.mjs',
+    'scripts/apply-deep-review-repairs.mjs',
+    'scripts/fix-deep-review-patch.mjs'
   ]) {
     assert.equal(fs.existsSync(path.join(root, relativePath)), false, `${relativePath} must not ship`);
   }
