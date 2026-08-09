@@ -37,3 +37,5 @@ jobs:
           git add scripts/source-intelligence.mjs scripts/collection-intelligence.mjs scripts/structured-source-adapters.mjs scripts/incident-freshness.mjs scripts/incident-detail-repairs.mjs scripts/entra-status-adapter.mjs scripts/update-public-status.mjs scripts/update-status.mjs scripts/full-review-source-adapters.mjs scripts/__tests__/final-public-health-conclusions.test.js scripts/__tests__/deep-review-regressions.test.js
           git commit -m "Repair source semantics found in full review"
           git push origin HEAD:agent/final-public-health-conclusions
+
+# Retry after correcting generated template interpolation escaping.
