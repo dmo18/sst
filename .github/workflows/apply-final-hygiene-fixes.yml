@@ -36,3 +36,5 @@ jobs:
           git add scripts/update-public-status.mjs scripts/public-source-repairs.mjs scripts/__tests__/deep-review-regressions.test.js scripts/__tests__/final-public-health-hygiene.test.js
           git commit -m "Remove stale provider policy paths"
           git push origin HEAD:agent/final-public-health-conclusions
+
+# Retry after fixing canonical UK scope and deferring temporary-tool guard until cleanup.
