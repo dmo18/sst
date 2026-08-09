@@ -101,8 +101,8 @@ export function parseAzureEntraStatus(html) {
   const components = parsed.relevant.map(item => ({
     name: normalizeHeader(item.region) || item.region,
     status: item.status
-  }));
-  const applicable = components.filter(item => !ignoredStatus(item.status));
+  })).filter(item => !ignoredStatus(item.status));
+  const applicable = components;
   const critical = applicable.filter(item => criticalStatus(item.status));
   const degraded = applicable.filter(item => degradedStatus(item.status));
 

@@ -1,10 +1,17 @@
 export const PARSER_VERSION = '3.0.0';
 
-const structuredModes = new Set(['statuspage-json', 'betterstack-json', 'provider-json']);
+const structuredModes = new Set(['statuspage-json', 'betterstack-json', 'provider-json', 'auth0-next-data']);
 const feedModes = new Set(['feed', 'rss', 'atom']);
 
 function clean(value) {
   return String(value || '').replace(/\s+/g, ' ').trim();
+}
+
+export function componentStatusIsProblem(value) {
+  const status = clean(value).toLowerCase().replace(/\s+/g, '_');
+  if (!status) return false;
+  if (/^(?:operational|available|up|ok|none|good|normal|healthy|not_available|n\/?a|not_applicable|unknown|under_maintenance|maintenance|scheduled_maintenance|planned_maintenance)$/.test(status)) return false;
+  return /(?:degrad|partial[_-]?outage|major[_-]?outage|outage|unavailable|down|offline|disrupt|impaired|warning|error|failure)/.test(status);
 }
 
 function hashString(value) {
@@ -29,6 +36,15 @@ function jsonShape(value, depth = 0) {
 export function schemaFingerprint(value, mode = '') {
   const text = String(value || '');
   if (!text) return '';
+  if (mode === 'auth0-next-data') {
+    const match = /<script[^>]+id=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i.exec(text);
+    if (!match?.[1]) return '';
+    try {
+      return 'json-' + hashString(jsonShape(JSON.parse(match[1])));
+    } catch {
+      return '';
+    }
+  }
   if (structuredModes.has(mode) || /json/i.test(mode)) {
     try {
       return `json-${hashString(jsonShape(JSON.parse(text)))}`;
@@ -175,7 +191,7 @@ export function sourceIntelligenceSummary(providers, maintenance = []) {
     high_confidence_source_count: providers.filter(provider => provider.source_confidence === 'high').length,
     schema_change_count: providers.filter(provider => provider.schema_changed === true).length,
     failure_streak_count: providers.filter(provider => Number(provider.consecutive_failures || 0) >= 2).length,
-    component_issue_count: components.filter(component => !/^(?:operational|available|up|ok|none|good)$/i.test(String(component.status || ''))).length
+    component_issue_count: components.filter(component => componentStatusIsProblem(component.status)).length
   };
 }
 

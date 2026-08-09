@@ -335,8 +335,9 @@
     "category": "Identity / Access",
     "priority": 78,
     "enabled": true,
-    "sourceType": "statuspage",
-    "url": "https://status.auth0.com/api/v2/summary.json"
+    "sourceType": "auth0-next-data",
+    "url": "https://status.auth0.com/?environment=Production&region=US",
+    "message": "Current Auth0 US Public Cloud health is read from the official server-rendered structured status snapshot."
   },
   {
     "id": "bitwarden",
@@ -778,8 +779,9 @@
     "category": "Accounting",
     "priority": 60,
     "enabled": true,
-    "sourceType": "quickbooks-html",
-    "url": "https://status.quickbooks.intuit.com/"
+    "sourceType": "statuspage",
+    "url": "https://status.quickbooks.intuit.com/api/v2/summary.json",
+    "message": "Current QuickBooks Online health is read from the official QuickBooks Statuspage JSON summary."
   },
   {
     "id": "xero",
@@ -806,7 +808,8 @@
     "priority": 60,
     "enabled": true,
     "sourceType": "statuspage",
-    "url": "https://status.stripe.com/api/v2/summary.json"
+    "url": "https://www.stripestatus.com/api/v2/summary.json",
+    "message": "Current Stripe service health is read from the official Stripe Statuspage JSON summary."
   },
   {
     "id": "paypal",
@@ -814,7 +817,8 @@
     "category": "Payments",
     "priority": 60,
     "enabled": true,
-    "sourceType": "statuspage",
-    "url": "https://www.paypal-status.com/api/v2/summary.json"
+    "sourceType": "rendered-official",
+    "url": "https://www.paypal-status.com/product/production",
+    "message": "Current PayPal production health is read from the official rendered Production status page."
   }
 ]

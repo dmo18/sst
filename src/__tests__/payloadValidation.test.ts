@@ -7,3 +7,22 @@ test('duplicate provider, bad URL and summary mismatch reject', () => { const x 
 test('valid limited source remains valid data but does not count as live coverage', () => { const x = structuredClone(p); x.providers[0].service_state = 'unknown'; x.providers[0].source_state = 'limited'; x.providers[0].ok = false; x.summary.service_overall = 'unknown'; x.summary.source_overall = 'limited'; x.summary.confirmed_operational_count = 0; x.summary.unknown_count = 1; x.summary.limited_count = 1; x.summary.coverage_percent = 0; x.summary.live_source_coverage_percent = 0; x.summary.confirmed_operational_percent = 0; assert.equal(isStatusPayload(x), true); assert.equal(x.summary.valid_status_percent, 100); });
 test('legacy record-validity coverage is rejected for a limited source', () => { const x = structuredClone(p); x.providers[0].service_state = 'unknown'; x.providers[0].source_state = 'limited'; x.providers[0].ok = false; x.summary.service_overall = 'unknown'; x.summary.source_overall = 'limited'; x.summary.confirmed_operational_count = 0; x.summary.unknown_count = 1; x.summary.limited_count = 1; x.summary.live_source_coverage_percent = 0; x.summary.confirmed_operational_percent = 0; assert.deepEqual(payloadValidationErrors(x), ['coverage counts do not reconcile']); });
 test('materially future generated_at is rejected', () => { const x = structuredClone(p); x.generated_at = new Date(Date.now() + 3600000).toISOString(); assert.deepEqual(payloadValidationErrors(x), ['generated_at is materially in the future']); });
+
+test('component-only degradation and neutral component states reconcile without an incident record', () => {
+  const x = structuredClone(p);
+  x.providers[0].service_state = 'degraded';
+  x.providers[0].color = 'amber';
+  x.providers[0].attention = 'action';
+  x.providers[0].component_status = [
+    { name: 'Region not applicable', status: 'Not available' },
+    { name: 'Maintenance window', status: 'under_maintenance' },
+    { name: 'API', status: 'degraded_performance' }
+  ];
+  x.summary.service_overall = 'degraded';
+  x.summary.affected_provider_count = 1;
+  x.summary.confirmed_operational_count = 0;
+  x.summary.degraded_count = 1;
+  x.summary.confirmed_operational_percent = 0;
+  x.summary.component_issue_count = 1;
+  assert.deepEqual(payloadValidationErrors(x), []);
+});

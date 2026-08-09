@@ -1,4 +1,7 @@
 import { parseStatuspageSummary } from './structured-source-adapters.mjs';
+import { INCIDENT_MAX_AGE_DAYS, incidentEvidenceIsCurrent } from './incident-freshness.mjs';
+import { regionScopeRelevant } from './region-scope.mjs';
+import { componentStatusIsProblem } from './source-intelligence.mjs';
 
 export const fullReviewOverrides = {
   kaseya: {
@@ -37,6 +40,22 @@ export const fullReviewOverrides = {
     feedCandidates: ['https://status.backblaze.com/data/rss.xml'],
     sourceName: 'Backblaze official FireHydrant payload',
     regionScope: 'us'
+  },
+  stripe: {
+    mode: 'statuspage-json',
+    url: 'https://www.stripestatus.com/api/v2/summary.json',
+    pageUrl: 'https://www.stripestatus.com/',
+    sourceName: 'Stripe official Statuspage JSON',
+    regionScope: 'global'
+  },
+  paypal: {
+    mode: 'status-html',
+    url: 'https://www.paypal-status.com/product/production',
+    pageUrl: 'https://www.paypal-status.com/product/production',
+    sourceName: 'PayPal production status page',
+    render: true,
+    discoverFeeds: false,
+    regionScope: 'global'
   },
   crowdstrike: {
     mode: 'status-access-reference',
@@ -107,10 +126,7 @@ function statusCastUpdates(incident) {
 }
 
 function explicitNonUsOnly(value) {
-  const text = clean(value);
-  const us = /\b(?:united states|u\.s\.|usa|us|north america|americas|global|worldwide|all regions|multiple regions)\b/i.test(text);
-  const nonUs = /\b(?:emea|europe|european|eu central|uk|united kingdom|apac|asia(?: pacific)?|australia|new zealand|canada|ca east|latin america|latam|middle east|africa|japan|singapore|india|brazil)\b/i.test(text);
-  return nonUs && !us;
+  return !regionScopeRelevant('', clean(value), 'us');
 }
 
 function serviceImpact(value) {
@@ -156,6 +172,7 @@ export function parseStatusCastSummary(value, provider = {}, source = {}) {
 
     const firstDetected = toIso(incident?.StartDate || incident?.DateCreated || updates.at(-1)?.at || '');
     const latestUpdate = toIso(incident?.DateUpdated || latest.at || incident?.DateCreated || incident?.StartDate || '');
+    if (!incidentEvidenceIsCurrent({ title, note, status, firstDetected, latestUpdate }, Date.now(), INCIDENT_MAX_AGE_DAYS, { requireTimestamp: true })) continue;
     incidents.push({
       id: String(incident?.Id || incident?.ExternalId || ''),
       title,
@@ -231,16 +248,20 @@ function fireHydrantColor(value) {
   return /\b(?:unavailable|offline|major|critical|complete outage|down)\b/i.test(text) ? 'red' : 'amber';
 }
 
-function fireHydrantMaintenance(json) {
+function fireHydrantMaintenance(json, source = {}) {
   const records = Array.isArray(json?.scheduledMaintenances) ? json.scheduledMaintenances : [];
   return records.map(item => {
-    const components = item?.componentConditions && typeof item.componentConditions === 'object'
+    const allComponents = item?.componentConditions && typeof item.componentConditions === 'object'
       ? Object.keys(item.componentConditions).map(clean).filter(Boolean)
       : [];
+    const title = clean(item?.name || 'Backblaze scheduled maintenance');
+    const note = clean(item?.summary || item?.description || '');
+    if (!regionScopeRelevant(title, note + ' ' + allComponents.join(' '), source.regionScope || 'us')) return null;
+    const components = source.regionScope === 'global' ? allComponents : allComponents.filter(name => regionScopeRelevant(name, '', source.regionScope || 'us'));
     return {
       id: String(item?.id || ''),
-      title: clean(item?.name || 'Backblaze scheduled maintenance'),
-      note: clean(item?.summary || item?.description || ''),
+      title,
+      note,
       status: timeValue(item?.startsAt) <= Date.now() && timeValue(item?.endsAt) >= Date.now() ? 'in_progress' : 'scheduled',
       startsAt: toIso(item?.startsAt || ''),
       endsAt: toIso(item?.endsAt || ''),
@@ -248,7 +269,7 @@ function fireHydrantMaintenance(json) {
       affectedService: components.join(', '),
       url: 'https://status.backblaze.com/'
     };
-  });
+  }).filter(Boolean);
 }
 
 export function parseFireHydrantPayload(value, provider = {}, source = {}) {
@@ -275,6 +296,7 @@ export function parseFireHydrantPayload(value, provider = {}, source = {}) {
     }
     const firstDetected = toIso(incident?.timestamps?.started || incident?.startedAt || incident?.createdAt || timeline.at(-1)?.at || '');
     const latestUpdate = toIso(latest.at || incident?.updatedAt || incident?.timestamps?.started || '');
+    if (!incidentEvidenceIsCurrent({ title, note, status, firstDetected, latestUpdate }, Date.now(), INCIDENT_MAX_AGE_DAYS, { requireTimestamp: true })) continue;
     incidents.push({
       id: String(incident?.id || ''),
       title: title || `${provider.name || 'Backblaze'} service incident`,
@@ -282,25 +304,25 @@ export function parseFireHydrantPayload(value, provider = {}, source = {}) {
       status: status || 'active',
       firstDetected,
       latestUpdate,
-      affectedService: components.map(item => item.name).join(', ') || provider.name || 'Backblaze services',
+      affectedService: components.filter(item => regionScopeRelevant(item.name, item.status, source.regionScope || 'us')).map(item => item.name).join(', ') || provider.name || 'Backblaze services',
       color: fireHydrantColor(combined),
       url: source.pageUrl || source.url,
       updates: timeline
     });
   }
 
-  const maintenance = fireHydrantMaintenance(json);
+  const maintenance = fireHydrantMaintenance(json, source);
   const components = json.components.map(item => ({
     name: clean(item?.name || ''),
     status: clean(item?.customerCondition || item?.condition || item?.status || 'operational')
-  })).filter(item => item.name);
+  })).filter(item => item.name && regionScopeRelevant(item.name, item.status, source.regionScope || 'us'));
 
   if (incidents.length) return { kind: 'issues', incidents: incidents.slice(0, 12), maintenance, components };
   if (explicitNonUsCount === active.length && active.length > 0) {
     return { kind: 'healthy', status: `${provider.name || 'Backblaze'} reports no active US-relevant service incidents`, maintenance, components };
   }
 
-  const explicitProblems = components.filter(component => !/^(?:operational|available|up|ok|none|good)$/i.test(component.status));
+  const explicitProblems = components.filter(component => componentStatusIsProblem(component.status));
   if (explicitProblems.length) {
     const message = explicitProblems.map(component => `${component.name}: ${component.status}`).join('; ');
     return {
@@ -375,10 +397,51 @@ export function parseAuthenticatedStatusReference(value, provider = {}) {
   return null;
 }
 
+export function parsePayPalProductionStatus(value) {
+  const text = clean(value);
+  if (!/\bPayPal Status Page\b/i.test(text) || !/\bProduction Sandbox Services\b/i.test(text)) return null;
+
+  const subscribeAnchor = text.search(/\bProduction Sandbox\s+Subscribe\b/i);
+  const productionAnchor = text.search(/\bProduction Sandbox\b/i);
+  const servicesAnchor = text.search(/\bProduction Sandbox Services\b/i);
+  const start = subscribeAnchor >= 0 ? subscribeAnchor : productionAnchor >= 0 ? productionAnchor : servicesAnchor;
+  const end = text.search(/\bView history\b/i);
+  const currentSection = start >= 0 ? text.slice(start, end > start ? end : start + 12000) : text.slice(0, 12000);
+  const legend = currentSection.search(/\bOperational\s+Major Outage\s+Degraded Performance\s+Maintenance\s+Bulletin\b/i);
+  const statusSection = legend > 0 ? currentSection.slice(0, legend) : currentSection;
+
+  if (/\bAll Production Systems Operational\b/i.test(statusSection)) {
+    return {
+      kind: 'healthy',
+      status: 'All Production Systems Operational',
+      components: [{ name: 'PayPal Production', status: 'Operational' }],
+      maintenance: []
+    };
+  }
+
+  const explicit = /\b(?:Production Systems? (?:Degraded|Unavailable)|Service (?:Outage|Disruption)|Major Outage|Degraded Performance|Partial Outage)\b/i.exec(statusSection);
+  if (explicit) {
+    return {
+      kind: 'component-state',
+      status: 'PayPal production status reports current service impact',
+      color: /major outage|unavailable|service outage/i.test(explicit[0]) ? 'red' : 'amber',
+      message: clean(statusSection.slice(Math.max(0, explicit.index - 500), Math.min(statusSection.length, explicit.index + 1600))),
+      components: [{ name: 'PayPal Production', status: explicit[0] }],
+      maintenance: []
+    };
+  }
+
+  return {
+    kind: 'limited',
+    message: 'The PayPal production status page rendered, but did not expose an explicit current operational or service-impact state.'
+  };
+}
+
 export function fullReviewConclusion(provider, value) {
   const source = fullReviewOverrides[provider?.id];
   if (!source) return null;
-  if (provider.id === 'kaseya' || provider.id === 'lastpass') return parseStatuspageSummary(value, provider, source);
+  if (provider.id === 'kaseya' || provider.id === 'lastpass' || provider.id === 'stripe') return parseStatuspageSummary(value, provider, source);
+  if (provider.id === 'paypal') return parsePayPalProductionStatus(value);
   if (provider.id === '8x8') return parseStatusCastSummary(value, provider, source);
   if (provider.id === 'proofpoint') return parseProofpointCurrentIncidents(value, provider);
   if (provider.id === 'backblaze') return parseFireHydrantPayload(value, provider, source);

@@ -24,12 +24,13 @@ test('current first-party structured endpoints replace retired aliases', () => {
   assert.equal(vercel.url, 'https://www.vercel-status.com/api/v2/summary.json');
 });
 
-test('Auth0 uses its current official public cloud status page instead of a retired Statuspage API path', () => {
+test('Auth0 uses its current official server-rendered Public Cloud status snapshot instead of browser fallback or a retired Statuspage API path', () => {
   const source = resolvePublicSource(provider('auth0', 'Auth0'));
-  assert.equal(source.mode, 'status-html');
+  assert.equal(source.mode, 'auth0-next-data');
   assert.equal(source.url, 'https://status.auth0.com/?environment=Production&region=US');
   assert.equal(source.pageUrl, 'https://status.auth0.com/');
-  assert.equal(source.render, true);
+  assert.equal(source.render, false);
+  assert.equal(source.discoverFeeds, false);
   assert.equal(source.regionScope, 'us');
 });
 
