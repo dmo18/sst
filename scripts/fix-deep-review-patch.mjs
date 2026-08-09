@@ -6,8 +6,10 @@ for (const expression of [
   'note',
   'affectedService',
   'incidents.length',
+  "incidents.length === 1 ? '' : 's'",
   'scope',
   'problemComponents.length',
+  "problemComponents.length === 1 ? '' : 's'",
   'names',
   'index',
   "String(index).padStart(2, '0')"
