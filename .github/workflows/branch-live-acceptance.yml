@@ -1,0 +1,151 @@
+name: Branch live provider acceptance
+
+on:
+  push:
+    branches:
+      - agent/final-public-health-conclusions
+    paths:
+      - .github/workflows/branch-live-acceptance.yml
+
+permissions:
+  contents: read
+
+jobs:
+  live-acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/final-public-health-conclusions
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm run validate-providers
+      - name: Retrieve prior production snapshot
+        run: curl --fail --silent --show-error --max-time 10 https://dmo18.github.io/sst/status.json -o public/previous-status.json || true
+      - name: Collect all live providers
+        run: npm run update-status
+      - name: Validate browser payload
+        run: npm run validate-browser-payload
+      - name: Enforce full provider acceptance
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import { componentStatusIsProblem } from './scripts/source-intelligence.mjs';
+          import { isNonServiceAdvisory } from './scripts/incident-classification.mjs';
+          import { regionScopeRelevant } from './scripts/region-scope.mjs';
+
+          const payload = JSON.parse(fs.readFileSync('public/status.json', 'utf8'));
+          const providers = payload.providers || [];
+          const incidents = payload.incidents || [];
+          const maintenance = payload.maintenance || [];
+          const summary = payload.summary || {};
+          const collection = payload.collection || {};
+          const fail = message => { throw new Error(message); };
+
+          if (providers.length !== 79 || Number(summary.provider_total) !== 79) fail(`Expected 79 providers, got ${providers.length}/${summary.provider_total}`);
+          if (Number(summary.valid_status_count) !== 79 || Number(summary.invalid_status_count) !== 0 || Number(summary.valid_status_percent) !== 100) fail('Provider validity is not 79/79 at 100%');
+          if (Number(summary.live_source_count) !== 79 || Number(summary.coverage_percent) !== 100 || Number(summary.live_source_coverage_percent) !== 100) fail('Live source coverage is not 79/79 at 100%');
+          if (Number(summary.fallback_source_count) !== 0) fail(`Fallback source count is ${summary.fallback_source_count}`);
+          if (Number(summary.limited_source_count) !== 0 || Number(summary.unavailable_count) !== 0 || Number(summary.pending_count) !== 0 || Number(summary.stale_source_count) !== 0) fail('A provider remains limited, unavailable, pending, or stale');
+          if (Number(collection.blind_spot_count) !== 0 || Number(summary.blind_spot_count) !== 0) fail('Blind provider coverage remains');
+          if (Number(collection.failed_request_count) !== 0 || Number(summary.failed_request_count) !== 0) fail(`Failed requests remain: ${collection.failed_request_count}/${summary.failed_request_count}`);
+          if (Number(collection.request_count) !== Number(collection.successful_request_count)) fail(`Request success is ${collection.successful_request_count}/${collection.request_count}`);
+          if (Number(summary.request_count) !== Number(summary.successful_request_count)) fail(`Summary request success is ${summary.successful_request_count}/${summary.request_count}`);
+
+          const nonLive = providers.filter(provider => provider.source_state !== 'available' || provider.ok !== true || provider.status_data_valid !== true);
+          if (nonLive.length) fail(`Non-live providers: ${nonLive.map(provider => provider.id).join(', ')}`);
+          const badLogs = providers.flatMap(provider => (provider.download_log || []).filter(log => log.ok !== true).map(log => `${provider.id}:${log.url}:${log.status || log.error}`));
+          if (badLogs.length) fail(`Failed provider download logs: ${badLogs.join(' | ')}`);
+          const fallbacks = providers.filter(provider => provider.status_data_basis === 'limited-fallback');
+          if (fallbacks.length) fail(`Fallback provider records: ${fallbacks.map(provider => provider.id).join(', ')}`);
+
+          const unknown = providers.filter(provider => provider.service_state === 'unknown').map(provider => provider.id).sort();
+          const expectedUnknown = ['crowdstrike', 'intermedia'];
+          if (JSON.stringify(unknown) !== JSON.stringify(expectedUnknown)) fail(`Unexpected service-state unknown providers: ${unknown.join(', ') || 'none'}`);
+          for (const id of expectedUnknown) {
+            const provider = providers.find(item => item.id === id);
+            if (provider?.health_access !== 'authenticated' || provider?.health_observable !== false || provider?.source_state !== 'available' || provider?.ok !== true) fail(`${id} authenticated health contract is not explicit and live`);
+          }
+          for (const id of ['paypal', 'stripe']) {
+            const provider = providers.find(item => item.id === id);
+            if (!provider || provider.service_state === 'unknown') fail(`${id} still lacks a public current-health conclusion`);
+          }
+
+          const affected = providers.filter(provider => ['major', 'degraded'].includes(provider.service_state));
+          if (Number(summary.affected_provider_count) !== affected.length) fail(`Affected provider count ${summary.affected_provider_count} does not reconcile to ${affected.length}`);
+          if (Number(summary.affected_provider_count) !== Number(summary.major_count) + Number(summary.degraded_count)) fail('Affected provider count does not equal major plus degraded counts');
+          if (Number(summary.active_incident_count) !== incidents.length) fail(`Incident summary ${summary.active_incident_count} does not equal payload ${incidents.length}`);
+          if (Number(summary.maintenance_count) !== maintenance.length) fail(`Maintenance summary ${summary.maintenance_count} does not equal payload ${maintenance.length}`);
+
+          const countMismatches = providers.flatMap(provider => {
+            const match = /^(\d+) active (?:US |current )?public incidents?$/.exec(String(provider.status || ''));
+            if (!match) return [];
+            const actual = (provider.incidents || []).length;
+            return Number(match[1]) === actual ? [] : [`${provider.id}:${match[1]} label/${actual} records`];
+          });
+          if (countMismatches.length) fail(`Provider incident-count labels are stale: ${countMismatches.join(', ')}`);
+
+          const advisoryIncidents = incidents.filter(item => isNonServiceAdvisory(item.title, item.note, item.status));
+          if (advisoryIncidents.length) fail(`Non-service advisories remain incidents: ${advisoryIncidents.map(item => `${item.providerId || item.provider}:${item.title}`).join(' | ')}`);
+
+          const entra = providers.find(provider => provider.id === 'entra');
+          const entraNotApplicable = (entra?.component_status || []).filter(component => /^(?:not available|n\/?a|not_applicable)$/i.test(String(component.status || '').replace(/_/g, ' ')));
+          if (entraNotApplicable.length) fail(`Entra still publishes non-applicable cells: ${entraNotApplicable.map(item => item.name).join(', ')}`);
+
+          for (const id of ['cloudflare', 'elastic-cloud']) {
+            const provider = providers.find(item => item.id === id);
+            const foreignProblems = (provider?.component_status || []).filter(component => componentStatusIsProblem(component.status) && !regionScopeRelevant(component.name, component.group || '', 'us'));
+            if (foreignProblems.length) fail(`${id} has foreign current problem components in US scope: ${foreignProblems.map(item => item.name).join(', ')}`);
+          }
+
+          const vultr = providers.find(provider => provider.id === 'vultr');
+          const seenVultr = new Set();
+          const duplicateVultr = [];
+          for (const item of vultr?.incidents || []) {
+            const key = [item.title, item.note, item.affected_service || item.affectedService, item.status].map(value => String(value || '').trim().toLowerCase()).join('|');
+            if (seenVultr.has(key)) duplicateVultr.push(item.title);
+            seenVultr.add(key);
+          }
+          if (duplicateVultr.length) fail(`Vultr still contains duplicate presentation alerts: ${duplicateVultr.join(', ')}`);
+
+          const calculatedComponentIssues = providers.reduce((sum, provider) => sum + (provider.component_status || []).filter(component => componentStatusIsProblem(component.status)).length, 0);
+          if (Number(summary.component_issue_count) !== calculatedComponentIssues) fail(`Component issue count ${summary.component_issue_count} does not reconcile to ${calculatedComponentIssues}`);
+
+          console.log(JSON.stringify({
+            generated_at: payload.generated_at,
+            provider_total: summary.provider_total,
+            live_source_count: summary.live_source_count,
+            coverage_percent: summary.coverage_percent,
+            blind_spot_count: collection.blind_spot_count,
+            fallback_source_count: summary.fallback_source_count,
+            request_count: collection.request_count,
+            successful_request_count: collection.successful_request_count,
+            failed_request_count: collection.failed_request_count,
+            service_states: {
+              operational: summary.confirmed_operational_count,
+              degraded: summary.degraded_count,
+              major: summary.major_count,
+              unknown: summary.unknown_count
+            },
+            unknown_providers: unknown,
+            active_incident_count: incidents.length,
+            affected_provider_count: affected.length,
+            maintenance_count: maintenance.length,
+            component_issue_count: calculatedComponentIssues,
+            quality_score: collection.quality_score,
+            origin_count: collection.origin_count,
+            median_request_ms: collection.median_request_ms,
+            p95_request_ms: collection.p95_request_ms,
+            affected_providers: affected.map(provider => ({ id: provider.id, state: provider.service_state, status: provider.status, incident_count: (provider.incidents || []).length }))
+          }, null, 2));
+          NODE
+      - uses: actions/upload-artifact@v4
+        with:
+          name: branch-live-status-${{ github.run_id }}
+          path: public/status.json
+          retention-days: 3
