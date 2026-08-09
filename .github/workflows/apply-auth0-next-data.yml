@@ -36,3 +36,5 @@ jobs:
           git add config/providers.json scripts/structured-source-adapters.mjs scripts/source-intelligence.mjs scripts/validate-providers.mjs scripts/__tests__/auth0-next-data.test.js
           git commit -m "Use Auth0 server structured current status"
           git push origin HEAD:agent/final-public-health-conclusions
+
+# Retry after fixing generated adapter source serialization.
