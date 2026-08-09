@@ -23,6 +23,13 @@ const validDate = (value: unknown): boolean => typeof value === 'string' && Numb
 const finiteNonNegative = (value: unknown): boolean => Number.isFinite(value) && Number(value) >= 0;
 const percentage = (value: unknown): boolean => finiteNonNegative(value) && Number(value) <= 100;
 
+function componentStatusIsProblem(value: unknown): boolean {
+  const status = String(value || '').trim().toLowerCase().replace(/\s+/g, '_');
+  if (!status) return false;
+  if (/^(?:operational|available|up|ok|none|good|normal|healthy|not_available|n\/?a|not_applicable|unknown|under_maintenance|maintenance|scheduled_maintenance|planned_maintenance)$/.test(status)) return false;
+  return /(?:degrad|partial[_-]?outage|major[_-]?outage|outage|unavailable|down|offline|disrupt|impaired|warning|error|failure)/.test(status);
+}
+
 function average(values: number[]): number {
   return values.length ? Math.round(values.reduce((sum, value) => sum + value, 0) / values.length) : 0;
 }
@@ -127,7 +134,7 @@ export function payloadValidationErrors(value: unknown): string[] {
     for (const key of ['coverage_percent', 'live_source_coverage_percent', 'valid_status_percent', 'confirmed_operational_percent', 'average_data_quality_score', 'request_success_percent']) if (summary[key] !== undefined && !percentage(summary[key])) errors.push(`invalid summary percentage ${key}`);
     if (summary.provider_total !== providers.length) errors.push('provider count mismatch');
     if (summary.active_incident_count !== incidents.length) errors.push('incident count mismatch');
-    if (summary.affected_provider_count !== new Set(incidents.map(item => item.providerId)).size) errors.push('affected provider count mismatch');
+    if (summary.affected_provider_count !== providers.filter(provider => ['degraded', 'major'].includes(String(provider.service_state))).length) errors.push('affected provider count mismatch');
 
     const count = (key: string, state: string) => providers.filter(provider => provider[key] === state).length;
     if (summary.confirmed_operational_count !== count('service_state', 'operational') || summary.degraded_count !== count('service_state', 'degraded') || summary.major_count !== count('service_state', 'major') || summary.unknown_count !== count('service_state', 'unknown')) errors.push('service counts do not reconcile');
@@ -151,7 +158,7 @@ export function payloadValidationErrors(value: unknown): string[] {
       high_confidence_source_count: providers.filter(provider => provider.source_confidence === 'high').length,
       schema_change_count: providers.filter(provider => provider.schema_changed === true).length,
       failure_streak_count: providers.filter(provider => Number(provider.consecutive_failures || 0) >= 2).length,
-      component_issue_count: providers.flatMap(provider => Array.isArray(provider.component_status) ? provider.component_status as Record<string, unknown>[] : []).filter(component => !/^(?:operational|available|up|ok|none|good)$/i.test(String(component.status || ''))).length,
+      component_issue_count: providers.flatMap(provider => Array.isArray(provider.component_status) ? provider.component_status as Record<string, unknown>[] : []).filter(component => componentStatusIsProblem(component.status)).length,
       actionable_provider_count: providers.filter(provider => ['critical', 'action'].includes(String(provider.attention))).length,
       healthy_source_count: count('source_health', 'healthy'),
       watch_source_count: count('source_health', 'watch'),

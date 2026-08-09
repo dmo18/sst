@@ -6,7 +6,7 @@ import { parseStatuspageSummary, parseVultrStatus } from '../structured-source-a
 import { parseAzureEntraStatus } from '../entra-status-adapter.mjs';
 import { parseNableIncidentRecords } from '../incident-detail-repairs.mjs';
 import { parsePayPalProductionStatus } from '../full-review-source-adapters.mjs';
-import { reconcileProviderIncidentEvidence, tryFeedCandidates } from '../update-public-status.mjs';
+import { reconcileProviderIncidentEvidence, resolvePublicSource, tryFeedCandidates } from '../update-public-status.mjs';
 import { summarizeProviders } from '../update-status.mjs';
 import { regionScopeRelevant } from '../region-scope.mjs';
 
@@ -158,4 +158,22 @@ test('PayPal health is scoped before history and static legend text', () => {
 
 test('deep review helper files are production code, not temporary patch artifacts', () => {
   for (const path of ['scripts/region-scope.mjs', 'scripts/incident-classification.mjs']) assert.equal(fs.existsSync(path), true);
+});
+
+test('QuickBooks Online uses the current official Statuspage JSON summary', () => {
+  const source = resolvePublicSource({ id: 'quickbooks-online', name: 'QuickBooks Online', category: 'Accounting', sourceType: 'statuspage', url: 'https://status.quickbooks.intuit.com/api/v2/summary.json' });
+  assert.equal(source.mode, 'statuspage-json');
+  assert.equal(source.url, 'https://status.quickbooks.intuit.com/api/v2/summary.json');
+  const result = parseStatuspageSummary(JSON.stringify({
+    page: { id: 'quickbooks', name: 'QuickBooks', url: 'https://status.quickbooks.intuit.com' },
+    status: { indicator: 'none', description: 'All Systems Operational' },
+    components: [
+      { name: 'United States', group_id: 'qbo', status: 'operational' },
+      { name: 'EMEA', group_id: 'qbo', status: 'major_outage' }
+    ],
+    incidents: [],
+    scheduled_maintenances: []
+  }), { id: 'quickbooks-online', name: 'QuickBooks Online' }, source);
+  assert.equal(result.kind, 'healthy');
+  assert.deepEqual(result.components.map(item => item.name), ['United States']);
 });

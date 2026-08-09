@@ -778,8 +778,9 @@
     "category": "Accounting",
     "priority": 60,
     "enabled": true,
-    "sourceType": "quickbooks-html",
-    "url": "https://status.quickbooks.intuit.com/"
+    "sourceType": "statuspage",
+    "url": "https://status.quickbooks.intuit.com/api/v2/summary.json",
+    "message": "Current QuickBooks Online health is read from the official QuickBooks Statuspage JSON summary."
   },
   {
     "id": "xero",
