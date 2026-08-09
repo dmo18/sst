@@ -58,6 +58,9 @@ jobs:
           if (countMismatch.length) problems.push(`incident count mismatch ${countMismatch.map(x=>x.id).join(',')}`);
           const foreignProblemComponents = p.flatMap(x => (x.component_status || []).filter(y => componentStatusIsProblem(y.status) && !regionScopeRelevant(y.name, y.group || '', 'us')).map(y => `${x.id}:${y.name}:${y.status}`));
           if (foreignProblemComponents.length) problems.push(`foreign problem components ${foreignProblemComponents.join(',')}`);
+          const independentForeignPattern = /\b(?:oceania|middle east|ramallah|palestine|emea|europe|asia pacific|apac|australia|new zealand|singapore|japan|india|brazil|africa|united kingdom|uk)\b/i;
+          const independentlyForeignProblems = p.flatMap(x => (x.component_status || []).filter(y => componentStatusIsProblem(y.status) && independentForeignPattern.test(`${y.name || ''} ${y.group || ''}`)).map(y => `${x.id}:${y.name}:${y.group || ''}:${y.status}`));
+          if (independentlyForeignProblems.length) problems.push(`independently detected foreign problem components ${independentlyForeignProblems.join(',')}`);
           const untimed = payload.incidents.filter(x => !x.latest_update && !x.first_detected && !x.rawTime && !(x.evidence_basis === 'current-page' && Number.isFinite(Date.parse(x.observed_at || ''))));
           if (untimed.length) problems.push(`unproven untimed incidents ${untimed.map(x=>x.id).join(',')}`);
           const componentOnly = p.filter(x => ['major','degraded'].includes(x.service_state) && Number(x.active_incident_count || 0) === 0 && Number(x.problem_component_count || 0) > 0);
@@ -68,4 +71,4 @@ jobs:
           if (problems.length) process.exit(1);
           NODE
 
-# expanded provider detail for final audit
+# rerun after Statuspage geographic group resolution
