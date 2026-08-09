@@ -210,6 +210,20 @@ export function normalizeStatusPayload(payload, previous = null, now = payload?.
   if (invalid.length) throw new Error(`Status data requirement failed for: ${invalid.map(provider => provider.id).join(', ')}`);
   if (normalized.summary.invalid_status_count !== 0 || normalized.summary.valid_status_count !== normalized.providers.length) throw new Error('Status data summary did not reconcile to zero invalid providers.');
   if (normalized.summary.coverage_percent !== normalized.summary.live_source_coverage_percent) throw new Error('Coverage metrics must reconcile to live official source coverage.');
+
+  const nowMs = Date.parse(now) || Date.now();
+  const futureActiveMaintenance = normalized.maintenance.filter(item => item.status === 'in_progress' && Number.isFinite(Date.parse(item.starts_at || '')) && Date.parse(item.starts_at) > nowMs + 5 * 60 * 1000);
+  if (futureActiveMaintenance.length) throw new Error(`Future maintenance cannot be in progress: ${futureActiveMaintenance.map(item => item.id).join(', ')}`);
+  const expiredMaintenance = normalized.maintenance.filter(item => Number.isFinite(Date.parse(item.ends_at || '')) && Date.parse(item.ends_at) < nowMs - 15 * 60 * 1000);
+  if (expiredMaintenance.length) throw new Error(`Expired maintenance cannot remain active: ${expiredMaintenance.map(item => item.id).join(', ')}`);
+  const incidentCounts = new Map();
+  for (const incident of normalized.incidents || []) incidentCounts.set(incident.providerId, Number(incidentCounts.get(incident.providerId) || 0) + 1);
+  const incidentCountMismatches = normalized.providers.filter(provider => Number(provider.active_incident_count || 0) !== Number(incidentCounts.get(provider.id) || 0));
+  if (incidentCountMismatches.length) throw new Error(`Provider incident counts do not reconcile: ${incidentCountMismatches.map(provider => provider.id).join(', ')}`);
+  const affectedCount = normalized.providers.filter(provider => ['major', 'degraded'].includes(provider.service_state)).length;
+  if (Number(normalized.summary.affected_provider_count) !== affectedCount) throw new Error(`Affected provider count does not reconcile: expected ${affectedCount}, received ${normalized.summary.affected_provider_count}`);
+  const unprovenUntimed = (normalized.incidents || []).filter(incident => !incident.latest_update && !incident.first_detected && !incident.rawTime && !(incident.evidence_basis === 'current-page' && Number.isFinite(Date.parse(incident.observed_at || ''))));
+  if (unprovenUntimed.length) throw new Error(`Untimed incidents require explicit current-page evidence: ${unprovenUntimed.map(incident => incident.id).join(', ')}`);
   return normalized;
 }
 

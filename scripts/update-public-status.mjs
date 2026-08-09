@@ -241,6 +241,8 @@ function makeIncident(provider, source, item) {
     priority: provider.priority || 0,
     first_detected: firstDetected,
     latest_update: latestUpdate,
+    observed_at: new Date().toISOString(),
+    ...(item.evidenceBasis || item.evidence_basis ? { evidence_basis: item.evidenceBasis || item.evidence_basis } : {}),
     client_impact: provider.client_impact,
     technician_action: provider.technician_action,
     affected_service: item.affectedService || item.affected_service || affectedServiceForIncident(provider, title, item.note),
@@ -251,7 +253,9 @@ function makeIncident(provider, source, item) {
 export function makeMaintenance(provider, source, item) {
   const title = cleanText(item.title || 'Scheduled maintenance');
   const token = maintenanceToken(source, item, title);
-  const status = normalizeMaintenanceState(item.status || 'scheduled');
+  const startsAt = item.startsAt || item.starts_at || '';
+  const endsAt = item.endsAt || item.ends_at || '';
+  const status = normalizeMaintenanceState(item.status || 'scheduled', startsAt, endsAt);
   return {
     id: `${provider.id}:${token}:maintenance`,
     providerId: provider.id,
@@ -262,8 +266,8 @@ export function makeMaintenance(provider, source, item) {
     source: source.sourceName || source.mode,
     url: safeIncidentUrl(item.url || source.pageUrl || source.url, source.url),
     status,
-    starts_at: item.startsAt || item.starts_at || '',
-    ends_at: item.endsAt || item.ends_at || '',
+    starts_at: startsAt,
+    ends_at: endsAt,
     announced_at: item.announcedAt || item.announced_at || '',
     latest_update: item.latestUpdate || item.latest_update || item.announcedAt || '',
     affected_service: item.affectedService || item.affected_service || (provider.services || []).join(', '),

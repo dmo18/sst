@@ -649,6 +649,7 @@ export function parseSalesforcePage(value, provider = {}) {
       note: details || `${provider.name || 'Salesforce'} reports an ongoing ${subject.toLowerCase()}.`,
       status: 'ongoing',
       affectedService: details,
+      evidenceBasis: 'current-page',
       color: /major outage|service outage/i.test(subject) ? 'red' : 'amber',
       url: `https://status.salesforce.com/incidents/${id}`
     });
@@ -666,6 +667,7 @@ export function parseSalesforcePage(value, provider = {}) {
       note: details || `${provider.name || 'Salesforce'} reports an ongoing ${subject.toLowerCase()}.`,
       status: 'ongoing',
       affectedService: details,
+      evidenceBasis: 'current-page',
       color: /major outage|service outage/i.test(subject) ? 'red' : 'amber',
       url: 'https://status.salesforce.com/current'
     };
