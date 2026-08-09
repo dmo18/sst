@@ -5,6 +5,7 @@ import { componentStatusIsProblem, sourceIntelligenceSummary } from '../source-i
 import { parseStatuspageSummary, parseVultrStatus } from '../structured-source-adapters.mjs';
 import { parseAzureEntraStatus } from '../entra-status-adapter.mjs';
 import { parseNableIncidentRecords } from '../incident-detail-repairs.mjs';
+import { isUsRelevantIncident } from '../public-source-repairs.mjs';
 import { parsePayPalProductionStatus } from '../full-review-source-adapters.mjs';
 import { reconcileProviderIncidentEvidence, resolvePublicSource, tryFeedCandidates } from '../update-public-status.mjs';
 import { summarizeProviders } from '../update-status.mjs';
@@ -176,4 +177,14 @@ test('QuickBooks Online uses the current official Statuspage JSON summary', () =
   }), { id: 'quickbooks-online', name: 'QuickBooks Online' }, source);
   assert.equal(result.kind, 'healthy');
   assert.deepEqual(result.components.map(item => item.name), ['United States']);
+});
+
+test('provider-specific region filtering shares the canonical US scope policy', () => {
+  assert.equal(isUsRelevantIncident('Arica, Chile - (ARI) service disruption'), false);
+  assert.equal(isUsRelevantIncident('Autotask UK cell service degradation'), false);
+  assert.equal(isUsRelevantIncident('AWS EC2 Health: me-south-1'), false);
+  assert.equal(isUsRelevantIncident('GCP northamerica-northeast1'), false);
+  assert.equal(isUsRelevantIncident('Ashburn, VA, United States - (IAD) service disruption'), true);
+  assert.equal(isUsRelevantIncident('AWS EC2 Health: us-east-1'), true);
+  assert.equal(isUsRelevantIncident('Global service disruption'), true);
 });

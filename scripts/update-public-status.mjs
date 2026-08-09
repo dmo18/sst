@@ -93,15 +93,6 @@ const publicOverrides = {
     url: 'https://status.connectwise.com/',
     sourceName: 'ConnectWise public status page'
   },
-  'quickbooks-online': {
-    mode: 'status-html',
-    url: 'https://status.quickbooks.intuit.com/',
-    feedCandidates: [
-      'https://status.quickbooks.intuit.com/history.rss',
-      'https://status.quickbooks.intuit.com/history.atom'
-    ],
-    sourceName: 'QuickBooks public status page'
-  },
   salesforce: {
     mode: 'status-html',
     url: 'https://status.salesforce.com/current',

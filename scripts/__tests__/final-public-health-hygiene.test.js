@@ -34,6 +34,8 @@ test('retired and weaker repaired-provider source paths are not production polic
   assert.equal(policy.includes('https://status.stripe.com/current/atom.xml'), false);
   assert.equal(policy.includes('https://www.stripestatus.com/history.atom'), false);
   assert.equal(policy.includes("'quickbooks-online': {\n    mode: 'status-html'"), false);
+  assert.equal(policy.includes('https://status.quickbooks.intuit.com/history.rss'), false);
+  assert.equal(policy.includes('https://status.quickbooks.intuit.com/history.atom'), false);
   assert.equal(policy.includes("mode: 'status-html',\n  url: 'https://status.auth0.com/?environment=Production&region=US'"), false);
 });
 
@@ -61,4 +63,11 @@ test('temporary review diagnostics, live probes, and patch tooling never ship', 
   ]) {
     assert.equal(fs.existsSync(path.join(root, relativePath)), false, `${relativePath} must not ship`);
   }
+});
+
+test('provider-specific conclusions use the shared region-scope implementation', () => {
+  const source = read('scripts/public-source-repairs.mjs');
+  assert.match(source, /regionScopeRelevant/);
+  assert.equal(source.includes('const usRegionPattern'), false);
+  assert.equal(source.includes('const nonUsRegionPattern'), false);
 });
