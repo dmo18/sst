@@ -1,4 +1,7 @@
 import { parseStatuspageSummary } from './structured-source-adapters.mjs';
+import { INCIDENT_MAX_AGE_DAYS, incidentEvidenceIsCurrent } from './incident-freshness.mjs';
+import { regionScopeRelevant } from './region-scope.mjs';
+import { componentStatusIsProblem } from './source-intelligence.mjs';
 
 export const fullReviewOverrides = {
   kaseya: {
@@ -123,10 +126,7 @@ function statusCastUpdates(incident) {
 }
 
 function explicitNonUsOnly(value) {
-  const text = clean(value);
-  const us = /\b(?:united states|u\.s\.|usa|us|north america|americas|global|worldwide|all regions|multiple regions)\b/i.test(text);
-  const nonUs = /\b(?:emea|europe|european|eu central|uk|united kingdom|apac|asia(?: pacific)?|australia|new zealand|canada|ca east|latin america|latam|middle east|africa|japan|singapore|india|brazil)\b/i.test(text);
-  return nonUs && !us;
+  return !regionScopeRelevant('', clean(value), 'us');
 }
 
 function serviceImpact(value) {
@@ -172,6 +172,7 @@ export function parseStatusCastSummary(value, provider = {}, source = {}) {
 
     const firstDetected = toIso(incident?.StartDate || incident?.DateCreated || updates.at(-1)?.at || '');
     const latestUpdate = toIso(incident?.DateUpdated || latest.at || incident?.DateCreated || incident?.StartDate || '');
+    if (!incidentEvidenceIsCurrent({ title, note, status, firstDetected, latestUpdate }, Date.now(), INCIDENT_MAX_AGE_DAYS, { requireTimestamp: true })) continue;
     incidents.push({
       id: String(incident?.Id || incident?.ExternalId || ''),
       title,
@@ -247,16 +248,20 @@ function fireHydrantColor(value) {
   return /\b(?:unavailable|offline|major|critical|complete outage|down)\b/i.test(text) ? 'red' : 'amber';
 }
 
-function fireHydrantMaintenance(json) {
+function fireHydrantMaintenance(json, source = {}) {
   const records = Array.isArray(json?.scheduledMaintenances) ? json.scheduledMaintenances : [];
   return records.map(item => {
-    const components = item?.componentConditions && typeof item.componentConditions === 'object'
+    const allComponents = item?.componentConditions && typeof item.componentConditions === 'object'
       ? Object.keys(item.componentConditions).map(clean).filter(Boolean)
       : [];
+    const title = clean(item?.name || 'Backblaze scheduled maintenance');
+    const note = clean(item?.summary || item?.description || '');
+    if (!regionScopeRelevant(title, note + ' ' + allComponents.join(' '), source.regionScope || 'us')) return null;
+    const components = source.regionScope === 'global' ? allComponents : allComponents.filter(name => regionScopeRelevant(name, '', source.regionScope || 'us'));
     return {
       id: String(item?.id || ''),
-      title: clean(item?.name || 'Backblaze scheduled maintenance'),
-      note: clean(item?.summary || item?.description || ''),
+      title,
+      note,
       status: timeValue(item?.startsAt) <= Date.now() && timeValue(item?.endsAt) >= Date.now() ? 'in_progress' : 'scheduled',
       startsAt: toIso(item?.startsAt || ''),
       endsAt: toIso(item?.endsAt || ''),
@@ -264,7 +269,7 @@ function fireHydrantMaintenance(json) {
       affectedService: components.join(', '),
       url: 'https://status.backblaze.com/'
     };
-  });
+  }).filter(Boolean);
 }
 
 export function parseFireHydrantPayload(value, provider = {}, source = {}) {
@@ -291,6 +296,7 @@ export function parseFireHydrantPayload(value, provider = {}, source = {}) {
     }
     const firstDetected = toIso(incident?.timestamps?.started || incident?.startedAt || incident?.createdAt || timeline.at(-1)?.at || '');
     const latestUpdate = toIso(latest.at || incident?.updatedAt || incident?.timestamps?.started || '');
+    if (!incidentEvidenceIsCurrent({ title, note, status, firstDetected, latestUpdate }, Date.now(), INCIDENT_MAX_AGE_DAYS, { requireTimestamp: true })) continue;
     incidents.push({
       id: String(incident?.id || ''),
       title: title || `${provider.name || 'Backblaze'} service incident`,
@@ -298,25 +304,25 @@ export function parseFireHydrantPayload(value, provider = {}, source = {}) {
       status: status || 'active',
       firstDetected,
       latestUpdate,
-      affectedService: components.map(item => item.name).join(', ') || provider.name || 'Backblaze services',
+      affectedService: components.filter(item => regionScopeRelevant(item.name, item.status, source.regionScope || 'us')).map(item => item.name).join(', ') || provider.name || 'Backblaze services',
       color: fireHydrantColor(combined),
       url: source.pageUrl || source.url,
       updates: timeline
     });
   }
 
-  const maintenance = fireHydrantMaintenance(json);
+  const maintenance = fireHydrantMaintenance(json, source);
   const components = json.components.map(item => ({
     name: clean(item?.name || ''),
     status: clean(item?.customerCondition || item?.condition || item?.status || 'operational')
-  })).filter(item => item.name);
+  })).filter(item => item.name && regionScopeRelevant(item.name, item.status, source.regionScope || 'us'));
 
   if (incidents.length) return { kind: 'issues', incidents: incidents.slice(0, 12), maintenance, components };
   if (explicitNonUsCount === active.length && active.length > 0) {
     return { kind: 'healthy', status: `${provider.name || 'Backblaze'} reports no active US-relevant service incidents`, maintenance, components };
   }
 
-  const explicitProblems = components.filter(component => !/^(?:operational|available|up|ok|none|good)$/i.test(component.status));
+  const explicitProblems = components.filter(component => componentStatusIsProblem(component.status));
   if (explicitProblems.length) {
     const message = explicitProblems.map(component => `${component.name}: ${component.status}`).join('; ');
     return {

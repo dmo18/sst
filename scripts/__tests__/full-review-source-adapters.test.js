@@ -33,21 +33,22 @@ test('Kaseya current Statuspage degradation remains specific structured incident
       name: 'Datto SaaS Protection backup degradation affecting multiple regions',
       status: 'monitoring',
       impact: 'major',
-      created_at: '2026-08-05T19:40:45Z',
-      updated_at: '2026-08-07T16:08:45Z',
+      created_at: '2026-08-02T10:40:45Z',
+      updated_at: '2026-08-02T12:08:45Z',
       incident_updates: [{
         status: 'monitoring',
         body: 'Backup success rates across all regions have recovered and remain under monitoring.',
-        created_at: '2026-08-07T16:08:45Z'
+        created_at: '2026-08-02T12:08:45Z'
       }],
       components: [{ name: 'Datto SaaS Protection Backups' }]
     }],
     scheduled_maintenances: []
   }));
 
-  assert.equal(result.kind, 'component-state');
-  assert.match(result.status, /Partially Degraded Service/);
-  assert.match(result.message, /Datto SaaS Protection Backups/);
+  assert.equal(result.kind, 'issues');
+  assert.equal(result.incidents.length, 1);
+  assert.match(result.incidents[0].title, /Datto SaaS Protection/);
+  assert.match(result.incidents[0].affectedService, /Datto SaaS Protection Backups/);
 });
 
 test('LastPass Rootly status JSON confirms current operational service without a failed legacy request', () => {
@@ -88,14 +89,14 @@ test('8x8 StatusCast current Americas service impact remains an incident', () =>
     Status: 'DegradedPerformance',
     UnresolvedIncidents: [{
       Id: 700001,
-      DateCreated: '2026-08-07T20:10:00Z',
+      DateCreated: '2026-08-02T11:10:00Z',
       IncidentType: 'Performance Issue',
       Status: 'Investigating',
       Title: 'Americas Contact Center performance degradation',
-      StartDate: '2026-08-07T20:10:00Z',
+      StartDate: '2026-08-02T11:10:00Z',
       Posts: [{
         Status: 'Investigating',
-        DateCreated: '2026-08-07T20:25:00Z',
+        DateCreated: '2026-08-02T12:25:00Z',
         Text: 'Customers in the Americas are experiencing intermittent Contact Center errors.'
       }]
     }]
@@ -113,11 +114,11 @@ test('8x8 StatusCast explicit non-US-only incident does not contaminate US scope
     Status: 'DegradedPerformance',
     UnresolvedIncidents: [{
       Id: 700002,
-      DateCreated: '2026-08-07T20:10:00Z',
+      DateCreated: '2026-08-02T11:10:00Z',
       IncidentType: 'Performance Issue',
       Status: 'Investigating',
       Title: 'EMEA Voice performance degradation',
-      StartDate: '2026-08-07T20:10:00Z',
+      StartDate: '2026-08-02T11:10:00Z',
       Posts: [{ Text: 'Customers in Europe are experiencing intermittent voice errors.' }]
     }]
   }), { id: '8x8', name: '8x8' }, fullReviewOverrides['8x8']);
@@ -167,11 +168,11 @@ test('Backblaze FireHydrant current US incident remains structured service-impac
       id: 'incident-1',
       name: 'B2 API availability degradation',
       summary: 'Customers in US East are experiencing elevated API errors.',
-      timestamps: { started: '2026-08-07T22:10:00Z' },
+      timestamps: { started: '2026-08-02T12:10:00Z' },
       currentMilestone: 'investigating',
       componentConditions: { 'US East Region': 'Degraded' },
       timeline: [{
-        occurredAt: '2026-08-07T22:25:00Z',
+        occurredAt: '2026-08-02T12:25:00Z',
         details: {
           '@type': 'type.googleapis.com/firehydrant.nunc.TimelineEvent.Note',
           note: 'Customers in US East are experiencing elevated API errors.'

@@ -75,6 +75,29 @@ function uniqueNames(values, limit = 8) {
   return `${names.slice(0, limit).join(', ')} +${names.length - limit} more`;
 }
 
+function componentName(value) {
+  if (typeof value === 'string') return clean(value);
+  return clean(value?.name || value?.display_name || value?.container_name || value?.public_name || value?.id || '');
+}
+
+function componentScopeText(value) {
+  if (!value || typeof value !== 'object') return '';
+  return clean([value.group_id, value.group_name, value.group, value.description, value.location, value.region].filter(Boolean).join(' '));
+}
+
+function scopedAffectedService(values, source) {
+  const items = Array.isArray(values) ? values : [];
+  const relevant = source.regionScope === 'global'
+    ? items
+    : items.filter(item => isUsRelevant(componentName(item), componentScopeText(item), source.regionScope));
+  return uniqueNames(relevant.map(componentName));
+}
+
+function componentStateColor(values, fallback = '') {
+  const text = values.map(item => clean(item?.status || item)).join(' ') + ' ' + clean(fallback);
+  return /\b(?:major|critical|complete[_ -]?outage|major[_ -]?outage|down|offline|unavailable)\b/i.test(text) ? 'red' : 'amber';
+}
+
 function safeJson(value) {
   try {
     return JSON.parse(String(value || ''));
@@ -290,10 +313,10 @@ export function parseStatuspageSummary(value, provider = {}, source = {}) {
       ...(Array.isArray(incident.components) ? incident.components : []),
       ...(Array.isArray(incident?.incident_updates?.[0]?.affected_components) ? incident.incident_updates[0].affected_components : [])
     ];
-    const affectedService = uniqueNames(affectedComponents.map(component => component?.name || component?.display_name || component?.id));
-    const regionText = `${affectedService} ${affectedComponents.map(component => `${component?.group_id || ''} ${component?.description || ''}`).join(' ')}`;
+    const affectedService = scopedAffectedService(affectedComponents, source);
+    const regionText = affectedComponents.map(component => componentName(component) + ' ' + componentScopeText(component)).join(' ');
     if (!title || isGenericTitle(title) || isEditorial(title, note) || isNonServiceAdvisory(title, note, status) || isPlannedOnly(title, note, status)) continue;
-    if (!isUsRelevant(title, `${note} ${regionText}`, source.regionScope)) continue;
+    if (!isUsRelevant(title, note + ' ' + regionText, source.regionScope)) continue;
     const firstDetected = incident.started_at || incident.created_at || updates.at(-1)?.at || '';
     const latestUpdate = incident.updated_at || latest.at || firstDetected;
     if (!incidentEvidenceIsCurrent({ title, note, status, firstDetected, latestUpdate }, Date.now(), INCIDENT_MAX_AGE_DAYS, { requireTimestamp: true })) {
@@ -323,9 +346,10 @@ export function parseStatuspageSummary(value, provider = {}, source = {}) {
     const title = clean(event.name || event.title || 'Scheduled maintenance');
     const note = clean(latest.note || event.body || event.description || 'The provider has scheduled maintenance.').slice(0, 900);
     const affectedComponents = Array.isArray(event.components) ? event.components : [];
-    const affectedService = uniqueNames(affectedComponents.map(component => component?.name || component?.display_name || component?.id));
+    const affectedService = scopedAffectedService(affectedComponents, source);
+    const allAffectedService = affectedComponents.map(componentName).join(' ');
     if (!title || isEditorial(title, note)) continue;
-    if (!isUsRelevant(title, `${note} ${affectedService}`, source.regionScope)) continue;
+    if (!isUsRelevant(title, note + ' ' + allAffectedService, source.regionScope)) continue;
     maintenance.push({
       id: String(event.id || ''),
       title,
@@ -344,19 +368,19 @@ export function parseStatuspageSummary(value, provider = {}, source = {}) {
   const extras = { maintenance, components };
   if (incidents.length) return { kind: 'issues', incidents, ...extras };
   const indicator = String(json.status?.indicator || '').toLowerCase();
-  if (indicator === 'none') return { kind: 'healthy', status: clean(json.status?.description) || `${provider.name || 'Provider'} reports all systems operational`, ...extras };
   const problemComponents = components.filter(component => componentStatusIsProblem(component.status));
-  if (problemComponents.length && indicator && indicator !== 'none') {
+  if (problemComponents.length) {
     const status = clean(json.status?.description) || `${provider.name || 'Provider'} reports current component degradation`;
     const names = uniqueNames(problemComponents.map(component => component.name));
     return {
       kind: 'component-state',
       status,
-      color: /major|critical/i.test(indicator) ? 'red' : 'amber',
+      color: componentStateColor(problemComponents, indicator),
       message: names ? `Current structured component state: ${names}` : 'The official structured source reports current component degradation.',
       ...extras
     };
   }
+  if (indicator === 'none') return { kind: 'healthy', status: clean(json.status?.description) || `${provider.name || 'Provider'} reports all systems operational`, ...extras };
   if (staleIncidentCount) return { kind: 'limited', message: `${provider.name || 'Provider'} lists ${staleIncidentCount} unresolved incident record${staleIncidentCount === 1 ? '' : 's'} without an official update in the last ${INCIDENT_MAX_AGE_DAYS} days. The records were not presented as current.`, ...extras };
   if (unresolved.length) return { kind: 'healthy', status: `${provider.name || 'Provider'} reports no active US-relevant incidents`, ...extras };
   return null;
@@ -386,7 +410,10 @@ function statusioMaintenance(result, source) {
   for (const { event, defaultState } of groups) {
     const title = clean(event?.name || event?.title || 'Scheduled maintenance');
     const note = clean(event?.details || event?.message || event?.description || 'The provider has scheduled maintenance.').slice(0, 900);
-    if (!title || isEditorial(title, note) || !isUsRelevant(title, note, source.regionScope)) continue;
+    const affectedItems = [...(event?.components || []), ...(event?.containers || [])];
+    const affectedService = scopedAffectedService(affectedItems, source);
+    const allAffectedService = affectedItems.map(componentName).join(' ');
+    if (!title || isEditorial(title, note) || !isUsRelevant(title, note + ' ' + allAffectedService, source.regionScope)) continue;
     records.push({
       id: String(event?.id || event?._id || ''),
       title,
@@ -396,7 +423,7 @@ function statusioMaintenance(result, source) {
       endsAt: event?.end_time || event?.end || event?.scheduled_until || '',
       announcedAt: event?.created_at || event?.datetime || '',
       latestUpdate: event?.updated_at || event?.datetime || event?.created_at || '',
-      affectedService: uniqueNames([...(event?.components || []), ...(event?.containers || [])].map(item => item?.name || item?.container_name || item)),
+      affectedService,
       url: source.pageUrl || source.url,
       updates: boundedUpdates(event?.messages || event?.updates || [])
     });
@@ -421,9 +448,11 @@ export function parseStatusioJson(value, provider = {}, source = {}) {
     const title = clean(incident?.name || incident?.title);
     const note = clean(latest.note || incident?.details || incident?.message || incident?.description).slice(0, 900);
     const status = clean(incident?.status || incident?.state || latest.status || 'active');
-    const affectedService = uniqueNames([...(incident?.components || []), ...(incident?.containers || [])].map(item => item?.name || item?.container_name || item));
+    const affectedItems = [...(incident?.components || []), ...(incident?.containers || [])];
+    const affectedService = scopedAffectedService(affectedItems, source);
+    const allAffectedService = affectedItems.map(componentName).join(' ');
     if (!title || isGenericTitle(title) || isEditorial(title, note) || isNonServiceAdvisory(title, note, status) || isPlannedOnly(title, note, status)) continue;
-    if (!isUsRelevant(title, `${note} ${affectedService}`, source.regionScope)) continue;
+    if (!isUsRelevant(title, note + ' ' + allAffectedService, source.regionScope)) continue;
     const firstDetected = incident?.started_at || incident?.created_at || incident?.datetime || updates.at(-1)?.at || '';
     const latestUpdate = incident?.updated_at || latest.at || firstDetected;
     if (!incidentEvidenceIsCurrent({ title, note, status, firstDetected, latestUpdate }, Date.now(), INCIDENT_MAX_AGE_DAYS, { requireTimestamp: Boolean(firstDetected || latestUpdate) })) continue;
@@ -444,6 +473,17 @@ export function parseStatusioJson(value, provider = {}, source = {}) {
   const extras = { maintenance, components };
   if (incidents.length) return { kind: 'issues', incidents, ...extras };
   const overall = clean(result.status_overall?.status || result.status_overall?.name || result.status_overall?.message);
+  const problemComponents = components.filter(component => componentStatusIsProblem(component.status));
+  if (problemComponents.length) {
+    const names = uniqueNames(problemComponents.map(component => component.name));
+    return {
+      kind: 'component-state',
+      status: `${provider.name || 'Provider'} reports current component degradation`,
+      color: componentStateColor(problemComponents, overall),
+      message: names ? `Current structured component state: ${names}` : 'The official Status.io source reports current component degradation.',
+      ...extras
+    };
+  }
   if (/operational|all systems (?:are )?(?:operational|normal)|all services (?:are )?(?:operating normally|operational)/i.test(overall)) {
     return { kind: 'healthy', status: overall || `${provider.name || 'Provider'} reports all systems operational`, ...extras };
   }
@@ -648,10 +688,11 @@ export function parseBetterStackIndex(value, provider = {}, source = {}) {
     const affected = Array.isArray(latest.affected_resources) && latest.affected_resources.length
       ? latest.affected_resources
       : Array.isArray(attributes.affected_resources) ? attributes.affected_resources : [];
-    const affectedService = uniqueNames(affected.map(item => resources.get(String(item.status_page_resource_id))?.public_name || item.status_page_resource_id));
+    const affectedNames = affected.map(item => resources.get(String(item.status_page_resource_id))?.public_name || item.status_page_resource_id).map(clean).filter(Boolean);
+    const affectedService = uniqueNames(affectedNames.filter(name => isUsRelevant(name, '', source.regionScope)));
     const title = clean(attributes.title);
     const note = clean(latest.message || attributes.message || attributes.description || '').slice(0, 900);
-    if (!title || isEditorial(title, note) || isNonServiceAdvisory(title, note, attributes.aggregate_state || attributes.status || '') || !isUsRelevant(title, `${note} ${affectedService}`, source.regionScope)) continue;
+    if (!title || isEditorial(title, note) || isNonServiceAdvisory(title, note, attributes.aggregate_state || attributes.status || '') || !isUsRelevant(title, note + ' ' + affectedNames.join(' '), source.regionScope)) continue;
 
     const reportType = String(attributes.report_type || '').toLowerCase();
     const aggregate = String(attributes.aggregate_state || '').toLowerCase();
@@ -698,6 +739,17 @@ export function parseBetterStackIndex(value, provider = {}, source = {}) {
   const extras = { maintenance, components };
   if (incidents.length) return { kind: 'issues', incidents, ...extras };
   const aggregate = String(json.data.attributes.aggregate_state || '').toLowerCase();
+  const problemComponents = components.filter(component => componentStatusIsProblem(component.status));
+  if (problemComponents.length) {
+    const names = uniqueNames(problemComponents.map(component => component.name));
+    return {
+      kind: 'component-state',
+      status: `${provider.name || 'Provider'} reports current component degradation`,
+      color: componentStateColor(problemComponents, aggregate),
+      message: names ? `Current structured component state: ${names}` : 'The official Better Stack source reports current component degradation.',
+      ...extras
+    };
+  }
   if (staleReportCount && !['operational', 'maintenance'].includes(aggregate)) return { kind: 'limited', message: `${provider.name || 'Provider'} has unresolved structured records without a recent official update. They were not presented as current.`, ...extras };
   if (aggregate === 'operational' || aggregate === 'maintenance') {
     return { kind: 'healthy', status: aggregate === 'maintenance' ? `${provider.name || 'Provider'} reports scheduled maintenance only` : `${provider.name || json.data.attributes.company_name || 'Provider'} reports all systems operational`, ...extras };

@@ -17,6 +17,7 @@ import {
   renderPublicPage
 } from './public-source-repairs.mjs';
 import { isEditorialIncidentEntry, isGenericIncidentTitle, isIncidentUsRelevant } from './incident-detail-repairs.mjs';
+import { isNonServiceAdvisory } from './incident-classification.mjs';
 import { INCIDENT_MAX_AGE_DAYS, dateLikeIncidentTitle, incidentEvidenceIsCurrent } from './incident-freshness.mjs';
 import {
   componentStatusIsProblem,
@@ -464,7 +465,7 @@ function itemColor(value) {
 export function activeFeedEntries(entries, maxAgeHours = 168, now = Date.now()) {
   return entries.filter(item => {
     const text = `${item.title} ${item.note} ${item.status}`;
-    if (isEditorialIncidentEntry(item) || isGenericIncidentTitle(item.title) || !issueText(text) || resolvedText(text) || maintenanceOnly(text)) return false;
+    if (isEditorialIncidentEntry(item) || isGenericIncidentTitle(item.title) || isNonServiceAdvisory(item.title, item.note, item.status) || !issueText(text) || resolvedText(text) || maintenanceOnly(text)) return false;
     const ms = Date.parse(item.time || '');
     if (!Number.isFinite(ms)) return true;
     const age = now - ms;
@@ -574,7 +575,7 @@ export async function parsePublicFeed(provider, source) {
 function currentHtmlSection(html) {
   const withoutScripts = String(html || '').replace(/<script[\s\S]*?<\/script>/gi, ' ').replace(/<style[\s\S]*?<\/style>/gi, ' ');
   const text = cleanText(withoutScripts);
-  const boundary = /\b(?:incident history|past incidents|previous incidents|resolved incidents|historical incidents|uptime history)\b/i.exec(text);
+  const boundary = /\b(?:view history|incident history|past incidents|previous incidents|resolved incidents|historical incidents|uptime history)\b/i.exec(text);
   return boundary ? text.slice(0, boundary.index) : text.slice(0, 80000);
 }
 
@@ -596,25 +597,28 @@ export function discoverFeedUrls(html, pageUrl) {
   return urls;
 }
 
-function htmlIssueConclusion(provider, source, html) {
+export function htmlIssueConclusion(provider, source, html) {
   const specific = providerSpecificConclusion(provider, html);
   if (specific) return specific;
   const current = currentHtmlSection(html);
   const lower = current.toLowerCase();
   if (/cloudflare|attention required|verify you are human|captcha|access denied|enable javascript to run this app/.test(lower) && current.length < 4000) return { kind: 'limited', message: 'The official page returned a bot challenge or JavaScript shell without readable service status.' };
   if (provider.id === 'entra') return entraConclusion(current);
-  const activeCount = /\b([1-9]\d*)\s+active incidents?\b/i.exec(current);
+  const signal = current
+    .replace(/\bOperational(?:\s+(?:Major Outage|Partial Outage|Degraded Performance|Maintenance|Bulletin)){2,}\b/gi, ' ')
+    .replace(/\bMajor Outage\s+Partial Outage\s+Degraded Performance\s+Operational(?:\s+Maintenance)?\b/gi, ' ');
+  const activeCount = /\b([1-9]\d*)\s+active incidents?\b/i.exec(signal);
   if (activeCount) return { kind: 'issue', color: 'amber', title: `${provider.name} public status page reports an active issue`, note: `${activeCount[1]} active incidents` };
-  const healthy = /\b(all systems operational|all systems working|all services operational|all services are operational|no active incidents|0 active incidents|no incidents reported|everything is operating normally)\b/i.exec(current);
-  if (healthy) return { kind: 'healthy', status: cleanText(healthy[0]) };
-  const issuePattern = /\b(major outage|partial outage|degraded performance|service disruption|service degradation|critical incident|active incident|investigating an issue|identified an issue|monitoring an issue)\b/i;
-  const issue = issuePattern.exec(current);
+  const issuePattern = /\b(major outage|partial outage|degraded performance|service disruption|service degradation|critical incident|investigating an issue|identified an issue|monitoring an issue)\b/i;
+  const issue = issuePattern.exec(signal);
   if (issue) {
     const text = issue[0];
     return { kind: 'issue', color: /major|critical|outage/i.test(text) && !/partial/i.test(text) ? 'red' : 'amber', title: `${provider.name} public status page reports an active issue`, note: text };
   }
-  const operationalMatches = current.match(/\bOperational\b/gi) || [];
-  const problemMatches = current.match(/\b(Major Outage|Partial Outage|Degraded Performance|Service Disruption)\b/gi) || [];
+  const healthy = /\b(all systems operational|all systems working|all services operational|all services are operational|no active incidents|0 active incidents|no incidents reported|everything is operating normally)\b/i.exec(signal);
+  if (healthy) return { kind: 'healthy', status: cleanText(healthy[0]) };
+  const operationalMatches = signal.match(/\bOperational\b/gi) || [];
+  const problemMatches = signal.match(/\b(Major Outage|Partial Outage|Degraded Performance|Service Disruption)\b/gi) || [];
   if (operationalMatches.length >= 2 && problemMatches.length === 0) return { kind: 'healthy', status: `${provider.name} components report operational` };
   return { kind: 'limited', message: 'The official page loaded but did not expose a stable readable current health conclusion.' };
 }
