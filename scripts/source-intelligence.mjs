@@ -152,20 +152,25 @@ export function enrichProviderHistory(results, previous, currentIncidents, gener
   });
 }
 
-function maintenanceState(value) {
+function maintenanceState(value, startsAt = '', endsAt = '', now = Date.now()) {
   const status = clean(value).toLowerCase();
-  if (/in[_ -]?progress|ongoing|underway|started/.test(status)) return 'in_progress';
+  const start = Date.parse(startsAt || '');
+  const end = Date.parse(endsAt || '');
   if (/completed|resolved|cancelled|canceled|finished/.test(status)) return 'completed';
+  if (Number.isFinite(end) && end <= now) return 'completed';
+  if (Number.isFinite(start) && start > now) return 'scheduled';
+  if (Number.isFinite(start) && start <= now && (!Number.isFinite(end) || end > now)) return 'in_progress';
+  if (/in[_ -]?progress|ongoing|underway|started/.test(status)) return 'in_progress';
   if (/scheduled|planned|upcoming|not[_ -]?started/.test(status)) return 'scheduled';
   return 'unknown';
 }
 
-export function normalizeMaintenanceState(value) {
-  return maintenanceState(value);
+export function normalizeMaintenanceState(value, startsAt = '', endsAt = '', now = Date.now()) {
+  return maintenanceState(value, startsAt, endsAt, now);
 }
 
 export function maintenanceIsRelevant(item, now = Date.now(), horizonDays = 45) {
-  if (!item || maintenanceState(item.status) === 'completed') return false;
+  if (!item || maintenanceState(item.status, item.starts_at, item.ends_at, now) === 'completed') return false;
   const end = Date.parse(item.ends_at || '');
   if (Number.isFinite(end) && end < now - 15 * 60 * 1000) return false;
   const start = Date.parse(item.starts_at || '');
@@ -184,7 +189,7 @@ export function sourceIntelligenceSummary(providers, maintenance = []) {
   const components = providers.flatMap(provider => Array.isArray(provider.component_status) ? provider.component_status : []);
   return {
     maintenance_count: maintenance.length,
-    ongoing_maintenance_count: maintenance.filter(item => maintenanceState(item.status) === 'in_progress').length,
+    ongoing_maintenance_count: maintenance.filter(item => maintenanceState(item.status, item.starts_at, item.ends_at) === 'in_progress').length,
     structured_source_count: available.filter(provider => provider.evidence_tier === 'structured').length,
     feed_source_count: available.filter(provider => provider.evidence_tier === 'feed').length,
     page_source_count: available.filter(provider => ['rendered-page', 'public-page'].includes(provider.evidence_tier)).length,
@@ -235,7 +240,7 @@ export function sourceIntelligenceChanges(previous, current, now = new Date().to
       changes.push({ id: `${now}:${item.id}:maintenance_new`, type: 'maintenance_new', provider_id: item.providerId, provider: item.provider, detected_at: now, title: item.title, attention: item.status === 'in_progress' ? 'action' : 'watch' });
       continue;
     }
-    if (maintenanceState(old.status) !== 'in_progress' && maintenanceState(item.status) === 'in_progress') {
+    if (maintenanceState(old.status, old.starts_at, old.ends_at) !== 'in_progress' && maintenanceState(item.status, item.starts_at, item.ends_at) === 'in_progress') {
       changes.push({ id: `${now}:${item.id}:maintenance_started`, type: 'maintenance_started', provider_id: item.providerId, provider: item.provider, detected_at: now, title: item.title, attention: 'action' });
     } else if (maintenanceSignature(old) !== maintenanceSignature(item)) {
       changes.push({ id: `${now}:${item.id}:maintenance_updated`, type: 'maintenance_updated', provider_id: item.providerId, provider: item.provider, detected_at: now, title: item.title, attention: 'watch' });

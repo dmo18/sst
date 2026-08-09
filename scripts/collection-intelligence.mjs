@@ -149,8 +149,12 @@ function sourceHealth(provider, score) {
   return 'watch';
 }
 
-function truthBasis(provider) {
-  if (['major', 'degraded'].includes(provider.service_state) && provider.source_state === 'available') return 'vendor-incident';
+function truthBasis(provider, incidentCount = 0, problemComponentCount = 0) {
+  if (['major', 'degraded'].includes(provider.service_state) && provider.source_state === 'available') {
+    if (incidentCount > 0) return 'vendor-incident';
+    if (problemComponentCount > 0) return 'vendor-component';
+    return 'observed-affected-no-detail';
+  }
   if (provider.service_state === 'operational' && provider.source_state === 'available') return 'confirmed-operational';
   if (provider.source_state === 'available') return 'observed-no-conclusion';
   if (provider.source_state === 'stale') return 'last-known-official';
@@ -165,6 +169,7 @@ export function enrichProviderCollection(provider, incidents = [], maintenance =
   const quality = providerQualityScore(provider, nowMs);
   const fresh = freshness(provider, nowMs);
   const problemComponents = (provider.component_status || []).filter(component => componentStatusIsProblem(component.status)).length;
+  const incidentCount = incidents.filter(item => item.providerId === provider.id).length;
   const sourceUrl = provider.source || '';
   let sourceHost = '';
   try {
@@ -173,7 +178,7 @@ export function enrichProviderCollection(provider, incidents = [], maintenance =
   return {
     ...provider,
     source_health: sourceHealth(provider, quality),
-    truth_basis: truthBasis(provider),
+    truth_basis: truthBasis(provider, incidentCount, problemComponents),
     data_quality_score: quality,
     source_latency_ms: durations.length ? Math.round(durations.reduce((sum, value) => sum + value, 0)) : 0,
     collection_attempt_count: logs.length,
@@ -182,7 +187,7 @@ export function enrichProviderCollection(provider, incidents = [], maintenance =
     source_host: sourceHost,
     freshness_state: fresh.state,
     ...(fresh.seconds === undefined ? {} : { freshness_seconds: fresh.seconds }),
-    active_incident_count: incidents.filter(item => item.providerId === provider.id).length,
+    active_incident_count: incidentCount,
     maintenance_count: maintenance.filter(item => item.providerId === provider.id).length,
     problem_component_count: problemComponents
   };

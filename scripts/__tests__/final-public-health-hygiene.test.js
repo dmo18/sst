@@ -52,6 +52,10 @@ test('temporary review diagnostics, live probes, and patch tooling never ship', 
     '.github/workflows/probe-auth0-quickbooks.yml',
     '.github/workflows/branch-live-acceptance.yml',
     '.github/workflows/apply-final-hygiene-fixes.yml',
+    '.github/workflows/apply-production-invariant-audit.yml',
+    '.github/workflows/live-production-invariant-audit.yml',
+    '.github/workflows/apply-truth-basis-validation.yml',
+    '.github/workflows/apply-statuspage-group-scope.yml',
     'scripts/apply-final-public-health.mjs',
     'scripts/apply-paypal-legend-safety.mjs',
     'scripts/apply-deep-review-repairs.mjs',
@@ -61,7 +65,10 @@ test('temporary review diagnostics, live probes, and patch tooling never ship', 
     'scripts/apply-validator-quickbooks-fix.mjs',
     'scripts/apply-auth0-next-data.mjs',
     'scripts/fix-auth0-contract-test.mjs',
-    'scripts/apply-final-hygiene-fixes.mjs'
+    'scripts/apply-final-hygiene-fixes.mjs',
+    'scripts/apply-production-invariant-audit.mjs',
+    'scripts/apply-truth-basis-validation.mjs',
+    'scripts/apply-statuspage-group-scope.mjs'
   ]) {
     assert.equal(fs.existsSync(path.join(root, relativePath)), false, `${relativePath} must not ship`);
   }
