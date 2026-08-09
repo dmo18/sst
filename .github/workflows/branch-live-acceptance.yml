@@ -50,10 +50,9 @@ jobs:
           }, null, 2));
           NODE
       - name: Validate browser payload
-        continue-on-error: true
         run: npm run validate-browser-payload
       - name: Enforce full provider acceptance
-        continue-on-error: true
+        if: always()
         shell: bash
         run: |
           node --input-type=module <<'NODE'
@@ -70,6 +69,7 @@ jobs:
           const collection = payload.collection || {};
           const failures = [];
           const check = (condition, message) => { if (!condition) failures.push(message); };
+          const incidentsFor = provider => incidents.filter(item => item.providerId === provider.id);
 
           check(providers.length === 79 && Number(summary.provider_total) === 79, `Expected 79 providers, got ${providers.length}/${summary.provider_total}`);
           check(Number(summary.valid_status_count) === 79 && Number(summary.invalid_status_count) === 0 && Number(summary.valid_status_percent) === 100, 'Provider validity is not 79/79 at 100%');
@@ -95,10 +95,15 @@ jobs:
             const provider = providers.find(item => item.id === id);
             check(provider?.health_access === 'authenticated' && provider?.health_observable === false && provider?.source_state === 'available' && provider?.ok === true, `${id} authenticated health contract is not explicit and live`);
           }
-          for (const id of ['paypal', 'stripe']) {
+          for (const id of ['auth0', 'paypal', 'quickbooks-online', 'stripe']) {
             const provider = providers.find(item => item.id === id);
-            check(Boolean(provider && provider.service_state !== 'unknown'), `${id} still lacks a public current-health conclusion`);
+            check(Boolean(provider && provider.service_state !== 'unknown' && provider.source_state === 'available' && provider.ok === true), `${id} still lacks a live current-health conclusion`);
           }
+          const auth0 = providers.find(provider => provider.id === 'auth0');
+          check(auth0?.source_type === 'auth0-next-data', `Auth0 source type is ${auth0?.source_type}`);
+          check((auth0?.download_log || []).every(log => log.source_type === 'auth0-next-data'), 'Auth0 used a browser or fallback transport instead of the server snapshot');
+          const quickBooks = providers.find(provider => provider.id === 'quickbooks-online');
+          check(quickBooks?.source_type === 'statuspage-json', `QuickBooks source type is ${quickBooks?.source_type}`);
 
           const affected = providers.filter(provider => ['major', 'degraded'].includes(provider.service_state));
           check(Number(summary.affected_provider_count) === affected.length, `Affected provider count ${summary.affected_provider_count} does not reconcile to ${affected.length}`);
@@ -107,12 +112,15 @@ jobs:
           check(Number(summary.maintenance_count) === maintenance.length, `Maintenance summary ${summary.maintenance_count} does not equal payload ${maintenance.length}`);
 
           const countMismatches = providers.flatMap(provider => {
+            const actual = incidentsFor(provider).length;
+            const embedded = Number(provider.active_incident_count || 0);
+            const mismatches = [];
+            if (embedded !== actual) mismatches.push(`${provider.id}:${embedded} provider count/${actual} global records`);
             const match = /^(\d+) active (?:US |current )?public incidents?$/.exec(String(provider.status || ''));
-            if (!match) return [];
-            const actual = (provider.incidents || []).length;
-            return Number(match[1]) === actual ? [] : [`${provider.id}:${match[1]} label/${actual} records`];
+            if (match && Number(match[1]) !== actual) mismatches.push(`${provider.id}:${match[1]} label/${actual} global records`);
+            return mismatches;
           });
-          check(countMismatches.length === 0, `Provider incident-count labels are stale: ${countMismatches.join(', ')}`);
+          check(countMismatches.length === 0, `Provider incident counts are stale: ${countMismatches.join(', ')}`);
 
           const advisoryIncidents = incidents.filter(item => isNonServiceAdvisory(item.title, item.note, item.status));
           check(advisoryIncidents.length === 0, `Non-service advisories remain incidents: ${advisoryIncidents.map(item => `${item.providerId || item.provider}:${item.title}`).join(' | ')}`);
@@ -127,10 +135,10 @@ jobs:
             check(foreignProblems.length === 0, `${id} has foreign current problem components in US scope: ${foreignProblems.map(item => item.name).join(', ')}`);
           }
 
-          const vultr = providers.find(provider => provider.id === 'vultr');
+          const vultrIncidents = incidents.filter(item => item.providerId === 'vultr');
           const seenVultr = new Set();
           const duplicateVultr = [];
-          for (const item of vultr?.incidents || []) {
+          for (const item of vultrIncidents) {
             const key = [item.title, item.note, item.affected_service || item.affectedService, item.status].map(value => String(value || '').trim().toLowerCase()).join('|');
             if (seenVultr.has(key)) duplicateVultr.push(item.title);
             seenVultr.add(key);
@@ -161,7 +169,7 @@ jobs:
             median_request_ms: collection.median_request_ms,
             p95_request_ms: collection.p95_request_ms,
             failures,
-            affected_providers: affected.map(provider => ({ id: provider.id, state: provider.service_state, status: provider.status, incident_count: (provider.incidents || []).length }))
+            affected_providers: affected.map(provider => ({ id: provider.id, state: provider.service_state, status: provider.status, incident_count: incidentsFor(provider).length }))
           }, null, 2));
           if (failures.length) throw new Error(`Live acceptance failed with ${failures.length} issue(s): ${failures.join(' | ')}`);
           NODE
