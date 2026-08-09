@@ -28,7 +28,8 @@ const allowedSourceTypes = new Set([
     'firehydrant-json',
     'rendered-official',
     'authenticated-status-reference',
-    'azure-status-html'
+    'azure-status-html',
+    'auth0-next-data'
 ]);
 const limitedSourceTypes = new Set(['limited-official', 'limited-public-page', 'official-limited', 'html-limited', 'okta-html']);
 function fail(message, context) {

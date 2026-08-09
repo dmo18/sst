@@ -335,8 +335,9 @@
     "category": "Identity / Access",
     "priority": 78,
     "enabled": true,
-    "sourceType": "statuspage",
-    "url": "https://status.auth0.com/api/v2/summary.json"
+    "sourceType": "auth0-next-data",
+    "url": "https://status.auth0.com/?environment=Production&region=US",
+    "message": "Current Auth0 US Public Cloud health is read from the official server-rendered structured status snapshot."
   },
   {
     "id": "bitwarden",

@@ -212,11 +212,12 @@ export const structuredSourceOverrides = Object.fromEntries(
 );
 
 structuredSourceOverrides.auth0 = {
-  mode: 'status-html',
+  mode: 'auth0-next-data',
   url: 'https://status.auth0.com/?environment=Production&region=US',
   pageUrl: 'https://status.auth0.com/',
-  sourceName: 'Auth0 official public cloud status page',
-  render: true,
+  sourceName: 'Auth0 official Public Cloud server status data',
+  render: false,
+  discoverFeeds: false,
   regionScope: 'us'
 };
 
@@ -292,6 +293,121 @@ structuredSourceOverrides.vultr = {
   sourceName: 'Vultr official public status JSON',
   regionScope: 'us'
 };
+
+function auth0NextData(value) {
+  const match = /<script[^>]+id=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i.exec(String(value || ''));
+  if (!match?.[1]) return null;
+  try {
+    const json = JSON.parse(match[1]);
+    return json && typeof json === 'object' ? json : null;
+  } catch {
+    return null;
+  }
+}
+
+function auth0CurrentRecord(row) {
+  const records = Array.isArray(row?.response?.incidents) ? row.response.incidents : [];
+  const live = records.filter(record => record && typeof record === 'object' && !record.resolved_at);
+  if (!live.length) return null;
+  const impacted = live.filter(record => !/^(?:operational|resolved|completed)$/i.test(clean(record.status)) || !/^(?:none|)$/i.test(clean(record.impact)));
+  return impacted[0] || live[0];
+}
+
+function auth0Operational(record) {
+  return Boolean(record)
+    && /^(?:operational|resolved|completed)$/i.test(clean(record.status))
+    && /^(?:none|)$/i.test(clean(record.impact))
+    && !record.scheduled_for;
+}
+
+function auth0Maintenance(record) {
+  return Boolean(record) && (/\b(?:scheduled|maintenance)\b/i.test(clean(record.status)) || Boolean(record.scheduled_for));
+}
+
+export function parseAuth0NextData(value, provider = {}, source = {}) {
+  const json = auth0NextData(value);
+  const rows = json?.props?.pageProps?.activeIncidents;
+  if (!Array.isArray(rows)) return null;
+
+  const currentUs = rows.filter(row => /^US(?:-\d+)?$/i.test(clean(row?.region)) && /^Production$/i.test(clean(row?.environment)));
+  if (!currentUs.length) return null;
+
+  const components = [];
+  const problems = [];
+  const maintenance = [];
+
+  for (const row of currentUs) {
+    const region = clean(row.region);
+    const record = auth0CurrentRecord(row);
+    if (!record) {
+      components.push({ name: region, status: 'unknown' });
+      continue;
+    }
+
+    if (auth0Maintenance(record) && !/\b(?:outage|degrad|disrupt|unavailable|error|failure)\b/i.test(clean(record.name))) {
+      components.push({ name: region, status: 'operational' });
+      maintenance.push({
+        id: String(record.id || region),
+        title: clean(record.name || 'Auth0 scheduled maintenance'),
+        note: 'Auth0 reports scheduled maintenance for ' + region + '.',
+        status: 'scheduled',
+        startsAt: record.scheduled_for || '',
+        latestUpdate: record.updated_at || '',
+        affectedService: region,
+        url: source.pageUrl || source.url || 'https://status.auth0.com/'
+      });
+      continue;
+    }
+
+    if (auth0Operational(record)) {
+      components.push({ name: region, status: 'operational' });
+      continue;
+    }
+
+    const severityText = String(record.impact || '') + ' ' + String(record.status || '') + ' ' + String(record.name || '');
+    const major = /\b(?:critical|major|major outage|complete outage|unavailable|down)\b/i.test(severityText);
+    const status = major ? 'major_outage' : 'degraded_performance';
+    components.push({ name: region, status });
+    problems.push({ region, record, major });
+  }
+
+  if (problems.length) {
+    const color = problems.some(problem => problem.major) ? 'red' : 'amber';
+    const message = problems.map(({ region, record }) => {
+      const state = [clean(record.status), clean(record.impact)].filter(Boolean).join(', ');
+      const updated = toIso(record.updated_at || '');
+      let text = region + ': ' + clean(record.name || 'current service impact');
+      if (state) text += ' (' + state + ')';
+      if (updated) text += '; vendor snapshot updated ' + updated;
+      return text;
+    }).join('; ');
+    return {
+      kind: 'component-state',
+      status: 'Auth0 reports current US Public Cloud service impact',
+      color,
+      message,
+      components,
+      maintenance
+    };
+  }
+
+  const unknownComponents = components.filter(component => component.status === 'unknown');
+  if (unknownComponents.length) {
+    return {
+      kind: 'limited',
+      message: 'Auth0 server status data omitted a current status record for ' + unknownComponents.map(component => component.name).join(', ') + '.',
+      components,
+      maintenance
+    };
+  }
+
+  return {
+    kind: 'healthy',
+    status: 'Auth0 reports all US Public Cloud regions operational',
+    components,
+    maintenance
+  };
+}
 
 export function parseStatuspageSummary(value, provider = {}, source = {}) {
   const json = safeJson(value);
@@ -832,6 +948,7 @@ export function structuredSourceConclusion(provider, value, source = {}) {
   if (provider?.id === 'ringcentral') return parseRingCentralPage(value, provider, { ...structuredSourceOverrides[provider?.id], ...source });
   if (provider?.id === 'salesforce') return parseSalesforcePage(value, provider, { ...structuredSourceOverrides[provider?.id], ...source });
   if (provider?.id === 'backblaze') return parseBackblazePage(value, provider, { ...structuredSourceOverrides[provider?.id], ...source });
+  if (mode === 'auth0-next-data') return parseAuth0NextData(value, provider, { ...structuredSourceOverrides[provider?.id], ...source });
   if (mode === 'statuspage-json') return parseStatuspageSummary(value, provider, { ...structuredSourceOverrides[provider?.id], ...source });
   if (mode === 'statusio-json') return parseStatusioJson(value, provider, { ...structuredSourceOverrides[provider?.id], ...source });
   if (mode === 'betterstack-json') return parseBetterStackIndex(value, provider, { ...structuredSourceOverrides[provider?.id], ...source });

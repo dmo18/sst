@@ -1,6 +1,6 @@
 export const PARSER_VERSION = '3.0.0';
 
-const structuredModes = new Set(['statuspage-json', 'betterstack-json', 'provider-json']);
+const structuredModes = new Set(['statuspage-json', 'betterstack-json', 'provider-json', 'auth0-next-data']);
 const feedModes = new Set(['feed', 'rss', 'atom']);
 
 function clean(value) {
@@ -36,6 +36,15 @@ function jsonShape(value, depth = 0) {
 export function schemaFingerprint(value, mode = '') {
   const text = String(value || '');
   if (!text) return '';
+  if (mode === 'auth0-next-data') {
+    const match = /<script[^>]+id=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i.exec(text);
+    if (!match?.[1]) return '';
+    try {
+      return 'json-' + hashString(jsonShape(JSON.parse(match[1])));
+    } catch {
+      return '';
+    }
+  }
   if (structuredModes.has(mode) || /json/i.test(mode)) {
     try {
       return `json-${hashString(jsonShape(JSON.parse(text)))}`;
