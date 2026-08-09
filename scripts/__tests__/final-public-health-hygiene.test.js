@@ -30,10 +30,13 @@ test('temporary review diagnostics and patch tooling never ship', () => {
     '.github/workflows/apply-paypal-legend-safety.yml',
     '.github/workflows/apply-deep-review-repairs.yml',
     '.github/workflows/fix-and-apply-deep-review.yml',
+    '.github/workflows/apply-last-mile-hardening.yml',
     'scripts/apply-final-public-health.mjs',
     'scripts/apply-paypal-legend-safety.mjs',
     'scripts/apply-deep-review-repairs.mjs',
-    'scripts/fix-deep-review-patch.mjs'
+    'scripts/fix-deep-review-patch.mjs',
+    'scripts/apply-last-mile-hardening.mjs',
+    'scripts/fix-last-mile-hardening.mjs'
   ]) {
     assert.equal(fs.existsSync(path.join(root, relativePath)), false, `${relativePath} must not ship`);
   }
