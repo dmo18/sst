@@ -38,4 +38,4 @@ jobs:
           git commit -m "Repair source semantics found in full review"
           git push origin HEAD:agent/final-public-health-conclusions
 
-# Retry after correcting generated template interpolation escaping.
+# Retry after region and PayPal anchor contract corrections.
