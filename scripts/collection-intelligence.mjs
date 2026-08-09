@@ -1,6 +1,7 @@
+import { componentStatusIsProblem } from './source-intelligence.mjs';
+
 const DEFAULT_GLOBAL_LIMIT = 10;
 const DEFAULT_PER_ORIGIN_LIMIT = 2;
-const operationalComponent = /^(?:operational|available|up|ok|none|good)$/i;
 
 function clamp(value, minimum = 0, maximum = 100) {
   return Math.max(minimum, Math.min(maximum, Math.round(value)));
@@ -163,7 +164,7 @@ export function enrichProviderCollection(provider, incidents = [], maintenance =
   const durations = logs.map(log => Number(log.duration_ms)).filter(Number.isFinite);
   const quality = providerQualityScore(provider, nowMs);
   const fresh = freshness(provider, nowMs);
-  const problemComponents = (provider.component_status || []).filter(component => !operationalComponent.test(String(component.status || ''))).length;
+  const problemComponents = (provider.component_status || []).filter(component => componentStatusIsProblem(component.status)).length;
   const sourceUrl = provider.source || '';
   let sourceHost = '';
   try {

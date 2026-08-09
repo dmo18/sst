@@ -38,12 +38,12 @@ test('Stripe current incident remains structured issue evidence', () => {
       name: 'Stripe API elevated errors',
       status: 'investigating',
       impact: 'major',
-      created_at: '2026-08-07T23:30:00Z',
-      updated_at: '2026-08-08T00:20:00Z',
+      created_at: '2026-08-02T11:30:00Z',
+      updated_at: '2026-08-02T12:20:00Z',
       incident_updates: [{
         status: 'investigating',
         body: 'We are investigating elevated API errors.',
-        created_at: '2026-08-08T00:20:00Z'
+        created_at: '2026-08-02T12:20:00Z'
       }],
       components: [{ name: 'Stripe API' }]
     }],

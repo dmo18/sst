@@ -1,4 +1,7 @@
 import { INCIDENT_MAX_AGE_DAYS, incidentEvidenceIsCurrent } from './incident-freshness.mjs';
+import { isNonServiceAdvisory } from './incident-classification.mjs';
+import { regionScopeRelevant } from './region-scope.mjs';
+import { componentStatusIsProblem } from './source-intelligence.mjs';
 
 const STATUSPAGE_SUFFIX = '/api/v2/summary.json';
 
@@ -37,18 +40,8 @@ function textLines(value) {
     .filter(Boolean);
 }
 
-const globalRegionPattern = /\b(?:global|worldwide|all regions|all customers|multiple regions|across regions)\b/i;
-const usRegionPattern = /\b(?:united states|u\.s\.|usa|us|north america|americas|us customers?|us cells?|us[- ](?:east|west|central|north|south)(?:[- ]\d+)?|us(?:e|w|c)\d+)\b/i;
-const nonUsRegionPattern = /\b(?:emea|europe|european|eu(?:rope)?(?:[- ]?(?:cell|region|zone))?[- ]?\d*|uk(?:[- ]?(?:cell|region|zone))?[- ]?\d*|united kingdom|apac|asia(?: pacific)?|australia|new zealand|canada|latin america|latam|middle east|africa|germany|france|spain|japan|singapore|india|brazil|china|beijing|hong kong|korea|dubai|uae|istanbul|türkiye|turkey|london|amsterdam|berlin|tokyo|sydney|frankfurt|paris|madrid|milan|warsaw|stockholm|kochi|kuala lumpur)\b|\b(?:aue|gbe|cae|de|eu|uk|ap|sg|jp)\d+(?:[-_a-z0-9]*)\b/i;
-
 function isUsRelevant(title, note = '', scope = '') {
-  if (scope === 'global') return true;
-  const heading = clean(title);
-  const details = clean(note).slice(0, 1800);
-  if (globalRegionPattern.test(heading) || usRegionPattern.test(heading)) return true;
-  if (nonUsRegionPattern.test(heading)) return false;
-  if (globalRegionPattern.test(details) || usRegionPattern.test(details)) return true;
-  return !nonUsRegionPattern.test(details);
+  return regionScopeRelevant(title, note, scope);
 }
 
 function isGenericTitle(value) {
@@ -112,7 +105,7 @@ function boundedUpdates(values) {
     .filter(update => update.note || update.status || update.at);
 }
 
-function componentRecords(values) {
+function componentRecords(values, limit = 512) {
   const records = [];
   const seen = new Set();
   for (const component of Array.isArray(values) ? values : []) {
@@ -124,7 +117,7 @@ function componentRecords(values) {
       status: clean(component?.status || component?.state || 'unknown').toLowerCase().replace(/\s+/g, '_'),
       group: clean(component?.group_name || component?.group || component?.group_id || '')
     });
-    if (records.length >= 36) break;
+    if (records.length >= limit) break;
   }
   return records;
 }
@@ -281,7 +274,8 @@ export function parseStatuspageSummary(value, provider = {}, source = {}) {
   if (!json || typeof json !== 'object' || !Array.isArray(json.incidents) || !json.status) return null;
 
   const components = componentRecords(json.components)
-    .filter(component => isUsRelevant(component.name, component.group || '', source.regionScope));
+    .filter(component => isUsRelevant(component.name, component.group || '', source.regionScope))
+    .slice(0, 36);
   const unresolved = json.incidents.filter(incident => !/^(?:resolved|completed|closed|postmortem|cancelled)$/i.test(String(incident?.status || '')));
   const incidents = [];
   let staleIncidentCount = 0;
@@ -298,7 +292,7 @@ export function parseStatuspageSummary(value, provider = {}, source = {}) {
     ];
     const affectedService = uniqueNames(affectedComponents.map(component => component?.name || component?.display_name || component?.id));
     const regionText = `${affectedService} ${affectedComponents.map(component => `${component?.group_id || ''} ${component?.description || ''}`).join(' ')}`;
-    if (!title || isGenericTitle(title) || isEditorial(title, note) || isPlannedOnly(title, note, status)) continue;
+    if (!title || isGenericTitle(title) || isEditorial(title, note) || isNonServiceAdvisory(title, note, status) || isPlannedOnly(title, note, status)) continue;
     if (!isUsRelevant(title, `${note} ${regionText}`, source.regionScope)) continue;
     const firstDetected = incident.started_at || incident.created_at || updates.at(-1)?.at || '';
     const latestUpdate = incident.updated_at || latest.at || firstDetected;
@@ -351,7 +345,7 @@ export function parseStatuspageSummary(value, provider = {}, source = {}) {
   if (incidents.length) return { kind: 'issues', incidents, ...extras };
   const indicator = String(json.status?.indicator || '').toLowerCase();
   if (indicator === 'none') return { kind: 'healthy', status: clean(json.status?.description) || `${provider.name || 'Provider'} reports all systems operational`, ...extras };
-  const problemComponents = components.filter(component => !/^(?:operational|available|up|ok|none|good)$/i.test(String(component.status || '')));
+  const problemComponents = components.filter(component => componentStatusIsProblem(component.status));
   if (problemComponents.length && indicator && indicator !== 'none') {
     const status = clean(json.status?.description) || `${provider.name || 'Provider'} reports current component degradation`;
     const names = uniqueNames(problemComponents.map(component => component.name));
@@ -416,7 +410,8 @@ export function parseStatusioJson(value, provider = {}, source = {}) {
   if (!result || typeof result !== 'object' || !result.status_overall) return null;
 
   const components = statusioComponentRecords(result)
-    .filter(component => isUsRelevant(component.name, component.group || '', source.regionScope));
+    .filter(component => isUsRelevant(component.name, component.group || '', source.regionScope))
+    .slice(0, 36);
   const maintenance = statusioMaintenance(result, source);
   const incidents = [];
 
@@ -427,7 +422,7 @@ export function parseStatusioJson(value, provider = {}, source = {}) {
     const note = clean(latest.note || incident?.details || incident?.message || incident?.description).slice(0, 900);
     const status = clean(incident?.status || incident?.state || latest.status || 'active');
     const affectedService = uniqueNames([...(incident?.components || []), ...(incident?.containers || [])].map(item => item?.name || item?.container_name || item));
-    if (!title || isGenericTitle(title) || isEditorial(title, note) || isPlannedOnly(title, note, status)) continue;
+    if (!title || isGenericTitle(title) || isEditorial(title, note) || isNonServiceAdvisory(title, note, status) || isPlannedOnly(title, note, status)) continue;
     if (!isUsRelevant(title, `${note} ${affectedService}`, source.regionScope)) continue;
     const firstDetected = incident?.started_at || incident?.created_at || incident?.datetime || updates.at(-1)?.at || '';
     const latestUpdate = incident?.updated_at || latest.at || firstDetected;
@@ -532,6 +527,29 @@ export function parseBackblazePage(value, provider = {}) {
   return null;
 }
 
+function dedupeIncidentPresentation(items) {
+  const byPresentation = new Map();
+  for (const item of items) {
+    const key = [clean(item.title), clean(item.note), clean(item.affectedService), clean(item.status)].join('|').toLowerCase();
+    const existing = byPresentation.get(key);
+    if (!existing) {
+      byPresentation.set(key, item);
+      continue;
+    }
+    const existingTime = Date.parse(existing.latestUpdate || '') || 0;
+    const itemTime = Date.parse(item.latestUpdate || '') || 0;
+    const newer = itemTime >= existingTime ? item : existing;
+    const older = newer === item ? existing : item;
+    byPresentation.set(key, {
+      ...newer,
+      firstDetected: [existing.firstDetected, item.firstDetected].filter(Boolean).sort()[0] || newer.firstDetected,
+      updates: boundedUpdates([...(existing.updates || []), ...(item.updates || [])]),
+      collapsedRecordCount: Number(existing.collapsedRecordCount || 1) + Number(item.collapsedRecordCount || 1)
+    });
+  }
+  return [...byPresentation.values()];
+}
+
 function vultrWindow(value, label) {
   const match = new RegExp(`${label}:\\s*(20\\d{2}-\\d{2}-\\d{2}\\s+\\d{2}:\\d{2}:\\d{2}\\s+UTC)`, 'i').exec(String(value || ''));
   return match ? toIso(match[1]) : '';
@@ -594,8 +612,9 @@ export function parseVultrStatus(value, provider = {}, source = {}) {
     });
   }
 
+  const dedupedIncidents = dedupeIncidentPresentation(incidents);
   const extras = { maintenance, components: [] };
-  if (incidents.length) return { kind: 'issues', incidents: incidents.slice(0, 12), ...extras };
+  if (dedupedIncidents.length) return { kind: 'issues', incidents: dedupedIncidents.slice(0, 12), ...extras };
   return { kind: 'healthy', status: `${provider.name || 'Vultr'} reports no active US service incidents`, ...extras };
 }
 
@@ -611,7 +630,8 @@ export function parseBetterStackIndex(value, provider = {}, source = {}) {
 
   const resources = new Map(json.included.filter(item => item?.type === 'status_page_resource').map(item => [String(item.id), item.attributes || {}]));
   const components = componentRecords([...resources.entries()].map(([id, attributes]) => ({ id, name: attributes.public_name, status: attributes.status })))
-    .filter(component => isUsRelevant(component.name, component.group || '', source.regionScope));
+    .filter(component => isUsRelevant(component.name, component.group || '', source.regionScope))
+    .slice(0, 36);
   const updates = new Map(json.included.filter(item => item?.type === 'status_update').map(item => [String(item.id), item.attributes || {}]));
   const reports = json.included.filter(item => item?.type === 'status_report');
   const incidents = [];
@@ -631,7 +651,7 @@ export function parseBetterStackIndex(value, provider = {}, source = {}) {
     const affectedService = uniqueNames(affected.map(item => resources.get(String(item.status_page_resource_id))?.public_name || item.status_page_resource_id));
     const title = clean(attributes.title);
     const note = clean(latest.message || attributes.message || attributes.description || '').slice(0, 900);
-    if (!title || isEditorial(title, note) || !isUsRelevant(title, `${note} ${affectedService}`, source.regionScope)) continue;
+    if (!title || isEditorial(title, note) || isNonServiceAdvisory(title, note, attributes.aggregate_state || attributes.status || '') || !isUsRelevant(title, `${note} ${affectedService}`, source.regionScope)) continue;
 
     const reportType = String(attributes.report_type || '').toLowerCase();
     const aggregate = String(attributes.aggregate_state || '').toLowerCase();
@@ -729,7 +749,7 @@ export function parseStatusioPage(value, provider = {}, source = {}) {
     const noteStart = lifecycleIndex >= 0 ? lifecycleIndex + 1 : Math.max(severityIndex + 1, firstDateIndex + 1);
     const note = clean(segment.slice(noteStart).filter(line => !DATE_LINE.test(line) && !TITLE_NOISE.test(line)).join(' ')).slice(0, 900);
     const affectedService = uniqueNames([...componentNames, ...locations]);
-    if (isEditorial(title, note) || isPlannedOnly(title, note, lifecycle)) continue;
+    if (isEditorial(title, note) || isNonServiceAdvisory(title, note, lifecycle) || isPlannedOnly(title, note, lifecycle)) continue;
     if (!isUsRelevant(title, `${note} ${locations.join(' ')}`, source.regionScope)) {
       foundNonUsIncident = true;
       continue;

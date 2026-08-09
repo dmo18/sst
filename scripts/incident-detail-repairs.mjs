@@ -1,5 +1,7 @@
 import { structuredSourceConclusion, structuredSourceOverrides } from './structured-source-adapters.mjs';
 import { INCIDENT_MAX_AGE_DAYS, dateLikeIncidentTitle, incidentEvidenceIsCurrent } from './incident-freshness.mjs';
+import { isNonServiceAdvisory } from './incident-classification.mjs';
+import { hasExplicitNonUsScope, hasExplicitUsScope, regionScopeRelevant } from './region-scope.mjs';
 
 const BLOCK_BREAK = /<\/?(?:article|section|main|header|footer|div|p|h[1-6]|li|ul|ol|table|tr|td|th|br|details|summary)[^>]*>/gi;
 
@@ -78,22 +80,8 @@ function clean(value) {
   return textLines(value).join(' ').replace(/\s+/g, ' ').trim();
 }
 
-const globalRegionPattern = /\b(?:global|worldwide|all regions|all customers|multiple regions|across regions)\b/i;
-const usRegionPattern = /\b(?:united states|u\.s\.|usa|us|north america|americas|us customers?|us cells?|us[- ](?:east|west|central|north|south)(?:[- ]\d+)?|us(?:e|w|c)\d+)\b/i;
-const nonUsRegionPattern = /\b(?:emea|europe|european|eu(?:rope)?(?:[- ]?(?:cell|region|zone))?[- ]?\d*|uk(?:[- ]?(?:cell|region|zone))?[- ]?\d*|united kingdom|apac|asia(?: pacific)?|australia|new zealand|canada|latin america|latam|middle east|africa|germany|france|spain|japan|singapore|india|brazil|china|beijing|hong kong|korea|dubai|uae|istanbul|türkiye|turkey|london|amsterdam|berlin|tokyo|sydney|frankfurt|paris|madrid|milan|warsaw|stockholm|kochi|kuala lumpur|mumbai|hyderabad|delhi)\b|\b(?:aue|gbe|cae|de|eu|uk|ap|sg|jp)\d+(?:[-_a-z0-9]*)\b/i;
-
 export function isIncidentUsRelevant(item) {
-  const title = clean(item?.title || '');
-  const note = clean(item?.note || '');
-  if (globalRegionPattern.test(title) || usRegionPattern.test(title)) return true;
-  if (nonUsRegionPattern.test(title)) return false;
-
-  const regionalDetail = [
-    /(?:affected data centers?|data centers?|regions?|locations?|cells?|services impacted)\s*:?\s*([^.;]{1,300})/i.exec(note)?.[1],
-    note.slice(0, 900)
-  ].filter(Boolean).join(' ');
-  if (globalRegionPattern.test(regionalDetail) || usRegionPattern.test(regionalDetail)) return true;
-  return !nonUsRegionPattern.test(regionalDetail);
+  return regionScopeRelevant(clean(item?.title || ''), clean(item?.note || ''), 'us');
 }
 
 export function isGenericIncidentTitle(value) {
@@ -195,7 +183,7 @@ function currentStatusPageIncidents(provider, html) {
 
     const note = clean(detail.join(' ')).slice(0, 900);
     const combined = `${title} ${status} ${note}`;
-    if (plannedOnly(combined) || isEditorialIncidentEntry({ title, note })) continue;
+    if (plannedOnly(combined) || isEditorialIncidentEntry({ title, note }) || isNonServiceAdvisory(title, note, status)) continue;
     const item = {
       title,
       note: note || `${status} update from the official status page.`,
@@ -251,6 +239,7 @@ export function parseNableIncidentRecords(html) {
     const prefix = /^(?:N[- ]?able®?\s*)?(.+?)(?=\s+(?:There|Some|Customers?|Users?|We|An?|The)\b)/i.exec(summary)?.[1];
     const serviceTitle = clean(prefix || affectedService || 'N-able service').replace(/\s{2,}/g, ' ').slice(0, 180);
     const note = [summary, latestNote && `Latest update: ${latestNote}`].filter(Boolean).join(' ').slice(0, 900);
+    if (isNonServiceAdvisory(summary || serviceTitle, note, status)) continue;
     records.push({
       id,
       title: `${serviceTitle}: ${severity || status}`,
@@ -314,10 +303,7 @@ export function providerIncidentConclusion(provider, html) {
     return { kind: 'healthy', status: `${provider.name} reports no active US-relevant incidents` };
   }
 
-  const currentHasOnlyNonUs = currentStatusPageIncidents(
-    provider,
-    String(html).replace(nonUsRegionPattern, 'NON_US_REGION')
-  ).length === 0 && nonUsRegionPattern.test(text);
+  const currentHasOnlyNonUs = hasExplicitNonUsScope(text) && !hasExplicitUsScope(text);
   if (currentHasOnlyNonUs) return { kind: 'healthy', status: `${provider.name} reports no active US-relevant incidents` };
   return null;
 }

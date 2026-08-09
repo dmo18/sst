@@ -395,7 +395,16 @@ export function parsePayPalProductionStatus(value) {
   const text = clean(value);
   if (!/\bPayPal Status Page\b/i.test(text) || !/\bProduction Sandbox Services\b/i.test(text)) return null;
 
-  if (/\bAll Production Systems Operational\b/i.test(text)) {
+  const subscribeAnchor = text.search(/\bProduction Sandbox\s+Subscribe\b/i);
+  const productionAnchor = text.search(/\bProduction Sandbox\b/i);
+  const servicesAnchor = text.search(/\bProduction Sandbox Services\b/i);
+  const start = subscribeAnchor >= 0 ? subscribeAnchor : productionAnchor >= 0 ? productionAnchor : servicesAnchor;
+  const end = text.search(/\bView history\b/i);
+  const currentSection = start >= 0 ? text.slice(start, end > start ? end : start + 12000) : text.slice(0, 12000);
+  const legend = currentSection.search(/\bOperational\s+Major Outage\s+Degraded Performance\s+Maintenance\s+Bulletin\b/i);
+  const statusSection = legend > 0 ? currentSection.slice(0, legend) : currentSection;
+
+  if (/\bAll Production Systems Operational\b/i.test(statusSection)) {
     return {
       kind: 'healthy',
       status: 'All Production Systems Operational',
@@ -404,11 +413,6 @@ export function parsePayPalProductionStatus(value) {
     };
   }
 
-  const start = text.search(/\bProduction Sandbox Services\b/i);
-  const end = text.search(/\bView history\b/i);
-  const currentSection = start >= 0 ? text.slice(start, end > start ? end : start + 12000) : text.slice(0, 12000);
-  const legend = currentSection.search(/\bOperational Major Outage Degraded Performance Maintenance Bulletin\b/i);
-  const statusSection = legend > 0 ? currentSection.slice(0, legend) : currentSection;
   const explicit = /\b(?:Production Systems? (?:Degraded|Unavailable)|Service (?:Outage|Disruption)|Major Outage|Degraded Performance|Partial Outage)\b/i.exec(statusSection);
   if (explicit) {
     return {
