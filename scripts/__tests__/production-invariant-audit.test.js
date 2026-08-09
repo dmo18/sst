@@ -4,7 +4,7 @@ import { regionScopeRelevant } from '../region-scope.mjs';
 import { normalizeMaintenanceState } from '../source-intelligence.mjs';
 import { enrichProviderCollection } from '../collection-intelligence.mjs';
 import { makeMaintenance } from '../update-public-status.mjs';
-import { parseSalesforcePage } from '../structured-source-adapters.mjs';
+import { parseSalesforcePage, parseStatuspageSummary } from '../structured-source-adapters.mjs';
 
 test('US scope excludes foreign macro-regions while retaining North America', () => {
   assert.equal(regionScopeRelevant('Oceania', '', 'us'), false);
@@ -74,4 +74,28 @@ test('Salesforce current table incidents carry explicit snapshot provenance when
   assert.equal(result.incidents.length, 1);
   assert.equal(result.incidents[0].evidenceBasis, 'current-page');
   assert.equal(result.incidents[0].latestUpdate || '', '');
+});
+
+
+test('Statuspage child components inherit named geographic groups before US filtering', () => {
+  const result = parseStatuspageSummary(JSON.stringify({
+    page: { name: 'Cloudflare', url: 'https://www.cloudflarestatus.com/' },
+    status: { indicator: 'minor', description: 'Partial System Outage' },
+    components: [
+      { id: 'na', name: 'North America', status: 'partial_outage', group: true, group_id: null },
+      { id: 'useast', name: 'Ashburn, VA - (IAD)', status: 'partial_outage', group: false, group_id: 'na' },
+      { id: 'me', name: 'Middle East', status: 'partial_outage', group: true, group_id: null },
+      { id: 'ramallah', name: 'Ramallah - (ZDM)', status: 'partial_outage', group: false, group_id: 'me' }
+    ],
+    incidents: [],
+    scheduled_maintenances: []
+  }), { id: 'cloudflare', name: 'Cloudflare' }, { regionScope: 'us', pageUrl: 'https://www.cloudflarestatus.com/' });
+
+  assert.equal(result.kind, 'component-state');
+  const names = result.components.map(component => component.name);
+  assert.ok(names.includes('North America'));
+  assert.ok(names.includes('Ashburn, VA - (IAD)'));
+  assert.ok(!names.includes('Middle East'));
+  assert.ok(!names.includes('Ramallah - (ZDM)'));
+  assert.equal(result.components.find(component => component.name === 'Ashburn, VA - (IAD)')?.group, 'North America');
 });

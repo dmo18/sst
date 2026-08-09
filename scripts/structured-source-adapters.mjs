@@ -129,16 +129,27 @@ function boundedUpdates(values) {
 }
 
 function componentRecords(values, limit = 512) {
+  const source = Array.isArray(values) ? values : [];
+  const groupNames = new Map();
+  for (const component of source) {
+    if (component?.group === true && component?.id) {
+      const groupName = clean(component?.name || component?.display_name || component?.public_name || '');
+      if (groupName) groupNames.set(String(component.id), groupName);
+    }
+  }
+
   const records = [];
   const seen = new Set();
-  for (const component of Array.isArray(values) ? values : []) {
+  for (const component of source) {
     const name = clean(component?.name || component?.display_name || component?.public_name || component?.id);
     if (!name || seen.has(name.toLowerCase())) continue;
     seen.add(name.toLowerCase());
+    const groupId = component?.group_id ? String(component.group_id) : '';
+    const resolvedGroup = clean(component?.group_name || (component?.group === true ? name : '') || groupNames.get(groupId) || '');
     records.push({
       name,
       status: clean(component?.status || component?.state || 'unknown').toLowerCase().replace(/\s+/g, '_'),
-      group: clean(component?.group_name || component?.group || component?.group_id || '')
+      group: resolvedGroup
     });
     if (records.length >= limit) break;
   }
