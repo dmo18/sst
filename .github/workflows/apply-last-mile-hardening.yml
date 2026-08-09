@@ -38,4 +38,4 @@ jobs:
           git commit -m "Harden provider truth and region semantics"
           git push origin HEAD:agent/final-public-health-conclusions
 
-# Retry with established fail-closed source semantics and fixed audit-clock fixtures.
+# Retry after aligning Kaseya current-evidence fixture with incident-first structured semantics.
