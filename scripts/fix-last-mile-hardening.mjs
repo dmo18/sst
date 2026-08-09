@@ -17,9 +17,9 @@ if (!patch.includes(oldTest)) throw new Error('Missing last-mile reconciliation 
 patch = patch.replace(oldTest, newTest);
 
 const testInsertMarker = "const tests = `import test from 'node:test';";
-const fixturePatch = `let fullReviewTests = read('scripts/__tests__/full-review-source-adapters.test.js');\nfullReviewTests = fullReviewTests\n  .replaceAll('2026-08-05T19:40:45Z', '2026-08-02T10:40:45Z')\n  .replaceAll('2026-08-07T16:08:45Z', '2026-08-02T12:08:45Z')\n  .replaceAll('2026-08-07T20:10:00Z', '2026-08-02T11:10:00Z')\n  .replaceAll('2026-08-07T20:25:00Z', '2026-08-02T12:25:00Z')\n  .replaceAll('2026-08-07T22:10:00Z', '2026-08-02T12:10:00Z')\n  .replaceAll('2026-08-07T22:25:00Z', '2026-08-02T12:25:00Z');\nwrite('scripts/__tests__/full-review-source-adapters.test.js', fullReviewTests);\n\n`;
+const fixturePatch = `let fullReviewTests = read('scripts/__tests__/full-review-source-adapters.test.js');\nfullReviewTests = fullReviewTests\n  .replaceAll('2026-08-05T19:40:45Z', '2026-08-02T10:40:45Z')\n  .replaceAll('2026-08-07T16:08:45Z', '2026-08-02T12:08:45Z')\n  .replaceAll('2026-08-07T20:10:00Z', '2026-08-02T11:10:00Z')\n  .replaceAll('2026-08-07T20:25:00Z', '2026-08-02T12:25:00Z')\n  .replaceAll('2026-08-07T22:10:00Z', '2026-08-02T12:10:00Z')\n  .replaceAll('2026-08-07T22:25:00Z', '2026-08-02T12:25:00Z')\n  .replace(\n    \"  assert.equal(result.kind, 'component-state');\\n  assert.match(result.status, /Partially Degraded Service/);\\n  assert.match(result.message, /Datto SaaS Protection Backups/);\",\n    \"  assert.equal(result.kind, 'issues');\\n  assert.equal(result.incidents.length, 1);\\n  assert.match(result.incidents[0].title, /Datto SaaS Protection/);\\n  assert.match(result.incidents[0].affectedService, /Datto SaaS Protection Backups/);\"\n  );\nwrite('scripts/__tests__/full-review-source-adapters.test.js', fullReviewTests);\n\n`;
 if (!patch.includes(testInsertMarker)) throw new Error('Missing last-mile generated test marker');
 patch = patch.replace(testInsertMarker, fixturePatch + testInsertMarker);
 
 fs.writeFileSync(patchPath, patch);
-console.log('Corrected last-mile patch contract and test-clock fixtures.');
+console.log('Corrected last-mile patch contract, current-evidence fixtures, and Kaseya incident expectation.');
