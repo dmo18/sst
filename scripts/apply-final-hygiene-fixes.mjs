@@ -37,7 +37,7 @@ if (!deepTests.includes("isUsRelevantIncident")) {
     "import { parseNableIncidentRecords } from '../incident-detail-repairs.mjs';\nimport { isUsRelevantIncident } from '../public-source-repairs.mjs';"
   );
 }
-const regression = `\ntest('provider-specific region filtering shares the canonical US scope policy', () => {\n  assert.equal(isUsRelevantIncident('Arica, Chile - (ARI) service disruption'), false);\n  assert.equal(isUsRelevantIncident('AWS EC2 Health: me-south-1'), false);\n  assert.equal(isUsRelevantIncident('GCP northamerica-northeast1'), false);\n  assert.equal(isUsRelevantIncident('Ashburn, VA, United States - (IAD) service disruption'), true);\n  assert.equal(isUsRelevantIncident('AWS EC2 Health: us-east-1'), true);\n  assert.equal(isUsRelevantIncident('Global service disruption'), true);\n});\n`;
+const regression = `\ntest('provider-specific region filtering shares the canonical US scope policy', () => {\n  assert.equal(isUsRelevantIncident('Arica, Chile - (ARI) service disruption'), false);\n  assert.equal(isUsRelevantIncident('Autotask UK cell service degradation'), false);\n  assert.equal(isUsRelevantIncident('AWS EC2 Health: me-south-1'), false);\n  assert.equal(isUsRelevantIncident('GCP northamerica-northeast1'), false);\n  assert.equal(isUsRelevantIncident('Ashburn, VA, United States - (IAD) service disruption'), true);\n  assert.equal(isUsRelevantIncident('AWS EC2 Health: us-east-1'), true);\n  assert.equal(isUsRelevantIncident('Global service disruption'), true);\n});\n`;
 if (!deepTests.includes('provider-specific region filtering shares the canonical US scope policy')) deepTests += regression;
 fs.writeFileSync(deepTestPath, deepTests);
 
@@ -46,10 +46,6 @@ let hygiene = fs.readFileSync(hygienePath, 'utf8');
 hygiene = hygiene.replace(
   "  assert.equal(policy.includes(\"'quickbooks-online': {\\n    mode: 'status-html'\"), false);\n",
   "  assert.equal(policy.includes(\"'quickbooks-online': {\\n    mode: 'status-html'\"), false);\n  assert.equal(policy.includes('https://status.quickbooks.intuit.com/history.rss'), false);\n  assert.equal(policy.includes('https://status.quickbooks.intuit.com/history.atom'), false);\n"
-);
-hygiene = hygiene.replace(
-  "    'scripts/fix-auth0-contract-test.mjs'\n",
-  "    'scripts/fix-auth0-contract-test.mjs',\n    '.github/workflows/apply-final-hygiene-fixes.yml',\n    'scripts/apply-final-hygiene-fixes.mjs'\n"
 );
 const sharedPolicyTest = `\ntest('provider-specific conclusions use the shared region-scope implementation', () => {\n  const source = read('scripts/public-source-repairs.mjs');\n  assert.match(source, /regionScopeRelevant/);\n  assert.equal(source.includes('const usRegionPattern'), false);\n  assert.equal(source.includes('const nonUsRegionPattern'), false);\n});\n`;
 if (!hygiene.includes('provider-specific conclusions use the shared region-scope implementation')) hygiene += sharedPolicyTest;
