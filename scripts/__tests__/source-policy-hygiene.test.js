@@ -24,7 +24,7 @@ test('retired source aliases cannot return through lower-precedence provider map
     read('config/providers.json'),
     read('scripts/structured-source-adapters.mjs'),
     read('scripts/public-source-repairs.mjs'),
-    read('scripts/public-source-repairs-legacy.mjs'),
+    read('scripts/public-source-adapter-implementation.mjs'),
     read('scripts/update-public-status.mjs')
   ].join('\n');
 
