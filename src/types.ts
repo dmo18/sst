@@ -97,6 +97,8 @@ export interface ProviderStatus {
   component_status?: ComponentStatus[];
   data_quality_score?: number;
   source_latency_ms?: number;
+  last_request_ms?: number;
+  collection_elapsed_ms?: number;
   collection_attempt_count?: number;
   collection_success_count?: number;
   collection_failure_count?: number;
