@@ -29,16 +29,16 @@ Complete the post-review architecture overhaul while preserving the production t
 - [x] Validate the canonical post-consolidation provider catalog, not only raw entries.
 - [x] Enforce browser payload provider parity with the canonical active catalog.
 - [x] Harden local-storage access for restricted browsers.
-- [ ] Strengthen fallback incident identity. This is intentionally sequenced with the Phase 2 producer-boundary migration so one PR does not combine broad collector identity changes with browser contract changes.
+- [x] Strengthen fallback incident identity. The implementation was sequenced into Phase 2 with the producer-boundary migration.
 
 ## Phase 2: architecture cleanup
 
 - [x] Move status enum values and cross-layer temporal policy into a shared runtime contract. The foundation landed in Phase 1 so browser validation could use it immediately.
-- [ ] Emit current-page provenance at the source adapter boundary and remove the RingCentral post-processing dependency.
-- [ ] Strengthen fallback incident identity using a stable semantic signature when a vendor incident id is unavailable.
-- [ ] Consolidate duplicated status validation and reconciliation behind reusable helpers and commands.
-- [ ] Reduce legacy collector responsibilities in `scripts/update-status.mjs` to infrastructure still used by the production collector.
-- [ ] Clarify collection timing semantics so aggregate collection elapsed time is not presented as a single request latency.
+- [x] Emit current-page provenance at the source adapter boundary and remove the RingCentral post-processing dependency.
+- [x] Strengthen fallback incident identity using a stable semantic signature when a vendor incident id is unavailable.
+- [x] Consolidate the deployment release invariants behind reusable code consumed by workflow verification and production smoke.
+- [x] Reduce legacy collector responsibilities so the production collector depends on a small status core instead of the legacy parser monolith.
+- [x] Clarify collection timing semantics so aggregate collection elapsed time is not presented as a single request latency.
 
 ## Phase 3: pipeline and security hardening
 
@@ -65,25 +65,47 @@ Critical implementation decisions and any production-discovered contract mismatc
 ### Phase 1
 
 Branch: `agent/status-contract-overhaul-phase-1`
+Pull request: #98
+Merge commit: `ab94fe5acc1039ec4830b0f43dd520614232026a`
+Production release: run #780, successful
 
-Initial findings being corrected:
+Initial findings corrected:
 
-1. Untimed current-page incidents can be accepted by server validation but disappear from an `alerts=` wallboard because the UI ignores `observed_at` when deriving event time.
-2. The operator console maintains a second browser-check clock and can report a check before a validated request succeeds.
-3. Component problem classification differs between collection metrics, browser validation, the view model, and the provider drawer.
-4. Browser payload reconciliation is self-consistent but does not prove parity with the active canonical provider catalog.
-5. Provider overrides are applied after raw validation and are not fully revalidated as canonical provider records.
+1. Untimed current-page incidents could be accepted by server validation but disappear from an `alerts=` wallboard because the UI ignored `observed_at` when deriving event time.
+2. The operator console maintained a second browser-check clock and could report a check before a validated request succeeded.
+3. Component problem classification differed between collection metrics, browser validation, the view model, and the provider drawer.
+4. Browser payload reconciliation was self-consistent but did not prove parity with the active canonical provider catalog.
+5. Provider overrides were applied after raw validation and were not fully revalidated as canonical provider records.
 
 Implemented decisions:
 
 - `src/statusContract.ts` is the shared browser/runtime vocabulary and temporal policy. Current-page evidence is not reclassified as a vendor timestamp. It receives an effective display/filter time only when `evidence_basis` is `current-page` and `observed_at` is valid and fresh.
 - Current-page and vendor-timed incident evidence both use the existing 72-hour current-evidence horizon and five-minute future-skew tolerance.
-- `src/componentStatus.ts` now classifies component states as healthy, problem, or neutral. Unknown and maintenance states are neutral, not green and not degraded.
-- `src/providerCatalog.ts` is the canonical active browser catalog after exclusions and overrides. Browser validation and production smoke now reject missing or unexpected provider ids.
+- `src/componentStatus.ts` classifies component states as healthy, problem, or neutral. Unknown and maintenance states are neutral, not green and not degraded.
+- `src/providerCatalog.ts` is the canonical active browser catalog after exclusions and overrides. Browser validation and production smoke reject missing or unexpected provider ids.
 - Browser status retrieval is limited to 5 MiB before JSON parsing and performs an immediate visibility-resume check when the last validated browser retrieval is due.
 - `App.tsx` owns the successful browser-check timestamp. The operator console consumes that timestamp instead of synthesizing its own clock on manual refresh.
 - Canonical provider overrides receive a second validation pass after consolidation.
 
-Safe sequencing decision:
+Production evidence:
 
-Fallback incident identity and removal of the RingCentral normalizer remain in Phase 2. They touch the collector's incident-construction boundary, so they will be changed only after Phase 1 proves the new browser/runtime contract in production. This keeps each release independently reversible.
+Run #780 passed 247 deterministic tests, TypeScript, production dependency audit, live collection for 79 of 79 providers, 100 percent live coverage, browser contract validation, deployment identity, normal browser rendering, and the exact 458 by 291 Yodeck verification.
+
+### Phase 2
+
+Branch: `agent/status-contract-overhaul-phase-2`
+Pull request: #99, draft until CI and production validation complete
+
+Implemented decisions:
+
+- Rendered current-page issue conclusions emit `evidenceBasis: current-page` at the source conclusion boundary. `makeIncident` converts that field into `evidence_basis` and records `observed_at`, so the RingCentral-specific file normalizer and package stage are removed.
+- Producer provenance regression tests cover RingCentral and Salesforce current-page conclusions.
+- Fallback rendered-page incidents receive stable semantic IDs derived from provider, title, source, affected service, first detection, and bounded detail. Multi-record adapters prefer vendor IDs when available. No new payload post-processing stage was introduced.
+- The former inline workflow release-contract implementation is now `scripts/release-contract.mjs` plus `scripts/verify-release-contract.mjs`. Production smoke consumes the same invariant code.
+- Provider collection timing is split into `last_request_ms` and `collection_elapsed_ms`. `source_latency_ms` remains temporarily as a compatibility alias for the last request rather than the sum of all retrieval work. Browser validation explicitly validates both new fields.
+- The duplicated 8x8 provider-specific branch was removed while touching the source conclusion module.
+- The generic production helpers formerly embedded in the large legacy collector were extracted into `scripts/status-core.mjs`. `scripts/update-status.mjs` is now only a compatibility re-export of that small core. The previous monolith is preserved as `scripts/legacy-update-status.mjs`, and a regression test prevents production from regaining legacy parser ownership.
+
+CI note:
+
+An early Phase 2 deterministic run failed after removing the normalizer. The response was treated as a contract migration failure, not as a reason to relax validation. Subsequent commits moved provenance and identity to the actual producer boundary, added explicit timing validation, and completed the production-core extraction before the final PR gate.

@@ -3,6 +3,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { incidentDetailOverrides, providerIncidentConclusion } from './incident-detail-repairs.mjs';
 import { fullReviewConclusion, fullReviewOverrides } from './full-review-source-adapters.mjs';
+import { fallbackIncidentToken } from './incident-identity.mjs';
 import { regionScopeRelevant } from './region-scope.mjs';
 
 const execFileAsync = promisify(execFile);
@@ -122,12 +123,46 @@ function healthy(status) {
   return { kind: 'healthy', status };
 }
 
+function currentPageIncident(provider, incident = {}) {
+  const hasVendorTime = Boolean(incident.firstDetected || incident.latestUpdate || incident.rawTime);
+  if (hasVendorTime) return incident;
+  const title = incident.title || `${provider.name || provider.id || 'Provider'} public status reports an active issue`;
+  const note = incident.note || incident.message || 'The current official status page reports active service impact.';
+  return {
+    ...incident,
+    id: incident.id || fallbackIncidentToken({
+      provider: provider.id || provider.name || 'provider',
+      title,
+      note,
+      source: 'current-page'
+    }),
+    title,
+    note,
+    evidenceBasis: incident.evidenceBasis || 'current-page'
+  };
+}
+
+function normalizeCurrentPageConclusion(provider, conclusion) {
+  if (!conclusion || typeof conclusion !== 'object') return conclusion;
+  if (conclusion.kind === 'issue') return currentPageIncident(provider, conclusion);
+  if (conclusion.kind === 'issues' && Array.isArray(conclusion.incidents)) {
+    return {
+      ...conclusion,
+      incidents: conclusion.incidents.map(incident => currentPageIncident(provider, incident))
+    };
+  }
+  return conclusion;
+}
+
 function issue(providerName, note, color = 'amber') {
+  const title = `${providerName} public status reports an active issue`;
   return {
     kind: 'issue',
+    id: fallbackIncidentToken({ provider: providerName, title, note, source: 'current-page' }),
     color,
-    title: `${providerName} public status reports an active issue`,
-    note
+    title,
+    note,
+    evidenceBasis: 'current-page'
   };
 }
 
@@ -206,11 +241,15 @@ function oktaConclusion(html) {
     kind: 'issues',
     incidents: activeUs.map(record => {
       const text = `${record.Incident_Title__c || ''} ${record.Log__c || ''} ${record.Category__c || ''}`;
+      const title = record.Incident_Title__c || record.Name || 'Okta service incident';
+      const note = record.Log__c || 'Okta reports an active service incident.';
+      const firstDetected = record.Start_Time__c || record.CreatedDate || record.Start_Date__c || '';
       return {
-        title: record.Incident_Title__c || record.Name || 'Okta service incident',
-        note: record.Log__c || 'Okta reports an active service incident.',
+        id: record.Id || record.id || record.Name || fallbackIncidentToken({ provider: 'okta', title, note, source: 'okta-current-page', firstDetected }),
+        title,
+        note,
         color: record.Is_Mis_Red__c === true || /\b(?:critical|major outage|complete outage|unavailable)\b/i.test(text) ? 'red' : 'amber',
-        firstDetected: record.Start_Time__c || record.CreatedDate || record.Start_Date__c || '',
+        firstDetected,
         latestUpdate: record.Last_Updated__c || record.LastModifiedDate || record.CreatedDate || '',
         status: record.Status__c || 'active',
         affectedService: [record.Okta_Sub_Service__c, record.Service_Feature__c].filter(Boolean).join(' / ')
@@ -238,13 +277,13 @@ export function providerSpecificConclusion(provider, html) {
   const text = cleanRenderedText(html);
   if (!text) return null;
   const reviewed = fullReviewConclusion(provider, html);
-  if (reviewed) return reviewed;
+  if (reviewed) return normalizeCurrentPageConclusion(provider, reviewed);
   if (provider.id === '8x8') {
     const scoped = eightByEightConclusion(text);
     if (scoped) return scoped;
   }
   const detailed = providerIncidentConclusion(provider, html);
-  if (detailed) return detailed;
+  if (detailed) return normalizeCurrentPageConclusion(provider, detailed);
 
   switch (provider.id) {
     case 'ringcentral': {
@@ -252,20 +291,6 @@ export function providerSpecificConclusion(provider, html) {
       if (active) return issue(provider.name, active[0].slice(0, 800));
       if (/No issues are being reported/i.test(text)) return healthy('RingCentral reports no issues');
       return null;
-    }
-    case '8x8': {
-      const statusStart = text.search(/Service Status/i);
-      if (statusStart < 0) return null;
-      const status = text.slice(statusStart, statusStart + 24000);
-      const americasStart = status.search(/\bAmericas\b/i);
-      if (americasStart < 0) return null;
-      const tail = status.slice(americasStart);
-      const nextRegion = tail.search(/\b(?:EMEA|APAC)\b/i);
-      const americas = nextRegion > 0 ? tail.slice(0, nextRegion) : tail.slice(0, 10000);
-      const problem = /\b(?:Investigating|Monitoring|Identified|Performance Issue|Service Outage|Outage)\b/i.exec(americas);
-      if (problem) return { kind: 'limited', message: '8x8 Americas currently reports ' + problem[0] + '; a specific incident record was not derived from the service matrix.' };
-      const normalCount = (americas.match(/\bNormal\b/gi) || []).length;
-      return normalCount >= 5 ? healthy('8x8 Americas services report normal status') : null;
     }
     case 'sophos':
       return /All systems normal/i.test(text) ? healthy('Sophos reports all systems normal') : null;
@@ -300,7 +325,7 @@ export function providerSpecificConclusion(provider, html) {
     case 'syncro':
       return /Operating Normally/i.test(text) ? healthy('Syncro reports normal operation') : null;
     case 'okta':
-      return oktaConclusion(html);
+      return normalizeCurrentPageConclusion(provider, oktaConclusion(html));
     case 'salesforce': {
       const start = text.search(/Current Status/i);
       if (start < 0) return null;

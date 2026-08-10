@@ -84,7 +84,7 @@ export function payloadValidationErrors(value: unknown, expectedProviderIds: rea
     for (const key of ['checked_at', 'last_success_at', 'last_semantic_change_at']) {
       if (provider[key] && !validDate(provider[key])) errors.push(`invalid ${key} ${String(provider.id)}`);
     }
-    const numericFields = ['source_latency_ms', 'collection_attempt_count', 'collection_success_count', 'collection_failure_count', 'freshness_seconds', 'active_incident_count', 'maintenance_count', 'problem_component_count'];
+    const numericFields = ['source_latency_ms', 'last_request_ms', 'collection_elapsed_ms', 'collection_attempt_count', 'collection_success_count', 'collection_failure_count', 'freshness_seconds', 'active_incident_count', 'maintenance_count', 'problem_component_count'];
     for (const key of numericFields) if (provider[key] !== undefined && !finiteNonNegative(provider[key])) errors.push(`invalid ${key} ${String(provider.id)}`);
     if (provider.data_quality_score !== undefined && !percentage(provider.data_quality_score)) errors.push(`invalid data_quality_score ${String(provider.id)}`);
     if (provider.collection_attempt_count !== undefined && provider.collection_success_count !== undefined && provider.collection_failure_count !== undefined && Number(provider.collection_attempt_count) !== Number(provider.collection_success_count) + Number(provider.collection_failure_count)) errors.push(`collection counts do not reconcile ${String(provider.id)}`);

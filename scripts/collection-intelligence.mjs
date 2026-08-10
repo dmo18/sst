@@ -166,6 +166,8 @@ export function enrichProviderCollection(provider, incidents = [], maintenance =
   const nowMs = Date.parse(now) || Date.now();
   const logs = retrievalLogs(provider);
   const durations = logs.map(log => Number(log.duration_ms)).filter(Number.isFinite);
+  const collectionElapsedMs = durations.length ? Math.round(durations.reduce((sum, value) => sum + value, 0)) : 0;
+  const lastRequestMs = durations.length ? Math.round(durations.at(-1)) : 0;
   const quality = providerQualityScore(provider, nowMs);
   const fresh = freshness(provider, nowMs);
   const problemComponents = (provider.component_status || []).filter(component => componentStatusIsProblem(component.status)).length;
@@ -180,7 +182,9 @@ export function enrichProviderCollection(provider, incidents = [], maintenance =
     source_health: sourceHealth(provider, quality),
     truth_basis: truthBasis(provider, incidentCount, problemComponents),
     data_quality_score: quality,
-    source_latency_ms: durations.length ? Math.round(durations.reduce((sum, value) => sum + value, 0)) : 0,
+    last_request_ms: lastRequestMs,
+    collection_elapsed_ms: collectionElapsedMs,
+    source_latency_ms: lastRequestMs,
     collection_attempt_count: logs.length,
     collection_success_count: logs.filter(log => log.ok === true).length,
     collection_failure_count: logs.filter(log => log.ok === false).length,

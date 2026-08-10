@@ -12,6 +12,7 @@ test('production HTML does not load a legacy wallboard DOM controller', async ()
 
 test('Pages deployment is serialized, fully validated, and bounded', async () => {
   const workflow = await read('.github/workflows/refresh-pages.yml');
+  const releaseContract = await read('scripts/release-contract.mjs');
   assert.match(workflow, /concurrency:\s*\n\s*group:\s*pages-release\s*\n\s*cancel-in-progress:\s*false/);
   assert.match(workflow, /build:\s*[\s\S]*timeout-minutes:\s*20/);
   assert.match(workflow, /deploy:\s*[\s\S]*timeout-minutes:\s*20/);
@@ -21,7 +22,8 @@ test('Pages deployment is serialized, fully validated, and bounded', async () =>
   assert.match(workflow, /name:\s*Run TypeScript checking[\s\S]*run:\s*npm run typecheck/);
   assert.match(workflow, /name:\s*Audit production dependencies[\s\S]*run:\s*npm audit --omit=dev --audit-level=high/);
   assert.match(workflow, /status_state:\s*\$\{\{ steps\.verify-status\.outputs\.state \}\}/);
-  assert.match(workflow, /liveSourceCount === total && calculatedBlind === 0 && fallbackCount === 0 \? 'success' : 'failure'/);
+  assert.match(workflow, /run:\s*node scripts\/verify-release-contract\.mjs public\/status\.json/);
+  assert.match(releaseContract, /liveSourceCount === total && calculatedBlind === 0 && fallbackCount === 0 \? 'success' : 'failure'/);
   assert.match(workflow, /state:\s*process\.env\.STATUS_STATE/);
   assert.match(workflow, /uses:\s*actions\/deploy-pages@v4\s*\n\s*with:\s*\n\s*timeout:\s*600000/);
   assert.match(workflow, /name:\s*Verify 458x291 Yodeck wallboard contract/);

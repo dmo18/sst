@@ -1,5 +1,6 @@
 import { payloadValidationErrors } from '../src/payloadValidation.ts';
 import { ACTIVE_PROVIDER_IDS } from '../src/providerCatalog.ts';
+import { verifyReleaseContract } from './release-contract.mjs';
 
 const requestedBase = process.argv[2] || 'https://dmo18.github.io/sst/';
 const base = new URL(requestedBase.endsWith('/') ? requestedBase : `${requestedBase}/`).href;
@@ -71,8 +72,5 @@ console.log(`COLLECTION_HEALTH healthy=${collection?.healthy_source_count ?? 'mi
 console.log(`VALIDATION_ERRORS ${errors.length}`);
 for (const error of errors) console.log(`VALIDATION_ERROR ${error}`);
 if (errors.length) throw new Error(`deployed payload rejected by browser validator: ${errors.join('; ')}`);
-if (!collection || collection.pipeline_version !== '3.0.0') throw new Error('deployed payload is missing the v3 collection contract');
-if (collection.provider_count !== payload.providers.length) throw new Error('deployed collection provider count mismatch');
-if (collection.request_count !== collection.successful_request_count + collection.failed_request_count) throw new Error('deployed collection request count mismatch');
-if (collection.healthy_source_count + collection.watch_source_count + collection.blind_spot_count !== payload.providers.length) throw new Error('deployed collection source-health count mismatch');
-if (!Number.isFinite(collection.quality_score) || collection.quality_score < 0 || collection.quality_score > 100) throw new Error('deployed collection quality score is invalid');
+const release = verifyReleaseContract(payload);
+console.log(`RELEASE_CONTRACT ${release.state} ${release.description}`);

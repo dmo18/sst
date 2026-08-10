@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { colorFromText, compareSnapshots, fetchSource, newestStatuspageUpdate, parseLimitedMicrosoft, parseRss, parseStatuspage, readBoundedBody, recentRssIncident, safeIncidentUrl, safeLoadProvider, summarizeProviders, validatePayload } from '../update-status.mjs';
+import { colorFromText, compareSnapshots, fetchSource, readBoundedBody, safeIncidentUrl, summarizeProviders, validatePayload } from '../update-status.mjs';
+import { newestStatuspageUpdate, parseLimitedMicrosoft, parseRss, parseStatuspage, recentRssIncident, safeLoadProvider } from '../legacy-update-status.mjs';
 const provider = { id: 'test', name: 'Test', category: 'Cloud', url: 'https://status.test/api', sourceType: 'statuspage', priority: 90, criticality: 'high' };
 const response = (body, status = 200, type = 'application/json', headers = {}) => new Response(body, { status, headers: { 'content-type': type, ...headers } });
 const mock = value => { globalThis.fetch = async () => value; };
