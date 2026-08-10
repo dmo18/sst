@@ -83,9 +83,14 @@ test('Status Contract v3 emitter binds the wire payload to the active catalog', 
 
 test('source adapter SDK normalizes untimed current-page issues and prevents duplicate registration', () => {
   const provider = { id: 'example', name: 'Example', url: 'https://status.example.test/' };
-  const normalized = normalizeCurrentPageConclusion(provider, { kind: 'issue', title: 'API degraded', note: 'Current status reports degradation' }, provider.url);
+  const conclusion = { kind: 'issue', title: 'API degraded', note: 'Current status reports degradation' };
+  const normalized = normalizeCurrentPageConclusion(provider, conclusion, provider.url);
+  const normalizedAgain = normalizeCurrentPageConclusion(provider, conclusion, provider.url);
+  const otherProvider = normalizeCurrentPageConclusion({ ...provider, id: 'other', name: 'Other' }, conclusion, provider.url);
   assert.equal(normalized.evidenceBasis, 'current-page');
-  assert.match(normalized.id, /^page-/);
+  assert.match(normalized.id, /^[a-z0-9-]+-[0-9a-f]{8}$/);
+  assert.equal(normalized.id, normalizedAgain.id);
+  assert.notEqual(normalized.id, otherProvider.id);
   const timed = normalizeCurrentPageConclusion(provider, { kind: 'issue', title: 'API degraded', note: 'Timed', firstDetected: '2026-08-02T13:00:00Z' }, provider.url);
   assert.equal(timed.evidenceBasis, undefined);
   const registry = new SourceAdapterRegistry().register({ id: 'example', conclude: () => ({ kind: 'healthy', status: 'ok' }) });
