@@ -26,8 +26,10 @@ const EXCLUDED_PROVIDER_IDS = new Set(CONSOLIDATION.excludedProviderIds);
 const CATALOG = (providerCatalog as ProviderConfig[])
     .filter(provider => !EXCLUDED_PROVIDER_IDS.has(provider.id))
     .map(provider => ({ ...provider, ...(CONSOLIDATION.providerOverrides[provider.id] || {}) }));
+const CATALOG_IDS = CATALOG.map(provider => provider.id);
 const MAX_PAYLOAD_AGE_MS = 20 * 60 * 1000;
 const MAX_FUTURE_SKEW_MS = 5 * 60 * 1000;
+const MAX_BROWSER_PAYLOAD_BYTES = 5 * 1024 * 1024;
 const OPERATOR_BROWSER_REFRESH_MS = 60 * 1000;
 const EMERGENCY_MAINTENANCE = /\b(?:emergency|unplanned|critical|urgent)\b/i;
 const PRODUCTION_IMPACT = /\b(?:production|outage|service interruption|service disruption|customer impact|customers? (?:are|may be) affected|degraded service)\b/i;
@@ -63,8 +65,15 @@ async function fetchStatus(signal: AbortSignal): Promise<StatusFetchResult> {
     const response = await fetch(`${import.meta.env.BASE_URL}status.json?ts=${Date.now()}`, { cache: 'no-store', signal });
     if (!response.ok)
         throw new Error(`status.json returned HTTP ${response.status}`);
-    const data: unknown = await response.json();
-    const errors = payloadValidationErrors(data);
+    const declaredBytes = Number(response.headers.get('content-length'));
+    if (Number.isFinite(declaredBytes) && declaredBytes > MAX_BROWSER_PAYLOAD_BYTES)
+        throw new Error(`status.json exceeds the ${MAX_BROWSER_PAYLOAD_BYTES} byte browser payload limit`);
+    const body = await response.text();
+    const actualBytes = new TextEncoder().encode(body).byteLength;
+    if (actualBytes > MAX_BROWSER_PAYLOAD_BYTES)
+        throw new Error(`status.json exceeds the ${MAX_BROWSER_PAYLOAD_BYTES} byte browser payload limit`);
+    const data: unknown = JSON.parse(body);
+    const errors = payloadValidationErrors(data, CATALOG_IDS);
     if (errors.length) {
         console.error('status.json validation failed:', errors);
         throw new Error(`status.json has an invalid or unsupported payload (${errors.join('; ')})`);
@@ -87,6 +96,7 @@ export function App(): JSX.Element {
     const [route, setRoute] = useState(() => readWallboardRoute(location.search));
     const [now, setNow] = useState(() => Date.now());
     const [lastBrowserCheckAt, setLastBrowserCheckAt] = useState<number | null>(null);
+    const lastBrowserCheckAtRef = useRef<number | null>(null);
     const ownership = useRef(new RequestOwnership());
     const mounted = useRef(true);
     const browserRefreshMs = route.wallboardMode ? route.refreshIntervalMs : OPERATOR_BROWSER_REFRESH_MS;
@@ -102,6 +112,7 @@ export function App(): JSX.Element {
             if (mounted.current && ownership.current.owns(request, sequence)) {
                 const checkedAt = Date.now();
                 dispatch({ type: 'success', data: result.data });
+                lastBrowserCheckAtRef.current = checkedAt;
                 setLastBrowserCheckAt(checkedAt);
                 if (result.freshnessWarning)
                     dispatch({ type: 'failure', message: result.freshnessWarning });
@@ -119,9 +130,21 @@ export function App(): JSX.Element {
     useEffect(() => {
         mounted.current = true;
         void refresh();
-        const id = window.setInterval(() => { if (!document.hidden)
-            void refresh(); }, browserRefreshMs);
-        return () => { mounted.current = false; window.clearInterval(id); ownership.current.cancel(); };
+        const id = window.setInterval(() => {
+            if (!document.hidden) void refresh();
+        }, browserRefreshMs);
+        const refreshWhenVisible = () => {
+            if (document.hidden) return;
+            const lastCheckedAt = lastBrowserCheckAtRef.current;
+            if (lastCheckedAt === null || Date.now() - lastCheckedAt >= browserRefreshMs) void refresh();
+        };
+        document.addEventListener('visibilitychange', refreshWhenVisible);
+        return () => {
+            mounted.current = false;
+            window.clearInterval(id);
+            document.removeEventListener('visibilitychange', refreshWhenVisible);
+            ownership.current.cancel();
+        };
     }, [browserRefreshMs, refresh]);
 
     useEffect(() => {
@@ -163,7 +186,7 @@ export function App(): JSX.Element {
         <main className="app-frame">
             {route.wallboardMode
                 ? <WallboardV2 model={model} lifecycle={state} now={now} browserCheckedAt={lastBrowserCheckAt} alertWindowMs={route.alertWindowMs} onExit={exitWallboard} />
-                : <IssueConsole model={model} lifecycle={state} onRefresh={() => void refresh()} />}
+                : <IssueConsole model={model} lifecycle={state} onRefresh={() => void refresh()} browserCheckedAt={lastBrowserCheckAt} browserRefreshMs={browserRefreshMs} />}
         </main>
     );
 }
