@@ -8,9 +8,11 @@ import { parseStatuspageSummary } from '../structured-source-adapters.mjs';
 const root = fileURLToPath(new URL('../..', import.meta.url));
 
 test('rendered vendor pages never block the concurrent collector event loop', () => {
-  const renderer = fs.readFileSync(path.join(root, 'scripts', 'public-source-repairs.mjs'), 'utf8');
+  const facade = fs.readFileSync(path.join(root, 'scripts', 'public-source-repairs.mjs'), 'utf8');
+  const renderer = fs.readFileSync(path.join(root, 'scripts', 'public-source-adapter-implementation.mjs'), 'utf8');
   const collector = fs.readFileSync(path.join(root, 'scripts', 'update-public-status.mjs'), 'utf8');
 
+  assert.match(facade, /SourceAdapterRegistry/);
   assert.doesNotMatch(renderer, /\bspawnSync\b/);
   assert.match(renderer, /export async function renderPublicPage\(source\)/);
   assert.match(collector, /await renderPublicPage\(source\)/);
@@ -48,9 +50,12 @@ test('explicit current Statuspage health wins over stale unresolved history', ()
   assert.equal(result.status, 'All Systems Operational');
 });
 
-test('browser maintenance filtering reconciles the summary it exposes', () => {
+test('browser maintenance filtering reconciles the summary it exposes from the poller boundary', () => {
   const app = fs.readFileSync(path.join(root, 'src', 'App.tsx'), 'utf8');
+  const poller = fs.readFileSync(path.join(root, 'src', 'usePayloadPoller.ts'), 'utf8');
 
-  assert.match(app, /maintenance_count:\s*emergencyMaintenance\.length/);
-  assert.match(app, /ongoing_maintenance_count:\s*emergencyMaintenance\.filter\(item => item\.status === 'in_progress'\)\.length/);
+  assert.match(app, /usePayloadPoller/);
+  assert.doesNotMatch(app, /maintenance_count:\s*emergencyMaintenance\.length/);
+  assert.match(poller, /maintenance_count:\s*emergencyMaintenance\.length/);
+  assert.match(poller, /ongoing_maintenance_count:\s*emergencyMaintenance\.filter\(item => item\.status === 'in_progress'\)\.length/);
 });
