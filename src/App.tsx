@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'r
 import packageMetadata from '../package.json';
 import { dataLifecycleReducer, initialDataLifecycle } from './dataLifecycle';
 import { IssueConsole } from './IssueConsole';
+import { OperationsIntelligencePanel } from './OperationsIntelligencePanel';
 import { payloadValidationErrors } from './payloadValidation';
 import { ACTIVE_PROVIDER_CATALOG, ACTIVE_PROVIDER_IDS } from './providerCatalog';
 import { RequestOwnership } from './requestOwnership';
@@ -174,7 +175,7 @@ export function App(): JSX.Element {
         <main className="app-frame">
             {route.wallboardMode
                 ? <WallboardV2 model={model} lifecycle={state} now={now} browserCheckedAt={lastBrowserCheckAt} alertWindowMs={route.alertWindowMs} onExit={exitWallboard} />
-                : <IssueConsole model={model} lifecycle={state} onRefresh={() => void refresh()} browserCheckedAt={lastBrowserCheckAt} browserRefreshMs={browserRefreshMs} />}
+                : <><IssueConsole model={model} lifecycle={state} onRefresh={() => void refresh()} browserCheckedAt={lastBrowserCheckAt} browserRefreshMs={browserRefreshMs} /><OperationsIntelligencePanel model={model} /></>}
         </main>
     );
 }
