@@ -3,6 +3,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { incidentDetailOverrides, providerIncidentConclusion } from './incident-detail-repairs.mjs';
 import { fullReviewConclusion, fullReviewOverrides } from './full-review-source-adapters.mjs';
+import { fallbackIncidentToken } from './incident-identity.mjs';
 import { regionScopeRelevant } from './region-scope.mjs';
 
 const execFileAsync = promisify(execFile);
@@ -123,10 +124,12 @@ function healthy(status) {
 }
 
 function issue(providerName, note, color = 'amber') {
+  const title = `${providerName} public status reports an active issue`;
   return {
     kind: 'issue',
+    id: fallbackIncidentToken({ provider: providerName, title, note, source: 'current-page' }),
     color,
-    title: `${providerName} public status reports an active issue`,
+    title,
     note,
     evidenceBasis: 'current-page'
   };
@@ -207,11 +210,15 @@ function oktaConclusion(html) {
     kind: 'issues',
     incidents: activeUs.map(record => {
       const text = `${record.Incident_Title__c || ''} ${record.Log__c || ''} ${record.Category__c || ''}`;
+      const title = record.Incident_Title__c || record.Name || 'Okta service incident';
+      const note = record.Log__c || 'Okta reports an active service incident.';
+      const firstDetected = record.Start_Time__c || record.CreatedDate || record.Start_Date__c || '';
       return {
-        title: record.Incident_Title__c || record.Name || 'Okta service incident',
-        note: record.Log__c || 'Okta reports an active service incident.',
+        id: record.Id || record.id || record.Name || fallbackIncidentToken({ provider: 'okta', title, note, source: 'okta-current-page', firstDetected }),
+        title,
+        note,
         color: record.Is_Mis_Red__c === true || /\b(?:critical|major outage|complete outage|unavailable)\b/i.test(text) ? 'red' : 'amber',
-        firstDetected: record.Start_Time__c || record.CreatedDate || record.Start_Date__c || '',
+        firstDetected,
         latestUpdate: record.Last_Updated__c || record.LastModifiedDate || record.CreatedDate || '',
         status: record.Status__c || 'active',
         affectedService: [record.Okta_Sub_Service__c, record.Service_Feature__c].filter(Boolean).join(' / ')
