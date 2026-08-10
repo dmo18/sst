@@ -13,7 +13,8 @@ test('wallboard browser refresh cadence is URL-controlled with a three-minute sa
   assert.match(route, /MAX_BROWSER_REFRESH_MS = HOUR_MS/);
   assert.match(route, /parseRefreshIntervalMs/);
   assert.match(route, /params\.get\('refresh'\)/);
-  assert.match(app, /route\.wallboardMode \? route\.refreshIntervalMs : DEFAULT_BROWSER_REFRESH_MS/);
+  assert.match(app, /OPERATOR_BROWSER_REFRESH_MS = 60 \* 1000/);
+  assert.match(app, /route\.wallboardMode \? route\.refreshIntervalMs : OPERATOR_BROWSER_REFRESH_MS/);
   assert.match(app, /window\.setInterval\([\s\S]*browserRefreshMs\)/);
   assert.match(app, /\[browserRefreshMs, refresh\]/);
 });
