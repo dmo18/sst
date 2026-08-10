@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 const root = fileURLToPath(new URL('..', import.meta.url));
 const errors = [];
 const textExtensions = new Set(['.ts', '.tsx', '.js', '.mjs', '.json', '.yml', '.yaml', '.css']);
-const ignoredNames = new Set(['legacy-update-status.mjs', 'public-source-repairs-legacy.mjs']);
+const ignoredNames = new Set(['legacy-update-status.mjs', 'public-source-adapter-implementation.mjs']);
 
 function scan(directory) {
   for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
