@@ -1,3 +1,5 @@
+import { componentStatusIsProblem } from '../src/componentStatus.ts';
+
 export const PARSER_VERSION = '3.0.0';
 
 const structuredModes = new Set(['statuspage-json', 'betterstack-json', 'provider-json', 'auth0-next-data']);
@@ -7,12 +9,7 @@ function clean(value) {
   return String(value || '').replace(/\s+/g, ' ').trim();
 }
 
-export function componentStatusIsProblem(value) {
-  const status = clean(value).toLowerCase().replace(/\s+/g, '_');
-  if (!status) return false;
-  if (/^(?:operational|available|up|ok|none|good|normal|healthy|not_available|n\/?a|not_applicable|unknown|under_maintenance|maintenance|scheduled_maintenance|planned_maintenance)$/.test(status)) return false;
-  return /(?:degrad|partial[_-]?outage|major[_-]?outage|outage|unavailable|down|offline|disrupt|impaired|warning|error|failure)/.test(status);
-}
+export { componentStatusIsProblem };
 
 function hashString(value) {
   let hash = 0x811c9dc5;
@@ -91,7 +88,7 @@ export function sourceEvidence(mode = '', sourceState = 'unavailable', ok = fals
 
 function incidentSignature(items) {
   return (items || [])
-    .map(item => `${item.id}|${item.status || ''}|${item.service_state || ''}|${item.latest_update || item.rawTime || ''}`)
+    .map(item => `${item.id}|${item.status || ''}|${item.service_state || ''}|${item.latest_update || item.rawTime || item.observed_at || ''}`)
     .sort()
     .join('~');
 }
