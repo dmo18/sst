@@ -127,7 +127,8 @@ function issue(providerName, note, color = 'amber') {
     kind: 'issue',
     color,
     title: `${providerName} public status reports an active issue`,
-    note
+    note,
+    evidenceBasis: 'current-page'
   };
 }
 
@@ -252,20 +253,6 @@ export function providerSpecificConclusion(provider, html) {
       if (active) return issue(provider.name, active[0].slice(0, 800));
       if (/No issues are being reported/i.test(text)) return healthy('RingCentral reports no issues');
       return null;
-    }
-    case '8x8': {
-      const statusStart = text.search(/Service Status/i);
-      if (statusStart < 0) return null;
-      const status = text.slice(statusStart, statusStart + 24000);
-      const americasStart = status.search(/\bAmericas\b/i);
-      if (americasStart < 0) return null;
-      const tail = status.slice(americasStart);
-      const nextRegion = tail.search(/\b(?:EMEA|APAC)\b/i);
-      const americas = nextRegion > 0 ? tail.slice(0, nextRegion) : tail.slice(0, 10000);
-      const problem = /\b(?:Investigating|Monitoring|Identified|Performance Issue|Service Outage|Outage)\b/i.exec(americas);
-      if (problem) return { kind: 'limited', message: '8x8 Americas currently reports ' + problem[0] + '; a specific incident record was not derived from the service matrix.' };
-      const normalCount = (americas.match(/\bNormal\b/gi) || []).length;
-      return normalCount >= 5 ? healthy('8x8 Americas services report normal status') : null;
     }
     case 'sophos':
       return /All systems normal/i.test(text) ? healthy('Sophos reports all systems normal') : null;
