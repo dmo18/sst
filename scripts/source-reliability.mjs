@@ -1,10 +1,16 @@
 import {
+  SOURCE_RELIABILITY_LONG_WINDOW_DAYS,
   SOURCE_RELIABILITY_MIN_SAMPLES,
   SOURCE_RELIABILITY_WINDOW_DAYS,
   sourceIntelligenceMetadataErrors
 } from '../src/sourceReliabilityContract.ts';
 
-export { SOURCE_RELIABILITY_MIN_SAMPLES, SOURCE_RELIABILITY_WINDOW_DAYS, sourceIntelligenceMetadataErrors };
+export {
+  SOURCE_RELIABILITY_LONG_WINDOW_DAYS,
+  SOURCE_RELIABILITY_MIN_SAMPLES,
+  SOURCE_RELIABILITY_WINDOW_DAYS,
+  sourceIntelligenceMetadataErrors
+};
 
 function integer(value) {
   return Number.isInteger(value) && Number(value) >= 0;
@@ -47,9 +53,9 @@ function sloState(sampleCount, livePercent, unavailableCount) {
   return 'breach';
 }
 
-export function rollSourceReliability(previous, provider, generatedAt, schemaChanged = false) {
+function rollWindow(previous, provider, generatedAt, schemaChanged, windowDays) {
   const today = dateKey(generatedAt) || dateKey(new Date().toISOString());
-  const earliest = addDays(today, -(SOURCE_RELIABILITY_WINDOW_DAYS - 1));
+  const earliest = addDays(today, -(windowDays - 1));
   const dailyMap = new Map();
   for (const raw of Array.isArray(previous?.daily) ? previous.daily : []) {
     const day = normalizedDay(raw);
@@ -64,7 +70,7 @@ export function rollSourceReliability(previous, provider, generatedAt, schemaCha
   if (schemaChanged) current.schema_changes += 1;
   dailyMap.set(today, current);
 
-  const daily = [...dailyMap.values()].sort((a, b) => a.date.localeCompare(b.date)).slice(-SOURCE_RELIABILITY_WINDOW_DAYS);
+  const daily = [...dailyMap.values()].sort((a, b) => a.date.localeCompare(b.date)).slice(-windowDays);
   const totals = daily.reduce((sum, day) => ({
     samples: sum.samples + day.samples,
     live: sum.live + day.live,
@@ -77,7 +83,7 @@ export function rollSourceReliability(previous, provider, generatedAt, schemaCha
   const unavailablePercent = totals.samples ? Math.round(totals.unavailable / totals.samples * 100) : 0;
 
   return {
-    window_days: SOURCE_RELIABILITY_WINDOW_DAYS,
+    window_days: windowDays,
     sample_count: totals.samples,
     live_percent: livePercent,
     limited_percent: limitedPercent,
@@ -88,13 +94,56 @@ export function rollSourceReliability(previous, provider, generatedAt, schemaCha
   };
 }
 
+export function rollSourceReliability(previous, provider, generatedAt, schemaChanged = false) {
+  const sevenDay = rollWindow(previous, provider, generatedAt, schemaChanged, SOURCE_RELIABILITY_WINDOW_DAYS);
+  const previousThirtyDay = previous?.window_30d || (previous?.window_days === SOURCE_RELIABILITY_LONG_WINDOW_DAYS ? previous : { daily: previous?.daily || [] });
+  return {
+    ...sevenDay,
+    window_30d: rollWindow(previousThirtyDay, provider, generatedAt, schemaChanged, SOURCE_RELIABILITY_LONG_WINDOW_DAYS)
+  };
+}
+
+function quarantineState(previousCanary, accepted, fingerprint, schemaChanged, generatedAt) {
+  const previousState = previousCanary?.quarantine_state || 'clear';
+  const previousFingerprint = previousCanary?.fingerprint || '';
+  const previousStable = Number(previousCanary?.stable_observations || 0);
+  const previousSince = previousCanary?.quarantine_since || '';
+
+  if (!accepted || !fingerprint) {
+    if (previousState === 'clear') return { state: 'clear', stable: 0, since: '' };
+    return { state: previousState, stable: 0, since: previousSince || generatedAt };
+  }
+
+  if (schemaChanged) {
+    const churn = ['observing', 'quarantined'].includes(previousState) && previousFingerprint && previousFingerprint !== fingerprint;
+    return {
+      state: churn ? 'quarantined' : 'observing',
+      stable: 0,
+      since: previousSince || generatedAt
+    };
+  }
+
+  if (previousState === 'observing') return { state: 'clear', stable: 1, since: '' };
+  if (previousState === 'quarantined') {
+    const stable = previousStable + 1;
+    return stable >= 2
+      ? { state: 'clear', stable, since: '' }
+      : { state: 'quarantined', stable, since: previousSince || generatedAt };
+  }
+  return { state: 'clear', stable: Math.min(previousStable + 1, 999), since: '' };
+}
+
 export function buildSchemaCanary(previousProvider, provider, schemaChanged, generatedAt) {
   const fingerprint = typeof provider?.schema_fingerprint === 'string' ? provider.schema_fingerprint : '';
   const accepted = provider?.source_state === 'available' && provider?.ok === true;
+  const quarantine = quarantineState(previousProvider?.schema_canary, accepted, fingerprint, schemaChanged, generatedAt);
   return {
     state: !fingerprint ? 'unobserved' : schemaChanged ? 'changed' : 'stable',
     observation: accepted ? 'accepted' : 'unavailable',
     fingerprint,
-    last_changed_at: schemaChanged ? generatedAt : previousProvider?.schema_canary?.last_changed_at || ''
+    last_changed_at: schemaChanged ? generatedAt : previousProvider?.schema_canary?.last_changed_at || '',
+    quarantine_state: quarantine.state,
+    quarantine_since: quarantine.since,
+    stable_observations: quarantine.stable
   };
 }
