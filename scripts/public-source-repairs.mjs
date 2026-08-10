@@ -384,12 +384,19 @@ export async function renderPublicPage(source) {
     };
   }
 
+  const profileDir = fs.mkdtempSync('/tmp/sst-vendor-chrome-');
   try {
     const result = await execFileAsync(chrome, [
       '--headless=new',
       '--disable-gpu',
-      '--no-sandbox',
       '--disable-dev-shm-usage',
+      '--disable-background-networking',
+      '--disable-default-apps',
+      '--disable-extensions',
+      '--disable-sync',
+      '--no-first-run',
+      '--no-default-browser-check',
+      `--user-data-dir=${profileDir}`,
       '--hide-scrollbars',
       '--virtual-time-budget=20000',
       '--dump-dom',
@@ -433,5 +440,7 @@ export async function renderPublicPage(source) {
         error: error?.message || String(error)
       }
     };
+  } finally {
+    fs.rmSync(profileDir, { recursive: true, force: true });
   }
 }

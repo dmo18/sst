@@ -20,8 +20,10 @@ jobs:
       status_description: ${{ steps.verify-status.outputs.description }}
       status_state: ${{ steps.verify-status.outputs.state }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: "22"
           cache: npm
@@ -31,19 +33,20 @@ jobs:
         run: npm test
       - name: Run TypeScript checking
         run: npm run typecheck
-      - name: Audit production dependencies
-        run: npm audit --omit=dev --audit-level=high
+      - name: Audit complete dependency graph
+        run: npm audit --audit-level=high
       - name: Retrieve prior snapshot (optional)
         run: curl --fail --silent --show-error --max-time 10 https://dmo18.github.io/sst/status.json -o public/previous-status.json || true
-      - run: npm run update-status
+      - name: Collect and validate public status data without GitHub credentials
+        run: env -u GITHUB_TOKEN -u GH_TOKEN npm run update-status
       - name: Verify browser payload compatibility before deployment
         run: npm run validate-browser-payload
       - name: Verify truthful coverage, collection intelligence, and freshness
         id: verify-status
         run: node scripts/verify-release-contract.mjs public/status.json
       - run: npm run build:app
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
+      - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
         with:
           path: dist
 
@@ -61,12 +64,14 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
         with:
           timeout: 600000
           reporting_interval: 10000
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: "22"
           cache: npm
@@ -112,7 +117,7 @@ jobs:
           node scripts/verify-yodeck-wallboard.mjs "$WALLBOARD_URL" /tmp/yodeck-wallboard.html /tmp/yodeck-wallboard.png
       - name: Upload Yodeck verification artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: yodeck-wallboard-${{ github.run_id }}
           path: |
