@@ -155,5 +155,5 @@ test('pinned pre-cascade-layer Chromium is a blocking non-scheduled release prob
 test('reconciliation record explicitly rejects the previous reduced closure', () => {
   const record = read('docs/architecture-reconciliation.md');
   assert.match(record, /previous four-phase tracker was closed against a reduced implementation scope/i);
-  assert.match(record, /Completion rule/);
+  assert.match(record, /Production completion rule/);
 });
