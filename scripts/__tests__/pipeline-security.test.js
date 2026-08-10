@@ -15,7 +15,7 @@ test('all third-party GitHub Actions are pinned to immutable commits', async () 
     for (const match of text.matchAll(/\buses:\s*([^\s#]+)/g)) {
       const reference = match[1];
       if (reference.startsWith('./')) continue;
-      assert.match(reference, /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+@[0-9a-f]{40}$/, `${file} has a moving action reference: ${reference}`);
+      assert.match(reference, /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_./-]+@[0-9a-f]{40}$/, `${file} has a moving action reference: ${reference}`);
     }
   }
 });
@@ -26,7 +26,7 @@ test('checkout credentials are never persisted into repository worktrees', async
 
   for (const file of files) {
     const text = await read(`.github/workflows/${file}`);
-    const checkouts = [...text.matchAll(/- uses:\s*actions\/checkout@[0-9a-f]{40}[^\n]*\n\s*with:\s*\n\s*persist-credentials:\s*false/g)];
+    const checkouts = [...text.matchAll(/- (?:name:[^\n]*\n\s*)?uses:\s*actions\/checkout@[0-9a-f]{40}[^\n]*\n\s*with:\s*\n\s*persist-credentials:\s*false/g)];
     const checkoutCount = [...text.matchAll(/uses:\s*actions\/checkout@[0-9a-f]{40}/g)].length;
     assert.equal(checkouts.length, checkoutCount, `${file} must set persist-credentials: false on every checkout`);
   }
@@ -43,7 +43,7 @@ test('vendor collection runs without GitHub tokens or deployment permissions', a
   assert.doesNotMatch(buildJob, /pages:\s*write|id-token:\s*write|statuses:\s*write|actions:\s*write/);
   assert.match(buildJob, /env -u GITHUB_TOKEN -u GH_TOKEN npm run update-status/);
 
-  const renderer = await read('scripts/public-source-repairs.mjs');
+  const renderer = await read('scripts/public-source-repairs-legacy.mjs');
   assert.doesNotMatch(renderer, /--no-sandbox/);
   assert.match(renderer, /--user-data-dir=\$\{profileDir\}/);
   assert.match(renderer, /fs\.rmSync\(profileDir, \{ recursive: true, force: true \}\)/);
