@@ -29,15 +29,15 @@ Complete the post-review architecture overhaul while preserving the production t
 - [x] Validate the canonical post-consolidation provider catalog, not only raw entries.
 - [x] Enforce browser payload provider parity with the canonical active catalog.
 - [x] Harden local-storage access for restricted browsers.
-- [ ] Strengthen fallback incident identity. This is intentionally sequenced with the Phase 2 producer-boundary migration so one PR does not combine broad collector identity changes with browser contract changes.
+- [x] Strengthen fallback incident identity. The implementation was sequenced into Phase 2 with the producer-boundary migration.
 
 ## Phase 2: architecture cleanup
 
 - [x] Move status enum values and cross-layer temporal policy into a shared runtime contract. The foundation landed in Phase 1 so browser validation could use it immediately.
 - [x] Emit current-page provenance at the source adapter boundary and remove the RingCentral post-processing dependency.
-- [ ] Strengthen fallback incident identity using a stable semantic signature when a vendor incident id is unavailable.
+- [x] Strengthen fallback incident identity using a stable semantic signature when a vendor incident id is unavailable.
 - [x] Consolidate the deployment release invariants behind reusable code consumed by workflow verification and production smoke.
-- [ ] Reduce legacy collector responsibilities in `scripts/update-status.mjs` to infrastructure still used by the production collector.
+- [x] Reduce legacy collector responsibilities so the production collector depends on a small status core instead of the legacy parser monolith.
 - [x] Clarify collection timing semantics so aggregate collection elapsed time is not presented as a single request latency.
 
 ## Phase 3: pipeline and security hardening
@@ -94,12 +94,18 @@ Run #780 passed 247 deterministic tests, TypeScript, production dependency audit
 ### Phase 2
 
 Branch: `agent/status-contract-overhaul-phase-2`
+Pull request: #99, draft until CI and production validation complete
 
-Critical decisions and work in progress:
+Implemented decisions:
 
-- Rendered current-page issue conclusions now emit `evidenceBasis: current-page` at the source conclusion boundary. `makeIncident` already converts that field into `evidence_basis` and records `observed_at`, so the RingCentral-specific file normalizer and package stage have been removed.
+- Rendered current-page issue conclusions emit `evidenceBasis: current-page` at the source conclusion boundary. `makeIncident` converts that field into `evidence_basis` and records `observed_at`, so the RingCentral-specific file normalizer and package stage are removed.
 - Producer provenance regression tests cover RingCentral and Salesforce current-page conclusions.
+- Fallback rendered-page incidents receive stable semantic IDs derived from provider, title, source, affected service, first detection, and bounded detail. Multi-record adapters prefer vendor IDs when available. No new payload post-processing stage was introduced.
 - The former inline workflow release-contract implementation is now `scripts/release-contract.mjs` plus `scripts/verify-release-contract.mjs`. Production smoke consumes the same invariant code.
-- Provider collection timing is split into `last_request_ms` and `collection_elapsed_ms`. `source_latency_ms` remains temporarily as a compatibility alias for the last request rather than a sum of all retrieval work.
+- Provider collection timing is split into `last_request_ms` and `collection_elapsed_ms`. `source_latency_ms` remains temporarily as a compatibility alias for the last request rather than the sum of all retrieval work. Browser validation explicitly validates both new fields.
 - The duplicated 8x8 provider-specific branch was removed while touching the source conclusion module.
-- Fallback incident identity and legacy collector helper extraction remain before this phase can close.
+- The generic production helpers formerly embedded in the large legacy collector were extracted into `scripts/status-core.mjs`. `scripts/update-status.mjs` is now only a compatibility re-export of that small core. The previous monolith is preserved as `scripts/legacy-update-status.mjs`, and a regression test prevents production from regaining legacy parser ownership.
+
+CI note:
+
+An early Phase 2 deterministic run failed after removing the normalizer. The response was treated as a contract migration failure, not as a reason to relax validation. Subsequent commits moved provenance and identity to the actual producer boundary, added explicit timing validation, and completed the production-core extraction before the final PR gate.
