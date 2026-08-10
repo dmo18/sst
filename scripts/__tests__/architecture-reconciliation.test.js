@@ -1,13 +1,11 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test from 'node:test';
-import { fileURLToPath } from 'node:url';
 import { emitStatusContract } from '../emit-status-contract.mjs';
 import { SourceAdapterRegistry, normalizeCurrentPageConclusion } from '../source-adapter-sdk.mjs';
 import { ACTIVE_PROVIDER_CATALOG, ACTIVE_PROVIDER_CATALOG_HASH, ACTIVE_PROVIDER_IDS, providerCatalogHash } from '../../src/providerCatalog.ts';
 import { wirePayloadValidationErrors } from '../../src/wirePayloadValidation.ts';
 
-const root = fileURLToPath(new URL('../..', import.meta.url));
 const read = relative => fs.readFileSync(new URL(`../../${relative}`, import.meta.url), 'utf8');
 const reliability = {
   window_days: 7,
@@ -17,7 +15,7 @@ const reliability = {
   unavailable_percent: 0,
   schema_change_count: 0,
   slo_state: 'warming',
-  daily: [{ date: '2026-08-10', samples: 1, live: 1, limited: 0, unavailable: 0, schema_changes: 0 }],
+  daily: [{ date: '2026-08-02', samples: 1, live: 1, limited: 0, unavailable: 0, schema_changes: 0 }],
   window_30d: {
     window_days: 30,
     sample_count: 1,
@@ -26,7 +24,7 @@ const reliability = {
     unavailable_percent: 0,
     schema_change_count: 0,
     slo_state: 'warming',
-    daily: [{ date: '2026-08-10', samples: 1, live: 1, limited: 0, unavailable: 0, schema_changes: 0 }]
+    daily: [{ date: '2026-08-02', samples: 1, live: 1, limited: 0, unavailable: 0, schema_changes: 0 }]
   }
 };
 const canary = { state: 'stable', observation: 'accepted', fingerprint: 'json-test', last_changed_at: '', quarantine_state: 'clear', quarantine_since: '', stable_observations: 1 };
@@ -51,7 +49,7 @@ function draftPayload() {
   const total = providers.length;
   return {
     schema_version: 2,
-    generated_at: '2026-08-10T22:00:00.000Z',
+    generated_at: '2026-08-02T13:44:00.000Z',
     summary: {
       service_overall: 'operational', source_overall: 'available', active_incident_count: 0, affected_provider_count: 0,
       confirmed_operational_count: total, degraded_count: 0, major_count: 0, unknown_count: 0, limited_count: 0,
@@ -88,7 +86,7 @@ test('source adapter SDK normalizes untimed current-page issues and prevents dup
   const normalized = normalizeCurrentPageConclusion(provider, { kind: 'issue', title: 'API degraded', note: 'Current status reports degradation' }, provider.url);
   assert.equal(normalized.evidenceBasis, 'current-page');
   assert.match(normalized.id, /^page-/);
-  const timed = normalizeCurrentPageConclusion(provider, { kind: 'issue', title: 'API degraded', note: 'Timed', firstDetected: '2026-08-10T20:00:00Z' }, provider.url);
+  const timed = normalizeCurrentPageConclusion(provider, { kind: 'issue', title: 'API degraded', note: 'Timed', firstDetected: '2026-08-02T13:00:00Z' }, provider.url);
   assert.equal(timed.evidenceBasis, undefined);
   const registry = new SourceAdapterRegistry().register({ id: 'example', conclude: () => ({ kind: 'healthy', status: 'ok' }) });
   assert.deepEqual(registry.ids(), ['example']);
