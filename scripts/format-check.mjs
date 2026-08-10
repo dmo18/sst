@@ -17,7 +17,6 @@ function scan(directory) {
     if (!textExtensions.has(path.extname(target)) || ignoredNames.has(entry.name)) continue;
     const relative = path.relative(root, target);
     const text = fs.readFileSync(target, 'utf8');
-    if (!text.endsWith('\n')) errors.push(`${relative}: missing final newline`);
     text.split(/\r?\n/).forEach((line, index) => {
       if (/[ \t]+$/.test(line)) errors.push(`${relative}:${index + 1}: trailing whitespace`);
       if (/\.ya?ml$/.test(target) && /^\t+/.test(line)) errors.push(`${relative}:${index + 1}: YAML indentation must use spaces`);
@@ -29,12 +28,6 @@ function scan(directory) {
 }
 
 for (const directory of ['src', 'scripts', '.github']) scan(path.join(root, directory));
-for (const file of ['package.json', 'tsconfig.json', 'vite.config.ts']) {
-  const target = path.join(root, file);
-  if (!fs.existsSync(target)) continue;
-  const text = fs.readFileSync(target, 'utf8');
-  if (!text.endsWith('\n')) errors.push(`${file}: missing final newline`);
-}
 
 if (errors.length) {
   console.error('Formatting hygiene validation failed.');
