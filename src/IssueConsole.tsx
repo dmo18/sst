@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { componentStatusDisposition, componentStatusIsProblem } from './componentStatus';
 import { ProviderIcon } from './providerIcon';
 import { countdownLabel, relativeAgeAt } from './liveTelemetry';
+import { effectiveIncidentTime } from './statusContract';
 import {
   filterDiagnostics,
   type ActionItem,
@@ -12,7 +14,6 @@ import {
 import type { DataLifecycle, Maintenance } from './types';
 
 const EASTERN_TIME_ZONE = 'America/New_York';
-const REFRESH_INTERVAL_MS = 60_000;
 const views = ['overview', 'incidents', 'providers', 'sources', 'timeline'] as const;
 type ConsoleView = typeof views[number] | 'wallboard';
 type ProviderSortKey = 'provider' | 'service' | 'source' | 'quality' | 'incidents' | 'latency' | 'freshness';
@@ -25,6 +26,23 @@ const viewMeta: Record<typeof views[number], { label: string; description: strin
   sources: { label: 'Source reliability', description: 'Collection quality and blind-spot control' },
   timeline: { label: 'Audit timeline', description: 'Bounded lifecycle and source changes' }
 };
+
+function readStoredView(): typeof views[number] | null {
+  try {
+    const stored = localStorage.getItem('sst-command-view');
+    return views.includes(stored as typeof views[number]) ? stored as typeof views[number] : null;
+  } catch {
+    return null;
+  }
+}
+
+function storeView(view: typeof views[number]): void {
+  try {
+    localStorage.setItem('sst-command-view', view);
+  } catch {
+    // Restricted browser storage must not block the operator workspace.
+  }
+}
 
 function parseTime(value?: string): number {
   const timestamp = Date.parse(value || '');
@@ -141,7 +159,7 @@ function SectionHeader({ eyebrow, title, detail, action }: { eyebrow?: string; t
   );
 }
 
-function LifecycleStrip({ lifecycle, model, now, nextRefreshAt }: { lifecycle: DataLifecycle; model: IssueConsoleModel | null; now: number; nextRefreshAt: number }): JSX.Element {
+function LifecycleStrip({ lifecycle, model, now, nextRefreshAt }: { lifecycle: DataLifecycle; model: IssueConsoleModel | null; now: number; nextRefreshAt: number | null }): JSX.Element {
   const phase = lifecycle.phase === 'ready' ? 'connected' : lifecycle.phase;
   const message = lifecycle.phase === 'loading'
     ? 'Loading and validating the latest generated payload.'
@@ -152,13 +170,18 @@ function LifecycleStrip({ lifecycle, model, now, nextRefreshAt }: { lifecycle: D
         : lifecycle.phase === 'refreshing'
           ? 'Checking status.json now. The previous validated model remains visible.'
           : `Browser model is current. Payload generated ${relativeAgeAt(model?.generatedAt, now)}.`;
+  const nextCheck = lifecycle.phase === 'refreshing'
+    ? 'in progress'
+    : nextRefreshAt === null
+      ? 'after the first validated load'
+      : `in ${countdownLabel(nextRefreshAt, now)}`;
   return (
     <div className={`lifecycle-strip lifecycle-${phase}`} role="status" aria-live="polite">
       <span className="connection-indicator" />
       <b>{titleCase(phase)}</b>
       <span>{message}</span>
       <span className="lifecycle-spacer" />
-      <small>Next browser check {lifecycle.phase === 'refreshing' ? 'in progress' : `in ${countdownLabel(nextRefreshAt, now)}`}</small>
+      <small>Next browser check {nextCheck}</small>
     </div>
   );
 }
@@ -259,6 +282,8 @@ function CategoryTable({ items, onCategory }: { items: CategoryPulse[]; onCatego
 }
 
 function IncidentSummary({ item, now, expanded = false }: { item: IssueBrief; now: number; expanded?: boolean }): JSX.Element {
+  const currentPageObservation = item.evidence_basis === 'current-page';
+  const effectiveTime = effectiveIncidentTime(item);
   return (
     <article className={`incident-record incident-${item.service_state}`}>
       <header>
@@ -269,8 +294,8 @@ function IncidentSummary({ item, now, expanded = false }: { item: IssueBrief; no
       <dl className="record-facts">
         <div><dt>Affected service</dt><dd>{item.affectedServiceLabel}</dd></div>
         <div><dt>Lifecycle</dt><dd>{titleCase(item.status || 'active')}</dd></div>
-        <div><dt>First detected</dt><dd>{timeLabel(item.first_detected || item.rawTime, true)}</dd></div>
-        <div><dt>Latest update</dt><dd>{relativeAgeAt(item.latest_update || item.rawTime, now)}</dd></div>
+        <div><dt>{currentPageObservation ? 'Observed' : 'First detected'}</dt><dd>{timeLabel(currentPageObservation ? item.observed_at : item.first_detected || item.rawTime, true)}</dd></div>
+        <div><dt>{currentPageObservation ? 'Observation age' : 'Latest update'}</dt><dd>{relativeAgeAt(effectiveTime, now)}</dd></div>
       </dl>
       {expanded && <div className="incident-guidance"><section><span>Likely MSP impact</span><p>{item.mspImpact}</p></section><section><span>Technician action</span><p>{item.technicianAction}</p></section></div>}
       {expanded && item.updates?.length ? <details className="timeline-disclosure"><summary>Official vendor timeline <span>{item.updates.length} updates</span></summary><ol>{item.updates.map((update, index) => <li key={`${update.at || 'unknown'}-${index}`}><time>{timeLabel(update.at, true)}</time><div><b>{titleCase(update.status || 'Update')}</b><p>{update.note}</p></div></li>)}</ol></details> : null}
@@ -292,7 +317,7 @@ function MaintenanceSummary({ item, now }: { item: Maintenance; now: number }): 
 }
 
 function ProviderDrawer({ source, incidents, maintenance, now, onClose }: { source: DiagnosticSource; incidents: IssueBrief[]; maintenance: Maintenance[]; now: number; onClose: () => void }): JSX.Element {
-  const problemComponents = source.componentStatus.filter(component => !/^(?:operational|available|up|ok|none|good)$/i.test(component.status));
+  const problemComponents = source.componentStatus.filter(component => componentStatusIsProblem(component.status));
   return (
     <div className="drawer-layer" role="presentation">
       <button className="drawer-backdrop" type="button" onClick={onClose} aria-label="Close provider details" />
@@ -309,7 +334,11 @@ function ProviderDrawer({ source, incidents, maintenance, now, onClose }: { sour
           <section><h3>Observation contract</h3><dl className="drawer-facts"><div><dt>Current conclusion</dt><dd>{source.status}</dd></div><div><dt>Truth basis</dt><dd>{titleCase(source.truthBasis)}</dd></div><div><dt>Evidence</dt><dd>{titleCase(source.evidenceTier)} · {source.sourceConfidence}</dd></div><div><dt>Official source</dt><dd>{source.sourceHost || 'Unknown host'}</dd></div><div><dt>Adapter</dt><dd>{titleCase(source.sourceType)}</dd></div><div><dt>Last successful retrieval</dt><dd>{timeLabel(source.lastSuccessAt)}</dd></div><div><dt>Freshness</dt><dd>{titleCase(source.freshnessState)}{source.freshnessSeconds !== undefined ? ` · ${Math.round(source.freshnessSeconds / 60)}m` : ''}</dd></div><div><dt>Request latency</dt><dd>{durationLabel(source.sourceLatencyMs)}</dd></div><div><dt>Failure streak</dt><dd>{source.consecutiveFailures}</dd></div><div><dt>Parser / schema</dt><dd>{source.parserVersion || 'legacy'} · {source.schemaChanged ? 'changed' : source.schemaFingerprint ? 'stable' : 'not fingerprinted'}</dd></div></dl></section>
           {incidents.length > 0 && <section><h3>Active incidents</h3><div className="drawer-list">{incidents.map(item => <IncidentSummary key={item.id} item={item} now={now} />)}</div></section>}
           {maintenance.length > 0 && <section><h3>Maintenance</h3><div className="drawer-list">{maintenance.map(item => <MaintenanceSummary key={item.id} item={item} now={now} />)}</div></section>}
-          {source.componentStatus.length > 0 && <section><h3>Components <small>{problemComponents.length} requiring attention</small></h3><ul className="component-list">{source.componentStatus.map(component => <li key={`${component.group || ''}-${component.name}`}><span><b>{component.name}</b>{component.group && <small>{component.group}</small>}</span><StateBadge tone={/^(?:operational|available|up|ok|none|good)$/i.test(component.status) ? 'positive' : 'warning'}>{titleCase(component.status)}</StateBadge></li>)}</ul></section>}
+          {source.componentStatus.length > 0 && <section><h3>Components <small>{problemComponents.length} requiring attention</small></h3><ul className="component-list">{source.componentStatus.map(component => {
+            const disposition = componentStatusDisposition(component.status);
+            const tone = disposition === 'healthy' ? 'positive' : disposition === 'problem' ? 'warning' : 'neutral';
+            return <li key={`${component.group || ''}-${component.name}`}><span><b>{component.name}</b>{component.group && <small>{component.group}</small>}</span><StateBadge tone={tone}>{titleCase(component.status)}</StateBadge></li>;
+          })}</ul></section>}
           <section><h3>Collection trace</h3><div className="trace-list">{source.downloadLog.slice(-8).reverse().map((log, index) => <article key={`${log.completed_at || index}-${index}`}><StateBadge tone={log.ok ? 'positive' : 'critical'}>{log.ok ? 'Success' : 'Failed'}</StateBadge><div><b>{log.status || 'Collection attempt'}</b><small>{durationLabel(log.duration_ms)} · {log.content_type || 'unknown content type'}</small>{(log.error || log.message) && <p>{log.error || log.message}</p>}</div></article>)}</div></section>
         </div>
         <footer className="drawer-footer"><a className="ui-button ui-button-primary" href={source.source} target="_blank" rel="noopener noreferrer">Open official source ↗</a></footer>
@@ -428,16 +457,15 @@ function Sidebar({ view, model, onNavigate }: { view: ConsoleView; model: IssueC
   );
 }
 
-export function IssueConsole({ model, lifecycle, onRefresh }: { model: IssueConsoleModel | null; lifecycle: DataLifecycle; onRefresh: () => void }): JSX.Element {
+export function IssueConsole({ model, lifecycle, onRefresh, browserCheckedAt, browserRefreshMs }: { model: IssueConsoleModel | null; lifecycle: DataLifecycle; onRefresh: () => void; browserCheckedAt: number | null; browserRefreshMs: number }): JSX.Element {
   const params = useMemo(() => new URLSearchParams(location.search), []);
   const initialView = params.get('view');
-  const [view, setView] = useState<ConsoleView>(() => initialView === 'wallboard' ? 'wallboard' : views.includes(initialView as typeof views[number]) ? initialView as typeof views[number] : (localStorage.getItem('sst-command-view') as ConsoleView) || 'overview');
+  const [view, setView] = useState<ConsoleView>(() => initialView === 'wallboard' ? 'wallboard' : views.includes(initialView as typeof views[number]) ? initialView as typeof views[number] : readStoredView() || 'overview');
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('all');
   const [selectedProviderId, setSelectedProviderId] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
-  const [lastBrowserCheckAt, setLastBrowserCheckAt] = useState(() => Date.now());
-  const [nextRefreshAt, setNextRefreshAt] = useState(() => Date.now() + REFRESH_INTERVAL_MS);
+  const nextRefreshAt = browserCheckedAt === null ? null : browserCheckedAt + browserRefreshMs;
 
   const selectedSource = model?.diagnostics.find(item => item.id === selectedProviderId) || null;
   const selectedIncidents = model?.briefs.filter(item => item.providerId === selectedProviderId) || [];
@@ -448,31 +476,17 @@ export function IssueConsole({ model, lifecycle, onRefresh }: { model: IssueCons
     return () => window.clearInterval(timer);
   }, []);
 
-  useEffect(() => {
-    if (lifecycle.phase !== 'ready') return;
-    const checked = Date.now();
-    setLastBrowserCheckAt(checked);
-    setNextRefreshAt(checked + REFRESH_INTERVAL_MS);
-  }, [lifecycle.phase, model?.generatedAt]);
-
-  useEffect(() => {
-    if (now < nextRefreshAt || lifecycle.phase === 'refreshing' || lifecycle.phase === 'loading') return;
-    setNextRefreshAt(now + REFRESH_INTERVAL_MS);
-  }, [lifecycle.phase, nextRefreshAt, now]);
-
   const navigate = (next: ConsoleView, nextFilter?: string) => {
     setView(next);
     setQuery('');
     setFilter(nextFilter || 'all');
-    if (next !== 'wallboard') localStorage.setItem('sst-command-view', next);
+    if (next !== 'wallboard') storeView(next);
     const search = new URLSearchParams(location.search);
     if (next === 'overview') search.delete('view'); else search.set('view', next);
     history.replaceState(null, '', `${location.pathname}${search.size ? `?${search}` : ''}`);
   };
 
   const requestRefresh = () => {
-    setLastBrowserCheckAt(Date.now());
-    setNextRefreshAt(Date.now() + REFRESH_INTERVAL_MS);
     onRefresh();
   };
 
@@ -494,7 +508,7 @@ export function IssueConsole({ model, lifecycle, onRefresh }: { model: IssueCons
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [selectedProviderId, view]);
+  }, [selectedProviderId, view, onRefresh]);
 
   useEffect(() => {
     if (!selectedProviderId) return;
@@ -504,6 +518,8 @@ export function IssueConsole({ model, lifecycle, onRefresh }: { model: IssueCons
   if (view === 'wallboard') return <Wallboard model={model} lifecycle={lifecycle} now={now} onExit={() => navigate('overview')} />;
 
   const currentView = view as typeof views[number];
+  const browserCheckAge = browserCheckedAt === null ? 'Never' : relativeAgeAt(new Date(browserCheckedAt).toISOString(), now);
+  const browserNext = nextRefreshAt === null ? 'Awaiting first validated check' : `Next in ${countdownLabel(nextRefreshAt, now)}`;
   return (
     <div className="enterprise-shell">
       <span className="sr-only">Operations command center. Technician briefing. Provider diagnostics and evidence. Current posture. What deserves attention now. Dependency landscape.</span>
@@ -514,7 +530,7 @@ export function IssueConsole({ model, lifecycle, onRefresh }: { model: IssueCons
           <div className="topbar-live">
             <div><span>Eastern time</span><b>{clockLabel(now)}</b><small>{dateLabel(now)}</small></div>
             <div><span>Payload age</span><b>{relativeAgeAt(model?.generatedAt, now)}</b><small>{model ? timeLabel(model.generatedAt, true) : 'Awaiting data'}</small></div>
-            <div><span>Last browser check</span><b>{relativeAgeAt(new Date(lastBrowserCheckAt).toISOString(), now)}</b><small>Next in {countdownLabel(nextRefreshAt, now)}</small></div>
+            <div><span>Last browser check</span><b>{browserCheckAge}</b><small>{browserNext}</small></div>
           </div>
           <div className="topbar-actions"><button className="ui-button ui-button-secondary" type="button" onClick={() => navigate('wallboard')}>Wallboard</button><button className="ui-button ui-button-primary" type="button" onClick={requestRefresh} disabled={lifecycle.phase === 'refreshing'}>{lifecycle.phase === 'refreshing' ? 'Checking…' : 'Refresh now'}</button></div>
         </header>

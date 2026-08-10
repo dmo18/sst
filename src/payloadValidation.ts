@@ -1,15 +1,30 @@
+import { componentStatusIsProblem } from './componentStatus.ts';
+import {
+  ATTENTION_LEVELS,
+  CURRENT_PAGE_EVIDENCE_BASIS,
+  EVIDENCE_TIERS,
+  FRESHNESS_STATES,
+  MAINTENANCE_STATES,
+  SERVICE_STATES,
+  SOURCE_CONFIDENCE_LEVELS,
+  SOURCE_HEALTH_STATES,
+  SOURCE_STATES,
+  STATUS_COLORS,
+  TRUTH_BASES,
+  incidentTemporalEvidence
+} from './statusContract.ts';
 import type { StatusPayload } from './types';
 
-const services = new Set(['operational', 'degraded', 'major', 'unknown']);
-const sources = new Set(['available', 'limited', 'unavailable', 'disabled', 'pending', 'stale']);
-const sourceHealth = new Set(['healthy', 'watch', 'blind']);
-const truthBasis = new Set(['vendor-incident', 'vendor-component', 'observed-affected-no-detail', 'confirmed-operational', 'observed-no-conclusion', 'last-known-official', 'limited-official', 'no-current-observation']);
-const freshness = new Set(['fresh', 'aging', 'stale', 'unknown']);
-const colors = new Set(['green', 'amber', 'red', 'blue']);
-const attention = new Set(['critical', 'action', 'watch', 'informational']);
-const confidence = new Set(['high', 'medium', 'low', 'none']);
-const evidence = new Set(['structured', 'feed', 'rendered-page', 'public-page', 'limited']);
-const maintenanceStates = new Set(['scheduled', 'in_progress', 'completed', 'unknown']);
+const services = new Set<string>(SERVICE_STATES);
+const sources = new Set<string>(SOURCE_STATES);
+const sourceHealth = new Set<string>(SOURCE_HEALTH_STATES);
+const truthBasis = new Set<string>(TRUTH_BASES);
+const freshness = new Set<string>(FRESHNESS_STATES);
+const colors = new Set<string>(STATUS_COLORS);
+const attention = new Set<string>(ATTENTION_LEVELS);
+const confidence = new Set<string>(SOURCE_CONFIDENCE_LEVELS);
+const evidence = new Set<string>(EVIDENCE_TIERS);
+const maintenanceStates = new Set<string>(MAINTENANCE_STATES);
 
 const http = (value: unknown): boolean => {
   try {
@@ -23,18 +38,11 @@ const validDate = (value: unknown): boolean => typeof value === 'string' && Numb
 const finiteNonNegative = (value: unknown): boolean => Number.isFinite(value) && Number(value) >= 0;
 const percentage = (value: unknown): boolean => finiteNonNegative(value) && Number(value) <= 100;
 
-function componentStatusIsProblem(value: unknown): boolean {
-  const status = String(value || '').trim().toLowerCase().replace(/\s+/g, '_');
-  if (!status) return false;
-  if (/^(?:operational|available|up|ok|none|good|normal|healthy|not_available|n\/?a|not_applicable|unknown|under_maintenance|maintenance|scheduled_maintenance|planned_maintenance)$/.test(status)) return false;
-  return /(?:degrad|partial[_-]?outage|major[_-]?outage|outage|unavailable|down|offline|disrupt|impaired|warning|error|failure)/.test(status);
-}
-
 function average(values: number[]): number {
   return values.length ? Math.round(values.reduce((sum, value) => sum + value, 0) / values.length) : 0;
 }
 
-export function payloadValidationErrors(value: unknown): string[] {
+export function payloadValidationErrors(value: unknown, expectedProviderIds: readonly string[] = []): string[] {
   const errors: string[] = [];
   if (!value || typeof value !== 'object') return ['payload must be an object'];
   const payload = value as Record<string, unknown>;
@@ -83,6 +91,13 @@ export function payloadValidationErrors(value: unknown): string[] {
     if (provider.component_status !== undefined && !Array.isArray(provider.component_status)) errors.push(`invalid component status ${String(provider.id)}`);
   }
 
+  if (expectedProviderIds.length) {
+    const expected = new Set(expectedProviderIds);
+    const missing = expectedProviderIds.filter(id => !ids.has(id));
+    const unexpected = [...ids].filter(id => !expected.has(id));
+    if (missing.length || unexpected.length) errors.push(`provider catalog mismatch missing=[${missing.join(',')}] unexpected=[${unexpected.join(',')}]`);
+  }
+
   const incidents = Array.isArray(payload.incidents) ? payload.incidents as Record<string, unknown>[] : [];
   const incidentIds = new Set<string>();
   for (const incident of incidents) {
@@ -92,7 +107,16 @@ export function payloadValidationErrors(value: unknown): string[] {
     if (!http(incident.url)) errors.push(`invalid incident URL ${String(incident.id)}`);
     if (!['degraded', 'major'].includes(String(incident.service_state))) errors.push(`invalid incident state ${String(incident.id)}`);
     if (!attention.has(String(incident.attention))) errors.push(`invalid incident attention ${String(incident.id)}`);
-    if (incident.rawTime && (!validDate(incident.rawTime) || Date.parse(String(incident.rawTime)) > Date.now() + 300000)) errors.push(`invalid incident timestamp ${String(incident.id)}`);
+    if (incident.evidence_basis !== undefined && incident.evidence_basis !== CURRENT_PAGE_EVIDENCE_BASIS) errors.push(`invalid incident evidence_basis ${String(incident.id)}`);
+    if (incident.observed_at !== undefined && !validDate(incident.observed_at)) errors.push(`invalid incident observed_at ${String(incident.id)}`);
+    const temporal = incidentTemporalEvidence({
+      latest_update: typeof incident.latest_update === 'string' ? incident.latest_update : undefined,
+      rawTime: typeof incident.rawTime === 'string' ? incident.rawTime : undefined,
+      first_detected: typeof incident.first_detected === 'string' ? incident.first_detected : undefined,
+      observed_at: typeof incident.observed_at === 'string' ? incident.observed_at : undefined,
+      evidence_basis: typeof incident.evidence_basis === 'string' ? incident.evidence_basis : undefined
+    });
+    if (!temporal.valid) errors.push(`invalid incident temporal evidence ${String(incident.id)}`);
     if (incident.updates !== undefined && !Array.isArray(incident.updates)) errors.push(`invalid incident updates ${String(incident.id)}`);
   }
 
@@ -199,6 +223,6 @@ export function payloadValidationErrors(value: unknown): string[] {
   return errors;
 }
 
-export function isStatusPayload(value: unknown): value is StatusPayload {
-  return payloadValidationErrors(value).length === 0;
+export function isStatusPayload(value: unknown, expectedProviderIds: readonly string[] = []): value is StatusPayload {
+  return payloadValidationErrors(value, expectedProviderIds).length === 0;
 }
