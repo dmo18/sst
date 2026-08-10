@@ -1,13 +1,13 @@
 # Operations intelligence contracts
 
-Status: Phase 4 implementation
+Status: full architecture reconciliation implementation
 Date: 2026-08-10
 
-This document defines the reliability, parser-canary, and event-correlation features added during the architecture overhaul. These features are operational evidence controls. They do not replace or modify vendor service-health conclusions.
+This document defines the source-reliability, parser-canary/quarantine, and event-correlation contracts used by the public ServiceOps application. These features are source-trust and operational-evidence controls. They do not replace vendor service-health evidence.
 
-## Seven-day source observation SLO
+## Seven-day and thirty-day source observation SLOs
 
-Each provider carries a bounded `source_reliability` record. The record contains at most seven UTC calendar-day buckets and is rolled forward from the previous validated production payload.
+Each provider carries a bounded `source_reliability` record. The top-level window is seven UTC calendar days and contains a nested `window_30d` record for thirty UTC calendar days. Both windows are rolled from the previous validated production payload and independently reconcile their daily buckets.
 
 Each collection run contributes exactly one provider observation:
 
@@ -15,38 +15,60 @@ Each collection run contributes exactly one provider observation:
 - `limited`: the provider is represented from a limited or stale official observation;
 - `unavailable`: no current accepted observation was available for that provider during the run.
 
-The rollup publishes:
+Each window publishes:
 
-- `window_days`, fixed at 7;
+- `window_days`, fixed at 7 or 30;
 - `sample_count`;
 - `live_percent`;
 - `limited_percent`;
 - `unavailable_percent`;
 - `schema_change_count`;
 - `slo_state`;
-- the bounded daily buckets used to reconcile those totals.
+- bounded UTC daily buckets used to reconcile those totals.
 
 SLO states are deliberately conservative:
 
-- `warming`: fewer than 10 observations exist in the rolling window;
+- `warming`: fewer than 10 observations exist in the window;
 - `meeting`: at least 99 percent live observations and zero unavailable observations;
 - `watch`: at least 95 percent live observations but not meeting the stronger target;
 - `breach`: below 95 percent live observations.
 
-This is an observation-availability SLO. A source SLO breach is not a vendor outage and cannot change `service_state`.
+These are observation-availability SLOs. A source SLO breach is not a vendor outage and cannot change `service_state`.
 
-## Parser schema canary
+## Parser schema canary and quarantine
 
 Each provider carries a `schema_canary` record with:
 
 - `state`: `stable`, `changed`, or `unobserved`;
 - `observation`: `accepted` or `unavailable`;
 - the current schema fingerprint when one is available;
-- `last_changed_at` for the most recent detected shape change.
+- `last_changed_at` for the most recent detected shape change;
+- `quarantine_state`: `clear`, `observing`, or `quarantined`;
+- `quarantine_since` while observation or quarantine is active;
+- `stable_observations`, the bounded recovery counter.
 
-A shape change can raise operator attention and create an audit event, but the canary is intentionally separate from service-health inference. Service state remains derived from accepted first-party service evidence under the existing fail-closed rules.
+The state machine is intentionally cautious:
 
-The server and browser both consume the same `src/sourceReliabilityContract.ts` metadata validator. Reconciliation errors, invalid percentages, malformed daily buckets, and malformed canary metadata reject the payload.
+1. A first accepted fingerprint change enters `observing`.
+2. A second different accepted fingerprint while observation/quarantine is active enters `quarantined`.
+3. One stable accepted observation clears `observing`.
+4. Two stable accepted observations clear `quarantined`.
+5. An unavailable observation never fabricates a new fingerprint and does not silently clear an active quarantine.
+
+Quarantine affects source trust, not vendor service truth. During `observing` or `quarantined`, source quality is penalized and `source_health` cannot be `healthy`; an otherwise accepted source becomes `watch`. This does not change `service_state`, `source_state`, `ok`, incident severity, or component conclusions. A parser quarantine therefore cannot create, suppress, or resolve a vendor outage.
+
+`src/sourceReliabilityContract.ts` is consumed by both server and browser validation. Reconciliation errors, invalid percentages, malformed daily buckets, malformed canary state, and malformed quarantine metadata reject the public payload.
+
+## Status Contract v3 relationship
+
+Public operations-intelligence metadata ships only inside Status Contract v3. The public envelope contains:
+
+- `schema_version: 3`;
+- `contract_version: 3`;
+- the canonical active-provider `catalog_hash`;
+- provider reliability and canary/quarantine metadata validated by the shared contract.
+
+Browser validation and release validation require the same canonical catalog hash, preventing a self-consistent but stale/mismatched provider set from being accepted.
 
 ## Active event correlation
 
@@ -66,7 +88,7 @@ Qualification rules:
 - two cross-category incidents are insufficient;
 - duplicate providers do not increase cluster size.
 
-Every cluster explicitly states: temporal correlation only; no causal relationship is inferred.
+Every cluster explicitly states that temporal correlation is not causation.
 
 Correlation does not use customer, tenant, ticket, device, user, or other private MSP data. The public static architecture remains free of client-specific information.
 
@@ -74,28 +96,31 @@ Correlation does not use customer, tenant, ticket, device, user, or other privat
 
 The operator console mounts an Operations Intelligence panel outside wallboard mode. It exposes:
 
-- source SLO distribution;
-- watch and breach providers;
-- parser canary changes;
+- seven-day source SLO distribution;
+- seven-day and thirty-day reliability for watch/breach providers;
+- parser shape changes and active quarantine state;
 - active vendor-timed correlation clusters;
 - explicit evidence-boundary language.
 
-The wallboard composition is unchanged. The exact 458 by 291 Yodeck contract remains controlled by `WallboardV2` and its existing production verifier.
+The wallboard composition is unchanged. The exact 458 by 291 Yodeck contract remains controlled by `WallboardV2` and its production verifier.
 
 ## Validation and release requirements
 
-The feature is not considered released until all of the following succeed on the merged production commit:
+The operations-intelligence contract is not considered production-verified until all of the following succeed on the merged implementation commit:
 
-1. canonical provider validation;
-2. deterministic tests;
-3. TypeScript checking;
-4. complete dependency audit;
-5. token-free sandboxed live vendor collection;
-6. server validation of `source_reliability` and `schema_canary`;
-7. browser validation of the same shared metadata contract;
-8. release-contract reconciliation;
-9. application build and Pages deployment;
-10. deployed smoke test;
-11. normal browser rendering;
-12. exact 458 by 291 Yodeck verification;
-13. deployed-intelligence status publication.
+1. canonical provider validation and catalog-hash derivation;
+2. repository quality gates;
+3. deterministic tests;
+4. TypeScript checking;
+5. complete dependency audit and CodeQL analysis;
+6. token-free sandboxed live vendor collection;
+7. Status Contract v3 emission;
+8. shared server/browser validation of seven-day and thirty-day reliability plus canary/quarantine metadata;
+9. release-contract reconciliation against the canonical catalog hash;
+10. application build and Pages deployment;
+11. deployed smoke test including CSP and Status Contract v3 identity;
+12. normal current-browser rendering;
+13. pinned pre-cascade-layer Chromium compatibility rendering on non-scheduled code releases;
+14. exact 458 by 291 current-Chromium Yodeck verification;
+15. deployed-intelligence status publication;
+16. a subsequent scheduled data refresh that reuses the verified application-shell artifact for the same commit while still passing live collection, validation, deployment, smoke, rendering, and Yodeck verification.
