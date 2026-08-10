@@ -8,7 +8,7 @@
     "dev": "vite --host 0.0.0.0",
     "build": "node scripts/build.mjs",
     "preview": "vite preview --host 0.0.0.0",
-    "update-status:raw": "node scripts/update-public-status.mjs",
+    "update-status:raw": "node --experimental-strip-types scripts/update-public-status.mjs",
     "normalize-current-page-evidence": "node scripts/normalize-current-page-evidence.mjs",
     "ensure-valid-status": "node scripts/ensure-valid-status.mjs",
     "update-status": "npm run update-status:raw && npm run normalize-current-page-evidence && npm run ensure-valid-status",
