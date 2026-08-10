@@ -1,10 +1,11 @@
 # Full architecture reconciliation
 
-Status: reopened
+Status: implementation complete, production verification pending
 Started: 2026-08-10
 Base commit: `82bc6cf3df4a65d2dc3adb43885b04f5aafcd2ee`
+Pull request: #111
 
-The previous four-phase tracker was closed against a reduced implementation scope. This document reconciles the original review backlog and the approved next-level architecture plan against the deployed `main` branch. The overhaul is not considered complete again until every missing or partial item below is either implemented and production-verified or explicitly rejected with a documented technical reason.
+The previous four-phase tracker was closed against a reduced implementation scope. This document is the authoritative reconciliation of the original review backlog and the approved next-level architecture plan. The implementation is complete on PR #111, but the overhaul is not considered closed again until the merged commit passes both the full production release path and an actual scheduled refresh that reuses the verified application shell.
 
 ## Original review findings
 
@@ -23,61 +24,95 @@ The previous four-phase tracker was closed against a reduced implementation scop
 | 11 | Bound browser `status.json` retrieval | Complete |
 | 12 | Recover overdue polling on visibility resume | Complete |
 | 13 | Make browser storage access resilient | Complete |
-| 14 | Reduce `update-status` monolith ownership | Partial - production uses extracted core, but legacy parser architecture still needs a formal adapter boundary |
+| 14 | Reduce `update-status` monolith ownership and establish a formal adapter boundary | Complete |
 | 15 | Remove RingCentral-specific post-processing | Complete |
 | 16 | Consolidate release validation invariants | Complete |
-| 17 | Harden supply chain: immutable actions, dependency audit, Dependabot, CodeQL | Partial - CodeQL is missing and pinned action majors still target deprecated Node 20 runtimes |
-| 18 | Add lint, formatting, and hook-quality gates | Missing |
-| 19 | Remove duplicated cross-layer policy helpers | Partial - temporal/component/region policies were consolidated, but a final duplication gate is still missing |
-| 20 | Remove hardcoded provider-count assumptions | Missing - raw and active counts remain literal constants in `validate-providers.mjs` |
+| 17 | Harden supply chain: immutable actions, dependency audit, Dependabot, CodeQL | Complete |
+| 18 | Add lint, formatting, and hook-quality gates | Complete |
+| 19 | Remove duplicated cross-layer policy helpers | Complete |
+| 20 | Remove hardcoded provider-count assumptions | Complete |
 
 ## Approved next-level architecture
 
 | Requirement | Reconciled state |
 |---|---|
-| Explicit Status Contract v3 metadata and shared schema/type policy | Partial - shared TypeScript policy exists, but payload still declares `schema_version: 2` and has no explicit contract metadata |
+| Explicit Status Contract v3 metadata and shared schema/type policy | Complete |
 | Canonical incident temporal model | Complete |
-| Source adapter SDK / normalized producer boundary | Missing |
-| Extract `usePayloadPoller` from `App.tsx` | Missing |
-| Canonical provider catalog hash in payload and release validation | Missing |
-| Historical source reliability for both 7-day and 30-day reporting | Partial - only a seven-day rollup exists |
-| Parser canary plus bounded quarantine semantics | Partial - canary exists, quarantine policy does not |
+| Source adapter SDK / normalized producer boundary | Complete |
+| Extract `usePayloadPoller` from `App.tsx` | Complete |
+| Canonical provider catalog hash in payload and release validation | Complete |
+| Historical source reliability for both 7-day and 30-day reporting | Complete |
+| Parser canary plus bounded quarantine semantics | Complete |
 | Conservative active-event correlation | Complete |
-| CSP and browser security policy | Missing |
-| Automated legacy-signage compatibility runtime test | Partial - static compatibility contracts exist, but no automated runtime fallback probe exists |
-| Scheduled release pipeline optimization / immutable app build reuse | Missing - scheduled refreshes rerun deterministic tests, TypeScript, audit, and application compilation five times per hour |
-| Keep customer, tenant, ticket, device, and user data out of public Pages | Complete and documented |
+| CSP and browser security policy | Complete |
+| Automated pinned legacy-signage compatibility runtime test | Complete |
+| Scheduled release pipeline optimization / immutable app build reuse | Complete |
+| Keep customer, tenant, ticket, device, and user data out of public Pages | Complete |
 
-## Reconciliation implementation plan
+## R1 - Contract and collector architecture
 
-### R1 - Contract and collector architecture
+- Public payloads are emitted as Status Contract v3 with `schema_version: 3`, `contract_version: 3`, and a deterministic canonical provider `catalog_hash`.
+- `src/wirePayloadValidation.ts` owns public-envelope validation. The collector may still validate an internal schema-2 draft before the final envelope is emitted, which avoids breaking internal construction stages while preventing schema-2 data from reaching the browser or release gate.
+- The prior deployed schema-3 payload is accepted only at the narrow `scripts/update-status.mjs` compatibility boundary so rolling reliability history survives subsequent refreshes. Production parser ownership remains outside that shim.
+- `src/providerCatalog.ts` derives the canonical active catalog and its stable FNV-1a identity. Browser validation, release verification, and production smoke require the same hash.
+- Provider validation derives active counts from the raw catalog and exclusion set instead of literal raw/active count constants.
+- `scripts/source-adapter-sdk.mjs` defines adapter registration, result-kind validation, current-page provenance defaults, and stable fallback incident identity. `scripts/public-source-repairs.mjs` is the registry-backed facade; the provider-specific implementation is isolated behind `scripts/public-source-adapter-implementation.mjs`.
+- SDK fallback IDs include provider identity, semantic incident text, source, affected service, and available first detection. This prevents equivalent titles from different providers from colliding.
+- Source reliability now publishes simultaneous bounded seven-day and thirty-day windows, each independently reconciled from UTC daily buckets.
+- Schema canaries now include a bounded quarantine state machine: `clear`, `observing`, and `quarantined`. A first shape change enters observing; repeated shape churn can quarantine; stable accepted observations clear the quarantine. Quarantine changes source trust only and never creates, suppresses, or changes vendor `service_state`.
+- The source-quality gate enforces one canonical exported definition of incident effective-time policy, component disposition, and region scope.
 
-- Introduce explicit Status Contract v3 metadata while retaining a compatibility `schema_version` only if required by existing consumers.
-- Add a deterministic catalog hash derived from the canonical active provider catalog and require it in server validation, browser validation, release validation, and production smoke.
-- Remove literal provider-count expectations from catalog validation.
-- Introduce a small source-adapter SDK that owns normalized result shapes, current-page provenance defaults, stable incident identity, and adapter registration/dispatch contracts.
-- Add bounded parser-quarantine metadata that affects source trust only and can never fabricate service health.
-- Extend source reliability to simultaneous seven-day and thirty-day windows.
+## R2 - Browser architecture and security
 
-### R2 - Browser architecture and security
+- `src/usePayloadPoller.ts` owns browser payload retrieval, request ownership, size limits, Status Contract v3/hash validation, freshness checks, cadence, visibility-resume recovery, and the timestamp of the most recent successful browser check.
+- `App.tsx` is again a composition layer. It selects the 60-second operator cadence or URL-controlled wallboard cadence and consumes the poller hook.
+- The production HTML now declares a restrictive CSP for locally bundled scripts, same-origin data retrieval, local/data images and fonts, no objects, no forms, and a self-only base URI. Inline script execution is not allowed. Inline styles remain permitted because the React application uses style attributes.
+- The application build target is Chrome 98, and non-scheduled production releases download a pinned pre-cascade-layer Chromium snapshot and execute the real 458 by 291 wallboard. The probe requires the `no-css-layers` compatibility marker and rendered operational content.
+- The old Chromium compatibility probe uses `--no-sandbox` only while rendering this repository's already-deployed static application. Untrusted vendor-page collection remains separately sandboxed with disposable browser profiles and no GitHub credentials.
 
-- Extract payload retrieval, request ownership, cadence, visibility recovery, size limits, validation, and successful browser-check telemetry into `usePayloadPoller`.
-- Add a restrictive CSP compatible with the static Vite application and same-origin `status.json` retrieval.
-- Add an automated runtime compatibility probe for the legacy no-CSS-layers wallboard fallback.
+## R3 - Engineering and supply-chain gates
 
-### R3 - Engineering and supply-chain gates
+- GitHub Actions references are immutable full SHAs and use current action generations: checkout v7, setup-node v7, configure-pages v6, upload-pages-artifact v5, deploy-pages v5, and upload-artifact v7.
+- CodeQL v4 analyzes JavaScript/TypeScript on pull requests, `main`, and a weekly schedule with read-only contents plus security-event write permission.
+- Pull-request and full production code-change gates run provider validation, dependency-free source-quality checks, formatting hygiene, the complete deterministic suite, TypeScript, production build, and a complete high-severity dependency audit.
+- `npm run quality` owns lint and formatting hygiene without increasing the dependency graph. The quality gate also prevents polling concerns from leaking back into `App.tsx` and prevents duplicate canonical policy definitions.
+- `.githooks/pre-commit` runs the same quality gate. `npm run hooks:install` explicitly configures `core.hooksPath=.githooks`; repository setup does not silently mutate a developer's Git config during `npm ci`.
+- Dependabot continues to own weekly npm and GitHub Actions update proposals.
 
-- Upgrade pinned GitHub Actions to current immutable revisions that target supported runner runtimes.
-- Add CodeQL for JavaScript/TypeScript.
-- Add dependency-free repository lint/format/source-quality gates and a local pre-commit hook path so quality enforcement does not expand the runtime dependency graph.
-- Add deterministic tests for action runtime generation, CSP, hook/quality wiring, catalog hash, adapter registration, quarantine isolation, and provider-count derivation.
+## R4 - Scheduled release optimization
 
-### R4 - Pipeline optimization and final production proof
+- Push and manual releases run the complete verification path, build the static application, remove mutable status/deployment files from that shell, and publish a commit-keyed `verified-app-shell-${GITHUB_SHA}` artifact.
+- Scheduled refreshes still install dependencies, validate the catalog, collect all first-party vendor data without GitHub tokens, emit Status Contract v3, run browser/release validation, deploy Pages, smoke test production, render the live application, verify exact Yodeck geometry, and publish live-coverage status.
+- Scheduled refreshes do not rerun unchanged source-quality, deterministic, TypeScript, dependency-audit, or application-compilation work when the verified shell for the same commit is available.
+- If the shell artifact is missing or expired, the scheduled workflow performs a fail-safe application build rather than blocking freshness.
+- Pages releases remain serialized with `cancel-in-progress: false`.
 
-- Split immutable application verification from scheduled live-data refresh work so scheduled refreshes do not rerun unchanged deterministic tests, typecheck, audit, and application compilation.
-- Preserve serialized Pages releases, token-free vendor collection, release-contract validation, production smoke, normal headless rendering, and exact 458 by 291 Yodeck verification.
-- Merge only after PR checks are green, then require a full production release from the final merge commit.
+## Pull-request evidence
 
-## Completion rule
+Implementation head validation on 2026-08-10 established the clean pre-production baseline:
 
-This reconciliation closes only when the final `main` commit has passed canonical provider validation, quality gates, deterministic tests, TypeScript, dependency audit, CodeQL configuration validation, live source collection, shared server/browser contract validation, release reconciliation, production deployment identity, normal rendering, the legacy compatibility runtime probe, and exact 458 by 291 Yodeck verification.
+- canonical raw/post-consolidation provider validation passed;
+- dependency-free quality gates passed;
+- all 284 deterministic tests passed in the normal repository test command;
+- TypeScript checking passed;
+- the Chrome-98-targeted production application build passed;
+- complete high-severity dependency audit passed;
+- CodeQL was enabled and analyzed the reconciliation branch using the pinned v4 action.
+
+During integration, temporary file-level and captured-log diagnostics were used only to locate stale architecture-location assertions after the adapter and poller extractions. Those diagnostics are removed before the final PR head. No assertion was skipped or weakened to obtain the green test result.
+
+## Production completion rule
+
+This reconciliation closes only after all of the following are true on the final merged `main` commit:
+
+1. canonical provider validation, quality gates, all deterministic tests, TypeScript, complete dependency audit, and CodeQL pass;
+2. token-free sandboxed first-party collection produces a valid Status Contract v3 payload bound to the canonical catalog hash;
+3. seven-day and thirty-day reliability plus canary/quarantine metadata pass the shared server/browser contract;
+4. the reusable release contract and deployed production smoke pass;
+5. Pages deployment identity matches the merged commit and workflow run;
+6. normal current Chromium renders the operator application successfully;
+7. pinned pre-cascade-layer Chromium renders the 458 by 291 compatibility wallboard and activates the no-CSS-layers path;
+8. the exact current-Chromium 458 by 291 Yodeck verifier passes and its artifacts upload;
+9. a subsequent scheduled refresh on the same commit restores the verified app-shell artifact, skips unchanged code verification/build work, and still passes live collection, validation, deployment, smoke, rendering, Yodeck verification, and status publication.
+
+After those gates are proven, this document is updated with the final merge commit and workflow run evidence and becomes the authoritative completed architecture record.
