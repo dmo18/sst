@@ -1,7 +1,8 @@
 # Architecture overhaul plan
 
-Status: in progress, final production verification pending
+Status: complete
 Started: 2026-08-10
+Completed: 2026-08-10
 Tracking: repository Issues are disabled, so this document is the authoritative implementation tracker.
 
 ## Objective
@@ -56,9 +57,9 @@ Complete the post-review architecture overhaul while preserving the production t
 
 ## Delivery process
 
-Each phase is implemented on a focused `agent/` branch and pull request. Pull-request validation must pass before merge. After merge, the production Pages workflow must pass live collection, server and browser validation, build, deployment identity, smoke checks, normal headless rendering, and exact Yodeck verification before the next phase proceeds.
+Each phase was implemented on a focused `agent/` branch and pull request. Pull-request validation passed before merge. After each merge, the production Pages workflow passed live collection, server and browser validation, build, deployment identity, smoke checks, normal headless rendering, and exact Yodeck verification before the next phase proceeded.
 
-Critical implementation decisions and any production-discovered contract mismatch are recorded in this file before the phase is closed.
+Critical implementation decisions and production-discovered contract mismatches are recorded in this file.
 
 ## Phase record
 
@@ -141,7 +142,8 @@ Run #784 passed the full hardened release path. Token-free sandboxed vendor coll
 
 Branch: `agent/status-contract-overhaul-phase-4`
 Pull request: #109
-Production release: pending merge and live verification
+Merge commit: `31ce6b7044bca7530827f94a33054a0f29137be9`
+Production release: run #785, successful
 
 Implemented decisions:
 
@@ -158,4 +160,12 @@ Implemented decisions:
 
 Pull-request evidence:
 
-PR #109 passed canonical provider validation, the deterministic test suite including new reliability/correlation/safety contracts, TypeScript checking, the production application build, and the complete dependency audit on its implementation head. The phase remains open until the merged production release proves live rolling metadata, browser/server parity, deployed rendering, and exact Yodeck verification.
+PR #109 passed canonical provider validation, the deterministic test suite including source-reliability, correlation, and safety contracts, TypeScript checking, the production application build, and the complete dependency audit on its final implementation head.
+
+Production evidence:
+
+Run #785 passed the full production release path at merge commit `31ce6b7044bca7530827f94a33054a0f29137be9`. The run initialized the first live seven-day reliability sample from a previous production payload that did not yet contain `source_reliability` or `schema_canary`, then successfully passed server validation and browser validation using the shared metadata contract. It also passed canonical provider validation, the full deterministic suite, TypeScript, the complete dependency audit, token-free sandboxed live vendor collection for 79 of 79 providers, the reusable release contract, application build, Pages deployment identity, deployed smoke testing, normal headless rendering, exact 458 by 291 Yodeck verification, verification artifact upload, and final deployed-intelligence status publication.
+
+## Closure
+
+All four planned phases are complete and production-verified. The overhaul preserved the wallboard and operator refresh contracts, vendor collection schedule, fail-closed service semantics, public-data boundary, and exact Yodeck geometry while reducing cross-layer contract drift, hardening the collection and release pipeline, and adding bounded source reliability, parser canaries, and cautious operator event correlation.
