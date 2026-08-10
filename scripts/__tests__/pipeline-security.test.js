@@ -43,7 +43,7 @@ test('vendor collection runs without GitHub tokens or deployment permissions', a
   assert.doesNotMatch(buildJob, /pages:\s*write|id-token:\s*write|statuses:\s*write|actions:\s*write/);
   assert.match(buildJob, /env -u GITHUB_TOKEN -u GH_TOKEN npm run update-status/);
 
-  const renderer = await read('scripts/public-source-repairs-legacy.mjs');
+  const renderer = await read('scripts/public-source-adapter-implementation.mjs');
   assert.doesNotMatch(renderer, /--no-sandbox/);
   assert.match(renderer, /--user-data-dir=\$\{profileDir\}/);
   assert.match(renderer, /fs\.rmSync\(profileDir, \{ recursive: true, force: true \}\)/);
