@@ -1,10 +1,10 @@
-export * from './public-source-repairs-legacy.mjs';
-import { providerSpecificConclusion as legacyProviderSpecificConclusion } from './public-source-repairs-legacy.mjs';
+export * from './public-source-adapter-implementation.mjs';
+import { providerSpecificConclusion as implementationProviderSpecificConclusion } from './public-source-adapter-implementation.mjs';
 import { SourceAdapterRegistry } from './source-adapter-sdk.mjs';
 
 const registry = new SourceAdapterRegistry().register({
   id: 'provider-specific-current-page',
-  conclude: (provider, html) => legacyProviderSpecificConclusion(provider, html)
+  conclude: (provider, html) => implementationProviderSpecificConclusion(provider, html)
 });
 
 export const PUBLIC_SOURCE_ADAPTER_IDS = registry.ids();
