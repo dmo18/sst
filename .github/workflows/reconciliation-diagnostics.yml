@@ -4,9 +4,9 @@ on:
 permissions:
   contents: read
 jobs:
-  quarantine-tests:
+  combined-log:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -16,4 +16,18 @@ jobs:
           node-version: "22"
           cache: npm
       - run: npm ci
-      - run: node --import ./scripts/__tests__/test-clock.mjs --test --experimental-strip-types scripts/__tests__/collection-intelligence.test.js scripts/__tests__/source-intelligence.test.js scripts/__tests__/source-reliability.test.js src/__tests__/operationsIntelligence.test.ts
+      - name: Capture exact npm test output
+        shell: bash
+        run: |
+          set +e
+          npm test 2>&1 | tee /tmp/npm-test.log
+          status=${PIPESTATUS[0]}
+          exit "$status"
+      - name: Upload exact combined log
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: reconciliation-npm-test-${{ github.sha }}
+          path: /tmp/npm-test.log
+          if-no-files-found: error
+          retention-days: 1
