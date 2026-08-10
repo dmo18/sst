@@ -7,6 +7,8 @@ export default defineConfig({
   plugins: [react()],
   build: {
     outDir: 'dist',
-    emptyOutDir: true
+    emptyOutDir: true,
+    target: 'chrome98',
+    cssTarget: 'chrome98'
   }
 });
