@@ -1,4 +1,5 @@
 import { payloadValidationErrors } from '../src/payloadValidation.ts';
+import { ACTIVE_PROVIDER_IDS } from '../src/providerCatalog.ts';
 
 const requestedBase = process.argv[2] || 'https://dmo18.github.io/sst/';
 const base = new URL(requestedBase.endsWith('/') ? requestedBase : `${requestedBase}/`).href;
@@ -54,7 +55,7 @@ const statusText = await statusResponse.text();
 console.log(`STATUS_BYTES ${Buffer.byteLength(statusText)}`);
 if (!statusResponse.ok) throw new Error(`status failed with HTTP ${statusResponse.status}`);
 const payload = JSON.parse(statusText);
-const errors = payloadValidationErrors(payload);
+const errors = payloadValidationErrors(payload, ACTIVE_PROVIDER_IDS);
 const collection = payload.collection;
 console.log(`PAYLOAD_VERSION ${payload?.schema_version}`);
 console.log(`GENERATED_AT ${payload?.generated_at}`);
