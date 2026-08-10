@@ -3,7 +3,7 @@ import type { StatusPayload } from './types';
 const services = new Set(['operational', 'degraded', 'major', 'unknown']);
 const sources = new Set(['available', 'limited', 'unavailable', 'disabled', 'pending', 'stale']);
 const sourceHealth = new Set(['healthy', 'watch', 'blind']);
-const truthBasis = new Set(['vendor-incident', 'confirmed-operational', 'observed-no-conclusion', 'last-known-official', 'limited-official', 'no-current-observation']);
+const truthBasis = new Set(['vendor-incident', 'vendor-component', 'observed-affected-no-detail', 'confirmed-operational', 'observed-no-conclusion', 'last-known-official', 'limited-official', 'no-current-observation']);
 const freshness = new Set(['fresh', 'aging', 'stale', 'unknown']);
 const colors = new Set(['green', 'amber', 'red', 'blue']);
 const attention = new Set(['critical', 'action', 'watch', 'informational']);
