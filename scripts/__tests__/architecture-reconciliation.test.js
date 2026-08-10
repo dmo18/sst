@@ -104,7 +104,7 @@ test('browser polling is isolated from the App composition layer', () => {
 test('production HTML carries the restrictive static CSP', () => {
   const html = read('index.html');
   for (const directive of ["default-src 'self'", "script-src 'self'", "connect-src 'self' ws: wss:", "object-src 'none'", "base-uri 'self'", "form-action 'none'"]) assert.ok(html.includes(directive), directive);
-  assert.doesNotMatch(html, /script-src[^>]*'unsafe-inline'/);
+  assert.doesNotMatch(html, /script-src[^;>]*'unsafe-inline'/);
 });
 
 test('provider counts are derived rather than frozen as catalog literals', () => {
