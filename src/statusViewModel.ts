@@ -1,3 +1,5 @@
+import { componentStatusIsProblem } from './componentStatus';
+import { effectiveIncidentTime } from './statusContract';
 import type {
   AttentionLevel,
   CollectionRun,
@@ -20,7 +22,6 @@ import type {
 const serviceRank: Record<ServiceState, number> = { major: 4, degraded: 3, unknown: 2, operational: 1 };
 const attentionRank: Record<AttentionLevel, number> = { critical: 4, action: 3, watch: 2, informational: 1 };
 const sourceHealthRank: Record<SourceHealth, number> = { blind: 3, watch: 2, healthy: 1 };
-const healthyComponent = /^(?:operational|available|up|ok|none|good)$/i;
 
 export interface IssueBrief extends Incident {
   label: string;
@@ -338,7 +339,7 @@ function buildActionQueue(briefs: IssueBrief[], maintenance: Maintenance[], diag
       title: incident.title,
       detail: incident.note,
       action: incident.technicianAction,
-      updatedAt: incident.latest_update || incident.rawTime || incident.first_detected || '',
+      updatedAt: effectiveIncidentTime(incident),
       source: incident.url,
       score: incident.service_state === 'major' ? 1200 + incident.priority : 1000 + incident.priority
     });
@@ -468,7 +469,7 @@ export function buildIssueConsoleModel(payload: StatusPayload, version: string, 
       freshnessState: provider.freshness_state || 'unknown',
       activeIncidentCount: Number(provider.active_incident_count ?? relatedIncidents.length),
       maintenanceCount: Number(provider.maintenance_count ?? relatedMaintenance.length),
-      problemComponentCount: Number(provider.problem_component_count ?? components.filter(component => !healthyComponent.test(component.status)).length),
+      problemComponentCount: Number(provider.problem_component_count ?? components.filter(component => componentStatusIsProblem(component.status)).length),
       searchText: `${provider.name} ${provider.category} ${(provider.tags || []).join(' ')} ${(provider.services || []).join(' ')} ${provider.source} ${sourceHost} ${components.map(component => `${component.name} ${component.status}`).join(' ')} ${relatedIncidents.map(item => `${item.title} ${item.note}`).join(' ')} ${relatedMaintenance.map(item => `${item.title} ${item.note}`).join(' ')}`.toLowerCase(),
       changed: changed.has(provider.id)
     };
@@ -485,7 +486,13 @@ export function buildIssueConsoleModel(payload: StatusPayload, version: string, 
         mspImpact: derivedMspImpact(item, provider),
         technicianAction: derivedTechnicianAction(item, provider),
         operatorPriority: operatorPriority(item, provider),
-        evidenceLabel: provider?.source_confidence === 'high' ? 'Structured first-party evidence' : provider?.source_confidence === 'medium' ? 'Readable first-party evidence' : 'Limited first-party evidence',
+        evidenceLabel: item.evidence_basis === 'current-page'
+          ? 'Current official page observation'
+          : provider?.source_confidence === 'high'
+            ? 'Structured first-party evidence'
+            : provider?.source_confidence === 'medium'
+              ? 'Readable first-party evidence'
+              : 'Limited first-party evidence',
         clientDraft: ''
       };
       return { ...brief, clientDraft: clientCommunicationDraft(brief, provider) };
