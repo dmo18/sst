@@ -1,0 +1,19 @@
+name: Reconciliation diagnostics
+on:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  quarantine-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: node --import ./scripts/__tests__/test-clock.mjs --test --experimental-strip-types scripts/__tests__/collection-intelligence.test.js scripts/__tests__/source-intelligence.test.js scripts/__tests__/source-reliability.test.js src/__tests__/operationsIntelligence.test.ts
