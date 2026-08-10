@@ -4,43 +4,22 @@ on:
 permissions:
   contents: read
 jobs:
-  discover:
+  combined-group:
+    name: ${{ matrix.name }}
     runs-on: ubuntu-latest
-    outputs:
-      files: ${{ steps.files.outputs.files }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - id: files
-        run: |
-          node --input-type=module <<'NODE'
-          import fs from 'node:fs';
-          import path from 'node:path';
-          const output = [];
-          function visit(directory) {
-            for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
-              const target = path.join(directory, entry.name);
-              if (entry.isDirectory()) visit(target);
-              else if (/\.test\.(?:js|ts)$/.test(entry.name)) output.push(target.replaceAll('\\', '/'));
-            }
-          }
-          visit('scripts/__tests__');
-          visit('src/__tests__');
-          output.sort();
-          fs.appendFileSync(process.env.GITHUB_OUTPUT, `files=${JSON.stringify(output)}\n`);
-          console.log(`Discovered ${output.length} deterministic test files.`);
-          NODE
-  file-test:
-    needs: discover
-    name: ${{ matrix.file }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 10
     strategy:
       fail-fast: false
-      max-parallel: 12
       matrix:
-        file: ${{ fromJSON(needs.discover.outputs.files) }}
+        include:
+          - name: scripts-all
+            command: scripts/__tests__/*.test.js
+          - name: src-all
+            command: src/__tests__/*.test.ts
+          - name: scripts-a-m
+            command: scripts/__tests__/{architecture-reconciliation,auth0-next-data,changelog,collection-intelligence,current-evidence-policy,deep-review-regressions,ensure-valid-status,entra-final-hygiene,entra-final-reliability,final-blindspot-repairs,final-public-health-conclusions,final-public-health-hygiene,full-review-source-adapters,incident-freshness,incident-identity,last-mile-hardening,maintenance-adapters,maintenance-identity}.test.js
+          - name: scripts-n-z
+            command: scripts/__tests__/{parsers,pipeline-security,producer-provenance,production-core-boundary,production-invariant-audit,production-smoke-identity,provider-source-parity,release-contract,repository-cleanup,source-intelligence,source-parity-regressions,source-parity-structured,source-policy-hygiene,source-reliability,structured-source-adapters,ultraHdVisual,wallboard-runtime-contract,wallboard-tv-detail}.test.js
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -50,4 +29,6 @@ jobs:
           node-version: "22"
           cache: npm
       - run: npm ci
-      - run: node --import ./scripts/__tests__/test-clock.mjs --test --experimental-strip-types "${{ matrix.file }}"
+      - name: Run grouped deterministic tests
+        shell: bash
+        run: node --import ./scripts/__tests__/test-clock.mjs --test --experimental-strip-types ${{ matrix.command }}
