@@ -1,12 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { normalizeStatusPayload, providerHasValidStatusData } from '../ensure-valid-status.mjs';
+import { buildSchemaCanary, rollSourceReliability } from '../source-reliability.mjs';
 import { summarizeProviders } from '../update-status.mjs';
 
 const generatedAt = '2026-01-01T00:00:00.000Z';
 
 function provider(sourceState = 'unavailable') {
-  return {
+  const base = {
     id: 'vendor',
     name: 'Vendor',
     category: 'Cloud',
@@ -20,7 +21,13 @@ function provider(sourceState = 'unavailable') {
     source: 'https://status.vendor.test/',
     priority: 50,
     source_type: 'statuspage',
+    schema_fingerprint: sourceState === 'available' ? 'json-test' : '',
     download_log: []
+  };
+  return {
+    ...base,
+    source_reliability: rollSourceReliability(undefined, base, generatedAt),
+    schema_canary: buildSchemaCanary(undefined, base, false, generatedAt)
   };
 }
 

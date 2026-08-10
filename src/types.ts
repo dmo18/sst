@@ -23,6 +23,9 @@ export type EvidenceTier = typeof EVIDENCE_TIERS[number];
 export type SourceConfidence = typeof SOURCE_CONFIDENCE_LEVELS[number];
 export type MaintenanceState = typeof MAINTENANCE_STATES[number];
 export type IncidentEvidenceBasis = 'current-page';
+export type SourceReliabilitySloState = 'warming' | 'meeting' | 'watch' | 'breach';
+export type SchemaCanaryState = 'stable' | 'changed' | 'unobserved';
+export type SchemaCanaryObservation = 'accepted' | 'unavailable';
 
 export interface ProviderDownloadLog {
   timestamp?: string;
@@ -60,6 +63,33 @@ export interface ComponentStatus {
   group?: string;
 }
 
+export interface SourceReliabilityDay {
+  date: string;
+  samples: number;
+  live: number;
+  limited: number;
+  unavailable: number;
+  schema_changes: number;
+}
+
+export interface SourceReliability {
+  window_days: 7;
+  sample_count: number;
+  live_percent: number;
+  limited_percent: number;
+  unavailable_percent: number;
+  schema_change_count: number;
+  slo_state: SourceReliabilitySloState;
+  daily: SourceReliabilityDay[];
+}
+
+export interface SchemaCanary {
+  state: SchemaCanaryState;
+  observation: SchemaCanaryObservation;
+  fingerprint: string;
+  last_changed_at: string;
+}
+
 export interface ProviderStatus {
   id: string;
   name: string;
@@ -91,6 +121,8 @@ export interface ProviderStatus {
   parser_version?: string;
   schema_fingerprint?: string;
   schema_changed?: boolean;
+  schema_canary?: SchemaCanary;
+  source_reliability?: SourceReliability;
   last_success_at?: string;
   consecutive_failures?: number;
   last_semantic_change_at?: string;

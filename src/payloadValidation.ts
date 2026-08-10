@@ -1,4 +1,5 @@
 import { componentStatusIsProblem } from './componentStatus.ts';
+import { sourceIntelligenceMetadataErrors } from './sourceReliabilityContract.ts';
 import {
   ATTENTION_LEVELS,
   CURRENT_PAGE_EVIDENCE_BASIS,
@@ -89,6 +90,7 @@ export function payloadValidationErrors(value: unknown, expectedProviderIds: rea
     if (provider.data_quality_score !== undefined && !percentage(provider.data_quality_score)) errors.push(`invalid data_quality_score ${String(provider.id)}`);
     if (provider.collection_attempt_count !== undefined && provider.collection_success_count !== undefined && provider.collection_failure_count !== undefined && Number(provider.collection_attempt_count) !== Number(provider.collection_success_count) + Number(provider.collection_failure_count)) errors.push(`collection counts do not reconcile ${String(provider.id)}`);
     if (provider.component_status !== undefined && !Array.isArray(provider.component_status)) errors.push(`invalid component status ${String(provider.id)}`);
+    for (const metadataError of sourceIntelligenceMetadataErrors(provider)) errors.push(`${metadataError} ${String(provider.id)}`);
   }
 
   if (expectedProviderIds.length) {

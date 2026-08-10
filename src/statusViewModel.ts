@@ -1,4 +1,5 @@
 import { componentStatusIsProblem } from './componentStatus.ts';
+import { buildEventCorrelations, type EventCorrelation } from './eventCorrelation.ts';
 import { effectiveIncidentTime } from './statusContract.ts';
 import type {
   AttentionLevel,
@@ -10,9 +11,11 @@ import type {
   ProviderConfig,
   ProviderDownloadLog,
   ProviderStatus,
+  SchemaCanary,
   ServiceState,
   SourceConfidence,
   SourceHealth,
+  SourceReliability,
   SourceState,
   StatusChange,
   StatusPayload,
@@ -63,6 +66,8 @@ export interface DiagnosticSource {
   parserVersion: string;
   schemaFingerprint: string;
   schemaChanged: boolean;
+  schemaCanary: SchemaCanary | null;
+  sourceReliability: SourceReliability | null;
   lastSuccessAt: string;
   consecutiveFailures: number;
   lastSemanticChangeAt: string;
@@ -114,6 +119,7 @@ export interface IssueConsoleModel {
   briefs: IssueBrief[];
   maintenance: Maintenance[];
   diagnostics: DiagnosticSource[];
+  correlations: EventCorrelation[];
   actionQueue: ActionItem[];
   categoryPulse: CategoryPulse[];
   changes: StatusChange[];
@@ -307,9 +313,11 @@ export function filterDiagnostics(items: DiagnosticSource[], query: string, filt
                     : filter === 'healthy-source' ? item.sourceHealth === 'healthy'
                       : filter === 'watch-source' ? item.sourceHealth === 'watch'
                         : filter === 'blind-source' ? item.sourceHealth === 'blind'
-                          : filter === 'maintenance' ? item.maintenanceCount > 0
-                            : filter === 'stale' ? ['aging', 'stale'].includes(item.freshnessState)
-                              : filter === item.sourceState || filter === item.serviceState || item.tags.includes(filter) || item.category.toLowerCase().includes(filter)
+                          : filter === 'slo-breach' ? item.sourceReliability?.slo_state === 'breach'
+                            : filter === 'slo-watch' ? item.sourceReliability?.slo_state === 'watch'
+                              : filter === 'maintenance' ? item.maintenanceCount > 0
+                                : filter === 'stale' ? ['aging', 'stale'].includes(item.freshnessState)
+                                  : filter === item.sourceState || filter === item.serviceState || item.tags.includes(filter) || item.category.toLowerCase().includes(filter)
   ));
 }
 
@@ -390,7 +398,7 @@ function buildActionQueue(briefs: IssueBrief[], maintenance: Maintenance[], diag
         score: 600 + source.priority
       });
     }
-    if (source.schemaChanged) {
+    if (source.schemaCanary?.state === 'changed') {
       items.push({
         id: `schema:${source.id}`,
         kind: 'schema',
@@ -398,9 +406,9 @@ function buildActionQueue(briefs: IssueBrief[], maintenance: Maintenance[], diag
         providerId: source.id,
         provider: source.provider,
         title: 'Official source shape changed',
-        detail: `Parser ${source.parserVersion || 'unknown'} observed a new source fingerprint.`,
+        detail: `Parser ${source.parserVersion || 'unknown'} observed a new source fingerprint. The canary is separate from service health.`,
         action: 'Review the captured source and parser fixture before trusting new semantics.',
-        updatedAt: source.checkedAt,
+        updatedAt: source.schemaCanary.last_changed_at || source.checkedAt,
         source: source.source,
         score: 500 + source.priority
       });
@@ -456,6 +464,8 @@ export function buildIssueConsoleModel(payload: StatusPayload, version: string, 
       parserVersion: provider.parser_version || '',
       schemaFingerprint: provider.schema_fingerprint || '',
       schemaChanged: provider.schema_changed === true,
+      schemaCanary: provider.schema_canary || null,
+      sourceReliability: provider.source_reliability || null,
       lastSuccessAt: provider.last_success_at || '',
       consecutiveFailures: provider.consecutive_failures || 0,
       lastSemanticChangeAt: provider.last_semantic_change_at || '',
@@ -503,6 +513,7 @@ export function buildIssueConsoleModel(payload: StatusPayload, version: string, 
   const healthySourceCount = diagnostics.filter(item => item.sourceHealth === 'healthy').length;
   const watchSourceCount = diagnostics.filter(item => item.sourceHealth === 'watch').length;
   const blindSpotCount = diagnostics.filter(item => item.sourceHealth === 'blind').length;
+  const correlations = buildEventCorrelations(payload.incidents);
 
   return {
     version,
@@ -513,6 +524,7 @@ export function buildIssueConsoleModel(payload: StatusPayload, version: string, 
     briefs,
     maintenance,
     diagnostics,
+    correlations,
     actionQueue: buildActionQueue(briefs, maintenance, diagnostics),
     categoryPulse: buildCategoryPulse(diagnostics),
     changes: payload.changes,
@@ -524,7 +536,7 @@ export function buildIssueConsoleModel(payload: StatusPayload, version: string, 
     newUnavailableCount: payload.changes.filter(item => item.type === 'source_unavailable').length,
     maintenanceCount: maintenance.length,
     ongoingMaintenanceCount: maintenance.filter(item => item.status === 'in_progress').length,
-    schemaChangeCount: diagnostics.filter(item => item.schemaChanged).length,
+    schemaChangeCount: diagnostics.filter(item => item.schemaCanary?.state === 'changed').length,
     failureStreakCount: diagnostics.filter(item => item.consecutiveFailures >= 2).length,
     highConfidenceCount: diagnostics.filter(item => item.sourceConfidence === 'high').length,
     componentIssueCount,

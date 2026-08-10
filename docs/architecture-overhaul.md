@@ -1,6 +1,6 @@
 # Architecture overhaul plan
 
-Status: in progress
+Status: in progress, final production verification pending
 Started: 2026-08-10
 Tracking: repository Issues are disabled, so this document is the authoritative implementation tracker.
 
@@ -49,10 +49,10 @@ Complete the post-review architecture overhaul while preserving the production t
 
 ## Phase 4: next-level operations intelligence
 
-- [ ] Add bounded source reliability history suitable for source SLO reporting.
-- [ ] Add parser/schema canary semantics that distinguish source-shape changes from trusted service evidence.
-- [ ] Add cautious active-event correlation that reports correlation, never causality.
-- [ ] Surface source reliability and event correlation in the operator experience without introducing customer, tenant, or ticket data into the public application.
+- [x] Add bounded source reliability history suitable for source SLO reporting.
+- [x] Add parser/schema canary semantics that distinguish source-shape changes from trusted service evidence.
+- [x] Add cautious active-event correlation that reports correlation, never causality.
+- [x] Surface source reliability and event correlation in the operator experience without introducing customer, tenant, or ticket data into the public application.
 
 ## Delivery process
 
@@ -119,8 +119,9 @@ Run #782 passed all 253 deterministic tests, canonical provider validation, Type
 ### Phase 3
 
 Branch: `agent/status-contract-overhaul-phase-3`
-Pull request: pending final gate
-Production release: pending final gate
+Pull request: #100
+Merge commit: `4123914b405d84478a30deb68e4c24f1eb39d3cf`
+Production release: run #784, successful
 
 Implemented decisions:
 
@@ -131,3 +132,30 @@ Implemented decisions:
 - PR and production gates audit the complete dependency graph, including build tooling, at high severity.
 - Dependabot owns weekly npm and GitHub Actions update proposals.
 - `pipeline-security.test.js` makes immutable action refs, non-persisted checkout credentials, token-free collection, sandboxed vendor rendering, full dependency audit, Dependabot ownership, and locally bundled browser assets deterministic repository contracts.
+
+Production evidence:
+
+Run #784 passed the full hardened release path. Token-free sandboxed vendor collection produced 79 of 79 validated providers with 100 percent live coverage, followed by server validation, browser payload compatibility, the reusable release contract, full dependency audit, deployment identity, normal headless rendering, exact 458 by 291 Yodeck verification, verification artifact upload, and final deployed-intelligence status publication.
+
+### Phase 4
+
+Branch: `agent/status-contract-overhaul-phase-4`
+Pull request: #109
+Production release: pending merge and live verification
+
+Implemented decisions:
+
+- Every provider now carries `source_reliability`, a bounded seven-day UTC daily rollup of live, limited, and unavailable source observations. The record includes reconciled percentages, schema-change count, and an observation SLO state.
+- SLO states are `warming`, `meeting`, `watch`, and `breach`. Fewer than ten observations remain warming. Meeting requires at least 99 percent live observations and zero unavailable observations; watch requires at least 95 percent live observations; lower availability is a breach.
+- Source SLO state measures collector observation reliability only. It never changes vendor `service_state`.
+- Every provider also carries `schema_canary`, which records current fingerprint observation state and the latest detected source-shape change. A canary change can raise operator attention but cannot create an outage conclusion.
+- `src/sourceReliabilityContract.ts` is consumed by both server and browser validation, so rolling SLO metadata and parser-canary metadata use one reconciliation contract.
+- Active correlation uses only vendor-timed incidents. Snapshot-only `current-page` observations are excluded because `observed_at` is an observation time, not an incident-start time.
+- Same-category correlation requires at least two distinct providers inside twenty minutes. Cross-category correlation requires at least three distinct providers inside the same window. Every cluster explicitly states that temporal correlation is not causation.
+- The operator-only Operations Intelligence panel exposes source SLO distribution, watch and breach sources, parser canaries, and active correlation clusters. Wallboard composition remains unchanged.
+- No customer, tenant, ticket, device, user, or other private MSP data was added to the public application.
+- `docs/operations-intelligence.md` defines the source SLO, parser-canary, correlation, UI, and release contracts in detail.
+
+Pull-request evidence:
+
+PR #109 passed canonical provider validation, the deterministic test suite including new reliability/correlation/safety contracts, TypeScript checking, the production application build, and the complete dependency audit on its implementation head. The phase remains open until the merged production release proves live rolling metadata, browser/server parity, deployed rendering, and exact Yodeck verification.
