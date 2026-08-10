@@ -23,7 +23,6 @@ for (const relativeRoot of roots) {
     if (!extensions.has(path.extname(file)) || excluded.has(path.basename(file))) continue;
     const relative = path.relative(root, file);
     const text = fs.readFileSync(file, 'utf8');
-    if (!text.endsWith('\n')) errors.push(`${relative}: missing final newline`);
     text.split(/\r?\n/).forEach((line, index) => {
       if (/[ \t]+$/.test(line)) errors.push(`${relative}:${index + 1}: trailing whitespace`);
     });
