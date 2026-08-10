@@ -5,7 +5,6 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const root = fileURLToPath(new URL('..', import.meta.url));
 const defaultStatusPath = path.join(root, 'public', 'status.json');
 
-const RINGCENTRAL_SOURCE = 'RingCentral public status dashboard';
 const RINGCENTRAL_URL = 'https://status.ringcentral.com/';
 
 function validObservedAt(value) {
@@ -19,15 +18,14 @@ export function normalizeCurrentPageEvidence(payload) {
     ? payload.providers.find(item => item?.id === 'ringcentral')
     : null;
   const observedAt = validObservedAt(provider?.checked_at) || validObservedAt(payload.generated_at);
-  if (!observedAt || provider?.source_state !== 'available') return payload;
+  const providerUsesCurrentPage = provider?.source === RINGCENTRAL_URL;
+  if (!observedAt || provider?.source_state !== 'available' || !providerUsesCurrentPage) return payload;
 
   const incidents = Array.isArray(payload.incidents)
     ? payload.incidents.map(incident => {
         const untimed = !incident?.latest_update && !incident?.first_detected && !incident?.rawTime;
-        const exactCurrentSource = incident?.providerId === 'ringcentral'
-          && incident?.source === RINGCENTRAL_SOURCE
-          && incident?.url === RINGCENTRAL_URL;
-        if (!untimed || !exactCurrentSource || incident?.evidence_basis) return incident;
+        const ringCentralIncident = incident?.providerId === 'ringcentral';
+        if (!untimed || !ringCentralIncident || incident?.evidence_basis) return incident;
         return { ...incident, evidence_basis: 'current-page', observed_at: observedAt };
       })
     : payload.incidents;
