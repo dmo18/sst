@@ -1,4 +1,5 @@
 import { componentStatusIsProblem } from '../src/componentStatus.ts';
+import { buildSchemaCanary, rollSourceReliability } from './source-reliability.mjs';
 
 export const PARSER_VERSION = '3.0.0';
 
@@ -136,6 +137,8 @@ export function enrichProviderHistory(results, previous, currentIncidents, gener
     let attention = result.attention;
     if (consecutiveFailures >= 2 && critical) attention = 'action';
     else if (schemaChanged && attention === 'informational') attention = 'watch';
+    const sourceReliability = rollSourceReliability(old?.source_reliability, result, generatedAt, schemaChanged);
+    const schemaCanary = buildSchemaCanary(old, result, schemaChanged, generatedAt);
 
     return {
       ...result,
@@ -144,7 +147,9 @@ export function enrichProviderHistory(results, previous, currentIncidents, gener
       last_success_at: success ? generatedAt : old?.last_success_at || '',
       consecutive_failures: consecutiveFailures,
       last_semantic_change_at: lastSemanticChange,
-      schema_changed: schemaChanged
+      schema_changed: schemaChanged,
+      source_reliability: sourceReliability,
+      schema_canary: schemaCanary
     };
   });
 }
