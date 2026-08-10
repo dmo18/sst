@@ -8,7 +8,7 @@ import { WallboardV2 } from './WallboardV2';
 import { buildIssueConsoleModel } from './statusViewModel';
 import { payloadValidationErrors } from './payloadValidation';
 import { RequestOwnership } from './requestOwnership';
-import { DEFAULT_BROWSER_REFRESH_MS, readWallboardRoute } from './wallboardRoute';
+import { readWallboardRoute } from './wallboardRoute';
 import type { ProviderConfig, StatusPayload } from './types';
 
 type ProviderConsolidation = {
@@ -28,6 +28,7 @@ const CATALOG = (providerCatalog as ProviderConfig[])
     .map(provider => ({ ...provider, ...(CONSOLIDATION.providerOverrides[provider.id] || {}) }));
 const MAX_PAYLOAD_AGE_MS = 20 * 60 * 1000;
 const MAX_FUTURE_SKEW_MS = 5 * 60 * 1000;
+const OPERATOR_BROWSER_REFRESH_MS = 60 * 1000;
 const EMERGENCY_MAINTENANCE = /\b(?:emergency|unplanned|critical|urgent)\b/i;
 const PRODUCTION_IMPACT = /\b(?:production|outage|service interruption|service disruption|customer impact|customers? (?:are|may be) affected|degraded service)\b/i;
 
@@ -88,7 +89,7 @@ export function App(): JSX.Element {
     const [lastBrowserCheckAt, setLastBrowserCheckAt] = useState<number | null>(null);
     const ownership = useRef(new RequestOwnership());
     const mounted = useRef(true);
-    const browserRefreshMs = route.wallboardMode ? route.refreshIntervalMs : DEFAULT_BROWSER_REFRESH_MS;
+    const browserRefreshMs = route.wallboardMode ? route.refreshIntervalMs : OPERATOR_BROWSER_REFRESH_MS;
 
     const refresh = useCallback(async () => {
         const slot = ownership.current.begin();
