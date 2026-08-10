@@ -10,20 +10,21 @@ test('production HTML does not load a legacy wallboard DOM controller', async ()
   assert.equal((html.match(/<script\b/g) || []).length, 1, 'only the Vite module entry should execute');
 });
 
-test('Pages deployment is serialized, fully validated, and bounded', async () => {
+test('Pages deployment is serialized, fully validated, bounded, and schedule-optimized', async () => {
   const workflow = await read('.github/workflows/refresh-pages.yml');
   const releaseContract = await read('scripts/release-contract.mjs');
   assert.match(workflow, /concurrency:\s*\n\s*group:\s*pages-release\s*\n\s*cancel-in-progress:\s*false/);
   assert.match(workflow, /build:\s*[\s\S]*timeout-minutes:\s*20/);
   assert.match(workflow, /deploy:\s*[\s\S]*timeout-minutes:\s*20/);
   assert.doesNotMatch(workflow, /Cancel superseded Pages deployment/);
-  assert.doesNotMatch(workflow, /github\.event_name != 'schedule'/);
-  assert.match(workflow, /name:\s*Run deterministic tests[\s\S]*run:\s*npm test/);
-  assert.match(workflow, /name:\s*Run TypeScript checking[\s\S]*run:\s*npm run typecheck/);
-  assert.match(workflow, /name:\s*Audit complete dependency graph[\s\S]*run:\s*npm audit --audit-level=high/);
+  assert.match(workflow, /name:\s*Run deterministic tests\s*\n\s*if:\s*github\.event_name != 'schedule'\s*\n\s*run:\s*npm test/);
+  assert.match(workflow, /name:\s*Run TypeScript checking\s*\n\s*if:\s*github\.event_name != 'schedule'\s*\n\s*run:\s*npm run typecheck/);
+  assert.match(workflow, /name:\s*Audit complete dependency graph\s*\n\s*if:\s*github\.event_name != 'schedule'\s*\n\s*run:\s*npm audit --audit-level=high/);
+  assert.match(workflow, /verified-app-shell-\$\{\{ github\.sha \}\}/);
+  assert.match(workflow, /name:\s*Restore verified application shell/);
   assert.doesNotMatch(workflow, /npm audit[^\n]*--omit=dev/);
   assert.match(workflow, /status_state:\s*\$\{\{ steps\.verify-status\.outputs\.state \}\}/);
-  assert.match(workflow, /run:\s*node scripts\/verify-release-contract\.mjs public\/status\.json/);
+  assert.match(workflow, /run:\s*node --experimental-strip-types scripts\/verify-release-contract\.mjs public\/status\.json/);
   assert.match(releaseContract, /liveSourceCount === total && calculatedBlind === 0 && fallbackCount === 0 \? 'success' : 'failure'/);
   assert.match(workflow, /state:\s*process\.env\.STATUS_STATE/);
   assert.match(workflow, /uses:\s*actions\/deploy-pages@[0-9a-f]{40}[^\n]*\n\s*with:\s*\n\s*timeout:\s*600000/);
@@ -69,6 +70,7 @@ test('wallboard controls and persistence are React-owned', async () => {
 test('wallboard overlay geometry and telemetry live in the dedicated stylesheet', async () => {
   const source = await read('src/WallboardV2.tsx');
   const app = await read('src/App.tsx');
+  const poller = await read('src/usePayloadPoller.ts');
   const main = await read('src/main.tsx');
   const css = await read('src/styles/wallboard-v2.css');
 
@@ -83,8 +85,8 @@ test('wallboard overlay geometry and telemetry live in the dedicated stylesheet'
   assert.match(source, /className="wallboard-mini-telemetry"/);
   assert.match(source, /Payload <b>\{compactAgeLabel\(model\?\.generatedAt, now\)\}<\/b>/);
   assert.match(source, /Browser <b>\{compactAgeLabel\(browserCheckedAt, now\)\}<\/b>/);
-  assert.match(app, /const \[lastBrowserCheckAt, setLastBrowserCheckAt\]/);
-  assert.match(app, /setLastBrowserCheckAt\(checkedAt\)/);
+  assert.match(poller, /const \[lastBrowserCheckAt, setLastBrowserCheckAt\]/);
+  assert.match(poller, /setLastBrowserCheckAt\(checkedAt\)/);
   assert.match(app, /browserCheckedAt=\{lastBrowserCheckAt\}/);
   assert.doesNotMatch(app, /sst:browser-check/);
 });
