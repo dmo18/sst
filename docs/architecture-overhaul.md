@@ -42,10 +42,10 @@ Complete the post-review architecture overhaul while preserving the production t
 
 ## Phase 3: pipeline and security hardening
 
-- [ ] Pin GitHub Actions dependencies to immutable revisions where practical.
-- [ ] Strengthen dependency and source checks without adding third-party browser runtime dependencies.
-- [ ] Isolate rendered vendor-page collection from deployment credentials and document that trust boundary.
-- [ ] Extend regression coverage for provenance, catalog identity, contract parity, compatibility, and production smoke semantics.
+- [x] Pin GitHub Actions dependencies to immutable revisions where practical.
+- [x] Strengthen dependency and source checks without adding third-party browser runtime dependencies.
+- [x] Isolate rendered vendor-page collection from deployment credentials and document that trust boundary.
+- [x] Extend regression coverage for provenance, catalog identity, contract parity, compatibility, production smoke, and pipeline supply-chain semantics.
 
 ## Phase 4: next-level operations intelligence
 
@@ -94,7 +94,9 @@ Run #780 passed 247 deterministic tests, TypeScript, production dependency audit
 ### Phase 2
 
 Branch: `agent/status-contract-overhaul-phase-2`
-Pull request: #99, draft until CI and production validation complete
+Pull request: #99
+Merge commit: `b3bd4cf8d0c368a9113a54b6a043a5f6398d8044`
+Production release: run #782, successful
 
 Implemented decisions:
 
@@ -108,4 +110,24 @@ Implemented decisions:
 
 CI note:
 
-An early Phase 2 deterministic run failed after removing the normalizer. The response was treated as a contract migration failure, not as a reason to relax validation. Subsequent commits moved provenance and identity to the actual producer boundary, added explicit timing validation, and completed the production-core extraction before the final PR gate.
+An early Phase 2 deterministic run failed after removing the normalizer. The response was treated as a contract migration failure, not as a reason to relax validation. The final shared source-conclusion boundary normalizes untimed current-page issues with stable identity and explicit provenance, while timed vendor records remain unchanged.
+
+Production evidence:
+
+Run #782 passed all 253 deterministic tests, canonical provider validation, TypeScript, dependency audit, live collection for 79 of 79 providers, 100 percent live coverage, zero fallbacks, browser payload compatibility, the extracted release contract, deployment identity, normal headless rendering, exact 458 by 291 Yodeck verification, artifact upload, and final status publication. The live payload contained 7 incidents and 48 maintenance events with collection quality 86 and zero blind spots. This is the first production release with the RingCentral postprocessor removed.
+
+### Phase 3
+
+Branch: `agent/status-contract-overhaul-phase-3`
+Pull request: pending final gate
+Production release: pending final gate
+
+Implemented decisions:
+
+- Every third-party action reference in repository workflows is pinned to a full immutable commit SHA. Human-readable major versions remain comments only.
+- Checkout credentials are never persisted into a repository worktree.
+- The live vendor collection step explicitly removes `GITHUB_TOKEN` and `GH_TOKEN` from its process environment. Its job has read-only repository permission and no Pages, status, action-write, or identity-token permission.
+- Remote vendor pages rendered by Chromium now use the browser sandbox instead of `--no-sandbox`, use a disposable per-render profile, and delete that profile after the observation.
+- PR and production gates audit the complete dependency graph, including build tooling, at high severity.
+- Dependabot owns weekly npm and GitHub Actions update proposals.
+- `pipeline-security.test.js` makes immutable action refs, non-persisted checkout credentials, token-free collection, sandboxed vendor rendering, full dependency audit, Dependabot ownership, and locally bundled browser assets deterministic repository contracts.
