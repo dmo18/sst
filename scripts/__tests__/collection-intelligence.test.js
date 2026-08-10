@@ -69,6 +69,19 @@ test('quality scoring keeps strong structured sources high and failed sources bl
   assert.equal(enrichProviderCollection(failed, [], [], '2026-08-01T12:05:00Z').source_health, 'blind');
 });
 
+test('provider timing separates last request latency from total collection elapsed time', () => {
+  const enriched = enrichProviderCollection(provider({
+    download_log: [
+      { url: 'https://status.alpha.test/a', ok: true, duration_ms: 120, status: 'HTTP 200', source_type: 'statuspage-json' },
+      { url: 'https://status.alpha.test/b', ok: true, duration_ms: 80, status: 'HTTP 200', source_type: 'feed' }
+    ]
+  }), [], [], '2026-08-01T12:05:00Z');
+  assert.equal(enriched.last_request_ms, 80);
+  assert.equal(enriched.source_latency_ms, 80);
+  assert.equal(enriched.collection_elapsed_ms, 200);
+  assert.equal(enriched.collection_attempt_count, 2);
+});
+
 test('collection intelligence exposes run, request, origin, quality, and provider workload metrics', () => {
   const incidents = [{ providerId: 'alpha' }];
   const maintenance = [{ providerId: 'alpha' }];
@@ -79,5 +92,7 @@ test('collection intelligence exposes run, request, origin, quality, and provide
   assert.equal(result.providers[0].active_incident_count, 1);
   assert.equal(result.providers[0].maintenance_count, 1);
   assert.equal(result.providers[0].source_health, 'healthy');
+  assert.equal(result.providers[0].last_request_ms, 120);
+  assert.equal(result.providers[0].collection_elapsed_ms, 120);
   assert.equal(result.summary.blind_spot_count, 0);
 });
