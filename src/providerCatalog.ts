@@ -1,5 +1,5 @@
-import providerCatalog from '../config/providers.json';
-import providerConsolidation from '../config/provider-consolidation.json';
+import providerCatalog from '../config/providers.json' with { type: 'json' };
+import providerConsolidation from '../config/provider-consolidation.json' with { type: 'json' };
 import type { ProviderConfig } from './types';
 
 type ProviderConsolidation = {
