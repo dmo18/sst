@@ -1,5 +1,5 @@
-import { componentStatusIsProblem } from './componentStatus';
-import { effectiveIncidentTime } from './statusContract';
+import { componentStatusIsProblem } from './componentStatus.ts';
+import { effectiveIncidentTime } from './statusContract.ts';
 import type {
   AttentionLevel,
   CollectionRun,

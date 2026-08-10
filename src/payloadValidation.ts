@@ -1,4 +1,4 @@
-import { componentStatusIsProblem } from './componentStatus';
+import { componentStatusIsProblem } from './componentStatus.ts';
 import {
   ATTENTION_LEVELS,
   CURRENT_PAGE_EVIDENCE_BASIS,
@@ -12,7 +12,7 @@ import {
   STATUS_COLORS,
   TRUTH_BASES,
   incidentTemporalEvidence
-} from './statusContract';
+} from './statusContract.ts';
 import type { StatusPayload } from './types';
 
 const services = new Set<string>(SERVICE_STATES);
