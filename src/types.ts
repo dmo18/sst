@@ -1,14 +1,28 @@
-export type StatusColor = 'green' | 'amber' | 'red' | 'blue';
-export type ServiceState = 'operational' | 'degraded' | 'major' | 'unknown';
-export type SourceState = 'available' | 'limited' | 'unavailable' | 'disabled' | 'pending' | 'stale';
-export type SourceHealth = 'healthy' | 'watch' | 'blind';
-export type TruthBasis = 'vendor-incident' | 'vendor-component' | 'observed-affected-no-detail' | 'confirmed-operational' | 'observed-no-conclusion' | 'last-known-official' | 'limited-official' | 'no-current-observation';
-export type FreshnessState = 'fresh' | 'aging' | 'stale' | 'unknown';
-export type AttentionLevel = 'critical' | 'action' | 'watch' | 'informational';
+import type {
+  ATTENTION_LEVELS,
+  EVIDENCE_TIERS,
+  FRESHNESS_STATES,
+  MAINTENANCE_STATES,
+  SERVICE_STATES,
+  SOURCE_CONFIDENCE_LEVELS,
+  SOURCE_HEALTH_STATES,
+  SOURCE_STATES,
+  STATUS_COLORS,
+  TRUTH_BASES
+} from './statusContract';
+
+export type StatusColor = typeof STATUS_COLORS[number];
+export type ServiceState = typeof SERVICE_STATES[number];
+export type SourceState = typeof SOURCE_STATES[number];
+export type SourceHealth = typeof SOURCE_HEALTH_STATES[number];
+export type TruthBasis = typeof TRUTH_BASES[number];
+export type FreshnessState = typeof FRESHNESS_STATES[number];
+export type AttentionLevel = typeof ATTENTION_LEVELS[number];
 export type Criticality = 'high' | 'medium' | 'low';
-export type EvidenceTier = 'structured' | 'feed' | 'rendered-page' | 'public-page' | 'limited';
-export type SourceConfidence = 'high' | 'medium' | 'low' | 'none';
-export type MaintenanceState = 'scheduled' | 'in_progress' | 'completed' | 'unknown';
+export type EvidenceTier = typeof EVIDENCE_TIERS[number];
+export type SourceConfidence = typeof SOURCE_CONFIDENCE_LEVELS[number];
+export type MaintenanceState = typeof MAINTENANCE_STATES[number];
+export type IncidentEvidenceBasis = 'current-page';
 
 export interface ProviderDownloadLog {
   timestamp?: string;
@@ -119,6 +133,8 @@ export interface Incident {
   priority: number;
   first_detected?: string;
   latest_update?: string;
+  observed_at?: string;
+  evidence_basis?: IncidentEvidenceBasis;
   client_impact?: string;
   technician_action?: string;
   affected_service?: string;
