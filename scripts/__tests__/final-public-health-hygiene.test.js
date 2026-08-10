@@ -76,7 +76,7 @@ test('temporary review diagnostics, live probes, and patch tooling never ship', 
 
 test('provider-specific conclusions use the shared region-scope implementation behind the adapter registry', () => {
   const facade = read('scripts/public-source-repairs.mjs');
-  const implementation = read('scripts/public-source-repairs-legacy.mjs');
+  const implementation = read('scripts/public-source-adapter-implementation.mjs');
   assert.match(facade, /SourceAdapterRegistry/);
   assert.match(facade, /registry\.conclude\('provider-specific-current-page'/);
   assert.match(implementation, /regionScopeRelevant/);
