@@ -20,10 +20,10 @@ Retrieval is bounded by global and per-origin concurrency, timeouts, streamed re
 
 ### Runtime application
 
-- `src/App.tsx`: data lifecycle, payload refresh, browser-check timestamp, route selection, URL-controlled wallboard refresh interval ownership, and operator or wallboard rendering.
+- `src/App.tsx`: data lifecycle, payload refresh, browser-check timestamp, route selection, URL-controlled wallboard refresh interval ownership, independent one-minute operator refresh cadence, and operator or wallboard rendering.
 - `src/IssueConsole.tsx`: operator workspace.
 - `src/WallboardV2.tsx`: sole active wallboard implementation, including overlay state, freshness telemetry, alert filtering, and marquee ownership.
-- `src/wallboardRoute.ts`: wallboard mode, `alerts` duration parsing, bounded `refresh` duration parsing, and route state.
+- `src/wallboardRoute.ts`: wallboard mode, `alerts` duration parsing, bounded `refresh` duration parsing, three-minute wallboard default, and route state.
 - `src/statusViewModel.ts`: command-center and action-queue model.
 - `src/payloadValidation.ts`: browser payload validation.
 - `src/types.ts`: payload and UI contracts.
@@ -54,10 +54,10 @@ The legacy `src/Wallboard.tsx`, `src/wallboard.ts`, `src/wallboardDomEnhancement
 
 - `scripts/__tests__/`: collector, parser, maintenance, freshness, workflow, visual, compatibility, payload, compact-TV, refresh, and help tests.
 - `src/__tests__/`: lifecycle, view-model, telemetry, icons, wallboard route, and browser validation tests.
-- `src/__tests__/wallboardRoute.test.ts`: deterministic alert-window and browser-refresh URL parsing tests, including bounds and safe fallback behavior.
+- `src/__tests__/wallboardRoute.test.ts`: deterministic alert-window and browser-refresh URL parsing tests, including bounds and the 180-second safe fallback behavior.
 - `scripts/__tests__/wallboard-compatibility.test.js`: contract that requires the legacy signage fallback to remain unlayered, marker-scoped, and structurally complete for compact wallboard use.
 - `scripts/__tests__/wallboard-tv-detail.test.js`: compact 458 by 291 presentation contract that preserves full incident text, provider names, telemetry, and icon-to-text spacing.
-- `scripts/__tests__/wallboard-refresh-help.test.js`: contract for wallboard-only refresh ownership, safe interval bounds, deployed help content, and no-script help delivery.
+- `scripts/__tests__/wallboard-refresh-help.test.js`: contract for three-minute wallboard refresh ownership, one-minute operator ownership, safe interval bounds, deployed help content, and no-script help delivery.
 - `scripts/production-smoke.mjs`: deployed asset, payload, and release-identity verification.
 - `scripts/verify-yodeck-wallboard.mjs`: Chrome DevTools Protocol verification at an exact 458 by 291 CSS viewport, including DOM and screenshot evidence.
 - `scripts/write-deploy-version.mjs`: generated deployment identity from `GITHUB_SHA` and `GITHUB_RUN_ID`.
@@ -100,7 +100,7 @@ Deterministic coverage validates GitHub provider metadata, structured incident a
 
 ## Runtime behavior
 
-The browser requests only static assets and `status.json`. The operator application keeps the one-minute browser payload-check cadence. Wallboard mode also defaults to one minute, but can override that cadence with the `refresh` URL parameter. A payload older than 20 minutes produces a freshness warning. Browser check and payload ages are maintained in React state and rendered directly into the wallboard without a DOM enhancement module.
+The browser requests only static assets and `status.json`. The operator application keeps the one-minute browser payload-check cadence. Wallboard mode defaults to three minutes, or 180 seconds, but can override that cadence with the `refresh` URL parameter. A payload older than 20 minutes produces a freshness warning. Browser check and payload ages are maintained in React state and rendered directly into the wallboard without a DOM enhancement module.
 
 The operator application exposes incidents, provider diagnostics, source reliability, request evidence, maintenance intelligence, timeline history, and cautious communication drafts.
 
@@ -110,24 +110,24 @@ Complete incident detail remains present in compact mode. The current TV-specifi
 
 ## Browser refresh URL contract
 
-`src/wallboardRoute.ts` owns refresh parsing through `parseRefreshIntervalMs` and `readWallboardRoute`.
+`src/wallboardRoute.ts` owns wallboard refresh parsing through `parseRefreshIntervalMs` and `readWallboardRoute`.
 
 Accepted units are:
 
 - seconds: `refresh=30s`;
-- minutes: `refresh=1m` or `refresh=5m`;
+- minutes: `refresh=1m`, `refresh=3m`, or `refresh=5m`;
 - hours: `refresh=1h`.
 
-The accepted interval range is 15 seconds through one hour. Missing, malformed, too-small, or too-large values return `DEFAULT_BROWSER_REFRESH_MS`, which is one minute.
+The accepted interval range is 15 seconds through one hour. Missing, malformed, too-small, or too-large wallboard values return `DEFAULT_BROWSER_REFRESH_MS`, which is three minutes.
 
-`App.tsx` applies the parsed custom interval only when `route.wallboardMode` is true:
+`App.tsx` keeps the two browser polling contracts separate:
 
 ```text
-wallboard mode -> route.refreshIntervalMs
-operator mode  -> DEFAULT_BROWSER_REFRESH_MS
+wallboard mode -> route.refreshIntervalMs, default 180 seconds
+operator mode  -> OPERATOR_BROWSER_REFRESH_MS, fixed at 60 seconds
 ```
 
-This separation keeps the operator console's existing refresh-countdown contract truthful even when a wallboard URL contains a custom interval.
+This separation keeps the operator console's existing refresh-countdown contract truthful while allowing unattended wallboards to use a lower default polling frequency or an explicit URL override.
 
 The refresh loop continues to respect page visibility. The scheduled interval checks `document.hidden` before starting a browser retrieval. The option controls retrieval and validation of the deployed static `status.json` only. It does not invoke vendor sources directly, trigger a GitHub Actions collection run, or control Yodeck's full-page Refresh Interval.
 
@@ -207,7 +207,7 @@ The help page documents:
 
 - the recommended 46-inch wallboard URL;
 - `alerts` duration syntax and range;
-- `refresh` duration syntax, range, default, and fallback behavior;
+- `refresh` duration syntax, range, three-minute wallboard default, and fallback behavior;
 - payload-age and browser-check-age meanings;
 - the distinction between browser payload polling, GitHub Actions collection, and Yodeck full-page refresh;
 - compact provider rail and incident-list behavior;
@@ -216,7 +216,7 @@ The help page documents:
 
 The static design intentionally introduces no runtime JavaScript, external font, analytics, credential, or network dependency beyond ordinary document and link loading.
 
-The run 623 GitHub Pages artifact was downloaded and inspected after the successful production deployment. It contains `help.html` with the current `refresh=1m` recommendation, refresh bounds, and Browser telemetry explanation.
+The current help recommendation uses `refresh=3m` explicitly for auditability even though that value now matches the wallboard default.
 
 ## Deployment identity
 
@@ -253,8 +253,8 @@ PR 74 merged the Yodeck legacy-browser compatibility fallback at commit `33f7d87
 
 PR 81, `Add URL-controlled wallboard refresh and online help`, passed pull-request run 322 and merged at commit `43e25da05e1178109b32ca5dcb0f68fcc98904b4`. Production release run 623 passed the complete build and deployment path, including live collection, browser validation, exact 458 by 291 Yodeck verification, artifact upload, and deployed-intelligence verification.
 
-The run 623 Yodeck screenshot contained no incidents in its selected 36-hour verification window, so it could not visually show the 11-pixel incident gap. The compact TV test verifies that rule directly, and the physical TV remains the correct acceptance environment for viewing-distance judgments.
+Commit `e8d7319f6661e80815d1812588865c4363bbd9a1` changed the wallboard browser default to three minutes as part of a broader production repair. This follow-up isolates that wallboard default from the operator console's one-minute cadence and adds explicit regression coverage for the split.
 
-GitHub monitoring, the Yodeck compatibility fallback, current physical-TV tuning, URL-controlled browser refresh, and the deployed online help are therefore production-validated through the repository release gate.
+GitHub monitoring, the Yodeck compatibility fallback, current physical-TV tuning, URL-controlled browser refresh, and the deployed online help remain governed by the repository release gate.
 
 See [system-status.md](system-status.md), [wallboard-url-options.md](wallboard-url-options.md), and [open-issues.md](open-issues.md) for current completion and deployment guidance. The deployed online help is available at `https://dmo18.github.io/sst/help.html`.
