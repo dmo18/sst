@@ -1,0 +1,30 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: America/New_York
+    open-pull-requests-limit: 6
+    groups:
+      react-runtime:
+        patterns:
+          - react
+          - react-dom
+          - "@types/react*"
+      build-toolchain:
+        patterns:
+          - vite
+          - "@vitejs/*"
+          - typescript
+          - "@types/node"
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:20"
+      timezone: America/New_York
+    open-pull-requests-limit: 6
