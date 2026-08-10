@@ -1,16 +1,13 @@
-export const SOURCE_RELIABILITY_WINDOW_DAYS = 7;
-export const SOURCE_RELIABILITY_MIN_SAMPLES = 10;
+import {
+  SOURCE_RELIABILITY_MIN_SAMPLES,
+  SOURCE_RELIABILITY_WINDOW_DAYS,
+  sourceIntelligenceMetadataErrors
+} from '../src/sourceReliabilityContract.ts';
 
-const SLO_STATES = new Set(['warming', 'meeting', 'watch', 'breach']);
-const CANARY_STATES = new Set(['stable', 'changed', 'unobserved']);
-const CANARY_OBSERVATIONS = new Set(['accepted', 'unavailable']);
+export { SOURCE_RELIABILITY_MIN_SAMPLES, SOURCE_RELIABILITY_WINDOW_DAYS, sourceIntelligenceMetadataErrors };
 
 function integer(value) {
   return Number.isInteger(value) && Number(value) >= 0;
-}
-
-function percentage(value) {
-  return integer(value) && Number(value) <= 100;
 }
 
 function dateKey(value) {
@@ -100,54 +97,4 @@ export function buildSchemaCanary(previousProvider, provider, schemaChanged, gen
     fingerprint,
     last_changed_at: schemaChanged ? generatedAt : previousProvider?.schema_canary?.last_changed_at || ''
   };
-}
-
-export function sourceIntelligenceMetadataErrors(provider) {
-  const errors = [];
-  const reliability = provider?.source_reliability;
-  if (!reliability || typeof reliability !== 'object') {
-    errors.push('missing source_reliability');
-  } else {
-    if (reliability.window_days !== SOURCE_RELIABILITY_WINDOW_DAYS) errors.push('invalid source_reliability window_days');
-    for (const key of ['sample_count', 'schema_change_count']) if (!integer(reliability[key])) errors.push(`invalid source_reliability ${key}`);
-    for (const key of ['live_percent', 'limited_percent', 'unavailable_percent']) if (!percentage(reliability[key])) errors.push(`invalid source_reliability ${key}`);
-    if (!SLO_STATES.has(reliability.slo_state)) errors.push('invalid source_reliability slo_state');
-    if (!Array.isArray(reliability.daily) || reliability.daily.length > SOURCE_RELIABILITY_WINDOW_DAYS) {
-      errors.push('invalid source_reliability daily');
-    } else {
-      const days = reliability.daily.map(normalizedDay);
-      if (days.some(day => !day)) errors.push('invalid source_reliability daily bucket');
-      else {
-        const validDays = days.filter(Boolean);
-        const distinct = new Set(validDays.map(day => day.date));
-        if (distinct.size !== validDays.length) errors.push('duplicate source_reliability day');
-        const totals = validDays.reduce((sum, day) => ({
-          samples: sum.samples + day.samples,
-          live: sum.live + day.live,
-          limited: sum.limited + day.limited,
-          unavailable: sum.unavailable + day.unavailable,
-          schemaChanges: sum.schemaChanges + day.schema_changes
-        }), { samples: 0, live: 0, limited: 0, unavailable: 0, schemaChanges: 0 });
-        if (totals.samples !== reliability.sample_count) errors.push('source_reliability sample_count mismatch');
-        if (totals.schemaChanges !== reliability.schema_change_count) errors.push('source_reliability schema_change_count mismatch');
-        const expectedLive = totals.samples ? Math.round(totals.live / totals.samples * 100) : 0;
-        const expectedLimited = totals.samples ? Math.round(totals.limited / totals.samples * 100) : 0;
-        const expectedUnavailable = totals.samples ? Math.round(totals.unavailable / totals.samples * 100) : 0;
-        if (expectedLive !== reliability.live_percent || expectedLimited !== reliability.limited_percent || expectedUnavailable !== reliability.unavailable_percent) errors.push('source_reliability percentage mismatch');
-      }
-    }
-  }
-
-  const canary = provider?.schema_canary;
-  if (!canary || typeof canary !== 'object') {
-    errors.push('missing schema_canary');
-  } else {
-    if (!CANARY_STATES.has(canary.state)) errors.push('invalid schema_canary state');
-    if (!CANARY_OBSERVATIONS.has(canary.observation)) errors.push('invalid schema_canary observation');
-    if (typeof canary.fingerprint !== 'string') errors.push('invalid schema_canary fingerprint');
-    if (canary.last_changed_at && !Number.isFinite(Date.parse(canary.last_changed_at))) errors.push('invalid schema_canary last_changed_at');
-    if (canary.state === 'changed' && !Number.isFinite(Date.parse(canary.last_changed_at || ''))) errors.push('changed schema_canary requires last_changed_at');
-    if (canary.state !== 'unobserved' && !canary.fingerprint) errors.push('observed schema_canary requires fingerprint');
-  }
-  return errors;
 }
