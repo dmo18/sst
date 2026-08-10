@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { compareSnapshots, summarizeProviders, validatePayload } from './update-status.mjs';
 import { sourceIntelligenceChanges, sourceIntelligenceSummary } from './source-intelligence.mjs';
+import { sourceIntelligenceMetadataErrors } from './source-reliability.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const defaultStatusPath = path.join(root, 'public', 'status.json');
@@ -134,6 +135,10 @@ export function normalizeStatusPayload(payload, previous = null, now = payload?.
 
   const maintenance = Array.isArray(payload.maintenance) ? payload.maintenance : [];
   const normalizedProviders = payload.providers.map(provider => normalizeProviderStatus(provider, payload.incidents, now));
+  const intelligenceMetadataErrors = normalizedProviders.flatMap(provider =>
+    sourceIntelligenceMetadataErrors(provider).map(error => `${provider.id}: ${error}`)
+  );
+  if (intelligenceMetadataErrors.length) throw new Error(`Source intelligence metadata validation failed: ${intelligenceMetadataErrors.join('; ')}`);
   const normalizedCount = normalizedProviders.filter((provider, index) => provider.source_state !== payload.providers[index].source_state).length;
   const validStatusCount = normalizedProviders.filter(providerHasValidStatusData).length;
   const invalidStatusCount = normalizedProviders.length - validStatusCount;
@@ -202,7 +207,7 @@ export function normalizeStatusPayload(payload, previous = null, now = payload?.
       coverage_definition: 'coverage_percent and live_source_coverage_percent are the percentage of providers with a successfully captured current official source or current official status-access channel. Limited, stale, and fallback records do not count as coverage. Providers whose current health is vendor-authenticated remain service_state unknown and are counted separately by auth_gated_provider_count; they are never operational confirmation.',
       record_validity_definition: 'valid_status_percent measures structurally valid records and must not be presented as live provider coverage.',
       evidence_definition: 'source_confidence describes the quality and readability of the first-party source, not the severity or health of the vendor service.',
-      collection_definition: 'source_health and data_quality_score describe the collector observation, freshness, evidence tier, and parser reliability. They never replace vendor service state.'
+      collection_definition: 'source_health and data_quality_score describe the collector observation, freshness, evidence tier, parser reliability, and bounded seven-day observation SLO. They never replace vendor service state. schema_canary reports source-shape observations only and never changes service health by itself.'
     }
   };
 
