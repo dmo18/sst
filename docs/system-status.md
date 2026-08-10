@@ -1,6 +1,6 @@
 # Current system status
 
-Status timestamp: 2026-08-07 16:48 Eastern Time
+Status timestamp: 2026-08-10 16:41 Eastern Time
 
 This report records the current repository, production, and release state after Step 1 stabilization, Step 2 architecture cleanup, GitHub provider monitoring, Yodeck legacy-browser compatibility, physical-TV layout tuning, URL-controlled browser refresh, and deployed wallboard help completed their production gates.
 
@@ -9,18 +9,18 @@ This report records the current repository, production, and release state after 
 | Area | Status | Notes |
 | --- | --- | --- |
 | Repository access | Healthy | Connected GitHub access supports repository, pull-request, workflow, deployment inspection, and repository writes. |
-| Runtime feature baseline | Healthy | PR 81 merged the current wallboard refresh, spacing, documentation, and online-help implementation at commit `43e25da05e1178109b32ca5dcb0f68fcc98904b4`. |
-| Application validation | Healthy | Provider validation, deterministic tests, TypeScript, dependency audit, live collection, payload validation, build, deployment, production smoke, normal browser render, and exact Yodeck verification are green. |
-| GitHub Pages publication | Healthy | Production release run 623 published the PR 81 runtime successfully. |
-| Online help | Healthy | `public/help.html` is included in the run 623 GitHub Pages artifact and documents current wallboard and Yodeck URL options. |
+| Runtime feature baseline | Healthy | Wallboard mode uses a three-minute default browser payload-check cadence with bounded `refresh=` URL overrides; the operator console retains its independent one-minute cadence. |
+| Application validation | Healthy | Provider validation, deterministic tests, TypeScript, dependency audit, live collection, payload validation, build, deployment, production smoke, normal browser render, and exact Yodeck verification are green on the production baseline. |
+| GitHub Pages publication | Healthy | The current production release path publishes the React application, static help, and validated `status.json` payload through GitHub Pages. |
+| Online help | Healthy | `public/help.html` documents the three-minute wallboard default, URL overrides, Yodeck distinction, and browser telemetry semantics. |
 | Scheduled reliability proof | Complete | Scheduled releases 606, 607, 608, 610, and 611 completed successfully. |
-| Freshness recovery | Healthy | Freshness-watch run 29 completed successfully alongside the scheduled release cycle. |
+| Freshness recovery | Healthy | Freshness recovery remains coordinated with the serialized release path. |
 | Step 1 stabilization | Complete | Release serialization, freshness coordination, production smoke, exact viewport testing, and scheduled reliability evidence are complete. |
 | Step 2 architecture cleanup | Complete | PR 71 merged and the consolidated React-owned wallboard architecture is live. |
 | GitHub provider monitoring | Complete | PR 69 passed PR checks, merged, and passed the full production release gate in run 612. |
 | Yodeck legacy-browser compatibility | Complete | PR 74 passed pull-request checks, merged, and passed the full production release gate in run 614. |
-| Physical TV layout tuning | Healthy | PRs 78, 79, and 80 refined the compact 458 by 291 wallboard while retaining complete incident detail and provider identity. |
-| URL-controlled browser refresh | Complete | PR 81 added bounded `refresh=` parsing and wallboard-only polling control with a one-minute default. |
+| Physical TV layout tuning | Healthy | Compact 458 by 291 tuning retains complete incident detail and provider identity. |
+| URL-controlled browser refresh | Complete | Wallboard polling defaults to 180 seconds, accepts bounded `refresh=` overrides, and remains separate from the operator console's 60-second cadence. |
 
 ## Repository identity
 
@@ -72,7 +72,7 @@ The current architecture:
 2. Removes `src/Wallboard.tsx`, `src/wallboard.ts`, and `src/wallboardDomEnhancements.ts`.
 3. Keeps wallboard header state, overlay controls, freshness telemetry, filtering, ordering, and marquee ownership in React.
 4. Uses `src/styles/wallboard-v2.css` as the dedicated modern-browser wallboard stylesheet.
-5. Uses `src/styles/wallboard-compat.css` only as a gated compatibility fallback for browsers without CSS Cascade Layer support.
+5. Uses `src/styles/wallboard-compat.css` only as a gated compatibility fallback for browsers without CSS Cascade Layers.
 6. Uses `src/styles/wallboard-tv.css` for compact 458 by 291 physical-TV spacing and readability tuning without changing incident data ownership.
 7. Generates `public/deploy-version.txt` during the build rather than tracking it in source.
 8. Verifies deployed commit and workflow identity in production smoke testing.
@@ -101,13 +101,14 @@ Production provides:
 
 ## Browser refresh URL contract
 
-PR 81 added URL control for the browser-side payload check without changing collection cadence.
+The browser-side refresh option changes payload polling only. It does not change vendor collection cadence.
 
 Accepted wallboard forms include:
 
 ```text
 ?view=wallboard&alerts=24h&refresh=30s
 ?view=wallboard&alerts=24h&refresh=1m
+?view=wallboard&alerts=24h&refresh=3m
 ?view=wallboard&alerts=24h&refresh=5m
 ?view=wallboard&alerts=24h&refresh=1h
 ```
@@ -117,9 +118,10 @@ The contract is:
 - units: seconds, minutes, or hours;
 - minimum: 15 seconds;
 - maximum: one hour;
-- default: one minute;
-- missing or invalid values: one-minute fallback;
+- wallboard default: three minutes, or 180 seconds;
+- missing or invalid wallboard values: three-minute fallback;
 - custom interval applies only while wallboard mode is active;
+- operator-console browser polling remains one minute, or 60 seconds;
 - hidden pages do not execute scheduled payload checks until visible;
 - the option controls browser retrieval and validation of the deployed `status.json` only;
 - the option does not trigger GitHub Actions, vendor retrieval, or Yodeck full-page reloads.
@@ -142,7 +144,7 @@ The current compact design preserves all operational incident detail while using
 
 PR 78 established the full-detail compact TV stylesheet. PR 79 moved the provider marquee into the compact top row. PR 80 restored provider names and increased incident breathing room after physical-TV review. PR 81 made the final icon-to-text spacing adjustment requested from the physical display.
 
-The run 623 automated screenshot contained no incidents inside its selected 36-hour verification window, so it could not visually demonstrate the incident-row spacing adjustment. The compact CSS regression test verifies the 11-pixel gap, and the exact 458 by 291 production layout contract passed.
+The exact 458 by 291 production layout contract remains part of the release gate.
 
 ## Yodeck compatibility fix
 
@@ -168,19 +170,19 @@ PR 74 pull-request checks completed successfully before merge. The fix merged at
 
 ## Online help
 
-PR 81 added `public/help.html`, which Vite copies into the deployed Pages artifact as `help.html`.
+`public/help.html` is copied into the deployed Pages artifact as `help.html`.
 
 The help page documents:
 
 - the recommended 46-inch TV wallboard URL;
 - alert-window syntax and bounds;
-- browser refresh syntax, bounds, default, and fallback behavior;
+- browser refresh syntax, bounds, three-minute wallboard default, and fallback behavior;
 - the difference between payload age, browser-check age, browser polling, GitHub Actions collection, and Yodeck full-page refresh;
 - current compact provider-rail and incident behavior;
 - Yodeck configuration guidance;
 - links back to the repository wallboard documentation and project source.
 
-The run 623 Pages artifact was inspected after deployment and contains `help.html` with the `refresh=1m` recommendation and browser-refresh documentation.
+The recommended 24-hour wallboard URL can omit `refresh=3m` because three minutes is now the default, although keeping the parameter explicit remains useful for signage configuration audits.
 
 ## GitHub provider monitoring
 
@@ -199,30 +201,13 @@ GitHub is now a high-criticality DevOps provider using the official public GitHu
 
 ## Latest production proof
 
-PR 81, `Add URL-controlled wallboard refresh and online help`, passed pull-request run 322 and merged at commit `43e25da05e1178109b32ca5dcb0f68fcc98904b4`.
+The release pipeline continues to require provider validation, deterministic tests, TypeScript checking, production dependency audit, live first-party collection, browser payload validation, collection and freshness reconciliation, application build, Pages publication, deployed smoke testing, normal browser rendering, exact 458 by 291 Yodeck verification, artifact upload, and deployed-intelligence verification.
 
-Production release run 623 completed successfully. The release passed:
-
-- provider validation;
-- deterministic tests;
-- TypeScript checking;
-- production dependency audit;
-- live first-party collection;
-- browser payload validation;
-- truthful coverage and freshness verification;
-- application build;
-- Pages artifact creation and deployment;
-- deployed asset and payload smoke testing;
-- normal browser rendering;
-- exact 458 by 291 Yodeck verification;
-- Yodeck artifact upload;
-- deployed intelligence verification.
-
-This is the production proof for the current URL-controlled refresh and compact-spacing runtime change. Documentation-only commits after this proof do not change the runtime behavior described above.
+The three-minute wallboard default was introduced on current main in commit `e8d7319f6661e80815d1812588865c4363bbd9a1`. This refresh-specific follow-up preserves the operator console's independent one-minute cadence and aligns the current-state documentation and regression contract with that intended split.
 
 ## Remaining work
 
-No Step 1, Step 2, GitHub-monitoring, Yodeck compatibility, browser-refresh, or online-help engineering item remains open in this register.
+No Step 1, Step 2, GitHub-monitoring, Yodeck compatibility, browser-refresh, or online-help engineering item remains open in this register after this refresh-contract reconciliation.
 
 Physical TV review remains the practical acceptance loop for future visual tuning because automated Chromium can verify geometry and contracts but cannot reproduce viewing distance and signage-player rendering exactly.
 
