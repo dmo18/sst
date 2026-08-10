@@ -13,6 +13,7 @@ test('component-only degradation and neutral component states reconcile without 
   x.providers[0].service_state = 'degraded';
   x.providers[0].color = 'amber';
   x.providers[0].attention = 'action';
+  x.providers[0].truth_basis = 'vendor-component';
   x.providers[0].component_status = [
     { name: 'Region not applicable', status: 'Not available' },
     { name: 'Maintenance window', status: 'under_maintenance' },
@@ -24,5 +25,19 @@ test('component-only degradation and neutral component states reconcile without 
   x.summary.degraded_count = 1;
   x.summary.confirmed_operational_percent = 0;
   x.summary.component_issue_count = 1;
+  assert.deepEqual(payloadValidationErrors(x), []);
+});
+
+test('affected provider without incident or component detail accepts collector truth basis', () => {
+  const x = structuredClone(p);
+  x.providers[0].service_state = 'degraded';
+  x.providers[0].color = 'amber';
+  x.providers[0].attention = 'action';
+  x.providers[0].truth_basis = 'observed-affected-no-detail';
+  x.summary.service_overall = 'degraded';
+  x.summary.affected_provider_count = 1;
+  x.summary.confirmed_operational_count = 0;
+  x.summary.degraded_count = 1;
+  x.summary.confirmed_operational_percent = 0;
   assert.deepEqual(payloadValidationErrors(x), []);
 });
