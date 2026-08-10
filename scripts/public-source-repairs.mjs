@@ -123,6 +123,37 @@ function healthy(status) {
   return { kind: 'healthy', status };
 }
 
+function currentPageIncident(provider, incident = {}) {
+  const hasVendorTime = Boolean(incident.firstDetected || incident.latestUpdate || incident.rawTime);
+  if (hasVendorTime) return incident;
+  const title = incident.title || `${provider.name || provider.id || 'Provider'} public status reports an active issue`;
+  const note = incident.note || incident.message || 'The current official status page reports active service impact.';
+  return {
+    ...incident,
+    id: incident.id || fallbackIncidentToken({
+      provider: provider.id || provider.name || 'provider',
+      title,
+      note,
+      source: 'current-page'
+    }),
+    title,
+    note,
+    evidenceBasis: incident.evidenceBasis || 'current-page'
+  };
+}
+
+function normalizeCurrentPageConclusion(provider, conclusion) {
+  if (!conclusion || typeof conclusion !== 'object') return conclusion;
+  if (conclusion.kind === 'issue') return currentPageIncident(provider, conclusion);
+  if (conclusion.kind === 'issues' && Array.isArray(conclusion.incidents)) {
+    return {
+      ...conclusion,
+      incidents: conclusion.incidents.map(incident => currentPageIncident(provider, incident))
+    };
+  }
+  return conclusion;
+}
+
 function issue(providerName, note, color = 'amber') {
   const title = `${providerName} public status reports an active issue`;
   return {
@@ -246,13 +277,13 @@ export function providerSpecificConclusion(provider, html) {
   const text = cleanRenderedText(html);
   if (!text) return null;
   const reviewed = fullReviewConclusion(provider, html);
-  if (reviewed) return reviewed;
+  if (reviewed) return normalizeCurrentPageConclusion(provider, reviewed);
   if (provider.id === '8x8') {
     const scoped = eightByEightConclusion(text);
     if (scoped) return scoped;
   }
   const detailed = providerIncidentConclusion(provider, html);
-  if (detailed) return detailed;
+  if (detailed) return normalizeCurrentPageConclusion(provider, detailed);
 
   switch (provider.id) {
     case 'ringcentral': {
@@ -294,7 +325,7 @@ export function providerSpecificConclusion(provider, html) {
     case 'syncro':
       return /Operating Normally/i.test(text) ? healthy('Syncro reports normal operation') : null;
     case 'okta':
-      return oktaConclusion(html);
+      return normalizeCurrentPageConclusion(provider, oktaConclusion(html));
     case 'salesforce': {
       const start = text.search(/Current Status/i);
       if (start < 0) return null;
