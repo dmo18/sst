@@ -19,10 +19,11 @@ export function normalizeCurrentPageConclusion(provider, conclusion, sourceUrl =
   const note = clean(conclusion.note || 'The official current status page reports a service issue.');
   const source = clean(sourceUrl || provider?.url || '');
   const id = clean(conclusion.id) || fallbackIncidentToken({
-    providerName: clean(provider?.name || provider?.id || 'provider'),
+    provider: clean(provider?.name || provider?.id || 'provider'),
     title,
     note,
     source,
+    affectedService: conclusion.affectedService || conclusion.affected_service || '',
     firstDetected: conclusion.firstDetected || conclusion.first_detected || conclusion.time || ''
   });
 
