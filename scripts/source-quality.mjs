@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 const root = fileURLToPath(new URL('..', import.meta.url));
 const roots = ['src', 'scripts'];
 const extensions = new Set(['.ts', '.tsx', '.js', '.mjs']);
-const excluded = new Set(['legacy-update-status.mjs', 'public-source-repairs-legacy.mjs']);
+const excluded = new Set(['legacy-update-status.mjs', 'public-source-adapter-implementation.mjs']);
 const definitionCensusExcluded = new Set(['source-quality.mjs']);
 const errors = [];
 const activeSources = [];
