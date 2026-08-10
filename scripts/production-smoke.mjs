@@ -1,5 +1,5 @@
-import { payloadValidationErrors } from '../src/payloadValidation.ts';
-import { ACTIVE_PROVIDER_IDS } from '../src/providerCatalog.ts';
+import { ACTIVE_PROVIDER_CATALOG_HASH, ACTIVE_PROVIDER_IDS } from '../src/providerCatalog.ts';
+import { wirePayloadValidationErrors } from '../src/wirePayloadValidation.ts';
 import { verifyReleaseContract } from './release-contract.mjs';
 
 const requestedBase = process.argv[2] || 'https://dmo18.github.io/sst/';
@@ -11,6 +11,7 @@ const html = await htmlResponse.text();
 console.log(`INDEX_BYTES ${Buffer.byteLength(html)}`);
 if (!htmlResponse.ok) throw new Error(`index failed with HTTP ${htmlResponse.status}`);
 if (!/<title>ServiceOps \| MSP Service Intelligence<\/title>/i.test(html)) throw new Error('deployed index does not identify the v3.1 ServiceOps enterprise workspace');
+if (!/http-equiv=["']Content-Security-Policy["']/i.test(html)) throw new Error('deployed index is missing the Content Security Policy');
 
 const scripts = [...html.matchAll(/<script[^>]+src=["']([^"']+)["']/gi)].map(match => new URL(match[1], base).href);
 const styles = [...html.matchAll(/<link[^>]+href=["']([^"']+)["'][^>]*>/gi)].map(match => new URL(match[1], base).href).filter(url => /\.css(?:\?|$)/.test(url));
@@ -56,9 +57,11 @@ const statusText = await statusResponse.text();
 console.log(`STATUS_BYTES ${Buffer.byteLength(statusText)}`);
 if (!statusResponse.ok) throw new Error(`status failed with HTTP ${statusResponse.status}`);
 const payload = JSON.parse(statusText);
-const errors = payloadValidationErrors(payload, ACTIVE_PROVIDER_IDS);
+const errors = wirePayloadValidationErrors(payload, ACTIVE_PROVIDER_IDS, ACTIVE_PROVIDER_CATALOG_HASH);
 const collection = payload.collection;
 console.log(`PAYLOAD_VERSION ${payload?.schema_version}`);
+console.log(`CONTRACT_VERSION ${payload?.contract_version}`);
+console.log(`CATALOG_HASH ${payload?.catalog_hash}`);
 console.log(`GENERATED_AT ${payload?.generated_at}`);
 console.log(`PROVIDERS ${payload?.providers?.length}`);
 console.log(`INCIDENTS ${payload?.incidents?.length}`);
@@ -72,5 +75,5 @@ console.log(`COLLECTION_HEALTH healthy=${collection?.healthy_source_count ?? 'mi
 console.log(`VALIDATION_ERRORS ${errors.length}`);
 for (const error of errors) console.log(`VALIDATION_ERROR ${error}`);
 if (errors.length) throw new Error(`deployed payload rejected by browser validator: ${errors.join('; ')}`);
-const release = verifyReleaseContract(payload);
+const release = verifyReleaseContract(payload, Date.now(), ACTIVE_PROVIDER_CATALOG_HASH);
 console.log(`RELEASE_CONTRACT ${release.state} ${release.description}`);
