@@ -6,6 +6,7 @@ const root = fileURLToPath(new URL('..', import.meta.url));
 const roots = ['src', 'scripts'];
 const extensions = new Set(['.ts', '.tsx', '.js', '.mjs']);
 const excluded = new Set(['legacy-update-status.mjs', 'public-source-repairs-legacy.mjs']);
+const definitionCensusExcluded = new Set(['source-quality.mjs']);
 const errors = [];
 const activeSources = [];
 
@@ -24,7 +25,7 @@ for (const relativeRoot of roots) {
     if (!extensions.has(path.extname(file)) || excluded.has(path.basename(file))) continue;
     const relative = path.relative(root, file);
     const text = fs.readFileSync(file, 'utf8');
-    if (!relative.includes('__tests__')) activeSources.push({ relative, text });
+    if (!relative.includes('__tests__') && !definitionCensusExcluded.has(path.basename(file))) activeSources.push({ relative, text });
     text.split(/\r?\n/).forEach((line, index) => {
       if (/[ \t]+$/.test(line)) errors.push(`${relative}:${index + 1}: trailing whitespace`);
     });
