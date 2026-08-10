@@ -7,6 +7,7 @@ const roots = ['src', 'scripts'];
 const extensions = new Set(['.ts', '.tsx', '.js', '.mjs']);
 const excluded = new Set(['legacy-update-status.mjs', 'public-source-repairs-legacy.mjs']);
 const errors = [];
+const activeSources = [];
 
 function filesUnder(directory) {
   const output = [];
@@ -23,11 +24,21 @@ for (const relativeRoot of roots) {
     if (!extensions.has(path.extname(file)) || excluded.has(path.basename(file))) continue;
     const relative = path.relative(root, file);
     const text = fs.readFileSync(file, 'utf8');
+    if (!relative.includes('__tests__')) activeSources.push({ relative, text });
     text.split(/\r?\n/).forEach((line, index) => {
       if (/[ \t]+$/.test(line)) errors.push(`${relative}:${index + 1}: trailing whitespace`);
     });
     if (!relative.includes('__tests__') && /\beval\s*\(|\bnew\s+Function\s*\(/.test(text)) errors.push(`${relative}: dynamic code execution is forbidden`);
   }
+}
+
+for (const [policy, pattern] of [
+  ['effectiveIncidentTime', /export function effectiveIncidentTime\b/g],
+  ['componentStatusDisposition', /export function componentStatusDisposition\b/g],
+  ['regionScopeRelevant', /export function regionScopeRelevant\b/g]
+]) {
+  const definitions = activeSources.flatMap(source => [...source.text.matchAll(pattern)].map(() => source.relative));
+  if (definitions.length !== 1) errors.push(`${policy}: expected one canonical exported definition, found ${definitions.length} (${definitions.join(', ') || 'none'})`);
 }
 
 const app = fs.readFileSync(path.join(root, 'src', 'App.tsx'), 'utf8');
