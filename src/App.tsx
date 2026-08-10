@@ -1,32 +1,20 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
-import providerCatalog from '../config/providers.json';
-import providerConsolidation from '../config/provider-consolidation.json';
 import packageMetadata from '../package.json';
 import { dataLifecycleReducer, initialDataLifecycle } from './dataLifecycle';
 import { IssueConsole } from './IssueConsole';
-import { WallboardV2 } from './WallboardV2';
-import { buildIssueConsoleModel } from './statusViewModel';
 import { payloadValidationErrors } from './payloadValidation';
+import { ACTIVE_PROVIDER_CATALOG, ACTIVE_PROVIDER_IDS } from './providerCatalog';
 import { RequestOwnership } from './requestOwnership';
+import { buildIssueConsoleModel } from './statusViewModel';
+import { WallboardV2 } from './WallboardV2';
 import { readWallboardRoute } from './wallboardRoute';
-import type { ProviderConfig, StatusPayload } from './types';
-
-type ProviderConsolidation = {
-    excludedProviderIds: string[];
-    providerOverrides: Record<string, Partial<ProviderConfig>>;
-};
+import type { StatusPayload } from './types';
 
 type StatusFetchResult = {
     data: StatusPayload;
     freshnessWarning: string | null;
 };
 
-const CONSOLIDATION = providerConsolidation as ProviderConsolidation;
-const EXCLUDED_PROVIDER_IDS = new Set(CONSOLIDATION.excludedProviderIds);
-const CATALOG = (providerCatalog as ProviderConfig[])
-    .filter(provider => !EXCLUDED_PROVIDER_IDS.has(provider.id))
-    .map(provider => ({ ...provider, ...(CONSOLIDATION.providerOverrides[provider.id] || {}) }));
-const CATALOG_IDS = CATALOG.map(provider => provider.id);
 const MAX_PAYLOAD_AGE_MS = 20 * 60 * 1000;
 const MAX_FUTURE_SKEW_MS = 5 * 60 * 1000;
 const MAX_BROWSER_PAYLOAD_BYTES = 5 * 1024 * 1024;
@@ -73,7 +61,7 @@ async function fetchStatus(signal: AbortSignal): Promise<StatusFetchResult> {
     if (actualBytes > MAX_BROWSER_PAYLOAD_BYTES)
         throw new Error(`status.json exceeds the ${MAX_BROWSER_PAYLOAD_BYTES} byte browser payload limit`);
     const data: unknown = JSON.parse(body);
-    const errors = payloadValidationErrors(data, CATALOG_IDS);
+    const errors = payloadValidationErrors(data, ACTIVE_PROVIDER_IDS);
     if (errors.length) {
         console.error('status.json validation failed:', errors);
         throw new Error(`status.json has an invalid or unsupported payload (${errors.join('; ')})`);
@@ -174,7 +162,7 @@ export function App(): JSX.Element {
         };
     }, []);
 
-    const model = useMemo(() => state.data ? buildIssueConsoleModel(state.data, `v${packageMetadata.version}`, CATALOG) : null, [state.data]);
+    const model = useMemo(() => state.data ? buildIssueConsoleModel(state.data, `v${packageMetadata.version}`, ACTIVE_PROVIDER_CATALOG) : null, [state.data]);
 
     const exitWallboard = () => {
         const search = new URLSearchParams(location.search);
