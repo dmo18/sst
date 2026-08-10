@@ -42,12 +42,15 @@ test('provider transport policy distinguishes browser fallback from authenticate
   }
 
   const collector = fs.readFileSync(path.join(root, 'scripts', 'update-public-status.mjs'), 'utf8');
-  const renderer = fs.readFileSync(path.join(root, 'scripts', 'public-source-repairs.mjs'), 'utf8');
+  const renderer = fs.readFileSync(path.join(root, 'scripts', 'public-source-adapter-implementation.mjs'), 'utf8');
+  const facade = fs.readFileSync(path.join(root, 'scripts', 'public-source-repairs.mjs'), 'utf8');
   assert.match(collector, /if \(!result\.ok\)[\s\S]*source\.render === true[\s\S]*await renderPublicPage\(source\)/);
   assert.match(collector, /let renderedAlready = false/);
+  assert.match(facade, /SourceAdapterRegistry/);
   assert.match(renderer, /--virtual-time-budget=20000/);
   assert.match(renderer, /timeout:\s*35000/);
   assert.doesNotMatch(renderer, /spawnSync/);
+  assert.doesNotMatch(renderer, /--no-sandbox/);
 });
 
 test('8x8 Americas service matrix can confirm an explicit all-normal current state', () => {
