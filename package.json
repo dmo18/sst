@@ -17,8 +17,8 @@
     "format:check": "node scripts/format-check.mjs",
     "quality": "npm run lint && npm run format:check",
     "hooks:install": "node scripts/configure-git-hooks.mjs",
-    "test": "node --import ./scripts/__tests__/test-clock.mjs --test --experimental-strip-types src/__tests__/*.test.ts scripts/__tests__/*.test.js",
-    "test:watch": "node --import ./scripts/__tests__/test-clock.mjs --test --watch --experimental-strip-types src/__tests__/*.test.ts scripts/__tests__/*.test.js",
+    "test": "node --import ./scripts/__tests__/test-clock.mjs --test --test-concurrency=1 --experimental-strip-types src/__tests__/*.test.ts scripts/__tests__/*.test.js",
+    "test:watch": "node --import ./scripts/__tests__/test-clock.mjs --test --test-concurrency=1 --watch --experimental-strip-types src/__tests__/*.test.ts scripts/__tests__/*.test.js",
     "typecheck": "tsc --noEmit",
     "build:app": "node scripts/write-deploy-version.mjs && vite build",
     "validate-browser-payload": "node --experimental-strip-types scripts/validate-browser-payload.mjs"
