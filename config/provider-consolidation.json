@@ -27,7 +27,7 @@
         "Microsoft Power Platform"
       ],
       "client_impact": "May affect Microsoft 365 administration, Exchange Online mail flow, Teams, SharePoint, OneDrive, Entra sign-in, Intune, Microsoft 365 Apps, Defender, Power Platform, and dependent client workflows.",
-      "technician_action": "Treat Microsoft 365 as a critical dependency. Check the public Microsoft signal and Entra status, then validate tenant-specific Microsoft 365 Service Health before changing client DNS, identity, mail, endpoint, or collaboration configuration."
+      "technician_action": "Check Microsoft public and Entra status, then tenant Service Health before changing client DNS, identity, mail, endpoint, or collaboration configuration."
     },
     "kaseya": {
       "criticality": "high",
