@@ -1,0 +1,61 @@
+/* Last-mile product polish identified from deployed desktop and mobile evidence. */
+
+@media (min-width: 901px) {
+  .workspace-main {
+    padding-bottom: 112px;
+  }
+}
+
+.metric-tile > small {
+  color: #8e9db2;
+}
+
+@media (max-width: 900px) {
+  .ops-intel-trigger {
+    right: 13px;
+    bottom: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom) + 13px);
+    width: 48px;
+    min-width: 48px;
+    height: 48px;
+    min-height: 48px;
+    display: grid;
+    place-items: center;
+    border-radius: 15px;
+    padding: 0;
+    font-size: 0;
+  }
+
+  .ops-intel-trigger::before {
+    content: '';
+    width: 19px;
+    height: 19px;
+    display: block;
+    background: currentColor;
+    mask-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M13.2 2 5 13h6l-.8 9L19 10h-6l.2-8ZM9 11l2.4-3.2-.2 4.2h3.9l-2.6 3.6.3-4.6H9Z'/%3E%3C/svg%3E");
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M13.2 2 5 13h6l-.8 9L19 10h-6l.2-8ZM9 11l2.4-3.2-.2 4.2h3.9l-2.6 3.6.3-4.6H9Z'/%3E%3C/svg%3E");
+    mask-repeat: no-repeat;
+    mask-position: center;
+    mask-size: contain;
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    -webkit-mask-size: contain;
+  }
+
+  .ops-intel-trigger span {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    min-width: 19px;
+    height: 19px;
+    display: grid;
+    place-items: center;
+    border: 2px solid #080b12;
+    border-radius: 999px;
+    padding: 0 4px;
+    color: #f7f9fc;
+    background: linear-gradient(135deg, #6d8dff, #8a62f3);
+    box-shadow: 0 5px 16px rgba(0, 0, 0, .32);
+    font-size: .56rem;
+    line-height: 1;
+  }
+}
