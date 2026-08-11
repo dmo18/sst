@@ -1,0 +1,182 @@
+/* Interaction polish layered after the main operator visual system and before wallboard styles. */
+
+.enterprise-shell * {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(120, 139, 170, .32) transparent;
+}
+
+.enterprise-shell *::-webkit-scrollbar { width: 9px; height: 9px; }
+.enterprise-shell *::-webkit-scrollbar-track { background: transparent; }
+.enterprise-shell *::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: rgba(120, 139, 170, .30);
+  background-clip: padding-box;
+}
+.enterprise-shell *::-webkit-scrollbar-thumb:hover { background-color: rgba(138, 160, 196, .46); }
+
+.enterprise-shell :focus-visible,
+.experience-pulse :focus-visible,
+.command-palette :focus-visible,
+.ops-intel-panel :focus-visible {
+  outline: 0;
+  box-shadow: 0 0 0 2px #090d15, 0 0 0 4px rgba(109, 141, 255, .68), 0 0 24px rgba(109,141,255,.24);
+}
+
+.workspace-stack > * {
+  animation: premium-surface-enter .38s cubic-bezier(.2,.8,.2,1) both;
+}
+.workspace-stack > *:nth-child(2) { animation-delay: .035s; }
+.workspace-stack > *:nth-child(3) { animation-delay: .07s; }
+.workspace-stack > *:nth-child(4) { animation-delay: .105s; }
+.workspace-stack > *:nth-child(5) { animation-delay: .14s; }
+.workspace-stack > *:nth-child(n+6) { animation-delay: .17s; }
+
+.workspace-panel,
+.page-summary,
+.posture-panel,
+.metric-tile,
+.filter-bar,
+.provider-drawer,
+.ops-intel-panel {
+  transition:
+    border-color .2s ease,
+    background-color .2s ease,
+    box-shadow .2s ease,
+    transform .2s ease;
+}
+
+.workspace-panel:hover {
+  border-color: rgba(148, 163, 184, .19);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.045), 0 22px 64px rgba(0,0,0,.17);
+}
+
+.data-table-body {
+  display: grid;
+  gap: 4px;
+  padding: 4px;
+}
+
+.data-table-row {
+  overflow: hidden;
+  border: 1px solid transparent !important;
+  border-radius: 11px;
+}
+
+.data-table-row:hover {
+  border-color: rgba(109, 141, 255, .16) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.025), 0 7px 20px rgba(0,0,0,.12);
+}
+
+.attention-table {
+  display: grid;
+  gap: 4px;
+}
+
+.attention-head { margin-bottom: 2px; }
+
+.attention-row {
+  border: 1px solid transparent !important;
+  border-radius: 12px;
+}
+
+.attention-row:hover {
+  border-color: rgba(109, 141, 255, .14) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.025);
+}
+
+.category-table,
+.timeline-table { padding: 4px; }
+.category-head,
+.timeline-head { margin: -4px -4px 3px; }
+.category-row,
+.timeline-row {
+  border: 1px solid transparent !important;
+  border-radius: 10px;
+}
+
+.provider-drawer {
+  animation: premium-drawer-enter .28s cubic-bezier(.2,.8,.2,1) both;
+}
+
+.drawer-backdrop { animation: premium-fade .18s ease both; }
+
+.ui-button,
+.link-button,
+.app-sidebar nav button,
+.table-sort,
+.drawer-close,
+.ops-intel-trigger {
+  transition:
+    color .17s ease,
+    border-color .17s ease,
+    background-color .17s ease,
+    box-shadow .17s ease,
+    transform .17s ease;
+}
+
+.ui-button:active,
+.app-sidebar nav button:active,
+.ops-intel-trigger:active,
+.experience-pulse > button:active { transform: translateY(1px) scale(.99); }
+
+.ui-button-primary:hover {
+  box-shadow: 0 13px 34px rgba(89,100,246,.32), inset 0 1px 0 rgba(255,255,255,.22);
+}
+
+.provider-identity .provider-logo {
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+
+.data-table-row:hover .provider-logo,
+.attention-row:hover .provider-logo,
+.incident-record:hover .provider-logo { transform: scale(1.045); }
+
+.status-chip i {
+  box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 10%, transparent);
+}
+
+.lifecycle-refreshing .connection-indicator,
+.lifecycle-loading .connection-indicator {
+  animation: premium-live-pulse 1.5s ease-in-out infinite;
+}
+
+.experience-positive .experience-pulse-orb,
+.lifecycle-connected .connection-indicator {
+  animation: premium-live-pulse 2.3s ease-in-out infinite;
+}
+
+.command-list > button:first-child:focus-within,
+.command-list > button:first-child:hover {
+  box-shadow: inset 3px 0 0 rgba(99,230,255,.62);
+}
+
+@keyframes premium-surface-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes premium-drawer-enter {
+  from { opacity: 0; transform: translateX(26px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes premium-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes premium-live-pulse {
+  0%, 100% { opacity: 1; filter: brightness(1); }
+  50% { opacity: .72; filter: brightness(1.35); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .workspace-stack > *,
+  .provider-drawer,
+  .drawer-backdrop,
+  .connection-indicator,
+  .experience-pulse-orb {
+    animation: none !important;
+  }
+}
