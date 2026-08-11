@@ -94,3 +94,35 @@ test('deployed product-depth verification captures universe search incident and 
   assert.match(verifier, /temporal correlations only\|Temporal correlation only/i);
   assert.match(verifier, /recorded changes only/i);
 });
+
+test('product-depth closure record is backed by final production and product evidence', async () => {
+  const tracker = await read('docs/product-depth-command-system.md');
+  const system = await read('docs/system-status.md');
+  const report = await read('docs/repository-report.md');
+  const readme = await read('README.md');
+
+  for (const document of [tracker, system, report, readme]) {
+    assert.match(document, /357021b38a955b402af03d35415d1c1eae2a1550/);
+    assert.match(document, /80 providers/i);
+    assert.match(document, /NUSO/);
+    assert.match(document, /Microsoft 365/);
+  }
+
+  assert.match(tracker, /Status: complete/);
+  assert.match(tracker, /production release #833/i);
+  assert.match(tracker, /product experience #34/i);
+  assert.match(tracker, /9120182392/);
+  assert.match(tracker, /ServiceHealth\.Read\.All/);
+  assert.match(tracker, /45 local exact\/brand-geometry provider references/);
+  assert.match(system, /Run #833 \(`31539557831`\)/);
+  assert.match(system, /Run #34 \(`31539671901`\)/);
+  assert.match(system, /35 exact masks/);
+  assert.match(report, /no external logo origins/i);
+  assert.match(readme, /80 raw entries and 80 active canonical providers/);
+  assert.match(readme, /product-experience\.yml/);
+
+  for (const document of [tracker, system, report, readme]) {
+    assert.doesNotMatch(document, /79 active providers/i);
+    assert.doesNotMatch(document, /Status: implementation in progress/);
+  }
+});
