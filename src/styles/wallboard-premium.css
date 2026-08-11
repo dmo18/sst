@@ -1,0 +1,156 @@
+/* Visual-only wallboard polish. Deliberately avoids layout, dimensions, font sizes,
+   positioning, overflow, or animation timing so the exact 458x291 Yodeck contract
+   remains owned by wallboard-v2.css, wallboard-compat.css, and wallboard-tv.css. */
+
+.wallboard-v2 {
+  background:
+    radial-gradient(circle at 8% 0%, rgba(67, 97, 238, .16), transparent 38%),
+    radial-gradient(circle at 92% 100%, rgba(117, 67, 238, .12), transparent 42%),
+    linear-gradient(145deg, #070a10, #0a0e16 55%, #080b12);
+}
+
+.wallboard-v2::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: .08;
+  background-image:
+    linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px);
+  background-size: 32px 32px;
+  mask-image: linear-gradient(to bottom, black, transparent 90%);
+}
+
+.wallboard-v2 > header,
+.wallboard-v2 > footer,
+.wallboard-v2 .wallboard-kpis {
+  border-color: rgba(148, 163, 184, .14);
+  background-color: rgba(8, 12, 19, .76);
+  backdrop-filter: blur(18px) saturate(135%);
+}
+
+.wallboard-v2 .wallboard-priority-v2,
+.wallboard-v2 .wallboard-providers {
+  border-color: rgba(148, 163, 184, .14);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.028), rgba(255,255,255,.01)),
+    rgba(14, 19, 29, .86);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.04),
+    0 18px 52px rgba(0,0,0,.18);
+}
+
+.wallboard-v2 .wallboard-priority-v2 > h2 {
+  color: #f4f7fb;
+}
+
+.wallboard-v2 .wallboard-mini-telemetry {
+  color: #8090a7;
+}
+
+.wallboard-v2 .wallboard-mini-telemetry b {
+  color: #dce7f7;
+}
+
+.wallboard-v2 .wallboard-alert-provider-chip {
+  border-color: rgba(107, 141, 255, .18);
+  background: linear-gradient(135deg, rgba(107, 141, 255, .08), rgba(161, 111, 255, .045));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.035);
+}
+
+.wallboard-v2 .wallboard-alert-provider-chip b {
+  color: #dce6f6;
+}
+
+.wallboard-v2 .wallboard-priority-group > article {
+  border-color: rgba(148, 163, 184, .11);
+  background:
+    linear-gradient(90deg, rgba(255,255,255,.018), transparent),
+    rgba(8, 12, 18, .52);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.025);
+}
+
+.wallboard-v2 .wallboard-priority-group > article.attention-critical {
+  border-color: rgba(255, 107, 122, .24);
+  background: linear-gradient(90deg, rgba(255, 107, 122, .075), rgba(8,12,18,.52) 34%);
+}
+
+.wallboard-v2 .wallboard-priority-group > article.attention-action {
+  border-color: rgba(255, 196, 92, .20);
+  background: linear-gradient(90deg, rgba(255, 196, 92, .055), rgba(8,12,18,.52) 34%);
+}
+
+.wallboard-v2 .wallboard-priority-group > article b,
+.wallboard-v2 .wallboard-priority-group > article h3 {
+  color: #f4f7fb;
+}
+
+.wallboard-v2 .wallboard-priority-group > article p,
+.wallboard-v2 .wallboard-priority-group > article time {
+  color: #8d9db3;
+}
+
+.wallboard-v2 .wallboard-signal-icon .provider-logo,
+.wallboard-v2 .wallboard-alert-provider-chip .provider-logo,
+.wallboard-v2 .wallboard-providers .provider-logo {
+  border-color: rgba(148, 163, 184, .18);
+  box-shadow: 0 6px 18px rgba(0,0,0,.18);
+}
+
+.wallboard-v2 .wallboard-providers article {
+  border-color: rgba(148, 163, 184, .10);
+  background: rgba(255,255,255,.018);
+}
+
+.wallboard-v2 .wallboard-providers article strong {
+  color: #a9baff;
+}
+
+.wallboard-v2 .metric-tile {
+  border-color: rgba(148, 163, 184, .12);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.025), rgba(255,255,255,.008)),
+    rgba(12, 17, 26, .76);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.035);
+}
+
+.wallboard-v2 .metric-tile header span {
+  color: #77869c;
+}
+
+.wallboard-v2 .metric-tile header em {
+  color: #73e6bb;
+}
+
+.wallboard-v2 .metric-tile > strong {
+  color: #f7f9fc;
+}
+
+.wallboard-v2 .wallboard-overlay-action,
+.wallboard-v2 .wallboard-overlay-restore,
+.wallboard-v2 > header .ui-button {
+  border-color: rgba(148, 163, 184, .18);
+  color: #d4deed;
+  background: rgba(255,255,255,.04);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+}
+
+.wallboard-v2 .connection-indicator {
+  box-shadow: 0 0 0 3px rgba(76, 224, 168, .08), 0 0 16px rgba(76, 224, 168, .28);
+}
+
+html.no-css-layers .wallboard-v2 {
+  background:
+    radial-gradient(circle at 8% 0%, rgba(67, 97, 238, .12), transparent 38%),
+    linear-gradient(145deg, #070a10, #0a0e16);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wallboard-v2 *,
+  .wallboard-v2 *::before,
+  .wallboard-v2 *::after {
+    transition-duration: .001ms !important;
+  }
+}
