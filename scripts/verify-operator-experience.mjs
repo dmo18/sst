@@ -326,6 +326,18 @@ finally {
     new Promise(resolve => browserProcess.once('exit', resolve)),
     sleep(1000)
   ]);
-  if (browserProcess.exitCode === null) browserProcess.kill('SIGKILL');
-  fs.rmSync(profileDir, { recursive: true, force: true });
+  if (browserProcess.exitCode === null) {
+    browserProcess.kill('SIGKILL');
+    await Promise.race([
+      new Promise(resolve => browserProcess.once('exit', resolve)),
+      sleep(1000)
+    ]);
+  }
+  try {
+    fs.rmSync(profileDir, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
+  }
+  catch (error) {
+    const code = error && typeof error === 'object' && 'code' in error ? String(error.code) : 'unknown';
+    console.warn(`Browser profile cleanup warning (${code}); all product assertions and screenshot capture have already completed.`);
+  }
 }
