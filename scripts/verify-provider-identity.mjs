@@ -209,10 +209,10 @@ async function identityContract(session) {
     for (const asset of uniqueLocalAssets) {
       try {
         const response = await fetch(asset, { cache: 'no-store' });
-        if (!response.ok) failedAssets.push(`${asset} HTTP ${response.status}`);
+        if (!response.ok) failedAssets.push(asset + ' HTTP ' + response.status);
       }
       catch (error) {
-        failedAssets.push(`${asset} ${String(error)}`);
+        failedAssets.push(asset + ' ' + String(error));
       }
     }
     const nuso = identities.find(identity => identity.querySelector('b')?.textContent?.trim() === 'NUSO');
