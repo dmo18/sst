@@ -10,6 +10,7 @@ test('premium operator styles load before the wallboard geometry stack', async (
   const interactions = main.indexOf("./styles/premium-interactions.css");
   const icons = main.indexOf("./styles/premium-icons.css");
   const state = main.indexOf("./styles/premium-state.css");
+  const mobile = main.indexOf("./styles/premium-mobile.css");
   const wallboard = main.indexOf("./styles/wallboard-v2.css");
   const tv = main.indexOf("./styles/wallboard-tv.css");
   const wallboardPremium = main.indexOf("./styles/wallboard-premium.css");
@@ -18,7 +19,8 @@ test('premium operator styles load before the wallboard geometry stack', async (
   assert.ok(interactions > premium, 'interaction polish follows the base premium visual system');
   assert.ok(icons > interactions, 'product iconography follows interaction polish');
   assert.ok(state > icons, 'state-aware atmosphere follows the product icon layer');
-  assert.ok(wallboard > state, 'wallboard geometry styles must override generic operator components');
+  assert.ok(mobile > state, 'premium mobile rules override the desktop premium shell');
+  assert.ok(wallboard > mobile, 'wallboard geometry styles must override generic operator components');
   assert.ok(tv > wallboard, 'TV geometry remains after normal wallboard styles');
   assert.ok(wallboardPremium > tv, 'visual-only wallboard polish loads last');
 });
@@ -31,6 +33,9 @@ test('operator runtime includes a keyboard-first live command experience', async
   assert.match(app, /<ExperienceLayer model=\{model\}/);
   assert.match(experience, /event\.metaKey \|\| event\.ctrlKey/);
   assert.match(experience, /event\.key\.toLowerCase\(\) === 'k'/);
+  assert.match(experience, /event\.key === 'ArrowDown'/);
+  assert.match(experience, /event\.key === 'ArrowUp'/);
+  assert.match(experience, /aria-selected=\{index === activeIndex\}/);
   assert.match(experience, /dispatchShortcut\('1'\)/);
   assert.match(experience, /dispatchShortcut\('5'\)/);
   assert.match(experience, /dispatchShortcut\('w'\)/);
@@ -39,6 +44,7 @@ test('operator runtime includes a keyboard-first live command experience', async
   assert.match(experience, /Opening \$\{item\.provider\} incident operations/);
   assert.match(experience, /dataset\.operationalTone = pulse\.tone/);
   assert.match(experience, /delete document\.documentElement\.dataset\.operationalTone/);
+  assert.match(experience, /Mac\|iPhone\|iPad/);
 });
 
 test('premium product identity no longer depends on prototype navigation glyphs', async () => {
@@ -47,6 +53,14 @@ test('premium product identity no longer depends on prototype navigation glyphs'
   assert.match(icons, /\.nav-glyph::before/);
   assert.match(icons, /mask-image: url/);
   assert.match(icons, /button:nth-of-type\(5\)/);
+});
+
+test('premium mobile layer restores the product bottom-navigation contract', async () => {
+  const mobile = await read('src/styles/premium-mobile.css');
+  assert.match(mobile, /@media \(max-width: 900px\)/);
+  assert.match(mobile, /\.app-sidebar \{[\s\S]*position: fixed;/);
+  assert.match(mobile, /grid-template-columns: repeat\(5, minmax\(0,1fr\)\)/);
+  assert.match(mobile, /\.experience-pulse \{ display: none; \}/);
 });
 
 test('premium motion remains accessible and wallboard polish stays geometry-neutral', async () => {
@@ -61,6 +75,19 @@ test('premium motion remains accessible and wallboard polish stays geometry-neut
   assert.doesNotMatch(wallboardPremium, /wallboard-priority-list[^}]*\bheight\s*:/s);
   assert.doesNotMatch(wallboardPremium, /wallboard-priority-v2[^}]*\bpadding\s*:/s);
   assert.doesNotMatch(wallboardPremium, /wallboard-priority-v2[^}]*\bwidth\s*:/s);
+});
+
+test('deployed product experience verification covers desktop command and mobile surfaces without schedule churn', async () => {
+  const workflow = await read('.github/workflows/product-experience.yml');
+  const verifier = await read('scripts/verify-operator-experience.mjs');
+  assert.match(workflow, /workflow_run\.event != 'schedule'/);
+  assert.match(workflow, /operator-experience\.png/);
+  assert.match(workflow, /operator-command\.png/);
+  assert.match(workflow, /operator-mobile\.png/);
+  assert.match(verifier, /const MOBILE_WIDTH = 390/);
+  assert.match(verifier, /const MOBILE_HEIGHT = 844/);
+  assert.match(verifier, /Command keyboard selection/);
+  assert.match(verifier, /Mobile navigation is not fixed/);
 });
 
 test('product experience overhaul remains production-gated', async () => {
