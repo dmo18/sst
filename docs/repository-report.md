@@ -145,6 +145,12 @@ Scheduled live-data refreshes reuse the verified application shell for the exact
 
 ## Verification status
 
-The complete implementation was merged through PR #111 and the legacy Chromium snapshot-resolution production blocker was repaired through PR #112. Full production release evidence and the required same-commit scheduled shell-reuse evidence are recorded in `docs/architecture-reconciliation.md` once closure is finalized.
+The complete implementation merged through PR #111. PR #112 repaired the production-only Chromium snapshot-resolution assumption and merged final production code commit `d61b177dbe89c4e393992524df98c073add0d7bf`.
 
-The historical `docs/architecture-overhaul.md` documents the earlier reduced-scope pass and is not the authoritative architecture record.
+Full code-changing production run #790 (`31444948649`) passed provider validation, repository quality, all 285 deterministic tests, TypeScript, complete dependency audit, live first-party collection, Status Contract v3/catalog-hash validation, release reconciliation, verified-shell publication, Pages deployment, production smoke, current Chromium, the published pre-cascade-layer Chromium runtime, exact 458 by 291 Yodeck verification, artifact upload, and deployed status publication.
+
+Scheduled run #792 (`31446743500`) then executed on the exact same final commit and proved application-shell reuse. The quality, deterministic test, TypeScript, dependency-audit, and application-build steps were skipped; the verified shell lookup and restore succeeded; artifact `9084789742` was reused; and the fail-safe build was skipped. Live collection still produced 79/79 live official sources at 100% coverage with quality 86/100, zero fallbacks, and zero blind providers. Status Contract v3, release verification, Pages deployment, production smoke, current-browser rendering, exact Yodeck verification, artifact upload, and live status publication all passed.
+
+The scheduled workflow intentionally does not rerun the legacy Chromium compatibility probe because the static application shell is unchanged; run #790 is the immutable-shell browser proof for that path.
+
+The architecture reconciliation is complete. `docs/architecture-reconciliation.md` is the authoritative completion record. The historical `docs/architecture-overhaul.md` documents the earlier reduced-scope pass and is not authoritative.
