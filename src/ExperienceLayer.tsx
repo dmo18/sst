@@ -51,15 +51,32 @@ export function ExperienceLayer({ model, lifecyclePhase, onRefresh }: Experience
   const inputRef = useRef<HTMLInputElement>(null);
   const pulse = pulseCopy(model);
 
-  const commands = useMemo<Command[]>(() => [
-    { id: 'overview', label: 'Open overview', description: 'Return to the live operational posture', shortcut: '1', icon: '⌂', action: () => dispatchShortcut('1') },
-    { id: 'incidents', label: 'Open incident operations', description: 'Active vendor events, impact, actions, and client-safe updates', shortcut: '2', icon: '⚡', action: () => dispatchShortcut('2') },
-    { id: 'providers', label: 'Explore providers', description: 'Service state, evidence quality, latency, and freshness', shortcut: '3', icon: '◇', action: () => dispatchShortcut('3') },
-    { id: 'sources', label: 'Inspect source reliability', description: 'Blind spots, SLOs, parser trust, and collection health', shortcut: '4', icon: '⌁', action: () => dispatchShortcut('4') },
-    { id: 'timeline', label: 'Open audit timeline', description: 'See what changed across incidents and source health', shortcut: '5', icon: '↺', action: () => dispatchShortcut('5') },
-    { id: 'wallboard', label: 'Launch wallboard', description: 'Enter the unattended signage view', shortcut: 'W', icon: '▣', action: () => dispatchShortcut('w') },
-    { id: 'refresh', label: 'Refresh intelligence now', description: 'Retrieve and validate the latest deployed status payload', shortcut: 'R', icon: '↻', action: () => { onRefresh(); setToast('Validated refresh requested'); } }
-  ], [onRefresh]);
+  const commands = useMemo<Command[]>(() => {
+    const liveSignals: Command[] = (model?.actionQueue || [])
+      .filter(item => item.kind === 'incident')
+      .slice(0, 4)
+      .map(item => ({
+        id: `signal:${item.id}`,
+        label: `${item.provider}: ${item.title}`,
+        description: `${item.action} · ${item.detail}`,
+        icon: item.attention === 'critical' ? '!' : '↑',
+        action: () => {
+          dispatchShortcut('2');
+          setToast(`Opening ${item.provider} incident operations`);
+        }
+      }));
+
+    return [
+      ...liveSignals,
+      { id: 'overview', label: 'Open overview', description: 'Return to the live operational posture', shortcut: '1', icon: '⌂', action: () => dispatchShortcut('1') },
+      { id: 'incidents', label: 'Open incident operations', description: 'Active vendor events, impact, actions, and client-safe updates', shortcut: '2', icon: '⚡', action: () => dispatchShortcut('2') },
+      { id: 'providers', label: 'Explore providers', description: 'Service state, evidence quality, latency, and freshness', shortcut: '3', icon: '◇', action: () => dispatchShortcut('3') },
+      { id: 'sources', label: 'Inspect source reliability', description: 'Blind spots, SLOs, parser trust, and collection health', shortcut: '4', icon: '⌁', action: () => dispatchShortcut('4') },
+      { id: 'timeline', label: 'Open audit timeline', description: 'See what changed across incidents and source health', shortcut: '5', icon: '↺', action: () => dispatchShortcut('5') },
+      { id: 'wallboard', label: 'Launch wallboard', description: 'Enter the unattended signage view', shortcut: 'W', icon: '▣', action: () => dispatchShortcut('w') },
+      { id: 'refresh', label: 'Refresh intelligence now', description: 'Retrieve and validate the latest deployed status payload', shortcut: 'R', icon: '↻', action: () => { onRefresh(); setToast('Validated refresh requested'); } }
+    ];
+  }, [model?.actionQueue, onRefresh]);
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -135,7 +152,7 @@ export function ExperienceLayer({ model, lifecyclePhase, onRefresh }: Experience
               {command.shortcut && <kbd>{command.shortcut}</kbd>}
               {index === 0 && query && <em>Enter</em>}
             </button>)}
-            {!filtered.length && <div className="command-empty"><b>No matching command</b><span>Try overview, incidents, providers, sources, wallboard, or refresh.</span></div>}
+            {!filtered.length && <div className="command-empty"><b>No matching command</b><span>Try overview, incidents, providers, sources, wallboard, refresh, or a live provider name.</span></div>}
           </div>
           <footer><span><kbd>↑</kbd><kbd>↓</kbd> browse</span><span><kbd>↵</kbd> run first match</span><span><kbd>ESC</kbd> close</span></footer>
         </section>
