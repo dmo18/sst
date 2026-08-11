@@ -1,12 +1,12 @@
 # Current system status
 
-Status timestamp: 2026-08-10 20:10 Eastern Time
+Status timestamp: 2026-08-10 21:05 Eastern Time
 
 ## Executive status
 
 | Area | Status | Notes |
 | --- | --- | --- |
-| Full architecture reconciliation | Production code complete | PR #111 merged the complete original-review and next-level backlog at `4252a3009dd3fe150612269b511f5b1ecc38f516`. |
+| Full architecture reconciliation | Complete | PR #111 merged the complete original-review and next-level backlog; production run #790 and same-commit scheduled run #792 satisfy the final closure rule. |
 | Legacy Chromium release repair | Production verified | PR #112 merged at `d61b177dbe89c4e393992524df98c073add0d7bf`; production run #790 passed the published old-Chromium resolver and runtime probe. |
 | Status Contract | Healthy | Public payloads use schema/contract v3 and are bound to the canonical active provider catalog hash. |
 | Active catalog | Healthy | 80 raw entries consolidate to 79 active providers; validation derives counts instead of hardcoding them. |
@@ -18,11 +18,11 @@ Status timestamp: 2026-08-10 20:10 Eastern Time
 | Supply chain | Healthy | Current immutable action generations, CodeQL v4, complete dependency audit, Dependabot, repository quality gates, and opt-in pre-commit hook are present. |
 | Public browser security | Healthy | Restrictive CSP, local application assets, and same-origin status retrieval. |
 | Vendor rendering trust boundary | Healthy | Untrusted vendor pages use sandboxed Chromium, disposable profiles, and token-free collection. |
-| Current-browser production render | Healthy | Run #790 passed deployed operator rendering. |
+| Current-browser production render | Healthy | Run #790 passed deployed operator rendering; scheduled run #792 passed the unchanged-shell current-browser path. |
 | Legacy-browser production render | Healthy | Run #790 resolved a published Chromium snapshot at or below the Chrome 98 branch-base ceiling and passed the 458 by 291 fallback runtime probe. |
-| Exact Yodeck verification | Healthy | Run #790 passed the current-Chromium 458 by 291 geometry/filtering/marquee verifier and artifact upload. |
-| Verified application shell | Published | Code-changing releases publish a commit-keyed immutable application-shell artifact for scheduled reuse. |
-| Scheduled shell-reuse proof | Pending final closure gate | The next actual scheduled refresh on the same `d61b177d...` main commit must restore the verified shell, skip unchanged code verification/build work, and pass the complete live deployment path. |
+| Exact Yodeck verification | Healthy | Runs #790 and #792 passed the current-Chromium 458 by 291 geometry/filtering/marquee verifier and artifact upload. |
+| Verified application shell | Proven | Code-changing run #790 published the commit-keyed application shell; scheduled run #792 restored it successfully. |
+| Scheduled shell-reuse proof | Complete | Run #792 reused verified app shell artifact `9084789742`, skipped unchanged code verification/build work, and passed the complete scheduled live deployment path. |
 
 ## Current repository identity
 
@@ -33,6 +33,8 @@ Status timestamp: 2026-08-10 20:10 Eastern Time
 - Current production code commit: `d61b177dbe89c4e393992524df98c073add0d7bf`
 - Full reconciliation implementation: PR #111
 - Production legacy-browser repair: PR #112
+- Full code-changing production proof: run #790 (`31444948649`)
+- Same-commit scheduled shell-reuse proof: run #792 (`31446743500`)
 
 ## Current architecture
 
@@ -74,12 +76,22 @@ The reconciled pull-request/release baseline requires:
 - exact current-Chromium 458 by 291 Yodeck verification;
 - verification artifact upload and live-coverage status publication.
 
-PR #111's final implementation head passed 285 deterministic tests plus provider validation, repository quality, TypeScript, production build, dependency audit, and CodeQL before merge.
+PR #111's final implementation head passed 285 deterministic tests plus provider validation, repository quality, TypeScript, production build, dependency audit, and CodeQL before merge. Full production run #790 then passed the complete live code-changing release path on final commit `d61b177d...`.
 
-## Scheduled release contract
+## Scheduled release contract and proof
 
 Scheduled status refreshes retain the live-data safety gates but reuse the exact commit-keyed application shell produced by a verified code-changing release. When that artifact is present the schedule skips unchanged source-quality, deterministic, TypeScript, dependency-audit, and application-compilation work. It still performs live collection, Status Contract v3/hash validation, release reconciliation, Pages deployment, production smoke, current-browser rendering, exact Yodeck verification, artifact upload, and status publication.
 
-If the verified shell is unavailable, the schedule performs a fail-safe build rather than sacrificing data freshness.
+Run #792 proved this path on the exact same `d61b177d...` commit:
 
-The final architecture reconciliation remains open only for the real scheduled same-commit shell-reuse proof and the documentation closure release. See `docs/architecture-reconciliation.md`.
+- quality, deterministic tests, TypeScript, dependency audit, application build, shell preparation, and shell publication were skipped;
+- the verified shell lookup succeeded and logged reuse of artifact `9084789742`;
+- shell restoration succeeded;
+- the fail-safe application build was skipped;
+- live collection reported 79/79 official sources, 100% coverage, quality 86/100, zero fallbacks, and zero blind providers;
+- Status Contract v3 and release validation passed with catalog hash `fnv1a32:fa326cfc`;
+- Pages deployment, production smoke, current-browser rendering, exact 458 by 291 Yodeck verification, artifact upload, and status publication all passed.
+
+The legacy Chromium compatibility probe is intentionally limited to code-changing releases because scheduled runs reuse an already-verified immutable application shell. Run #790 remains the production proof for that browser path.
+
+The full architecture reconciliation is closed. `docs/architecture-reconciliation.md` is the authoritative completion record.
