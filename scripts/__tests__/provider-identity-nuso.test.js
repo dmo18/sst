@@ -75,7 +75,15 @@ test('provider identity is bundled locally with a pinned source record and no ru
   assert.equal(existsSync(new URL('../../public/assets/logos/quickbooks.svg', import.meta.url)), true);
 });
 
-test('deployed provider identity verification uses structural CDP checks instead of dump-dom copy heuristics', async () => {
+test('desktop devices do not enter the compact mobile shell only because the CSS viewport is narrow', async () => {
+  const main = await read('src/main.tsx');
+  assert.match(main, /keepDesktopDevicesOutOfCompactShell/);
+  assert.match(main, /max-device-width: 900px/);
+  assert.match(main, /max-device-width: 370px/);
+  assert.match(main, /rule\.media\.mediaText = replacement/);
+});
+
+test('deployed provider identity verification uses structural and computed-style CDP checks', async () => {
   const verifier = await read('scripts/verify-provider-identity.mjs');
   assert.doesNotMatch(verifier, /--dump-dom/);
   assert.doesNotMatch(verifier, /\/Provider operations\/i\.test\(html\)/);
@@ -90,6 +98,11 @@ test('deployed provider identity verification uses structural CDP checks instead
   assert.match(verifier, /networkRefs/);
   assert.match(verifier, /failedAssets/);
   assert.match(verifier, /nusoVisible/);
+  assert.match(verifier, /styleContract/);
+  assert.match(verifier, /shellStyle\?\.display === 'grid'/);
+  assert.match(verifier, /sidebarStyle\?\.position === 'fixed'/);
+  assert.match(verifier, /generatedStyle\?\.paddingTop === '0px'/);
+  assert.match(verifier, /NAVIGATION_ATTEMPTS = 3/);
 });
 
 test('provider identity browser verifier is syntactically executable', () => {
