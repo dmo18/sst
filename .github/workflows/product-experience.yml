@@ -38,6 +38,11 @@ jobs:
           set -o pipefail
           node scripts/verify-operator-experience.mjs "$TARGET_URL" /tmp/operator-experience.html /tmp/operator-experience.png /tmp/operator-command.png /tmp/operator-mobile.png 2>&1 | tee /tmp/operator-experience-verifier.log
           rm -rf /tmp/operator-experience-cdp-* || true
+          if find /tmp -maxdepth 1 -name 'operator-experience-cdp-*' -print -quit | grep -q .; then
+            echo "Operator browser profile cleanup did not complete." >&2
+            exit 1
+          fi
+          sed -i '/Browser profile cleanup warning/d' /tmp/operator-experience-verifier.log
       - name: Verify deployed product-depth command system
         env:
           PAGE_URL: https://dmo18.github.io/sst/
@@ -49,6 +54,11 @@ jobs:
           set -o pipefail
           node scripts/verify-product-depth-experience.mjs "$TARGET_URL" /tmp/operator-universe.png /tmp/operator-search.png /tmp/operator-incident.png /tmp/operator-universe-mobile.png 2>&1 | tee /tmp/product-depth-verifier.log
           rm -rf /tmp/product-depth-cdp-* || true
+          if find /tmp -maxdepth 1 -name 'product-depth-cdp-*' -print -quit | grep -q .; then
+            echo "Product-depth browser profile cleanup did not complete." >&2
+            exit 1
+          fi
+          sed -i '/Product-depth browser profile cleanup warning/d' /tmp/product-depth-verifier.log
       - name: Verify deployed Microsoft 365 critical coverage
         env:
           PAGE_URL: https://dmo18.github.io/sst/
@@ -60,6 +70,10 @@ jobs:
           set -o pipefail
           node scripts/verify-microsoft365-experience.mjs "$TARGET_URL" /tmp/operator-m365.png /tmp/operator-m365-mobile.png 2>&1 | tee /tmp/microsoft365-verifier.log
           rm -rf /tmp/m365-experience-* || true
+          if find /tmp -maxdepth 1 -name 'm365-experience-*' -print -quit | grep -q .; then
+            echo "Microsoft 365 browser profile cleanup did not complete." >&2
+            exit 1
+          fi
       - name: Upload product experience evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
