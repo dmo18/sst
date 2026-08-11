@@ -1,38 +1,62 @@
 /* Provider recognition layer. Exact bundled monochrome brand geometry is rendered as
-   a local mask in the provider accent; native multicolor assets remain untouched. */
+   a local mask in the provider accent; native multicolor assets remain untouched.
+
+   Recognition rule: curated identities must read as distinct brands at table scale.
+   Do not place generated or masked marks inside the shared pale padded logo shell. */
+
+.provider-logo--brand-mask,
+.provider-logo--generated {
+  padding: 0;
+  overflow: hidden;
+}
 
 .provider-logo--brand-mask {
   position: relative;
   display: inline-grid;
   place-items: center;
   flex: 0 0 auto;
-  overflow: hidden;
-  background: linear-gradient(145deg, #ffffff, #dce7f4);
+  border-color: var(--provider-accent, #4b5563);
+  background: var(--provider-accent, #27364b);
   box-shadow:
-    0 7px 18px rgba(0, 0, 0, .2),
-    0 1px 0 rgba(255, 255, 255, .72) inset,
-    0 0 0 1px color-mix(in srgb, var(--provider-accent) 24%, transparent);
+    0 8px 20px rgba(0, 0, 0, .24),
+    0 1px 0 rgba(255, 255, 255, .24) inset;
 }
 
 .provider-logo--brand-mask::after {
   content: '';
-  width: calc(100% - 12px);
-  height: calc(100% - 12px);
-  background: var(--provider-accent, #27364b);
+  width: calc(100% - 8px);
+  height: calc(100% - 8px);
+  background: #ffffff;
   -webkit-mask: var(--provider-logo-mask) center / contain no-repeat;
   mask: var(--provider-logo-mask) center / contain no-repeat;
 }
 
 .provider-logo--generated {
   object-fit: cover;
+  border-color: var(--provider-accent, #4b5563);
+  background: var(--provider-accent, #27364b);
+  box-shadow:
+    0 8px 20px rgba(0, 0, 0, .22),
+    0 1px 0 rgba(255, 255, 255, .18) inset;
 }
 
-@supports not (background: color-mix(in srgb, white 50%, black)) {
-  .provider-logo--brand-mask {
-    box-shadow: 0 7px 18px rgba(0, 0, 0, .2), 0 1px 0 rgba(255, 255, 255, .72) inset;
+/* Native multicolor marks keep a restrained light plate so their own brand geometry wins. */
+.provider-logo:not(.provider-logo--brand-mask):not(.provider-logo--generated) {
+  padding: 3px;
+  background: #f7fafc;
+}
+
+@supports (background: color-mix(in srgb, white 50%, black)) {
+  .provider-logo--brand-mask,
+  .provider-logo--generated {
+    border-color: color-mix(in srgb, var(--provider-accent, #4b5563) 72%, #ffffff 10%);
+    box-shadow:
+      0 8px 20px color-mix(in srgb, var(--provider-accent, #27364b) 24%, transparent),
+      0 1px 0 rgba(255, 255, 255, .24) inset;
   }
 }
 
-html.no-css-layers .provider-logo--brand-mask {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, .2);
+html.no-css-layers .provider-logo--brand-mask,
+html.no-css-layers .provider-logo--generated {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .22);
 }
