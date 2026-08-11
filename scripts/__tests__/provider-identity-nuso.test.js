@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { canonicalizeProviderCatalog, resolvePublicSource } from '../update-public-status.mjs';
 
 const read = path => readFile(new URL(`../../${path}`, import.meta.url), 'utf8');
@@ -84,6 +86,12 @@ test('deployed provider identity verification uses structural CDP checks instead
   assert.match(verifier, /generatedCount > 35/);
   assert.match(verifier, /failedAssets/);
   assert.match(verifier, /nusoVisible/);
+});
+
+test('provider identity browser verifier is syntactically executable', () => {
+  const verifierPath = fileURLToPath(new URL('../verify-provider-identity.mjs', import.meta.url));
+  const check = spawnSync(process.execPath, ['--check', verifierPath], { encoding: 'utf8' });
+  assert.equal(check.status, 0, check.stderr || check.stdout || 'node --check failed');
 });
 
 test('provider consolidation remains the single source of canonical overrides', async () => {
