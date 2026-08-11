@@ -7,6 +7,8 @@ const MOBILE_WIDTH = 390;
 const MOBILE_HEIGHT = 844;
 const DEBUG_PORT = 9228;
 const TIMEOUT_MS = 20_000;
+const STYLE_TIMEOUT_MS = 6_000;
+const NAVIGATION_ATTEMPTS = 3;
 
 const [targetUrl, desktopScreenshot = '/tmp/operator-providers.png', mobileScreenshot = '/tmp/operator-providers-mobile.png'] = process.argv.slice(2);
 const browser = process.env.BROWSER;
@@ -175,6 +177,67 @@ async function waitForProviderTable(session, timeoutMs = TIMEOUT_MS) {
   throw new Error(`Provider workspace did not become structurally ready: ${JSON.stringify(last)}`);
 }
 
+async function styleContract(session, mobile) {
+  return evaluate(session, `(() => {
+    const shell = document.querySelector('.enterprise-shell');
+    const sidebar = document.querySelector('.app-sidebar');
+    const head = document.querySelector('.provider-data-table .data-table-head');
+    const generated = document.querySelector('.provider-logo--generated');
+    const bodyStyle = getComputedStyle(document.body);
+    const shellStyle = shell ? getComputedStyle(shell) : null;
+    const sidebarStyle = sidebar ? getComputedStyle(sidebar) : null;
+    const headStyle = head ? getComputedStyle(head) : null;
+    const generatedStyle = generated ? getComputedStyle(generated) : null;
+    const styleSheets = [...document.styleSheets];
+    return {
+      bodyFont: bodyStyle.fontFamily,
+      shellDisplay: shellStyle?.display || '',
+      sidebarPosition: sidebarStyle?.position || '',
+      tableHeadDisplay: headStyle?.display || '',
+      generatedPadding: generatedStyle?.paddingTop || '',
+      stylesheetCount: styleSheets.length,
+      cssLinkCount: document.querySelectorAll('link[rel="stylesheet"]').length,
+      expectedMobile: ${mobile ? 'true' : 'false'},
+      ready: Boolean(
+        styleSheets.length > 0 &&
+        document.querySelector('link[rel="stylesheet"]') &&
+        /Inter|system-ui/i.test(bodyStyle.fontFamily) &&
+        generatedStyle?.paddingTop === '0px' &&
+        (${mobile ? "sidebarStyle?.position === 'fixed' && headStyle?.display === 'none'" : "shellStyle?.display === 'grid' && sidebarStyle?.position === 'sticky' && headStyle?.display !== 'none'"})
+      )
+    };
+  })()`);
+}
+
+async function waitForProviderStyles(session, mobile, timeoutMs = STYLE_TIMEOUT_MS) {
+  const deadline = Date.now() + timeoutMs;
+  let last;
+  while (Date.now() < deadline) {
+    last = await styleContract(session, mobile);
+    if (last?.ready) return last;
+    await sleep(150);
+  }
+  throw new Error(`Provider ${mobile ? 'mobile' : 'desktop'} styling did not become ready: ${JSON.stringify(last)}`);
+}
+
+async function navigateReadyProviderView(session, mobile) {
+  let lastError;
+  for (let attempt = 1; attempt <= NAVIGATION_ATTEMPTS; attempt += 1) {
+    const probe = `${mobile ? 'mobile' : 'desktop'}-${Date.now()}-${attempt}`;
+    try {
+      await navigate(session, providerUrl(probe));
+      await waitForProviderTable(session);
+      const style = await waitForProviderStyles(session, mobile);
+      return style;
+    }
+    catch (error) {
+      lastError = error;
+      if (attempt < NAVIGATION_ATTEMPTS) await sleep(500 * attempt);
+    }
+  }
+  throw new Error(`Provider ${mobile ? 'mobile' : 'desktop'} view failed after ${NAVIGATION_ATTEMPTS} navigation attempts: ${lastError?.message || lastError}`);
+}
+
 async function capture(session, path) {
   const screenshot = await session.send('Page.captureScreenshot', {
     format: 'png',
@@ -246,8 +309,7 @@ try {
   await session.send('Runtime.enable');
 
   await setViewport(session, WIDTH, HEIGHT, false);
-  await navigate(session, providerUrl(`desktop-${Date.now()}`));
-  await waitForProviderTable(session);
+  const desktopStyle = await navigateReadyProviderView(session, false);
   const desktop = await identityContract(session);
 
   if (desktop.unavailable) throw new Error('Provider identity verification rendered the unavailable state.');
@@ -264,8 +326,7 @@ try {
   const desktopBytes = await capture(session, desktopScreenshot);
 
   await setViewport(session, MOBILE_WIDTH, MOBILE_HEIGHT, true);
-  await navigate(session, providerUrl(`mobile-${Date.now()}`));
-  await waitForProviderTable(session);
+  const mobileStyle = await navigateReadyProviderView(session, true);
   const mobile = await evaluate(session, `(() => {
     const table = document.querySelector('.provider-data-table[aria-label="Provider operations"]');
     const identities = [...(table?.querySelectorAll('.provider-identity') || [])];
@@ -293,6 +354,7 @@ try {
   const mobileBytes = await capture(session, mobileScreenshot);
 
   console.log(`PROVIDER_IDENTITY providers=${desktop.providerIdentityCount} exact_masks=${desktop.brandMaskCount} curated_generated=${desktop.generatedCount} embedded_svg=${desktop.embeddedSvgCount} local_assets=${desktop.localLogoAssets} unique_assets=${desktop.uniqueLocalLogoAssets}`);
+  console.log(`PROVIDER_IDENTITY_STYLE desktop_shell=${desktopStyle.shellDisplay} desktop_sidebar=${desktopStyle.sidebarPosition} mobile_sidebar=${mobileStyle.sidebarPosition} stylesheets=${desktopStyle.stylesheetCount}`);
   console.log(`PROVIDER_IDENTITY_NUSO present=true visible_mobile=true desktop=${desktopBytes} mobile=${mobileBytes}`);
 }
 finally {
