@@ -1,4 +1,5 @@
 import providerCatalog from '../config/providers.json' with { type: 'json' };
+import providerAdditions from '../config/provider-additions.json' with { type: 'json' };
 import providerConsolidation from '../config/provider-consolidation.json' with { type: 'json' };
 import type { ProviderConfig } from './types';
 
@@ -9,8 +10,9 @@ type ProviderConsolidation = {
 
 const consolidation = providerConsolidation as ProviderConsolidation;
 const excludedProviderIds = new Set(consolidation.excludedProviderIds);
+const rawProviderCatalog = [...(providerCatalog as ProviderConfig[]), ...(providerAdditions as ProviderConfig[])];
 
-export const ACTIVE_PROVIDER_CATALOG: ProviderConfig[] = (providerCatalog as ProviderConfig[])
+export const ACTIVE_PROVIDER_CATALOG: ProviderConfig[] = rawProviderCatalog
   .filter(provider => !excludedProviderIds.has(provider.id))
   .map(provider => ({ ...provider, ...(consolidation.providerOverrides[provider.id] || {}) }));
 
