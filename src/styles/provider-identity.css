@@ -1,0 +1,38 @@
+/* Provider recognition layer. Exact bundled monochrome brand geometry is rendered as
+   a local mask in the provider accent; native multicolor assets remain untouched. */
+
+.provider-logo--brand-mask {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  overflow: hidden;
+  background: linear-gradient(145deg, #ffffff, #dce7f4);
+  box-shadow:
+    0 7px 18px rgba(0, 0, 0, .2),
+    0 1px 0 rgba(255, 255, 255, .72) inset,
+    0 0 0 1px color-mix(in srgb, var(--provider-accent) 24%, transparent);
+}
+
+.provider-logo--brand-mask::after {
+  content: '';
+  width: calc(100% - 12px);
+  height: calc(100% - 12px);
+  background: var(--provider-accent, #27364b);
+  -webkit-mask: var(--provider-logo-mask) center / contain no-repeat;
+  mask: var(--provider-logo-mask) center / contain no-repeat;
+}
+
+.provider-logo--generated {
+  object-fit: cover;
+}
+
+@supports not (background: color-mix(in srgb, white 50%, black)) {
+  .provider-logo--brand-mask {
+    box-shadow: 0 7px 18px rgba(0, 0, 0, .2), 0 1px 0 rgba(255, 255, 255, .72) inset;
+  }
+}
+
+html.no-css-layers .provider-logo--brand-mask {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .2);
+}
