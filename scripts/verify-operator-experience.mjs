@@ -3,13 +3,21 @@ import { spawn } from 'node:child_process';
 
 const WIDTH = 1440;
 const HEIGHT = 960;
+const MOBILE_WIDTH = 390;
+const MOBILE_HEIGHT = 844;
 const DEBUG_PORT = 9224;
 const DEFAULT_TIMEOUT_MS = 20_000;
 
-const [targetUrl, htmlPath = '/tmp/operator-experience.html', screenshotPath = '/tmp/operator-experience.png', commandScreenshotPath = '/tmp/operator-command.png'] = process.argv.slice(2);
+const [
+  targetUrl,
+  htmlPath = '/tmp/operator-experience.html',
+  screenshotPath = '/tmp/operator-experience.png',
+  commandScreenshotPath = '/tmp/operator-command.png',
+  mobileScreenshotPath = '/tmp/operator-mobile.png'
+] = process.argv.slice(2);
 const browser = process.env.BROWSER;
 
-if (!targetUrl) throw new Error('Usage: node scripts/verify-operator-experience.mjs <url> [html-path] [screenshot-path] [command-screenshot-path]');
+if (!targetUrl) throw new Error('Usage: node scripts/verify-operator-experience.mjs <url> [html-path] [screenshot-path] [command-screenshot-path] [mobile-screenshot-path]');
 if (!browser) throw new Error('BROWSER environment variable is required.');
 if (typeof WebSocket !== 'function') throw new Error('Node WebSocket support is required.');
 
@@ -130,6 +138,26 @@ async function evaluate(session, expression) {
   return result.result?.value;
 }
 
+async function setViewport(session, width, height, mobile = false) {
+  await session.send('Emulation.setDeviceMetricsOverride', {
+    width,
+    height,
+    deviceScaleFactor: 1,
+    mobile,
+    screenWidth: width,
+    screenHeight: height,
+    positionX: 0,
+    positionY: 0,
+    dontSetVisibleSize: false
+  });
+}
+
+async function navigate(session, url) {
+  const loadEvent = session.waitForEvent('Page.loadEventFired');
+  await session.send('Page.navigate', { url });
+  await loadEvent;
+}
+
 async function waitForOperator(session, timeoutMs = DEFAULT_TIMEOUT_MS) {
   const deadline = Date.now() + timeoutMs;
   let last = null;
@@ -138,9 +166,10 @@ async function waitForOperator(session, timeoutMs = DEFAULT_TIMEOUT_MS) {
       shell: Boolean(document.querySelector('.enterprise-shell')),
       hero: Boolean(document.querySelector('.posture-panel')),
       pulse: Boolean(document.querySelector('.experience-pulse')),
+      tone: document.documentElement.dataset.operationalTone || '',
       unavailable: /Status intelligence unavailable/i.test(document.body.innerText)
     }))()`);
-    if (last?.shell && last?.hero && last?.pulse && !last?.unavailable) return last;
+    if (last?.shell && last?.hero && last?.pulse && last?.tone && !last?.unavailable) return last;
     await sleep(250);
   }
   throw new Error(`Premium operator surface did not become ready: ${JSON.stringify(last)}`);
@@ -165,21 +194,8 @@ try {
   await session.open();
   await session.send('Page.enable');
   await session.send('Runtime.enable');
-  await session.send('Emulation.setDeviceMetricsOverride', {
-    width: WIDTH,
-    height: HEIGHT,
-    deviceScaleFactor: 1,
-    mobile: false,
-    screenWidth: WIDTH,
-    screenHeight: HEIGHT,
-    positionX: 0,
-    positionY: 0,
-    dontSetVisibleSize: false
-  });
-
-  const loadEvent = session.waitForEvent('Page.loadEventFired');
-  await session.send('Page.navigate', { url: targetUrl });
-  await loadEvent;
+  await setViewport(session, WIDTH, HEIGHT, false);
+  await navigate(session, targetUrl);
   await waitForOperator(session);
 
   const contract = await evaluate(session, `(() => {
@@ -232,15 +248,65 @@ try {
         const palette = document.querySelector('.command-palette');
         const input = palette?.querySelector('input');
         const commands = palette ? palette.querySelectorAll('.command-list > button').length : 0;
-        return { visible: Boolean(palette), focused: document.activeElement === input, commands };
+        const selected = palette?.querySelector('[role="option"][aria-selected="true"]')?.id || '';
+        return { visible: Boolean(palette), focused: document.activeElement === input, commands, selected };
       })()`);
-      if (state.visible && state.focused) return state;
+      if (state.visible && state.focused && state.selected) return state;
       await sleep(100);
     }
   })(), 4_000, 'Command palette');
 
   if (palette.commands < 7) throw new Error(`Command palette has too few actions: ${palette.commands}`);
+  const beforeSelection = palette.selected;
+  await session.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'ArrowDown', code: 'ArrowDown' });
+  await session.send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'ArrowDown', code: 'ArrowDown' });
+  const afterSelection = await withTimeout((async () => {
+    while (true) {
+      const selected = await evaluate(session, `document.querySelector('[role="option"][aria-selected="true"]')?.id || ''`);
+      if (selected && selected !== beforeSelection) return selected;
+      await sleep(50);
+    }
+  })(), 2_000, 'Command keyboard selection');
+  if (!afterSelection) throw new Error('Arrow-key command selection did not move.');
   const commandScreenshotBytes = await capture(session, commandScreenshotPath);
+
+  await setViewport(session, MOBILE_WIDTH, MOBILE_HEIGHT, true);
+  const mobileUrl = `${targetUrl}${targetUrl.includes('?') ? '&' : '?'}mobileExperienceProbe=1`;
+  await navigate(session, mobileUrl);
+  await waitForOperator(session);
+
+  const mobileContract = await evaluate(session, `(() => {
+    const nav = document.querySelector('.app-sidebar');
+    const navStyle = nav ? getComputedStyle(nav) : null;
+    const navRect = nav?.getBoundingClientRect();
+    const hero = document.querySelector('.posture-panel');
+    const heroTitle = hero?.querySelector('h2');
+    const heroStyle = heroTitle ? getComputedStyle(heroTitle) : null;
+    const pulse = document.querySelector('.experience-pulse');
+    const pulseStyle = pulse ? getComputedStyle(pulse) : null;
+    return {
+      viewport: { width: innerWidth, height: innerHeight },
+      navPosition: navStyle?.position || '',
+      navBottomGap: navRect ? innerHeight - navRect.bottom : 999,
+      navButtons: nav?.querySelectorAll('nav button').length || 0,
+      heroFontSize: heroStyle ? parseFloat(heroStyle.fontSize) : 0,
+      pulseDisplay: pulseStyle?.display || '',
+      operationalTone: document.documentElement.dataset.operationalTone || '',
+      horizontalOverflow: document.documentElement.scrollWidth - innerWidth,
+      unavailable: /Status intelligence unavailable/i.test(document.body.innerText)
+    };
+  })()`);
+
+  if (mobileContract.viewport.width !== MOBILE_WIDTH || mobileContract.viewport.height !== MOBILE_HEIGHT) throw new Error(`Mobile viewport mismatch: ${mobileContract.viewport.width}x${mobileContract.viewport.height}`);
+  if (mobileContract.navPosition !== 'fixed') throw new Error(`Mobile navigation is not fixed: ${mobileContract.navPosition || 'missing'}`);
+  if (Math.abs(mobileContract.navBottomGap) > 2) throw new Error(`Mobile navigation does not reach the viewport bottom: ${mobileContract.navBottomGap}px`);
+  if (mobileContract.navButtons !== 5) throw new Error(`Mobile navigation expected 5 destinations, found ${mobileContract.navButtons}`);
+  if (mobileContract.heroFontSize < 18) throw new Error(`Mobile posture headline is too small: ${mobileContract.heroFontSize}px`);
+  if (mobileContract.pulseDisplay !== 'none') throw new Error(`Desktop pulse dock should collapse on mobile, found display=${mobileContract.pulseDisplay}`);
+  if (!mobileContract.operationalTone) throw new Error('Mobile operational atmosphere is not active.');
+  if (mobileContract.horizontalOverflow > 1) throw new Error(`Mobile operator surface has horizontal overflow: ${mobileContract.horizontalOverflow}px`);
+  if (mobileContract.unavailable) throw new Error('Mobile operator surface rendered the unavailable state.');
+  const mobileScreenshotBytes = await capture(session, mobileScreenshotPath);
 
   console.log(`OPERATOR_VIEWPORT ${WIDTH}x${HEIGHT}`);
   console.log(`OPERATOR_HERO_HEIGHT ${Math.round(contract.heroHeight)}`);
@@ -249,6 +315,9 @@ try {
   console.log(`OPERATOR_SCREENSHOT_BYTES ${screenshotBytes}`);
   console.log(`OPERATOR_COMMAND_SCREENSHOT_BYTES ${commandScreenshotBytes}`);
   console.log(`OPERATOR_COMMANDS ${palette.commands}`);
+  console.log(`OPERATOR_COMMAND_SELECTION ${beforeSelection} -> ${afterSelection}`);
+  console.log(`OPERATOR_MOBILE_VIEWPORT ${MOBILE_WIDTH}x${MOBILE_HEIGHT}`);
+  console.log(`OPERATOR_MOBILE_SCREENSHOT_BYTES ${mobileScreenshotBytes}`);
 }
 finally {
   session?.close();
