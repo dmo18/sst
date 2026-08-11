@@ -28,5 +28,5 @@ export function ProviderIcon({ id, name }: { id: string; name: string }): JSX.El
     event.currentTarget.style.removeProperty('--provider-accent');
   };
   return <img className={className} style={style} src={source} alt="" width={40} height={40}
-    loading="lazy" decoding="async" onError={onError} />;
+    loading="eager" decoding="async" onError={onError} />;
 }
