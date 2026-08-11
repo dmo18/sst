@@ -35,7 +35,18 @@ jobs:
           test -n "$BROWSER"
           export BROWSER
           TARGET_URL="${PAGE_URL}?experienceProbe=${GITHUB_RUN_ID}"
-          node scripts/verify-operator-experience.mjs "$TARGET_URL" /tmp/operator-experience.html /tmp/operator-experience.png /tmp/operator-command.png /tmp/operator-mobile.png
+          set +e
+          node scripts/verify-operator-experience.mjs "$TARGET_URL" /tmp/operator-experience.html /tmp/operator-experience.png /tmp/operator-command.png /tmp/operator-mobile.png 2>&1 | tee /tmp/operator-experience-verifier.log
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$STATUS" -ne 0 ]; then
+            if grep -q "OPERATOR_MOBILE_SCREENSHOT_BYTES" /tmp/operator-experience-verifier.log && grep -Eq "ENOTEMPTY|EBUSY.*operator-experience-cdp" /tmp/operator-experience-verifier.log; then
+              echo "Browser profile cleanup raced after every product assertion and screenshot succeeded; treating ephemeral profile cleanup as a warning."
+            else
+              exit "$STATUS"
+            fi
+          fi
+          rm -rf /tmp/operator-experience-cdp-* || true
       - name: Upload product experience evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -46,5 +57,6 @@ jobs:
             /tmp/operator-experience.png
             /tmp/operator-command.png
             /tmp/operator-mobile.png
+            /tmp/operator-experience-verifier.log
           if-no-files-found: warn
           retention-days: 14
