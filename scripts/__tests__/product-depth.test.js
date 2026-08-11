@@ -76,3 +76,21 @@ test('persistent launcher makes the signature feature discoverable without overl
   assert.match(css, /right: 164px/);
   assert.match(css, /@media \(max-width: 900px\)/);
 });
+
+test('deployed product-depth verification captures universe search incident and mobile evidence without schedule churn', async () => {
+  const workflow = await read('.github/workflows/product-experience.yml');
+  const verifier = await read('scripts/verify-product-depth-experience.mjs');
+  assert.match(workflow, /workflow_run\.event != 'schedule'/);
+  assert.match(workflow, /verify-product-depth-experience\.mjs/);
+  for (const artifact of ['operator-universe.png', 'operator-search.png', 'operator-incident.png', 'operator-universe-mobile.png', 'product-depth-verifier.log']) {
+    assert.match(workflow, new RegExp(artifact.replace('.', '\\.')));
+  }
+  assert.match(verifier, /focus: 'universe'/);
+  assert.match(verifier, /focus: 'search'/);
+  assert.match(verifier, /focus: `incident:\$\{incidentId\}`/);
+  assert.match(verifier, /PRODUCT_DEPTH_INCIDENT/);
+  assert.match(verifier, /skipped no-live-incident/);
+  assert.match(verifier, /Mobile Dependency Universe launcher overlaps Operations Intelligence chrome/);
+  assert.match(verifier, /temporal correlations only\|Temporal correlation only/i);
+  assert.match(verifier, /recorded changes only/i);
+});
