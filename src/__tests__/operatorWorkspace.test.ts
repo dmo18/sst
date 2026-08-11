@@ -29,7 +29,7 @@ function fixture(): IssueConsoleModel {
         id: 'incident-a', providerId: 'alpha', provider: 'Alpha', category: 'Identity', title: 'Sign-in delays', note: 'Authentication is delayed.', source: 'status', url: 'https://status.example/alpha', time: generatedAt, color: 'red', service_state: 'major', attention: 'critical', priority: 90, label: 'Major', clientDraft: 'DRAFT alpha', affectedServiceLabel: 'sign-in', mspImpact: 'Users may be unable to sign in.', technicianAction: 'Test a known-good account.', operatorPriority: 'P1', evidenceLabel: 'Structured vendor incident'
       },
       {
-        id: 'incident-b', providerId: 'beta', provider: 'Beta', category: 'Identity', title: 'MFA errors', note: 'MFA errors are elevated.', source: 'status', url: 'https://status.example/beta', time: generatedAt, color: 'yellow', service_state: 'degraded', attention: 'action', priority: 80, label: 'Degraded', clientDraft: 'DRAFT beta', affectedServiceLabel: 'MFA', mspImpact: 'MFA may fail.', technicianAction: 'Capture timestamps.', operatorPriority: 'P2', evidenceLabel: 'Vendor feed'
+        id: 'incident-b', providerId: 'beta', provider: 'Beta', category: 'Identity', title: 'MFA errors', note: 'MFA errors are elevated.', source: 'status', url: 'https://status.example/beta', time: generatedAt, color: 'amber', service_state: 'degraded', attention: 'action', priority: 80, label: 'Degraded', clientDraft: 'DRAFT beta', affectedServiceLabel: 'MFA', mspImpact: 'MFA may fail.', technicianAction: 'Capture timestamps.', operatorPriority: 'P2', evidenceLabel: 'Vendor feed'
       }
     ],
     maintenance: [],
