@@ -47,9 +47,11 @@ function pulseCopy(model: IssueConsoleModel | null): { label: string; detail: st
 export function ExperienceLayer({ model, lifecyclePhase, onRefresh }: ExperienceLayerProps): JSX.Element {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
+  const [activeIndex, setActiveIndex] = useState(0);
   const [toast, setToast] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const pulse = pulseCopy(model);
+  const commandShortcut = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/i.test(navigator.platform) ? '⌘K' : 'Ctrl K';
 
   const commands = useMemo<Command[]>(() => {
     const liveSignals: Command[] = (model?.actionQueue || [])
@@ -110,8 +112,18 @@ export function ExperienceLayer({ model, lifecyclePhase, onRefresh }: Experience
   useEffect(() => {
     if (!open) return;
     setQuery('');
+    setActiveIndex(0);
     window.setTimeout(() => inputRef.current?.focus(), 0);
   }, [open]);
+
+  useEffect(() => {
+    setActiveIndex(0);
+  }, [query]);
+
+  useEffect(() => {
+    if (activeIndex < filtered.length) return;
+    setActiveIndex(Math.max(0, filtered.length - 1));
+  }, [activeIndex, filtered.length]);
 
   useEffect(() => {
     if (!toast) return;
@@ -124,13 +136,31 @@ export function ExperienceLayer({ model, lifecyclePhase, onRefresh }: Experience
     setOpen(false);
   };
 
+  const handleCommandKey = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!filtered.length) return;
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      setActiveIndex(index => (index + 1) % filtered.length);
+      return;
+    }
+    if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      setActiveIndex(index => (index - 1 + filtered.length) % filtered.length);
+      return;
+    }
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      run(filtered[activeIndex] || filtered[0]);
+    }
+  };
+
   return (
     <>
       <div className={`experience-pulse experience-${pulse.tone}`} aria-live="polite">
         <span className="experience-pulse-orb" />
         <div><b>{pulse.label}</b><span>{pulse.detail}</span></div>
         <button type="button" onClick={() => setOpen(true)} aria-label="Open command palette">
-          <span>Command</span><kbd>⌘K</kbd>
+          <span>Command</span><kbd>{commandShortcut}</kbd>
         </button>
       </div>
 
@@ -144,24 +174,38 @@ export function ExperienceLayer({ model, lifecyclePhase, onRefresh }: Experience
           </header>
           <label className="command-search">
             <span>⌕</span>
-            <input ref={inputRef} value={query} onChange={event => setQuery(event.target.value)} placeholder="Jump anywhere or run an action…" onKeyDown={event => {
-              if (event.key === 'Enter' && filtered[0]) run(filtered[0]);
-            }} />
+            <input
+              ref={inputRef}
+              value={query}
+              onChange={event => setQuery(event.target.value)}
+              placeholder="Jump anywhere or run an action…"
+              onKeyDown={handleCommandKey}
+              aria-activedescendant={filtered[activeIndex] ? `command-${filtered[activeIndex].id}` : undefined}
+            />
           </label>
           <div className="command-context">
             <span>Live context</span>
             <b>{model ? `${model.incidentCount} incidents · ${model.blindSpotCount} blind · ${model.summary.coverage_percent}% coverage` : 'Awaiting validated data'}</b>
           </div>
-          <div className="command-list">
-            {filtered.map((command, index) => <button type="button" key={command.id} onClick={() => run(command)}>
+          <div className="command-list" role="listbox" aria-label="Available commands">
+            {filtered.map((command, index) => <button
+              type="button"
+              id={`command-${command.id}`}
+              key={command.id}
+              className={index === activeIndex ? 'is-active' : undefined}
+              role="option"
+              aria-selected={index === activeIndex}
+              onMouseEnter={() => setActiveIndex(index)}
+              onClick={() => run(command)}
+            >
               <span className="command-icon">{command.icon}</span>
               <span><b>{command.label}</b><small>{command.description}</small></span>
               {command.shortcut && <kbd>{command.shortcut}</kbd>}
-              {index === 0 && query && <em>Enter</em>}
+              {index === activeIndex && query && <em>Enter</em>}
             </button>)}
             {!filtered.length && <div className="command-empty"><b>No matching command</b><span>Try overview, incidents, providers, sources, wallboard, refresh, or a live provider name.</span></div>}
           </div>
-          <footer><span><kbd>↑</kbd><kbd>↓</kbd> browse</span><span><kbd>↵</kbd> run first match</span><span><kbd>ESC</kbd> close</span></footer>
+          <footer><span><kbd>↑</kbd><kbd>↓</kbd> browse</span><span><kbd>↵</kbd> run selection</span><span><kbd>ESC</kbd> close</span></footer>
         </section>
       </div>}
 
