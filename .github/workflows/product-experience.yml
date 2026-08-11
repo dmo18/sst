@@ -14,7 +14,7 @@ jobs:
   verify:
     if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event != 'schedule')
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
     permissions:
       contents: read
     steps:
@@ -38,6 +38,17 @@ jobs:
           set -o pipefail
           node scripts/verify-operator-experience.mjs "$TARGET_URL" /tmp/operator-experience.html /tmp/operator-experience.png /tmp/operator-command.png /tmp/operator-mobile.png 2>&1 | tee /tmp/operator-experience-verifier.log
           rm -rf /tmp/operator-experience-cdp-* || true
+      - name: Verify deployed product-depth command system
+        env:
+          PAGE_URL: https://dmo18.github.io/sst/
+        run: |
+          BROWSER="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
+          test -n "$BROWSER"
+          export BROWSER
+          TARGET_URL="${PAGE_URL}?productDepthProbe=${GITHUB_RUN_ID}"
+          set -o pipefail
+          node scripts/verify-product-depth-experience.mjs "$TARGET_URL" /tmp/operator-universe.png /tmp/operator-search.png /tmp/operator-incident.png /tmp/operator-universe-mobile.png 2>&1 | tee /tmp/product-depth-verifier.log
+          rm -rf /tmp/product-depth-cdp-* || true
       - name: Upload product experience evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -48,6 +59,11 @@ jobs:
             /tmp/operator-experience.png
             /tmp/operator-command.png
             /tmp/operator-mobile.png
+            /tmp/operator-universe.png
+            /tmp/operator-search.png
+            /tmp/operator-incident.png
+            /tmp/operator-universe-mobile.png
             /tmp/operator-experience-verifier.log
+            /tmp/product-depth-verifier.log
           if-no-files-found: warn
           retention-days: 14
