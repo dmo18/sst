@@ -146,9 +146,16 @@
   animation: premium-live-pulse 2.3s ease-in-out infinite;
 }
 
-.command-list > button:first-child:focus-within,
-.command-list > button:first-child:hover {
-  box-shadow: inset 3px 0 0 rgba(99,230,255,.62);
+.command-list > button.is-active {
+  border-color: rgba(109,141,255,.22);
+  background: linear-gradient(90deg, rgba(109,141,255,.12), rgba(167,121,255,.055));
+  box-shadow: inset 3px 0 0 rgba(99,230,255,.62), 0 8px 24px rgba(0,0,0,.10);
+}
+
+.command-list > button.is-active .command-icon {
+  border-color: rgba(109,141,255,.28);
+  color: #c6d4ff;
+  background: rgba(109,141,255,.10);
 }
 
 @keyframes premium-surface-enter {
