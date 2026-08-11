@@ -42,8 +42,10 @@ test('incident focus action loop is local and cannot rewrite vendor truth', asyn
 test('signature experience contains dependency universe cautious correlation and signal replay', async () => {
   const layer = await read('src/ProductDepthLayer.tsx');
   const workspace = await read('src/operatorWorkspace.ts');
+  const correlation = await read('src/eventCorrelation.ts');
   assert.match(layer, /Dependency Universe/);
-  assert.match(layer, /Temporal correlation only/);
+  assert.match(layer, /temporal correlations only, never inferred causality/i);
+  assert.match(correlation, /Temporal correlation only; no causal relationship is inferred/);
   assert.match(layer, /Signal replay/);
   assert.match(layer, /does not reconstruct unobserved service state/);
   assert.match(workspace, /kind: 'correlation'/);
