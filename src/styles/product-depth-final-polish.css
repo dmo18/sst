@@ -1,0 +1,62 @@
+/* Final product-depth visual polish driven by deployed screenshot review. */
+
+@media (max-width: 900px) {
+  .depth-shell-universe .depth-universe-stage {
+    isolation: isolate;
+  }
+
+  .depth-shell-universe .depth-stage-heading,
+  .depth-shell-universe .depth-replay {
+    position: relative;
+    z-index: 2;
+  }
+
+  .depth-shell-universe .dependency-universe {
+    transform: scale(1.58);
+    transform-origin: 50% 50%;
+  }
+
+  .depth-shell-universe .depth-replay {
+    background: rgba(8, 13, 23, .96);
+    box-shadow: 0 18px 48px rgba(0, 0, 0, .36);
+  }
+
+  .depth-truth-boundary {
+    top: auto;
+    bottom: 146px;
+    width: calc(100vw - 34px);
+    grid-template-columns: auto auto minmax(0, 1fr);
+    gap: 7px;
+    border-radius: 999px;
+    padding: 7px 10px;
+  }
+
+  .depth-truth-boundary span,
+  .depth-truth-boundary strong,
+  .depth-truth-boundary small {
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 470px) {
+  .depth-truth-boundary {
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    border-radius: 13px;
+  }
+
+  .depth-truth-boundary span {
+    grid-column: 1 / -1;
+  }
+
+  .depth-truth-boundary small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .depth-shell-universe .dependency-universe {
+    transform: scale(1.58);
+  }
+}
