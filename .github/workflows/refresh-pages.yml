@@ -166,17 +166,27 @@ jobs:
           grep -q 'What deserves attention now' /tmp/live-dom.html
           ! grep -q 'Status intelligence unavailable' /tmp/live-dom.html
           ! grep -q 'invalid or unsupported payload' /tmp/live-dom.html
+      - name: Resolve published pre-cascade-layer Chromium snapshot
+        if: github.event_name != 'schedule'
+        id: legacy-chromium
+        env:
+          LEGACY_CHROMIUM_MAX_REVISION: "950365"
+        run: node scripts/resolve-legacy-chromium.mjs
       - name: Verify pinned pre-cascade-layer Chromium wallboard runtime
         if: github.event_name != 'schedule'
         env:
           PAGE_URL: ${{ steps.deployment.outputs.page_url }}
-          LEGACY_CHROMIUM_REVISION: "950365"
+          LEGACY_CHROMIUM_REVISION: ${{ steps.legacy-chromium.outputs.revision }}
+          LEGACY_CHROMIUM_URL: ${{ steps.legacy-chromium.outputs.url }}
         run: |
+          test -n "${LEGACY_CHROMIUM_REVISION}"
+          test -n "${LEGACY_CHROMIUM_URL}"
           rm -rf /tmp/chromium-legacy /tmp/chromium-legacy.zip
-          curl --fail --silent --show-error --location "https://storage.googleapis.com/chromium-browser-snapshots/Linux_x64/${LEGACY_CHROMIUM_REVISION}/chrome-linux.zip" -o /tmp/chromium-legacy.zip
+          curl --fail --silent --show-error --location "${LEGACY_CHROMIUM_URL}" -o /tmp/chromium-legacy.zip
           mkdir -p /tmp/chromium-legacy
           unzip -q /tmp/chromium-legacy.zip -d /tmp/chromium-legacy
           chmod +x /tmp/chromium-legacy/chrome-linux/chrome
+          echo "LEGACY_CHROMIUM_REVISION ${LEGACY_CHROMIUM_REVISION}"
           LEGACY_BROWSER=/tmp/chromium-legacy/chrome-linux/chrome STATUS_BASE_URL="$PAGE_URL" node scripts/verify-legacy-wallboard.mjs
       - name: Verify 458x291 Yodeck wallboard contract
         env:
