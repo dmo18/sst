@@ -3,6 +3,32 @@
     "datto"
   ],
   "providerOverrides": {
+    "microsoft365": {
+      "criticality": "high",
+      "tags": [
+        "cloud",
+        "email",
+        "communications",
+        "identity",
+        "collaboration",
+        "endpoint-management",
+        "security"
+      ],
+      "services": [
+        "Microsoft 365 suite",
+        "Exchange Online",
+        "Microsoft Teams",
+        "SharePoint Online",
+        "OneDrive for Business",
+        "Microsoft Entra ID",
+        "Microsoft Intune",
+        "Microsoft 365 Apps",
+        "Microsoft Defender for Microsoft 365",
+        "Microsoft Power Platform"
+      ],
+      "client_impact": "May affect Microsoft 365 administration, Exchange Online mail flow, Teams, SharePoint, OneDrive, Entra sign-in, Intune, Microsoft 365 Apps, Defender, Power Platform, and dependent client workflows.",
+      "technician_action": "Check Microsoft public and Entra status, then tenant Service Health before changing client DNS, identity, mail, endpoint, or collaboration configuration."
+    },
     "kaseya": {
       "criticality": "high",
       "tags": [

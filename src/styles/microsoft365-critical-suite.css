@@ -1,0 +1,331 @@
+/* Microsoft 365 critical coverage workspace and product truth boundary. */
+
+.m365-launcher {
+  position: fixed;
+  z-index: 126;
+  left: 14px;
+  bottom: 306px;
+  width: calc(var(--px-sidebar) - 28px);
+  min-height: 54px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  border: 1px solid rgba(98, 177, 255, .22);
+  border-radius: 14px;
+  padding: 8px 9px 8px 11px;
+  color: #eaf5ff;
+  background:
+    radial-gradient(circle at 16% 0%, rgba(38, 146, 255, .22), transparent 46%),
+    linear-gradient(180deg, rgba(19, 34, 56, .97), rgba(9, 17, 29, .98));
+  box-shadow: 0 16px 38px rgba(0, 0, 0, .28), 0 0 0 1px rgba(255, 255, 255, .025) inset;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+
+.m365-launcher:hover,
+.m365-launcher:focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba(89, 185, 255, .48);
+  box-shadow: 0 20px 46px rgba(0, 0, 0, .34), 0 0 30px rgba(51, 153, 255, .11);
+  outline: none;
+}
+
+.m365-launcher-mark {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(107, 191, 255, .45);
+  border-radius: 8px;
+  color: #dff2ff;
+  background: linear-gradient(135deg, rgba(34, 139, 230, .92), rgba(91, 103, 238, .86));
+  box-shadow: 0 0 18px rgba(49, 145, 255, .24);
+  font-size: .63rem;
+  font-weight: 900;
+  letter-spacing: -.04em;
+}
+
+.m365-launcher > span:nth-child(2) {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.m365-launcher b {
+  overflow: hidden;
+  color: #f1f7ff;
+  font-size: .68rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.m365-launcher small {
+  overflow: hidden;
+  color: #8298b8;
+  font-size: .54rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.m365-launcher em {
+  border-radius: 999px;
+  padding: 4px 6px;
+  color: #9eacc5;
+  background: rgba(4, 8, 15, .42);
+  font-size: .46rem;
+  font-style: normal;
+  font-weight: 850;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.m365-launcher.is-positive em { color: #67dbad; }
+.m365-launcher.is-warning em { color: #f2c76f; }
+.m365-launcher.is-critical em { color: #ff8e95; }
+
+.m365-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 292;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+  background:
+    radial-gradient(circle at 68% 12%, rgba(37, 137, 255, .16), transparent 34%),
+    rgba(3, 7, 13, .84);
+  -webkit-backdrop-filter: blur(18px) saturate(125%);
+  backdrop-filter: blur(18px) saturate(125%);
+}
+
+.m365-shell {
+  width: min(1480px, calc(100vw - 56px));
+  height: min(900px, calc(100vh - 56px));
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  border: 1px solid rgba(127, 164, 211, .2);
+  border-radius: 26px;
+  color: #edf5ff;
+  background:
+    radial-gradient(circle at 14% 8%, rgba(27, 126, 223, .11), transparent 29%),
+    linear-gradient(180deg, rgba(15, 24, 39, .99), rgba(5, 10, 18, .99));
+  box-shadow: 0 42px 110px rgba(0, 0, 0, .65), 0 0 0 1px rgba(255, 255, 255, .024) inset;
+}
+
+.m365-header {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: start;
+  gap: 24px;
+  padding: 22px 26px 18px;
+  border-bottom: 1px solid rgba(124, 155, 197, .14);
+}
+
+.m365-header span,
+.m365-section-heading span,
+.m365-rail section > span,
+.m365-source-card > span {
+  display: block;
+  color: #7f99bd;
+  font-size: .62rem;
+  font-weight: 850;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.m365-header h2 {
+  margin: 5px 0 5px;
+  font-size: clamp(1.55rem, 2.5vw, 2.55rem);
+  letter-spacing: -.04em;
+}
+
+.m365-header p {
+  max-width: 760px;
+  margin: 0;
+  color: #8fa1bb;
+  font-size: .82rem;
+}
+
+.m365-header > button {
+  width: 38px;
+  height: 38px;
+  border: 1px solid rgba(133, 156, 191, .16);
+  border-radius: 11px;
+  color: #9cabc2;
+  background: rgba(7, 12, 21, .68);
+  font-size: 1.25rem;
+  cursor: pointer;
+}
+
+.m365-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding: 14px 18px;
+  border-bottom: 1px solid rgba(124, 155, 197, .1);
+}
+
+.m365-source-card {
+  min-width: 0;
+  min-height: 88px;
+  display: grid;
+  align-content: center;
+  gap: 5px;
+  border: 1px solid rgba(124, 155, 197, .13);
+  border-radius: 15px;
+  padding: 13px 15px;
+  color: inherit;
+  background: rgba(7, 12, 21, .58);
+  text-align: left;
+  font: inherit;
+}
+
+button.m365-source-card { cursor: pointer; }
+button.m365-source-card:hover,
+button.m365-source-card:focus-visible { border-color: rgba(95, 181, 255, .34); outline: none; }
+.m365-source-card.is-positive { box-shadow: inset 3px 0 0 rgba(74, 213, 163, .64); }
+.m365-source-card.is-warning { box-shadow: inset 3px 0 0 rgba(240, 188, 81, .7); }
+.m365-source-card.is-critical { box-shadow: inset 3px 0 0 rgba(255, 103, 114, .72); }
+.m365-source-card.is-boundary { box-shadow: inset 3px 0 0 rgba(103, 146, 255, .72); }
+
+.m365-source-card strong { font-size: .88rem; }
+.m365-source-card small { color: #8799b4; font-size: .64rem; line-height: 1.45; }
+
+.m365-content-grid {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 330px;
+  overflow: hidden;
+}
+
+.m365-content-grid > main {
+  min-width: 0;
+  overflow: auto;
+  padding: 20px 22px 28px;
+}
+
+.m365-section-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 14px;
+}
+
+.m365-section-heading h3 { margin: 4px 0 0; font-size: 1.15rem; }
+.m365-section-heading > b { color: #85a7cf; font-size: .68rem; }
+
+.m365-service-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.m365-service-card {
+  min-width: 0;
+  display: grid;
+  gap: 11px;
+  border: 1px solid rgba(127, 157, 197, .13);
+  border-radius: 16px;
+  padding: 14px 15px;
+  background: linear-gradient(180deg, rgba(15, 24, 38, .76), rgba(7, 12, 21, .72));
+}
+
+.m365-service-card header,
+.m365-service-card footer { display: grid; gap: 4px; }
+.m365-service-card header span { color: #eaf3ff; font-size: .78rem; font-weight: 800; }
+.m365-service-card header em { color: #6f89ad; font-size: .52rem; font-style: normal; text-transform: uppercase; letter-spacing: .08em; }
+.m365-service-card p { margin: 0; color: #8b9eb9; font-size: .68rem; line-height: 1.48; }
+.m365-service-card footer b { color: #b9c8dc; font-size: .63rem; text-transform: capitalize; }
+.m365-service-card footer small { color: #687d9b; font-size: .58rem; line-height: 1.45; }
+.m365-service-card.is-positive { border-color: rgba(72, 200, 153, .2); }
+.m365-service-card.is-warning { border-color: rgba(235, 186, 82, .22); }
+.m365-service-card.is-critical { border-color: rgba(255, 103, 114, .24); }
+
+.m365-rail {
+  min-height: 0;
+  overflow: auto;
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  padding: 20px 18px 26px;
+  border-left: 1px solid rgba(124, 155, 197, .11);
+  background: rgba(4, 9, 16, .45);
+}
+
+.m365-rail section {
+  display: grid;
+  gap: 8px;
+  border: 1px solid rgba(126, 157, 198, .12);
+  border-radius: 15px;
+  padding: 14px;
+  background: rgba(11, 18, 29, .72);
+}
+
+.m365-rail h3 { margin: 0; font-size: .84rem; }
+.m365-rail p { margin: 0; color: #8295b1; font-size: .65rem; line-height: 1.52; }
+.m365-rail code { display: block; overflow-wrap: anywhere; color: #9ebcf0; font-size: .61rem; }
+
+.depth-truth-boundary {
+  position: fixed;
+  z-index: 322;
+  left: 50%;
+  bottom: 38px;
+  transform: translateX(-50%);
+  min-width: 320px;
+  max-width: min(680px, calc(100vw - 64px));
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  align-items: center;
+  gap: 9px;
+  border: 1px solid rgba(117, 151, 207, .2);
+  border-radius: 999px;
+  padding: 8px 12px;
+  color: #dce9fb;
+  background: rgba(6, 12, 21, .92);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, .42);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+}
+
+.depth-truth-boundary span { color: #7e98bb; font-size: .52rem; font-weight: 850; letter-spacing: .1em; text-transform: uppercase; }
+.depth-truth-boundary strong { font-size: .62rem; }
+.depth-truth-boundary small { color: #7f91aa; font-size: .58rem; }
+
+@media (max-width: 900px) {
+  .m365-launcher {
+    display: none;
+  }
+
+  .m365-layer { padding: 10px; }
+  .m365-shell {
+    width: calc(100vw - 20px);
+    height: calc(100vh - 20px);
+    border-radius: 20px;
+  }
+  .m365-header { padding: 17px 16px 14px; }
+  .m365-header h2 { font-size: 1.45rem; }
+  .m365-header p { font-size: .7rem; }
+  .m365-summary-grid { grid-template-columns: 1fr; padding: 10px 12px; }
+  .m365-content-grid { grid-template-columns: 1fr; overflow: auto; }
+  .m365-content-grid > main { overflow: visible; padding: 16px 12px; }
+  .m365-service-grid { grid-template-columns: 1fr; }
+  .m365-rail { overflow: visible; border-top: 1px solid rgba(124, 155, 197, .11); border-left: 0; padding: 12px; }
+
+  .depth-truth-boundary {
+    bottom: 82px;
+    min-width: 0;
+    width: calc(100vw - 26px);
+    grid-template-columns: 1fr;
+    gap: 2px;
+    border-radius: 12px;
+    padding: 7px 10px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .m365-launcher { transition: none !important; }
+}

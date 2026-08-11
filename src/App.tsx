@@ -2,9 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 import packageMetadata from '../package.json';
 import { ExperienceLayer } from './ExperienceLayer';
 import { IssueConsole } from './IssueConsole';
+import { Microsoft365CriticalSuite } from './Microsoft365CriticalSuite';
 import { OperationsIntelligencePanel } from './OperationsIntelligencePanel';
 import { ProductDepthLauncher } from './ProductDepthLauncher';
 import { ProductDepthLayer } from './ProductDepthLayer';
+import { ProductTruthBoundary } from './ProductTruthBoundary';
 import { ACTIVE_PROVIDER_CATALOG } from './providerCatalog';
 import { buildIssueConsoleModel } from './statusViewModel';
 import { usePayloadPoller } from './usePayloadPoller';
@@ -51,6 +53,9 @@ export function App(): JSX.Element {
     [state.data]
   );
 
+  const productFocus = new URLSearchParams(location.search).get('focus') || '';
+  const replayBoundaryVisible = productFocus === 'universe' || productFocus.startsWith('category:') || productFocus.startsWith('correlation:');
+
   const exitWallboard = () => {
     const search = new URLSearchParams(location.search);
     search.delete('view');
@@ -68,7 +73,9 @@ export function App(): JSX.Element {
             <OperationsIntelligencePanel model={model} />
             <ExperienceLayer model={model} lifecyclePhase={state.phase} onRefresh={requestRefresh} />
             <ProductDepthLauncher model={model} />
+            <Microsoft365CriticalSuite model={model} />
             <ProductDepthLayer model={model} />
+            <ProductTruthBoundary visible={replayBoundaryVisible} />
           </>}
     </main>
   );
