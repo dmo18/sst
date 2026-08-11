@@ -40,7 +40,8 @@ test('Microsoft 365 is a first-class critical service estate', async () => {
   assert.equal(catalog.providerOverrides.microsoft365.criticality, 'high');
   assert.match(component, /Microsoft 365 coverage/);
   assert.match(component, /Public does not mean tenant-complete/);
-  assert.match(component, /ServiceHealth\.Read\.All/);
+  assert.match(contract, /ServiceHealth\.Read\.All/);
+  assert.match(component, /MICROSOFT_GRAPH_SERVICE_HEALTH_PERMISSION/);
   assert.match(component, /data-m365-critical-suite/);
   assert.match(app, /<Microsoft365CriticalSuite model=\{model\} \/>/);
 });
