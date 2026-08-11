@@ -16,8 +16,14 @@ type Command = {
   action: () => void;
 };
 
+type ProductCommand = 'universe' | 'search' | 'changes' | 'watchlist' | 'focus';
+
 function dispatchShortcut(key: string): void {
   window.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+}
+
+function dispatchProductCommand(command: ProductCommand, target?: string): void {
+  window.dispatchEvent(new CustomEvent('serviceops:product-command', { detail: { command, target } }));
 }
 
 function pulseCopy(model: IssueConsoleModel | null): { label: string; detail: string; tone: string } {
@@ -63,13 +69,20 @@ export function ExperienceLayer({ model, lifecyclePhase, onRefresh }: Experience
         description: `${item.action} · ${item.detail}`,
         icon: item.attention === 'critical' ? '!' : '↑',
         action: () => {
-          dispatchShortcut('2');
-          setToast(`Opening ${item.provider} incident operations`);
+          const incident = model?.briefs.find(candidate => candidate.providerId === item.providerId && candidate.title === item.title)
+            || model?.briefs.find(candidate => candidate.providerId === item.providerId);
+          if (incident) dispatchProductCommand('focus', `incident:${incident.id}`);
+          else dispatchShortcut('2');
+          setToast(`Opening ${item.provider} incident focus`);
         }
       }));
 
     return [
       ...liveSignals,
+      { id: 'universe', label: 'Open Dependency Universe', description: 'Explore provider domains, temporal correlation edges, saved lenses, and signal replay', shortcut: 'G', icon: '◎', action: () => dispatchProductCommand('universe') },
+      { id: 'changes', label: 'Show what changed', description: 'Review meaningful operating-model changes since your last explicit catch-up', shortcut: 'C', icon: '∆', action: () => dispatchProductCommand('changes') },
+      { id: 'search-all', label: 'Search everything', description: 'Find providers, incidents, maintenance, correlations, categories, and recorded changes', shortcut: '⇧K', icon: '⌕', action: () => dispatchProductCommand('search') },
+      { id: 'watchlist', label: 'Open my operational lens', description: 'Pinned providers, saved dependency lenses, and browser-local workflow state', shortcut: 'L', icon: '◉', action: () => dispatchProductCommand('watchlist') },
       { id: 'overview', label: 'Open overview', description: 'Return to the live operational posture', shortcut: '1', icon: '⌂', action: () => dispatchShortcut('1') },
       { id: 'incidents', label: 'Open incident operations', description: 'Active vendor events, impact, actions, and client-safe updates', shortcut: '2', icon: '⚡', action: () => dispatchShortcut('2') },
       { id: 'providers', label: 'Explore providers', description: 'Service state, evidence quality, latency, and freshness', shortcut: '3', icon: '◇', action: () => dispatchShortcut('3') },
@@ -78,7 +91,7 @@ export function ExperienceLayer({ model, lifecyclePhase, onRefresh }: Experience
       { id: 'wallboard', label: 'Launch wallboard', description: 'Enter the unattended signage view', shortcut: 'W', icon: '▣', action: () => dispatchShortcut('w') },
       { id: 'refresh', label: 'Refresh intelligence now', description: 'Retrieve and validate the latest deployed status payload', shortcut: 'R', icon: '↻', action: () => { onRefresh(); setToast('Validated refresh requested'); } }
     ];
-  }, [model?.actionQueue, onRefresh]);
+  }, [model?.actionQueue, model?.briefs, onRefresh]);
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -95,7 +108,7 @@ export function ExperienceLayer({ model, lifecyclePhase, onRefresh }: Experience
 
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+      if ((event.metaKey || event.ctrlKey) && !event.shiftKey && event.key.toLowerCase() === 'k') {
         event.preventDefault();
         setOpen(value => !value);
         return;
@@ -203,7 +216,7 @@ export function ExperienceLayer({ model, lifecyclePhase, onRefresh }: Experience
               {command.shortcut && <kbd>{command.shortcut}</kbd>}
               {index === activeIndex && query && <em>Enter</em>}
             </button>)}
-            {!filtered.length && <div className="command-empty"><b>No matching command</b><span>Try overview, incidents, providers, sources, wallboard, refresh, or a live provider name.</span></div>}
+            {!filtered.length && <div className="command-empty"><b>No matching command</b><span>Try Dependency Universe, changes, search, watchlist, incidents, providers, sources, wallboard, refresh, or a live provider name.</span></div>}
           </div>
           <footer><span><kbd>↑</kbd><kbd>↓</kbd> browse</span><span><kbd>↵</kbd> run selection</span><span><kbd>ESC</kbd> close</span></footer>
         </section>

@@ -41,7 +41,8 @@ test('operator runtime includes a keyboard-first live command experience', async
   assert.match(experience, /dispatchShortcut\('w'\)/);
   assert.match(experience, /Validated refresh requested/);
   assert.match(experience, /model\?\.actionQueue/);
-  assert.match(experience, /Opening \$\{item\.provider\} incident operations/);
+  assert.match(experience, /dispatchProductCommand\('focus', `incident:\$\{incident\.id\}`\)/);
+  assert.match(experience, /Opening \$\{item\.provider\} incident focus/);
   assert.match(experience, /dataset\.operationalTone = pulse\.tone/);
   assert.match(experience, /delete document\.documentElement\.dataset\.operationalTone/);
   assert.match(experience, /Mac\|iPhone\|iPad/);
