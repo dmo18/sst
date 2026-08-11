@@ -33,7 +33,7 @@ test('Microsoft 365 is a first-class critical service estate', async () => {
     'Microsoft Defender for Microsoft 365',
     'Microsoft Power Platform'
   ]) {
-    assert.match(contract, new RegExp(service.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+    assert.ok(contract.includes(service), `coverage contract must include ${service}`);
     assert.ok(catalog.providerOverrides.microsoft365.services.includes(service), `catalog must cover ${service}`);
   }
 
@@ -41,6 +41,7 @@ test('Microsoft 365 is a first-class critical service estate', async () => {
   assert.match(component, /Microsoft 365 coverage/);
   assert.match(component, /Public does not mean tenant-complete/);
   assert.match(component, /ServiceHealth\.Read\.All/);
+  assert.match(component, /data-m365-critical-suite/);
   assert.match(app, /<Microsoft365CriticalSuite model=\{model\} \/>/);
 });
 
@@ -67,4 +68,18 @@ test('Microsoft 365 critical suite styles load before wallboard geometry and rem
   assert.match(css, /\.depth-truth-boundary/);
   const wallboardBranch = app.slice(app.indexOf('? <WallboardV2'), app.indexOf(': <>'));
   assert.doesNotMatch(wallboardBranch, /Microsoft365CriticalSuite|ProductTruthBoundary/);
+});
+
+test('post-deploy evidence verifies Microsoft 365 desktop and mobile coverage', async () => {
+  const workflow = await read('.github/workflows/product-experience.yml');
+  const verifier = await read('scripts/verify-microsoft365-experience.mjs');
+  assert.match(workflow, /Verify deployed Microsoft 365 critical coverage/);
+  assert.match(workflow, /verify-microsoft365-experience\.mjs/);
+  assert.match(workflow, /operator-m365\.png/);
+  assert.match(workflow, /operator-m365-mobile\.png/);
+  assert.match(workflow, /microsoft365-verifier\.log/);
+  assert.match(verifier, /data-m365-critical-suite/);
+  assert.match(verifier, /facetCount !== 10/);
+  assert.match(verifier, /ServiceHealth\.Read\.All/);
+  assert.match(verifier, /MICROSOFT365_CRITICAL/);
 });
