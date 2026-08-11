@@ -7,6 +7,7 @@ import './styles/mobile-ops.css';
 import './styles/ultra-hd-tuning.css';
 import './styles/premium-experience.css';
 import './styles/premium-interactions.css';
+import './styles/premium-icons.css';
 import './styles/wallboard-v2.css';
 import './styles/wallboard-compat.css';
 import './styles/wallboard-tv.css';
