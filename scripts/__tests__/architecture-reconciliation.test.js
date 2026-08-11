@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test from 'node:test';
 import { emitStatusContract } from '../emit-status-contract.mjs';
+import { publishedSnapshotRevisions, selectLegacySnapshotRevision, LEGACY_CHROMIUM_MAX_REVISION } from '../resolve-legacy-chromium.mjs';
 import { SourceAdapterRegistry, normalizeCurrentPageConclusion } from '../source-adapter-sdk.mjs';
 import { ACTIVE_PROVIDER_CATALOG, ACTIVE_PROVIDER_CATALOG_HASH, ACTIVE_PROVIDER_IDS, providerCatalogHash } from '../../src/providerCatalog.ts';
 import { wirePayloadValidationErrors } from '../../src/wirePayloadValidation.ts';
@@ -144,10 +145,18 @@ test('scheduled releases reuse a verified commit-keyed app shell and skip unchan
   assert.match(workflow, /Fail-safe application build when reusable shell is unavailable/);
 });
 
-test('pinned pre-cascade-layer Chromium is a blocking non-scheduled release probe', () => {
+test('pinned pre-cascade-layer Chromium resolves a published snapshot below the Chrome 98 ceiling', () => {
   const workflow = read('.github/workflows/refresh-pages.yml');
+  const resolver = read('scripts/resolve-legacy-chromium.mjs');
   assert.match(read('vite.config.ts'), /target: 'chrome98'/);
-  assert.match(workflow, /LEGACY_CHROMIUM_REVISION: "950365"/);
+  assert.equal(LEGACY_CHROMIUM_MAX_REVISION, 950365);
+  const xml = '<ListBucketResult><CommonPrefixes><Prefix>Linux_x64/950401/</Prefix></CommonPrefixes><CommonPrefixes><Prefix>Linux_x64/950300/</Prefix></CommonPrefixes><CommonPrefixes><Prefix>Linux_x64/950250/</Prefix></CommonPrefixes></ListBucketResult>';
+  assert.deepEqual(publishedSnapshotRevisions(xml), [950401, 950300, 950250]);
+  assert.equal(selectLegacySnapshotRevision(publishedSnapshotRevisions(xml), LEGACY_CHROMIUM_MAX_REVISION), 950300);
+  assert.match(resolver, /method: 'HEAD'/);
+  assert.match(workflow, /Resolve published pre-cascade-layer Chromium snapshot/);
+  assert.match(workflow, /LEGACY_CHROMIUM_MAX_REVISION: "950365"/);
+  assert.match(workflow, /steps\.legacy-chromium\.outputs\.url/);
   assert.match(workflow, /verify-legacy-wallboard\.mjs/);
   assert.match(read('scripts/verify-legacy-wallboard.mjs'), /no-css-layers/);
 });
