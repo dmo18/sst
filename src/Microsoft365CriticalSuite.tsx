@@ -14,7 +14,7 @@ function stateLabel(value?: string): string {
 }
 
 export function Microsoft365CriticalSuite({ model }: { model: IssueConsoleModel | null }): JSX.Element {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(() => new URLSearchParams(location.search).get('m365') === '1');
   const snapshot = useMemo(() => microsoft365CoverageSnapshot(model), [model]);
   const m365Tone = microsoft365PublicTone(snapshot.microsoft365);
   const entraTone = microsoft365PublicTone(snapshot.entra);
@@ -50,7 +50,7 @@ export function Microsoft365CriticalSuite({ model }: { model: IssueConsoleModel 
       </button>
 
       {open ? (
-        <div className="m365-layer" role="presentation" onMouseDown={event => {
+        <div className="m365-layer" role="presentation" data-m365-critical-suite="open" onMouseDown={event => {
           if (event.currentTarget === event.target) setOpen(false);
         }}>
           <section className="m365-shell" role="dialog" aria-modal="true" aria-label="Microsoft 365 critical coverage">
@@ -92,7 +92,7 @@ export function Microsoft365CriticalSuite({ model }: { model: IssueConsoleModel 
                     const source = service.providerId === 'entra' ? snapshot.entra : snapshot.microsoft365;
                     const tone = microsoft365PublicTone(source);
                     return (
-                      <article key={service.id} className={`m365-service-card is-${tone}`}>
+                      <article key={service.id} className={`m365-service-card is-${tone}`} data-m365-service={service.id}>
                         <header><span>{service.label}</span><em>{service.coverageMode === 'dedicated-public' ? 'Dedicated public + tenant' : 'Public umbrella + tenant'}</em></header>
                         <p>{service.operatorImpact}</p>
                         <footer>
