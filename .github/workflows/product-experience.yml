@@ -35,7 +35,7 @@ jobs:
           test -n "$BROWSER"
           export BROWSER
           TARGET_URL="${PAGE_URL}?experienceProbe=${GITHUB_RUN_ID}"
-          node scripts/verify-operator-experience.mjs "$TARGET_URL" /tmp/operator-experience.html /tmp/operator-experience.png /tmp/operator-command.png
+          node scripts/verify-operator-experience.mjs "$TARGET_URL" /tmp/operator-experience.html /tmp/operator-experience.png /tmp/operator-command.png /tmp/operator-mobile.png
       - name: Upload product experience evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -45,5 +45,6 @@ jobs:
             /tmp/operator-experience.html
             /tmp/operator-experience.png
             /tmp/operator-command.png
+            /tmp/operator-mobile.png
           if-no-files-found: warn
           retention-days: 14
