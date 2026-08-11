@@ -1,0 +1,49 @@
+name: Premium product experience verification
+
+on:
+  workflow_run:
+    workflows: ["Deploy ServiceOps Enterprise Workspace"]
+    types: [completed]
+  workflow_dispatch:
+
+concurrency:
+  group: product-experience-${{ github.event.workflow_run.id || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - name: Verify deployed premium operator experience
+        env:
+          PAGE_URL: https://dmo18.github.io/sst/
+        run: |
+          BROWSER="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
+          test -n "$BROWSER"
+          export BROWSER
+          TARGET_URL="${PAGE_URL}?experienceProbe=${GITHUB_RUN_ID}"
+          node scripts/verify-operator-experience.mjs "$TARGET_URL" /tmp/operator-experience.html /tmp/operator-experience.png /tmp/operator-command.png
+      - name: Upload product experience evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: product-experience-${{ github.event.workflow_run.id || github.run_id }}
+          path: |
+            /tmp/operator-experience.html
+            /tmp/operator-experience.png
+            /tmp/operator-command.png
+          if-no-files-found: warn
+          retention-days: 14
