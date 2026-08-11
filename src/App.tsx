@@ -3,6 +3,7 @@ import packageMetadata from '../package.json';
 import { ExperienceLayer } from './ExperienceLayer';
 import { IssueConsole } from './IssueConsole';
 import { OperationsIntelligencePanel } from './OperationsIntelligencePanel';
+import { ProductDepthLauncher } from './ProductDepthLauncher';
 import { ProductDepthLayer } from './ProductDepthLayer';
 import { ACTIVE_PROVIDER_CATALOG } from './providerCatalog';
 import { buildIssueConsoleModel } from './statusViewModel';
@@ -66,6 +67,7 @@ export function App(): JSX.Element {
             <IssueConsole model={model} lifecycle={state} onRefresh={requestRefresh} browserCheckedAt={lastBrowserCheckAt} browserRefreshMs={browserRefreshMs} />
             <OperationsIntelligencePanel model={model} />
             <ExperienceLayer model={model} lifecyclePhase={state.phase} onRefresh={requestRefresh} />
+            <ProductDepthLauncher model={model} />
             <ProductDepthLayer model={model} />
           </>}
     </main>
