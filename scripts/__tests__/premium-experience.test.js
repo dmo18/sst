@@ -90,10 +90,14 @@ test('deployed product experience verification covers desktop command and mobile
   assert.match(verifier, /Mobile navigation is not fixed/);
 });
 
-test('product experience overhaul remains production-gated', async () => {
+test('product experience overhaul records completed production and visual evidence', async () => {
   const doc = await read('docs/product-experience-overhaul.md');
-  assert.match(doc, /Status: implementation in progress/);
+  assert.match(doc, /Status: complete/);
+  assert.match(doc, /Final full production release: #799 \(`31454693471`\)/);
+  assert.match(doc, /Final clean product-evidence run: #6 \(`31454777612`\)/);
+  assert.match(doc, /Final evidence artifact: `9087617756`/);
   assert.match(doc, /Command\/Ctrl \+ K/);
-  assert.match(doc, /exact 458 by 291 Yodeck verification passes/);
-  assert.match(doc, /deployed to production/);
+  assert.match(doc, /exact 458 by 291 Yodeck verification is green/i);
+  assert.match(doc, /repeated human visual review/i);
+  assert.match(doc, /No known premium-product-experience engineering item remains open/);
 });
