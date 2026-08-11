@@ -25,7 +25,12 @@ const exactAssets = [
   ['paypal', 'paypal.svg'],
   ['shopify', 'shopify.svg'],
   ['fortinet', 'fortinet.svg'],
-  ['quickbooks-online', 'quickbooks.svg']
+  ['quickbooks-online', 'quickbooks.svg'],
+  ['ubiquiti', 'ubiquiti.svg'],
+  ['lumen', 'lumen.svg'],
+  ['wasabi', 'wasabi.svg'],
+  ['bitdefender-gravityzone', 'bitdefender.svg'],
+  ['elastic-cloud', 'elastic.svg']
 ] as const;
 
 test('known providers use bundled local branded assets', () => {
@@ -33,6 +38,7 @@ test('known providers use bundled local branded assets', () => {
     assert.equal(hasBrandedProviderIcon(providerId), true, `${providerId} must use a bundled branded asset`);
     assert.match(providerIconSrc(providerId, providerId), new RegExp(`assets/logos/${file.replace('.', '\\.')}$`));
     assert.equal(existsSync(new URL(`../../public/assets/logos/${file}`, import.meta.url)), true, `${file} must exist`);
+    assert.equal(providerIconPresentation(providerId).generated, false, `${providerId} must not regress to a generated tile`);
   }
 });
 
