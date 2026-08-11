@@ -1,32 +1,33 @@
 # Current system status
 
-Status timestamp: 2026-08-10 22:14 Eastern Time
+Status timestamp: 2026-08-11 17:50 Eastern Time
 
 ## Executive status
 
 | Area | Status | Notes |
 | --- | --- | --- |
-| Architecture reconciliation | Complete | Original review backlog and next-level architecture are implemented and production-proven. |
-| Premium SaaS product experience | Complete | Desktop, command palette, mobile, Operations Intelligence, and wallboard presentation are redesigned and production-reviewed. |
-| Current product baseline | Healthy | `f1ad5df7d651212f2c699a8c16e9dc253ede6245` |
-| Full production release | Healthy | Run #799 (`31454693471`) passed the complete release path. |
-| Product evidence | Healthy | Run #6 (`31454777612`) passed desktop, command, and mobile browser assertions and uploaded clean screenshot evidence. |
+| Architecture reconciliation | Complete | Status Contract v3, catalog identity, adapter/poller boundaries, reliability/quarantine, security, current actions, legacy runtime, and scheduled shell reuse are production-proven. |
+| Premium SaaS experience | Complete | Desktop, command palette, mobile, Operations Intelligence, and wallboard visual system are production-reviewed. |
+| Product-depth command system | Complete | Incident Focus, Dependency Universe, replay, universal search, catch-up, lenses, local operator actions, and shareable investigation state are deployed and browser-proven. |
+| Microsoft 365 critical suite | Complete within public architecture | Ten explicit facets are represented. Public broad status + dedicated Entra evidence are separated from tenant-only Microsoft Graph service health. |
+| NUSO | Healthy / first-class | NUSO is a high-criticality VoIP provider in the canonical catalog and live collection path. |
+| Provider recognition | Complete | 80/80 active providers have curated recognition identities; 45 exact/local brand references and 35 provider-specific embedded recognition SVGs. |
+| Current implementation baseline | Healthy | `357021b38a955b402af03d35415d1c1eae2a1550` |
+| Full production release | Healthy | Run #833 (`31539557831`) passed the complete release path. |
+| Main CodeQL | Healthy | Run #125 (`31539557679`) passed on the final implementation commit. |
+| Product evidence | Healthy | Run #34 (`31539671901`) passed premium, product-depth, Microsoft 365, provider/NUSO, desktop, and mobile browser gates. |
 | Status Contract | Healthy | Public payloads use Status Contract v3 and canonical provider catalog identity. |
-| Provider catalog | Healthy | 80 raw entries consolidate to 79 active providers; validation derives membership/counts rather than hardcoding them. |
+| Provider catalog | Healthy | 80 raw entries canonicalize to 80 active providers; membership/counts are derived rather than hardcoded. |
 | Browser polling | Healthy | `usePayloadPoller` owns bounded retrieval, validation, freshness, cadence, visibility recovery, and successful-check telemetry. |
 | Operator cadence | Healthy | 60-second browser payload retrieval cadence. |
 | Wallboard cadence | Healthy | Three-minute default with bounded 15-second through one-hour `refresh=` override. |
 | Source reliability | Healthy | Bounded seven-day and thirty-day observation windows remain active. |
 | Parser trust | Healthy | Canary/quarantine affects source trust without changing vendor service truth. |
-| Supply chain | Healthy | Immutable action SHAs, CodeQL v4, complete dependency audit, Dependabot, quality gates, and opt-in pre-commit hook are active. |
-| Public browser security | Healthy | Restrictive CSP, same-origin data retrieval, local application assets. |
-| Vendor renderer trust boundary | Healthy | Untrusted vendor pages use sandboxed Chromium, disposable profiles, and token-free collection. |
-| Current-browser production render | Healthy | Run #799 passed deployed current-Chromium rendering. |
-| Legacy-browser production render | Healthy | Run #799 passed the pinned pre-Cascade-Layers Chromium CDP runtime gate. |
-| Exact Yodeck verification | Healthy | Run #799 passed the exact current-Chromium 458 by 291 wallboard contract. |
-| Premium desktop evidence | Healthy | 1440 by 960, 281px posture hero, 46.08px headline, no horizontal overflow. |
-| Premium command evidence | Healthy | 11 live commands in the tested state and real ArrowDown selection movement were browser-proven. |
-| Premium mobile evidence | Healthy | 390 by 844, fixed five-destination navigation, sticky topbar Intelligence, no horizontal overflow. |
+| Public browser security | Healthy | Restrictive CSP, same-origin data retrieval, local application/logo assets. |
+| Supply chain | Healthy | Immutable current action SHAs, CodeQL v4, complete dependency audit, Dependabot, quality gates, and opt-in pre-commit hook. |
+| Current-browser render | Healthy | Run #833 passed deployed current-Chromium rendering. |
+| Legacy-browser render | Healthy | Run #833 passed pinned pre-Cascade-Layers Chromium CDP runtime verification. |
+| Exact Yodeck | Healthy | Run #833 passed exact current-Chromium 458x291 wallboard verification. |
 
 ## Current repository identity
 
@@ -34,71 +35,80 @@ Status timestamp: 2026-08-10 22:14 Eastern Time
 - Visibility: public
 - Default branch: `main`
 - Package: `msp-status-hud` 3.3.0
-- Active production catalog: 79 providers
+- Final implementation commit: `357021b38a955b402af03d35415d1c1eae2a1550`
+- Active production catalog: 80 providers across 31 categories
 - Public contract: Status Contract v3
 - Hosting: GitHub Pages
 - Backend: none
 - Database: none
 - Browser-side vendor collection: none
+- Runtime logo CDN/favicon requests: none
 - Customer, tenant, ticket, device, and user data in public Pages: none
 
-## Current product experience
+## Product experience
 
-### Desktop command center
+### Operator command center
 
-The operator workspace is now organized around operating posture rather than raw inventory.
+The normal operator surface now combines the premium visual system with product-depth workflows:
 
-The primary surface provides:
+- state-aware operating posture and action queue;
+- Incident Focus with vendor timeline, evidence, technician guidance, local workflow actions, notes/assignee, handoff, and deep link;
+- Dependency Universe with category/provider topology and cautious temporal-correlation edges;
+- bounded Signal Replay using recorded changes only;
+- Command/Ctrl + K command launcher;
+- Command/Ctrl + Shift + K universal search;
+- since-last-review catch-up intelligence;
+- browser-local pinned providers and saved lenses;
+- source reliability, parser canary/quarantine, and collection diagnostics;
+- desktop and mobile-specific application chrome.
 
-- state-aware atmospheric canvas;
-- large operational posture hero;
-- live service/source metrics;
-- ranked operator action queue;
-- provider dependency table;
-- source reliability and parser-trust views;
-- maintenance and timeline intelligence;
-- premium provider-detail drawer;
-- docked Operations Intelligence and live pulse in sidebar chrome;
-- keyboard-first command launcher.
+Browser-local workflow state remains explicitly non-authoritative and cannot rewrite service or source truth.
 
-### Live command launcher
+### Microsoft 365
 
-`Command/Ctrl + K` opens the live command surface. It promotes current incident signals, then canonical navigation and refresh actions. Up/Down changes selection, Enter runs the selected command, Esc closes the palette, and mouse hover tracks the same selected-command state.
+Microsoft 365 is a critical operating suite rather than a generic provider row. The deployed product represents ten service facets covering major Microsoft cloud workloads and dependencies, including Exchange Online, Teams, SharePoint Online, OneDrive, Entra ID, and Microsoft 365 administration/service health.
 
-The final deployed evidence recorded 11 command entries in the tested operating state and real keyboard movement between incident commands.
+Evidence is deliberately split:
 
-### Mobile operator experience
+- public Microsoft status: broad public evidence;
+- Entra: dedicated public evidence where available;
+- tenant-specific service health: private Microsoft Graph integration required with `ServiceHealth.Read.All`.
 
-The mobile experience is a dedicated product surface rather than a scaled desktop layout.
+The public static application does not claim tenant-complete Microsoft 365 health.
 
-It provides:
+### NUSO
 
-- fixed five-destination bottom navigation;
-- sticky topbar and lifecycle strip;
-- compact Intelligence action beside Refresh;
-- responsive posture hero;
-- two-column metrics;
-- touch-first provider cards;
-- phone-native incident/timeline layouts;
-- full-screen provider details;
-- safe-area spacing;
-- no floating desktop pulse overlay.
+NUSO is a high-criticality VoIP/communications provider using its public Statuspage feed. Its canonical scope includes UCaaS, Teams/Zoom bridge services, Microsoft Operator Connect, inbound/outbound voice, messaging, emergency services, network, portals, and CPaaS/API surfaces.
 
-### Wallboard
+It participates in the same canonical catalog hash, collection, release, search, Universe, provider operations, and visual evidence path as every other first-class provider.
 
-The wallboard shares the premium visual identity while preserving all signage safety contracts.
+### Provider recognition
 
-- exact 458 by 291 target remains blocking;
-- pre-Cascade-Layers compatibility remains blocking;
-- vendor incident data ownership remains React-based;
-- browser refresh remains independent from vendor collection cadence;
-- visual polish does not change filtering, geometry, marquee timing, or incident truth.
+Every active provider has a curated local recognition identity.
+
+Final deployed evidence reports:
+
+- providers: 80;
+- exact masked marks: 35;
+- provider-specific embedded recognition SVGs: 35;
+- exact local-logo references: 45;
+- unique exact local assets: 43;
+- external logo references: 0;
+- NUSO: present and intentionally visible in the mobile evidence frame.
+
+The distinction is intentional. Exact sourced geometry is used where a stable local mark is available. Long-tail MSP/security/telecom vendors without a stable exact mark in the pinned source set use provider-specific recognition aids with curated label, brand-family color, and motif. Generic initials are reserved for unknown-provider fallback only.
+
+### Mobile and wallboard
+
+Mobile is a dedicated 390x844 operator surface with fixed five-destination bottom navigation, sticky topbar actions, responsive cards, full-screen product-depth surfaces, and no horizontal overflow.
+
+The wallboard remains independent and blocking at exact 458x291 geometry, with current Chrome plus pinned pre-Cascade-Layers Chromium verification. Product-depth and provider-identity layers load before authoritative wallboard geometry so signage remains isolated.
 
 ## Current architecture
 
 ```text
 provider catalog + consolidation
-  -> canonical active catalog + stable hash
+  -> 80-provider canonical catalog + stable hash
   -> bounded first-party collection
   -> structured adapters / registry-backed current-page adapter SDK
   -> fail-closed internal draft
@@ -109,80 +119,60 @@ provider catalog + consolidation
   -> public/status.json
   -> shared browser wire validation
   -> usePayloadPoller
-  -> React operator command center / premium wallboard
+  -> premium operator command center / product-depth layer / wallboard
   -> serialized GitHub Pages release
-  -> post-deploy current Chrome + legacy Chrome + exact Yodeck gates
-  -> post-deploy desktop + command + mobile product evidence
+  -> current Chrome + legacy Chrome + exact Yodeck gates
+  -> post-deploy premium + product-depth + Microsoft 365 + provider/NUSO evidence
 ```
 
 Service truth remains independent from collection trust. A source failure, SLO breach, schema change, parser observation, or parser quarantine cannot fabricate a vendor outage or a healthy conclusion.
 
-## Permanent release gates
+## Final implementation evidence
 
-Code-changing production releases require:
+### Production release #833
 
-- canonical provider validation;
-- repository quality/formatting gates;
+Run #833 (`31539557831`) passed on `357021b38a955b402af03d35415d1c1eae2a1550`:
+
+- provider/catalog validation;
+- repository quality gates;
 - complete deterministic tests;
-- TypeScript checking;
-- Chrome-98-targeted application build;
-- complete high-severity dependency audit;
-- pinned CodeQL v4 analysis;
-- token-free live first-party collection;
-- Status Contract v3/catalog-hash validation;
-- release-contract reconciliation;
-- verified application-shell publication;
-- GitHub Pages deployment and identity verification;
-- deployed production smoke;
-- current-Chromium operator rendering;
-- pinned pre-Cascade-Layers Chromium wallboard runtime;
-- exact current-Chromium 458 by 291 Yodeck verification;
-- verification artifact/status publication.
+- strict TypeScript;
+- complete dependency audit;
+- token-free live first-party collection including NUSO;
+- Status Contract v3/catalog-hash browser validation;
+- release reconciliation;
+- verified application-shell build/publication;
+- GitHub Pages deployment;
+- production smoke;
+- current Chromium;
+- pinned pre-Cascade-Layers Chromium;
+- exact 458x291 Yodeck;
+- artifacts and deployed intelligence publication.
 
-Successful non-scheduled releases then trigger the premium product-evidence workflow, which verifies the deployed desktop, command palette interaction, and mobile surface and retains HTML plus screenshots.
+Main CodeQL #125 (`31539557679`) also passed on the same final implementation commit.
 
-## Final premium acceptance evidence
+### Product experience #34
 
-### Production run #799
+Run #34 (`31539671901`) passed every deployed visual/product gate and uploaded artifact `9120182392`, digest `sha256:8c1ea4cec9cc783ba63a9c776e4629309664474f683acfe518d332b8b6edfaab`.
 
-Run #799 (`31454693471`) passed the entire code/release/browser/signage path on product baseline `f1ad5df7d651212f2c699a8c16e9dc253ede6245`.
+Recorded evidence includes:
 
-### Product evidence run #6
-
-Run #6 (`31454777612`) passed the deployed premium UX contract and uploaded artifact `9087617756`.
-
-Recorded evidence:
-
-- desktop: 1440 by 960;
+- desktop: 1440x960;
 - posture hero: 281px;
 - posture headline: 46.08px;
-- state-aware operating tone active;
-- live commands: 11;
-- ArrowDown moved selection from a Kaseya incident command to a RingCentral incident command;
-- mobile: 390 by 844;
-- fixed five-destination bottom navigation;
-- no horizontal overflow;
-- clean verifier shutdown and artifact log.
+- command palette: 15 live commands in the tested operating state with real ArrowDown movement;
+- product-depth Universe: 80 providers, 31 categories;
+- universal search and live Incident Focus verification;
+- product-depth mobile: 390x844;
+- Microsoft 365: 10 critical facets with public-vs-tenant evidence boundary;
+- provider identity: 80 providers, 35 exact masks, 35 embedded curated identities, 45 local exact-logo references, 43 unique assets;
+- NUSO visible in the mobile provider screenshot;
+- no external logo loading.
 
-The artifact digest is `sha256:a3e9af7af18002a734dda06a968291a8ee5d589ef3c91932fafa3271f2da0e0b`.
-
-## Human visual acceptance
-
-Production screenshots were reviewed repeatedly, not merely generated.
-
-The review caught and closed:
-
-- incorrect singular posture grammar;
-- desktop live-pulse overlap;
-- weak secondary metric contrast;
-- mobile Intelligence overlap;
-- persistent desktop controls feeling like floating overlays;
-- Chromium evidence cleanup noise.
-
-The accepted composition docks desktop persistent controls into the sidebar and mobile Intelligence into the sticky topbar. The final desktop, command, and mobile evidence is visually unobstructed.
+The final provider desktop/mobile screenshots were manually reviewed. The desktop provider estate is scan-friendly and recognizable; mobile centers NUSO cleanly with identity, service/source state, quality, and category visible without overlap or horizontal clipping.
 
 ## Remaining work
 
-No known architecture-reconciliation or premium-product-experience engineering item remains open in the current register.
+No known item remains open from the approved architecture, premium-experience, product-depth, Microsoft 365 public-coverage, NUSO, or provider-recognition scope.
 
-Future work should be treated as new product development or visual iteration, not unfinished work from these overhauls.
+Shared collaboration, authentication, tenant Microsoft Graph ingestion, ticket/PSA writes, Slack/Teams delivery, PagerDuty actions, and other private integrations remain future product development because they require an authenticated backend and private-data architecture.
