@@ -199,11 +199,14 @@ async function identityContract(session) {
     };
     const referenced = logos.map(element => element.tagName === 'IMG' ? element.getAttribute('src') || '' : maskUrl(element)).filter(Boolean);
     const resolved = referenced.map(value => new URL(value, location.href).href);
-    const localAssets = resolved.filter(value => {
+    const embeddedSvg = resolved.filter(value => value.startsWith('data:image/svg+xml,'));
+    const unexpectedData = resolved.filter(value => value.startsWith('data:') && !value.startsWith('data:image/svg+xml,'));
+    const networkRefs = resolved.filter(value => !value.startsWith('data:'));
+    const localAssets = networkRefs.filter(value => {
       const parsed = new URL(value);
       return parsed.origin === location.origin && parsed.pathname.includes('/assets/logos/');
     });
-    const external = resolved.filter(value => new URL(value).origin !== location.origin);
+    const external = networkRefs.filter(value => new URL(value).origin !== location.origin);
     const uniqueLocalAssets = [...new Set(localAssets)];
     const failedAssets = [];
     for (const asset of uniqueLocalAssets) {
@@ -220,6 +223,8 @@ async function identityContract(session) {
       providerIdentityCount: identities.length,
       brandMaskCount: logos.filter(element => element.classList.contains('provider-logo--brand-mask')).length,
       generatedCount: logos.filter(element => element.classList.contains('provider-logo--generated')).length,
+      embeddedSvgCount: embeddedSvg.length,
+      unexpectedData,
       localLogoAssets: localAssets.length,
       uniqueLocalLogoAssets: uniqueLocalAssets.length,
       externalLogoSrc: external,
@@ -250,6 +255,8 @@ try {
   if (desktop.providerIdentityCount < 80) throw new Error(`Expected at least 80 provider identities, found ${desktop.providerIdentityCount}.`);
   if (desktop.brandMaskCount < 35) throw new Error(`Expected at least 35 exact masked brand marks, found ${desktop.brandMaskCount}.`);
   if (desktop.generatedCount > 35) throw new Error(`Too many providers regressed to generated recognition tiles: ${desktop.generatedCount}.`);
+  if (desktop.embeddedSvgCount !== desktop.generatedCount) throw new Error(`Embedded local SVG count ${desktop.embeddedSvgCount} does not match generated identity count ${desktop.generatedCount}.`);
+  if (desktop.unexpectedData.length) throw new Error(`Unexpected embedded provider asset type: ${desktop.unexpectedData[0]}`);
   if (desktop.localLogoAssets < 45) throw new Error(`Expected at least 45 local exact-logo references, found ${desktop.localLogoAssets}.`);
   if (desktop.externalLogoSrc.length) throw new Error(`Provider identity attempted external logo loading: ${desktop.externalLogoSrc[0]}`);
   if (desktop.failedAssets.length) throw new Error(`Bundled provider logo assets failed to load: ${desktop.failedAssets.join('; ')}`);
@@ -285,7 +292,7 @@ try {
   if (mobile.unavailable) throw new Error('Mobile provider identity verification rendered the unavailable state.');
   const mobileBytes = await capture(session, mobileScreenshot);
 
-  console.log(`PROVIDER_IDENTITY providers=${desktop.providerIdentityCount} exact_masks=${desktop.brandMaskCount} curated_generated=${desktop.generatedCount} local_assets=${desktop.localLogoAssets} unique_assets=${desktop.uniqueLocalLogoAssets}`);
+  console.log(`PROVIDER_IDENTITY providers=${desktop.providerIdentityCount} exact_masks=${desktop.brandMaskCount} curated_generated=${desktop.generatedCount} embedded_svg=${desktop.embeddedSvgCount} local_assets=${desktop.localLogoAssets} unique_assets=${desktop.uniqueLocalLogoAssets}`);
   console.log(`PROVIDER_IDENTITY_NUSO present=true visible_mobile=true desktop=${desktopBytes} mobile=${mobileBytes}`);
 }
 finally {
