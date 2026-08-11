@@ -34,11 +34,15 @@ test('mobile intelligence control is docked into the sticky topbar', async () =>
   assert.match(polish, /\.ops-intel-trigger span\s*\{[\s\S]*position: absolute/);
 });
 
-test('product verifier cleanup cannot mask completed UX evidence', async () => {
+test('product verifier owns profile cleanup without workflow exception handling', async () => {
   const workflow = await read('.github/workflows/product-experience.yml');
-  assert.match(workflow, /OPERATOR_MOBILE_SCREENSHOT_BYTES/);
-  assert.match(workflow, /ENOTEMPTY\|EBUSY/);
+  const verifier = await read('scripts/verify-operator-experience.mjs');
+
+  assert.match(workflow, /set -o pipefail/);
   assert.match(workflow, /operator-experience-verifier\.log/);
-  assert.match(workflow, /exit "\$STATUS"/);
-  assert.match(workflow, /rm -rf \/tmp\/operator-experience-cdp-\* \|\| true/);
+  assert.doesNotMatch(workflow, /ENOTEMPTY\|EBUSY/);
+  assert.doesNotMatch(workflow, /STATUS=\$\{PIPESTATUS\[0\]\}/);
+  assert.match(verifier, /maxRetries: 3, retryDelay: 100/);
+  assert.match(verifier, /Browser profile cleanup warning/);
+  assert.match(verifier, /browserProcess\.kill\('SIGKILL'\)/);
 });
