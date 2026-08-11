@@ -77,7 +77,7 @@ NUSO uses the normal first-party Statuspage adapter and history feeds. It partic
 Every active provider now has a curated recognition identity. The final implementation has:
 
 - 80 active providers;
-- 45 local exact/brand-geometry references across 43 unique bundled assets;
+- 45 local exact/brand-geometry provider references across 43 unique bundled assets;
 - 35 exact masked marks in the deployed provider table;
 - 35 provider-specific embedded recognition SVGs for vendors without a stable exact mark in the pinned source set;
 - deterministic initials only as an unknown-provider fallback;
