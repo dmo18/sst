@@ -85,6 +85,13 @@ export function ExperienceLayer({ model, lifecyclePhase, onRefresh }: Experience
   }, [commands, query]);
 
   useEffect(() => {
+    document.documentElement.dataset.operationalTone = pulse.tone;
+    return () => {
+      delete document.documentElement.dataset.operationalTone;
+    };
+  }, [pulse.tone]);
+
+  useEffect(() => {
     const handler = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault();
