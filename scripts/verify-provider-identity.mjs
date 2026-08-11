@@ -3,6 +3,8 @@ import { spawn } from 'node:child_process';
 
 const WIDTH = 1440;
 const HEIGHT = 960;
+const SCALED_DESKTOP_WIDTH = 720;
+const SCALED_DESKTOP_HEIGHT = 900;
 const MOBILE_WIDTH = 390;
 const MOBILE_HEIGHT = 844;
 const DEBUG_PORT = 9228;
@@ -131,14 +133,14 @@ async function evaluate(session, expression) {
   return result.result?.value;
 }
 
-async function setViewport(session, width, height, mobile = false) {
+async function setViewport(session, width, height, mobile = false, screenWidth = width, screenHeight = height) {
   await session.send('Emulation.setDeviceMetricsOverride', {
     width,
     height,
     deviceScaleFactor: 1,
     mobile,
-    screenWidth: width,
-    screenHeight: height,
+    screenWidth,
+    screenHeight,
     positionX: 0,
     positionY: 0,
     dontSetVisibleSize: false
@@ -197,13 +199,15 @@ async function styleContract(session, mobile) {
       generatedPadding: generatedStyle?.paddingTop || '',
       stylesheetCount: styleSheets.length,
       cssLinkCount: document.querySelectorAll('link[rel="stylesheet"]').length,
+      viewportWidth: innerWidth,
+      screenWidth: screen.width,
       expectedMobile: ${mobile ? 'true' : 'false'},
       ready: Boolean(
         styleSheets.length > 0 &&
         document.querySelector('link[rel="stylesheet"]') &&
         /Inter|system-ui/i.test(bodyStyle.fontFamily) &&
         generatedStyle?.paddingTop === '0px' &&
-        (${mobile ? "sidebarStyle?.position === 'fixed' && headStyle?.display === 'none'" : "shellStyle?.display === 'grid' && sidebarStyle?.position === 'sticky' && headStyle?.display !== 'none'"})
+        (${mobile ? "sidebarStyle?.position === 'fixed' && headStyle?.display === 'none'" : "shellStyle?.display === 'grid' && sidebarStyle?.position !== 'fixed' && headStyle?.display !== 'none'"})
       )
     };
   })()`);
@@ -325,6 +329,15 @@ try {
   if (desktop.horizontalOverflow > 1) throw new Error(`Provider desktop view has horizontal overflow: ${desktop.horizontalOverflow}px`);
   const desktopBytes = await capture(session, desktopScreenshot);
 
+  await setViewport(session, SCALED_DESKTOP_WIDTH, SCALED_DESKTOP_HEIGHT, false, WIDTH, HEIGHT);
+  const scaledDesktopStyle = await navigateReadyProviderView(session, false);
+  if (scaledDesktopStyle.viewportWidth !== SCALED_DESKTOP_WIDTH || scaledDesktopStyle.screenWidth !== WIDTH) {
+    throw new Error(`Scaled desktop metrics mismatch: viewport=${scaledDesktopStyle.viewportWidth} screen=${scaledDesktopStyle.screenWidth}`);
+  }
+  if (scaledDesktopStyle.shellDisplay !== 'grid' || scaledDesktopStyle.sidebarPosition === 'fixed' || scaledDesktopStyle.tableHeadDisplay === 'none') {
+    throw new Error(`Scaled desktop incorrectly entered compact shell: ${JSON.stringify(scaledDesktopStyle)}`);
+  }
+
   await setViewport(session, MOBILE_WIDTH, MOBILE_HEIGHT, true);
   const mobileStyle = await navigateReadyProviderView(session, true);
   const mobile = await evaluate(session, `(() => {
@@ -354,7 +367,7 @@ try {
   const mobileBytes = await capture(session, mobileScreenshot);
 
   console.log(`PROVIDER_IDENTITY providers=${desktop.providerIdentityCount} exact_masks=${desktop.brandMaskCount} curated_generated=${desktop.generatedCount} embedded_svg=${desktop.embeddedSvgCount} local_assets=${desktop.localLogoAssets} unique_assets=${desktop.uniqueLocalLogoAssets}`);
-  console.log(`PROVIDER_IDENTITY_STYLE desktop_shell=${desktopStyle.shellDisplay} desktop_sidebar=${desktopStyle.sidebarPosition} mobile_sidebar=${mobileStyle.sidebarPosition} stylesheets=${desktopStyle.stylesheetCount}`);
+  console.log(`PROVIDER_IDENTITY_STYLE desktop_shell=${desktopStyle.shellDisplay} desktop_sidebar=${desktopStyle.sidebarPosition} scaled_viewport=${scaledDesktopStyle.viewportWidth} scaled_screen=${scaledDesktopStyle.screenWidth} scaled_shell=${scaledDesktopStyle.shellDisplay} mobile_sidebar=${mobileStyle.sidebarPosition} stylesheets=${desktopStyle.stylesheetCount}`);
   console.log(`PROVIDER_IDENTITY_NUSO present=true visible_mobile=true desktop=${desktopBytes} mobile=${mobileBytes}`);
 }
 finally {
