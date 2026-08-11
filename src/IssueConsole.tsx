@@ -350,11 +350,11 @@ function ProviderDrawer({ source, incidents, maintenance, now, onClose }: { sour
 function OverviewView({ model, now, onProvider, onNavigate }: { model: IssueConsoleModel; now: number; onProvider: (id: string) => void; onNavigate: (view: ConsoleView, filter?: string) => void }): JSX.Element {
   const affected = model.summary.major_count + model.summary.degraded_count;
   const headline = model.summary.major_count
-    ? `${model.summary.major_count} major provider issue${model.summary.major_count === 1 ? '' : 's'} require validation`
+    ? `${model.summary.major_count} major provider issue${model.summary.major_count === 1 ? '' : 's'} ${model.summary.major_count === 1 ? 'requires' : 'require'} validation`
     : model.summary.degraded_count
-      ? `${model.summary.degraded_count} provider degradation${model.summary.degraded_count === 1 ? '' : 's'} are active`
+      ? `${model.summary.degraded_count} provider degradation${model.summary.degraded_count === 1 ? '' : 's'} ${model.summary.degraded_count === 1 ? 'is' : 'are'} active`
       : model.blindSpotCount
-        ? `No active incident is confirmed; ${model.blindSpotCount} source blind spot${model.blindSpotCount === 1 ? '' : 's'} remain`
+        ? `No active incident is confirmed; ${model.blindSpotCount} source blind spot${model.blindSpotCount === 1 ? '' : 's'} ${model.blindSpotCount === 1 ? 'remains' : 'remain'}`
         : 'No active vendor incident is supported by readable official sources';
   return (
     <div className="workspace-stack">
