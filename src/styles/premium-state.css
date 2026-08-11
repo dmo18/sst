@@ -1,0 +1,95 @@
+/* State-aware ambient treatment for the operator console. The ExperienceLayer owns
+   the root data attribute and removes it when the wallboard takes over. */
+
+html[data-operational-tone='positive'] body {
+  background:
+    radial-gradient(circle at 12% 8%, rgba(77, 214, 164, .095), transparent 27rem),
+    radial-gradient(circle at 86% 4%, rgba(98, 127, 255, .115), transparent 34rem),
+    radial-gradient(circle at 50% 100%, rgba(67, 214, 255, .05), transparent 42rem),
+    #06080d;
+}
+
+html[data-operational-tone='warning'] body {
+  background:
+    radial-gradient(circle at 14% 8%, rgba(255, 190, 77, .10), transparent 28rem),
+    radial-gradient(circle at 86% 2%, rgba(113, 102, 255, .11), transparent 34rem),
+    radial-gradient(circle at 48% 100%, rgba(255, 154, 77, .04), transparent 42rem),
+    #06080d;
+}
+
+html[data-operational-tone='critical'] body {
+  background:
+    radial-gradient(circle at 12% 8%, rgba(255, 92, 112, .12), transparent 30rem),
+    radial-gradient(circle at 88% 1%, rgba(123, 83, 255, .11), transparent 34rem),
+    radial-gradient(circle at 50% 100%, rgba(255, 73, 107, .045), transparent 42rem),
+    #06080d;
+}
+
+html[data-operational-tone='neutral'] body {
+  background:
+    radial-gradient(circle at 12% 8%, rgba(109, 141, 255, .11), transparent 28rem),
+    radial-gradient(circle at 88% 2%, rgba(167, 121, 255, .08), transparent 34rem),
+    #06080d;
+}
+
+html[data-operational-tone='positive'] .posture-panel::before {
+  border-color: rgba(76, 224, 168, .12);
+  box-shadow: 0 0 0 38px rgba(76,224,168,.025), 0 0 0 76px rgba(99,230,255,.016);
+}
+
+html[data-operational-tone='warning'] .posture-panel::before {
+  border-color: rgba(255, 200, 97, .14);
+  box-shadow: 0 0 0 38px rgba(255,200,97,.024), 0 0 0 76px rgba(167,121,255,.016);
+}
+
+html[data-operational-tone='critical'] .posture-panel::before {
+  border-color: rgba(255, 111, 125, .16);
+  box-shadow: 0 0 0 38px rgba(255,111,125,.026), 0 0 0 76px rgba(167,121,255,.018);
+}
+
+html[data-operational-tone='positive'] .posture-panel {
+  background:
+    radial-gradient(circle at 86% 18%, rgba(76,224,168,.11), transparent 17rem),
+    radial-gradient(circle at 65% 120%, rgba(109,141,255,.14), transparent 27rem),
+    linear-gradient(135deg, rgba(18,29,39,.95), rgba(9,15,22,.92));
+}
+
+html[data-operational-tone='warning'] .posture-panel {
+  background:
+    radial-gradient(circle at 86% 18%, rgba(255,200,97,.12), transparent 17rem),
+    radial-gradient(circle at 65% 120%, rgba(167,121,255,.14), transparent 27rem),
+    linear-gradient(135deg, rgba(31,27,35,.95), rgba(13,14,22,.92));
+}
+
+html[data-operational-tone='critical'] .posture-panel {
+  background:
+    radial-gradient(circle at 86% 18%, rgba(255,111,125,.13), transparent 17rem),
+    radial-gradient(circle at 65% 120%, rgba(167,121,255,.15), transparent 27rem),
+    linear-gradient(135deg, rgba(34,23,32,.95), rgba(14,12,20,.92));
+}
+
+html[data-operational-tone='critical'] .app-sidebar nav button[aria-current='page']::before {
+  background: linear-gradient(#ff8794, #a779ff);
+  box-shadow: 0 0 18px rgba(255,111,125,.42);
+}
+
+html[data-operational-tone='warning'] .app-sidebar nav button[aria-current='page']::before {
+  background: linear-gradient(#ffd177, #9c7cff);
+  box-shadow: 0 0 18px rgba(255,200,97,.35);
+}
+
+html[data-operational-tone='positive'] .app-sidebar nav button[aria-current='page']::before {
+  background: linear-gradient(#67e6b6, #6d8dff);
+  box-shadow: 0 0 18px rgba(76,224,168,.34);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html[data-operational-tone='critical'] .posture-panel::before {
+    animation: premium-critical-breathe 3.4s ease-in-out infinite;
+  }
+}
+
+@keyframes premium-critical-breathe {
+  0%, 100% { opacity: .72; }
+  50% { opacity: 1; }
+}
