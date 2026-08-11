@@ -1,0 +1,42 @@
+[
+  {
+    "id": "nuso",
+    "name": "NUSO",
+    "category": "VoIP",
+    "priority": 88,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.nuso.cloud/api/v2/summary.json",
+    "criticality": "high",
+    "tags": [
+      "communications",
+      "voice",
+      "ucaas",
+      "cpaas",
+      "messaging",
+      "teams",
+      "zoom"
+    ],
+    "services": [
+      "UCaaS - Orange Platform",
+      "UCaaS - Green Platform",
+      "UCaaS - Blue Platform",
+      "NUSO Connect for Business",
+      "NUSO Bridge for Teams",
+      "NUSO Bridge for Zoom",
+      "SimplyConnect/MessageView",
+      "Microsoft Operator Connect",
+      "Outbound Voice (Termination Services)",
+      "Inbound Voice (Origination Services)",
+      "Messaging Services (SMS/MMS)",
+      "Emergency Services",
+      "Data Center/Network Connectivity",
+      "NUSO.io Management Portal",
+      "NUSO.io API",
+      "CPaaS Portal",
+      "CPaaS API"
+    ],
+    "client_impact": "May affect UCaaS, inbound/outbound calling, Teams or Zoom bridges, Operator Connect, SMS/MMS, emergency calling, CPaaS, portals, or APIs.",
+    "technician_action": "Check NUSO incident/component scope and upstream carrier status before changing PBX, SIP, routing, or client voice configuration."
+  }
+]
