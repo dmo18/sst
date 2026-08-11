@@ -49,6 +49,17 @@ jobs:
           set -o pipefail
           node scripts/verify-product-depth-experience.mjs "$TARGET_URL" /tmp/operator-universe.png /tmp/operator-search.png /tmp/operator-incident.png /tmp/operator-universe-mobile.png 2>&1 | tee /tmp/product-depth-verifier.log
           rm -rf /tmp/product-depth-cdp-* || true
+      - name: Verify deployed Microsoft 365 critical coverage
+        env:
+          PAGE_URL: https://dmo18.github.io/sst/
+        run: |
+          BROWSER="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
+          test -n "$BROWSER"
+          export BROWSER
+          TARGET_URL="${PAGE_URL}?m365Probe=${GITHUB_RUN_ID}"
+          set -o pipefail
+          node scripts/verify-microsoft365-experience.mjs "$TARGET_URL" /tmp/operator-m365.png /tmp/operator-m365-mobile.png 2>&1 | tee /tmp/microsoft365-verifier.log
+          rm -rf /tmp/m365-experience-* || true
       - name: Upload product experience evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -63,7 +74,10 @@ jobs:
             /tmp/operator-search.png
             /tmp/operator-incident.png
             /tmp/operator-universe-mobile.png
+            /tmp/operator-m365.png
+            /tmp/operator-m365-mobile.png
             /tmp/operator-experience-verifier.log
             /tmp/product-depth-verifier.log
+            /tmp/microsoft365-verifier.log
           if-no-files-found: warn
           retention-days: 14
