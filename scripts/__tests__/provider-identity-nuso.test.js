@@ -73,6 +73,19 @@ test('provider identity is bundled locally with a pinned source record and no ru
   assert.equal(existsSync(new URL('../../public/assets/logos/quickbooks.svg', import.meta.url)), true);
 });
 
+test('deployed provider identity verification uses structural CDP checks instead of dump-dom copy heuristics', async () => {
+  const verifier = await read('scripts/verify-provider-identity.mjs');
+  assert.doesNotMatch(verifier, /--dump-dom/);
+  assert.doesNotMatch(verifier, /\/Provider operations\/i\.test\(html\)/);
+  assert.match(verifier, /remote-debugging-port/);
+  assert.match(verifier, /provider-data-table\[aria-label=/);
+  assert.match(verifier, /brandMaskCount < 35/);
+  assert.match(verifier, /localLogoAssets < 45/);
+  assert.match(verifier, /generatedCount > 35/);
+  assert.match(verifier, /failedAssets/);
+  assert.match(verifier, /nusoVisible/);
+});
+
 test('provider consolidation remains the single source of canonical overrides', async () => {
   assert.equal(existsSync(new URL('../../config/provider-additions.json', import.meta.url)), false);
   const source = await read('src/providerCatalog.ts');
