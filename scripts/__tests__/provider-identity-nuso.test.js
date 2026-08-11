@@ -84,6 +84,10 @@ test('deployed provider identity verification uses structural CDP checks instead
   assert.match(verifier, /brandMaskCount < 35/);
   assert.match(verifier, /localLogoAssets < 45/);
   assert.match(verifier, /generatedCount > 35/);
+  assert.match(verifier, /embeddedSvgCount !== desktop\.generatedCount/);
+  assert.match(verifier, /data:image\/svg\+xml,/);
+  assert.match(verifier, /unexpectedData/);
+  assert.match(verifier, /networkRefs/);
   assert.match(verifier, /failedAssets/);
   assert.match(verifier, /nusoVisible/);
 });
