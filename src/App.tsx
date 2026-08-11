@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import packageMetadata from '../package.json';
+import { ExperienceLayer } from './ExperienceLayer';
 import { IssueConsole } from './IssueConsole';
 import { OperationsIntelligencePanel } from './OperationsIntelligencePanel';
 import { ACTIVE_PROVIDER_CATALOG } from './providerCatalog';
@@ -54,11 +55,17 @@ export function App(): JSX.Element {
     history.replaceState(null, '', `${location.pathname}${search.size ? `?${search}` : ''}${location.hash}`);
   };
 
+  const requestRefresh = () => void refresh();
+
   return (
     <main className="app-frame">
       {route.wallboardMode
         ? <WallboardV2 model={model} lifecycle={state} now={now} browserCheckedAt={lastBrowserCheckAt} alertWindowMs={route.alertWindowMs} onExit={exitWallboard} />
-        : <><IssueConsole model={model} lifecycle={state} onRefresh={() => void refresh()} browserCheckedAt={lastBrowserCheckAt} browserRefreshMs={browserRefreshMs} /><OperationsIntelligencePanel model={model} /></>}
+        : <>
+            <IssueConsole model={model} lifecycle={state} onRefresh={requestRefresh} browserCheckedAt={lastBrowserCheckAt} browserRefreshMs={browserRefreshMs} />
+            <OperationsIntelligencePanel model={model} />
+            <ExperienceLayer model={model} lifecyclePhase={state.phase} onRefresh={requestRefresh} />
+          </>}
     </main>
   );
 }
