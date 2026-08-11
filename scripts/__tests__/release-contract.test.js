@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { verifyReleaseContract } from '../release-contract.mjs';
 
+const catalogHash = 'fnv1a32:12345678';
 function payload(overrides = {}) {
   const generatedAt = '2026-08-10T21:00:00.000Z';
   const providers = [{
@@ -18,6 +19,9 @@ function payload(overrides = {}) {
     collection_failure_count: 0
   }];
   return {
+    schema_version: 3,
+    contract_version: 3,
+    catalog_hash: catalogHash,
     generated_at: generatedAt,
     providers,
     summary: {
@@ -49,16 +53,23 @@ function payload(overrides = {}) {
 }
 
 test('release contract returns deployment description and success state', () => {
-  const result = verifyReleaseContract(payload(), Date.parse('2026-08-10T21:01:00.000Z'));
+  const result = verifyReleaseContract(payload(), Date.parse('2026-08-10T21:01:00.000Z'), catalogHash);
   assert.equal(result.state, 'success');
   assert.equal(result.description, '1/1 live (100%); quality 90; 0 blind');
+});
+
+test('release contract rejects catalog identity mismatch', () => {
+  assert.throws(
+    () => verifyReleaseContract(payload(), Date.parse('2026-08-10T21:01:00.000Z'), 'fnv1a32:deadbeef'),
+    /provider catalog hash mismatch/
+  );
 });
 
 test('release contract rejects inconsistent request reconciliation', () => {
   const value = payload();
   value.collection.request_count = 2;
   assert.throws(
-    () => verifyReleaseContract(value, Date.parse('2026-08-10T21:01:00.000Z')),
+    () => verifyReleaseContract(value, Date.parse('2026-08-10T21:01:00.000Z'), catalogHash),
     /collection request counts do not reconcile/
   );
 });

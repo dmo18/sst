@@ -23,6 +23,7 @@ function provider(overrides = {}) {
     last_success_at: '2026-08-01T12:00:00Z',
     consecutive_failures: 0,
     schema_changed: false,
+    schema_canary: { state: 'stable', observation: 'accepted', fingerprint: 'json-alpha', last_changed_at: '', quarantine_state: 'clear', quarantine_since: '', stable_observations: 4 },
     component_status: [],
     download_log: [{ url: 'https://status.alpha.test/api/v2/summary.json', ok: true, duration_ms: 120, status: 'HTTP 200', source_type: 'statuspage-json' }],
     ...overrides
@@ -67,6 +68,27 @@ test('quality scoring keeps strong structured sources high and failed sources bl
   const failed = provider({ source_state: 'unavailable', ok: false, evidence_tier: 'public-page', consecutive_failures: 3, last_success_at: '' });
   assert.ok(providerQualityScore(failed, Date.parse('2026-08-01T12:05:00Z')) < 20);
   assert.equal(enrichProviderCollection(failed, [], [], '2026-08-01T12:05:00Z').source_health, 'blind');
+});
+
+test('parser quarantine reduces source trust but preserves vendor service state and accepted observation', () => {
+  const quarantined = provider({
+    schema_changed: false,
+    schema_canary: {
+      state: 'stable',
+      observation: 'accepted',
+      fingerprint: 'json-alpha-next',
+      last_changed_at: '2026-08-01T11:58:00Z',
+      quarantine_state: 'quarantined',
+      quarantine_since: '2026-08-01T11:55:00Z',
+      stable_observations: 1
+    }
+  });
+  const enriched = enrichProviderCollection(quarantined, [], [], '2026-08-01T12:05:00Z');
+  assert.equal(enriched.service_state, 'operational');
+  assert.equal(enriched.source_state, 'available');
+  assert.equal(enriched.ok, true);
+  assert.equal(enriched.source_health, 'watch');
+  assert.ok(enriched.data_quality_score < providerQualityScore(provider(), Date.parse('2026-08-01T12:05:00Z')));
 });
 
 test('provider timing separates last request latency from total collection elapsed time', () => {

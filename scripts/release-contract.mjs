@@ -2,7 +2,7 @@ function average(values) {
   return values.length ? Math.round(values.reduce((sum, value) => sum + value, 0) / values.length) : 0;
 }
 
-export function verifyReleaseContract(payload, now = Date.now()) {
+export function verifyReleaseContract(payload, now = Date.now(), expectedCatalogHash = '') {
   const summary = payload?.summary || {};
   const collection = payload?.collection || {};
   const providers = Array.isArray(payload?.providers) ? payload.providers : [];
@@ -34,6 +34,8 @@ export function verifyReleaseContract(payload, now = Date.now()) {
     provider.status_data_basis === 'limited-fallback' && provider.ok === true
   );
 
+  if (payload?.schema_version !== 3 || payload?.contract_version !== 3) throw new Error(`unexpected Status Contract envelope schema=${payload?.schema_version || 'missing'} contract=${payload?.contract_version || 'missing'}`);
+  if (expectedCatalogHash && payload?.catalog_hash !== expectedCatalogHash) throw new Error(`provider catalog hash mismatch: ${payload?.catalog_hash || 'missing'}`);
   if (!Number.isFinite(generatedAt)) throw new Error('generated_at is invalid');
   if (generatedAgeMs < -300000 || generatedAgeMs > 300000) throw new Error(`generated_at is not fresh: age ${Math.round(generatedAgeMs / 1000)} seconds`);
   if (!Number.isFinite(total) || total <= 0) throw new Error('provider_total is invalid');

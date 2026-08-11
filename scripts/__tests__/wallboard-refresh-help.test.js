@@ -7,6 +7,7 @@ const read = path => readFile(new URL(`../../${path}`, import.meta.url), 'utf8')
 test('wallboard browser refresh cadence is URL-controlled with a three-minute safe default', async () => {
   const route = await read('src/wallboardRoute.ts');
   const app = await read('src/App.tsx');
+  const poller = await read('src/usePayloadPoller.ts');
 
   assert.match(route, /DEFAULT_BROWSER_REFRESH_MS = 3 \* MINUTE_MS/);
   assert.match(route, /MIN_BROWSER_REFRESH_MS = 15 \* SECOND_MS/);
@@ -15,8 +16,9 @@ test('wallboard browser refresh cadence is URL-controlled with a three-minute sa
   assert.match(route, /params\.get\('refresh'\)/);
   assert.match(app, /OPERATOR_BROWSER_REFRESH_MS = 60 \* 1000/);
   assert.match(app, /route\.wallboardMode \? route\.refreshIntervalMs : OPERATOR_BROWSER_REFRESH_MS/);
-  assert.match(app, /window\.setInterval\([\s\S]*browserRefreshMs\)/);
-  assert.match(app, /\[browserRefreshMs, refresh\]/);
+  assert.match(app, /usePayloadPoller\(browserRefreshMs\)/);
+  assert.match(poller, /window\.setInterval\([\s\S]*browserRefreshMs\)/);
+  assert.match(poller, /\[browserRefreshMs, refresh\]/);
 });
 
 test('deployed online help and repository docs explain refresh semantics', async () => {

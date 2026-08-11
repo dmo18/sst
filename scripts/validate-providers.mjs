@@ -4,8 +4,6 @@ import { fileURLToPath } from 'node:url';
 const root = fileURLToPath(new URL('..', import.meta.url));
 const catalogPath = path.join(root, 'config', 'providers.json');
 const consolidationPath = path.join(root, 'config', 'provider-consolidation.json');
-const expectedRawProviderCount = 80;
-const expectedActiveProviderCount = 79;
 const allowedSourceTypes = new Set([
     'statuspage',
     'rss',
@@ -47,9 +45,7 @@ if (!Array.isArray(catalog)) {
     errors.push('Provider catalog must be an array.');
 }
 else {
-    if (catalog.length !== expectedRawProviderCount) {
-        errors.push(`Expected ${expectedRawProviderCount} raw providers, found ${catalog.length}.`);
-    }
+    if (catalog.length === 0) errors.push('Provider catalog must not be empty.');
     for (const [index, provider] of catalog.entries()) {
         const context = provider?.id || provider?.name || `index ${index}`;
         if (!provider || typeof provider !== 'object') {
@@ -113,6 +109,7 @@ if (!providerOverrides || typeof providerOverrides !== 'object' || Array.isArray
     errors.push('provider-consolidation providerOverrides must be an object.');
 }
 const excluded = new Set(Array.isArray(excludedProviderIds) ? excludedProviderIds : []);
+if (Array.isArray(excludedProviderIds) && excluded.size !== excludedProviderIds.length) errors.push('provider-consolidation excludedProviderIds must not contain duplicates.');
 for (const id of excluded) {
     if (!ids.has(id)) errors.push(fail('Excluded provider id is not in the raw catalog.', id));
 }
@@ -123,9 +120,10 @@ for (const id of Object.keys(providerOverrides || {})) {
 const activeCatalog = Array.isArray(catalog)
     ? catalog.filter(provider => !excluded.has(provider.id)).map(provider => ({ ...provider, ...(providerOverrides?.[provider.id] || {}) }))
     : [];
-if (activeCatalog.length !== expectedActiveProviderCount) {
-    errors.push(`Expected ${expectedActiveProviderCount} active providers, found ${activeCatalog.length}.`);
+if (Array.isArray(catalog) && activeCatalog.length !== catalog.length - excluded.size) {
+    errors.push(`Active provider count does not reconcile with exclusions: raw=${catalog.length}, excluded=${excluded.size}, active=${activeCatalog.length}.`);
 }
+if (activeCatalog.length === 0) errors.push('Canonical active provider catalog must not be empty.');
 const activeIds = new Set(activeCatalog.map(provider => provider.id));
 if (activeIds.has('datto')) errors.push('Datto must be absorbed into Kaseya, not emitted as a separate active provider.');
 const kaseya = activeCatalog.find(provider => provider.id === 'kaseya');

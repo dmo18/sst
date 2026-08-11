@@ -26,6 +26,7 @@ export type IncidentEvidenceBasis = 'current-page';
 export type SourceReliabilitySloState = 'warming' | 'meeting' | 'watch' | 'breach';
 export type SchemaCanaryState = 'stable' | 'changed' | 'unobserved';
 export type SchemaCanaryObservation = 'accepted' | 'unavailable';
+export type SchemaQuarantineState = 'clear' | 'observing' | 'quarantined';
 
 export interface ProviderDownloadLog {
   timestamp?: string;
@@ -72,8 +73,8 @@ export interface SourceReliabilityDay {
   schema_changes: number;
 }
 
-export interface SourceReliability {
-  window_days: 7;
+export interface SourceReliabilityWindow {
+  window_days: 7 | 30;
   sample_count: number;
   live_percent: number;
   limited_percent: number;
@@ -83,11 +84,19 @@ export interface SourceReliability {
   daily: SourceReliabilityDay[];
 }
 
+export interface SourceReliability extends SourceReliabilityWindow {
+  window_days: 7;
+  window_30d: SourceReliabilityWindow & { window_days: 30 };
+}
+
 export interface SchemaCanary {
   state: SchemaCanaryState;
   observation: SchemaCanaryObservation;
   fingerprint: string;
   last_changed_at: string;
+  quarantine_state: SchemaQuarantineState;
+  quarantine_since: string;
+  stable_observations: number;
 }
 
 export interface ProviderStatus {
@@ -295,7 +304,9 @@ export interface CollectionRun {
 }
 
 export interface StatusPayload {
-  schema_version: 2;
+  schema_version: 2 | 3;
+  contract_version?: 3;
+  catalog_hash?: string;
   generated_at: string;
   summary: StatusSummary;
   collection?: CollectionRun;

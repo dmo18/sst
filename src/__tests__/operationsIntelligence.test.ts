@@ -15,15 +15,17 @@ test('operations intelligence is operator-only and never changes wallboard compo
 
 test('operator intelligence states evidence boundaries explicitly', async () => {
   const panel = await read('src/OperationsIntelligencePanel.tsx');
-  assert.match(panel, /evidence controls, not vendor service health/);
+  assert.match(panel, /source-trust controls, not vendor service health/);
   assert.match(panel, /never causal claims/);
+  assert.match(panel, /Quarantine affects source trust only and cannot create or suppress a vendor service-health conclusion/);
   assert.match(panel, /Snapshot-only current-page observations are intentionally excluded/);
   assert.doesNotMatch(panel, /client name|tenant name|ticket id/i);
 });
 
-test('schema canary is separate from service-state decision logic', async () => {
+test('schema canary and quarantine are separate from service-state decision logic', async () => {
   const source = await read('scripts/source-intelligence.mjs');
   const reliability = await read('scripts/source-reliability.mjs');
   assert.match(source, /schema_canary: schemaCanary/);
+  assert.match(reliability, /quarantine_state/);
   assert.doesNotMatch(reliability, /service_state\s*=|serviceState\s*=/);
 });

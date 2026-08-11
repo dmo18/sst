@@ -127,6 +127,10 @@ function retrievalLogs(provider) {
   );
 }
 
+function quarantineState(provider) {
+  return provider?.schema_canary?.quarantine_state || 'clear';
+}
+
 export function providerQualityScore(provider, now = Date.now()) {
   const fresh = freshness(provider, now);
   let score = evidenceBase(provider);
@@ -137,6 +141,8 @@ export function providerQualityScore(provider, now = Date.now()) {
   if (provider.ok !== true) score -= 8;
   score -= Math.min(32, Number(provider.consecutive_failures || 0) * 9);
   if (provider.schema_changed === true) score -= 12;
+  if (quarantineState(provider) === 'observing') score -= 10;
+  if (quarantineState(provider) === 'quarantined') score -= 24;
   if (fresh.state === 'aging') score -= 8;
   if (fresh.state === 'stale') score -= 22;
   if (fresh.state === 'unknown' && provider.source_state === 'available') score -= 10;
@@ -144,8 +150,10 @@ export function providerQualityScore(provider, now = Date.now()) {
 }
 
 function sourceHealth(provider, score) {
-  if (provider.source_state === 'available' && provider.ok === true && score >= 74) return 'healthy';
+  const quarantine = quarantineState(provider);
   if (provider.source_state === 'unavailable' || provider.source_state === 'pending' || score < 28) return 'blind';
+  if (quarantine !== 'clear') return 'watch';
+  if (provider.source_state === 'available' && provider.ok === true && score >= 74) return 'healthy';
   return 'watch';
 }
 

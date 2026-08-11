@@ -1,3 +1,6 @@
+export const STATUS_CONTRACT_VERSION = 3 as const;
+export const STATUS_WIRE_SCHEMA_VERSION = 3 as const;
+export const LEGACY_INTERNAL_SCHEMA_VERSION = 2 as const;
 export const SERVICE_STATES = ['operational', 'degraded', 'major', 'unknown'] as const;
 export const SOURCE_STATES = ['available', 'limited', 'unavailable', 'disabled', 'pending', 'stale'] as const;
 export const SOURCE_HEALTH_STATES = ['healthy', 'watch', 'blind'] as const;

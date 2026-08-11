@@ -74,9 +74,12 @@ test('temporary review diagnostics, live probes, and patch tooling never ship', 
   }
 });
 
-test('provider-specific conclusions use the shared region-scope implementation', () => {
-  const source = read('scripts/public-source-repairs.mjs');
-  assert.match(source, /regionScopeRelevant/);
-  assert.equal(source.includes('const usRegionPattern'), false);
-  assert.equal(source.includes('const nonUsRegionPattern'), false);
+test('provider-specific conclusions use the shared region-scope implementation behind the adapter registry', () => {
+  const facade = read('scripts/public-source-repairs.mjs');
+  const implementation = read('scripts/public-source-adapter-implementation.mjs');
+  assert.match(facade, /SourceAdapterRegistry/);
+  assert.match(facade, /registry\.conclude\('provider-specific-current-page'/);
+  assert.match(implementation, /regionScopeRelevant/);
+  assert.equal(implementation.includes('const usRegionPattern'), false);
+  assert.equal(implementation.includes('const nonUsRegionPattern'), false);
 });

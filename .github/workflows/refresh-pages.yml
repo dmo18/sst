@@ -14,26 +14,33 @@ jobs:
   build:
     permissions:
       contents: read
+      actions: read
     runs-on: ubuntu-latest
     timeout-minutes: 20
     outputs:
       status_description: ${{ steps.verify-status.outputs.description }}
       status_state: ${{ steps.verify-status.outputs.state }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: "22"
           cache: npm
       - run: npm ci
       - run: npm run validate-providers
+      - name: Run repository quality gates
+        if: github.event_name != 'schedule'
+        run: npm run quality
       - name: Run deterministic tests
+        if: github.event_name != 'schedule'
         run: npm test
       - name: Run TypeScript checking
+        if: github.event_name != 'schedule'
         run: npm run typecheck
       - name: Audit complete dependency graph
+        if: github.event_name != 'schedule'
         run: npm audit --audit-level=high
       - name: Retrieve prior snapshot (optional)
         run: curl --fail --silent --show-error --max-time 10 https://dmo18.github.io/sst/status.json -o public/previous-status.json || true
@@ -43,10 +50,63 @@ jobs:
         run: npm run validate-browser-payload
       - name: Verify truthful coverage, collection intelligence, and freshness
         id: verify-status
-        run: node scripts/verify-release-contract.mjs public/status.json
-      - run: npm run build:app
-      - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
-      - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
+        run: node --experimental-strip-types scripts/verify-release-contract.mjs public/status.json
+      - name: Build verified application shell
+        if: github.event_name != 'schedule'
+        run: npm run build:app
+      - name: Prepare reusable application shell
+        if: github.event_name != 'schedule'
+        run: |
+          rm -rf /tmp/verified-app-shell
+          mkdir -p /tmp/verified-app-shell
+          cp -a dist/. /tmp/verified-app-shell/
+          rm -f /tmp/verified-app-shell/status.json /tmp/verified-app-shell/previous-status.json /tmp/verified-app-shell/deploy-version.txt
+      - name: Publish verified application shell
+        if: github.event_name != 'schedule'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: verified-app-shell-${{ github.sha }}
+          path: /tmp/verified-app-shell
+          if-no-files-found: error
+          retention-days: 30
+      - name: Find verified application shell
+        if: github.event_name == 'schedule'
+        id: shell
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const name = `verified-app-shell-${process.env.GITHUB_SHA}`;
+          const endpoint = `https://api.github.com/repos/${process.env.GITHUB_REPOSITORY}/actions/artifacts?name=${encodeURIComponent(name)}&per_page=20`;
+          const response = await fetch(endpoint, { headers: { accept: 'application/vnd.github+json', authorization: `Bearer ${process.env.GH_TOKEN}`, 'x-github-api-version': '2022-11-28' } });
+          if (!response.ok) throw new Error(`Unable to locate verified app shell: HTTP ${response.status} ${await response.text()}`);
+          const payload = await response.json();
+          const artifact = (payload.artifacts || []).filter(item => !item.expired).sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))[0];
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `found=${Boolean(artifact)}\n`);
+          if (artifact) fs.appendFileSync(process.env.GITHUB_OUTPUT, `url=${artifact.archive_download_url}\n`);
+          console.log(artifact ? `Reusing verified app shell artifact ${artifact.id}.` : `No reusable app shell found for ${process.env.GITHUB_SHA}.`);
+          NODE
+      - name: Restore verified application shell
+        if: github.event_name == 'schedule' && steps.shell.outputs.found == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHELL_URL: ${{ steps.shell.outputs.url }}
+        run: |
+          rm -rf dist /tmp/verified-app-shell.zip
+          mkdir -p dist
+          curl --fail --silent --show-error --location --header "Authorization: Bearer ${GH_TOKEN}" --header "X-GitHub-Api-Version: 2022-11-28" "${SHELL_URL}" -o /tmp/verified-app-shell.zip
+          unzip -q /tmp/verified-app-shell.zip -d dist
+          node scripts/write-deploy-version.mjs
+          cp public/status.json public/deploy-version.txt dist/
+          test ! -f public/previous-status.json || cp public/previous-status.json dist/previous-status.json
+      - name: Fail-safe application build when reusable shell is unavailable
+        if: github.event_name == 'schedule' && steps.shell.outputs.found != 'true'
+        run: |
+          echo "Verified app shell artifact is unavailable; performing a fail-safe build for freshness continuity."
+          npm run build:app
+      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: dist
 
@@ -64,14 +124,14 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
-        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
+        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0
         with:
           timeout: 600000
           reporting_interval: 10000
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: "22"
           cache: npm
@@ -93,7 +153,7 @@ jobs:
           BROWSER="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
           test -n "$BROWSER"
           for attempt in $(seq 1 4); do
-            "$BROWSER" --headless=new --disable-gpu --no-sandbox --disable-dev-shm-usage --user-data-dir="/tmp/live-chrome-$attempt" --virtual-time-budget=20000 --dump-dom "${PAGE_URL}?smoke=${GITHUB_RUN_ID}-$attempt" > /tmp/live-dom.html
+            "$BROWSER" --headless=new --disable-gpu --disable-dev-shm-usage --user-data-dir="/tmp/live-chrome-$attempt" --virtual-time-budget=20000 --dump-dom "${PAGE_URL}?smoke=${GITHUB_RUN_ID}-$attempt" > /tmp/live-dom.html
             if grep -q 'Live dependency table' /tmp/live-dom.html; then break; fi
             sleep 6
           done
@@ -106,6 +166,18 @@ jobs:
           grep -q 'What deserves attention now' /tmp/live-dom.html
           ! grep -q 'Status intelligence unavailable' /tmp/live-dom.html
           ! grep -q 'invalid or unsupported payload' /tmp/live-dom.html
+      - name: Verify pinned pre-cascade-layer Chromium wallboard runtime
+        if: github.event_name != 'schedule'
+        env:
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+          LEGACY_CHROMIUM_REVISION: "950365"
+        run: |
+          rm -rf /tmp/chromium-legacy /tmp/chromium-legacy.zip
+          curl --fail --silent --show-error --location "https://storage.googleapis.com/chromium-browser-snapshots/Linux_x64/${LEGACY_CHROMIUM_REVISION}/chrome-linux.zip" -o /tmp/chromium-legacy.zip
+          mkdir -p /tmp/chromium-legacy
+          unzip -q /tmp/chromium-legacy.zip -d /tmp/chromium-legacy
+          chmod +x /tmp/chromium-legacy/chrome-linux/chrome
+          LEGACY_BROWSER=/tmp/chromium-legacy/chrome-linux/chrome STATUS_BASE_URL="$PAGE_URL" node scripts/verify-legacy-wallboard.mjs
       - name: Verify 458x291 Yodeck wallboard contract
         env:
           PAGE_URL: ${{ steps.deployment.outputs.page_url }}
@@ -117,7 +189,7 @@ jobs:
           node scripts/verify-yodeck-wallboard.mjs "$WALLBOARD_URL" /tmp/yodeck-wallboard.html /tmp/yodeck-wallboard.png
       - name: Upload Yodeck verification artifacts
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: yodeck-wallboard-${{ github.run_id }}
           path: |

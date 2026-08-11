@@ -10,9 +10,19 @@ const reliability = {
   unavailable_percent: 0,
   schema_change_count: 0,
   slo_state: 'warming',
-  daily: [{ date: '2026-01-01', samples: 1, live: 1, limited: 0, unavailable: 0, schema_changes: 0 }]
+  daily: [{ date: '2026-01-01', samples: 1, live: 1, limited: 0, unavailable: 0, schema_changes: 0 }],
+  window_30d: {
+    window_days: 30,
+    sample_count: 1,
+    live_percent: 100,
+    limited_percent: 0,
+    unavailable_percent: 0,
+    schema_change_count: 0,
+    slo_state: 'warming',
+    daily: [{ date: '2026-01-01', samples: 1, live: 1, limited: 0, unavailable: 0, schema_changes: 0 }]
+  }
 };
-const canary = { state: 'stable', observation: 'accepted', fingerprint: 'json-test', last_changed_at: '' };
+const canary = { state: 'stable', observation: 'accepted', fingerprint: 'json-test', last_changed_at: '', quarantine_state: 'clear', quarantine_since: '', stable_observations: 1 };
 const p: any = { schema_version: 2, generated_at: '2026-01-01T00:00:00Z', summary: { service_overall: 'operational', source_overall: 'available', active_incident_count: 0, affected_provider_count: 0, confirmed_operational_count: 1, degraded_count: 0, major_count: 0, unknown_count: 0, limited_count: 0, unavailable_count: 0, disabled_count: 0, pending_count: 0, stale_count: 0, provider_total: 1, enabled_provider_count: 1, coverage_percent: 100, live_source_coverage_percent: 100, valid_status_count: 1, invalid_status_count: 0, valid_status_percent: 100, confirmed_operational_percent: 100 }, providers: [{ id: 'a', name: 'A', category: 'C', status: 'ok', color: 'green', service_state: 'operational', source_state: 'available', attention: 'informational', ok: true, source: 'https://a.test', priority: 1, status_data_valid: true, source_reliability: reliability, schema_canary: canary }], incidents: [], changes: [], history: [] };
 
 test('complete payload validates', () => assert.equal(isStatusPayload(p), true));
@@ -30,9 +40,11 @@ test('browser validation requires reconciled reliability history and canary meta
 
   const corrupt = structuredClone(p);
   corrupt.providers[0].source_reliability.sample_count = 9;
-  corrupt.providers[0].schema_canary = { state: 'changed', observation: 'accepted', fingerprint: 'json-new', last_changed_at: '' };
+  corrupt.providers[0].source_reliability.window_30d.sample_count = 9;
+  corrupt.providers[0].schema_canary = { ...canary, state: 'changed', last_changed_at: '', quarantine_state: 'quarantined', quarantine_since: '' };
   assert.ok(payloadValidationErrors(corrupt).some(error => error.includes('sample_count mismatch')));
   assert.ok(payloadValidationErrors(corrupt).some(error => error.includes('requires last_changed_at')));
+  assert.ok(payloadValidationErrors(corrupt).some(error => error.includes('requires quarantine_since')));
 });
 
 test('component-only degradation and neutral component states reconcile without an incident record', () => {

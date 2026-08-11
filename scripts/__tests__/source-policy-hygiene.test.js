@@ -11,30 +11,12 @@ test('provider catalog names the current source technology and endpoint for repa
   const catalog = JSON.parse(read('config/providers.json'));
   const byId = id => catalog.find(provider => provider.id === id);
 
-  assert.deepEqual(
-    [byId('lastpass').sourceType, byId('lastpass').url],
-    ['rootly-json', 'https://status.lastpass.com/api/v1/status.json']
-  );
-  assert.deepEqual(
-    [byId('8x8').sourceType, byId('8x8').url],
-    ['statuscast-json', 'https://8x8status.status.page/summary.json']
-  );
-  assert.deepEqual(
-    [byId('proofpoint').sourceType, byId('proofpoint').url],
-    ['rendered-official', 'https://proofpoint.my.site.com/community/s/proofpoint-current-incidents']
-  );
-  assert.deepEqual(
-    [byId('backblaze').sourceType, byId('backblaze').url],
-    ['firehydrant-json', 'https://status.backblaze.com/data/payload.json']
-  );
-  assert.deepEqual(
-    [byId('crowdstrike').sourceType, byId('crowdstrike').url],
-    ['authenticated-status-reference', 'https://www.crowdstrike.com/en-us/contact-us/']
-  );
-  assert.deepEqual(
-    [byId('intermedia').sourceType, byId('intermedia').url],
-    ['authenticated-status-reference', 'https://support.intermedia.com/']
-  );
+  assert.deepEqual([byId('lastpass').sourceType, byId('lastpass').url], ['rootly-json', 'https://status.lastpass.com/api/v1/status.json']);
+  assert.deepEqual([byId('8x8').sourceType, byId('8x8').url], ['statuscast-json', 'https://8x8status.status.page/summary.json']);
+  assert.deepEqual([byId('proofpoint').sourceType, byId('proofpoint').url], ['rendered-official', 'https://proofpoint.my.site.com/community/s/proofpoint-current-incidents']);
+  assert.deepEqual([byId('backblaze').sourceType, byId('backblaze').url], ['firehydrant-json', 'https://status.backblaze.com/data/payload.json']);
+  assert.deepEqual([byId('crowdstrike').sourceType, byId('crowdstrike').url], ['authenticated-status-reference', 'https://www.crowdstrike.com/en-us/contact-us/']);
+  assert.deepEqual([byId('intermedia').sourceType, byId('intermedia').url], ['authenticated-status-reference', 'https://support.intermedia.com/']);
 });
 
 test('retired source aliases cannot return through lower-precedence provider maps', () => {
@@ -42,6 +24,7 @@ test('retired source aliases cannot return through lower-precedence provider map
     read('config/providers.json'),
     read('scripts/structured-source-adapters.mjs'),
     read('scripts/public-source-repairs.mjs'),
+    read('scripts/public-source-adapter-implementation.mjs'),
     read('scripts/update-public-status.mjs')
   ].join('\n');
 
