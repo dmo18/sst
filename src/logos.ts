@@ -52,7 +52,12 @@ const brandedLogoFiles: Record<string, BrandedLogo> = {
   'quickbooks-online': { file: 'quickbooks.svg', accent: '#2ca01c', monochrome: true },
   vultr: { file: 'vultr.svg', accent: '#007bfc', monochrome: true },
   backblaze: { file: 'backblaze.svg', accent: '#e21e29', monochrome: true },
-  keeper: { file: 'keeper.svg', accent: '#ffc700', monochrome: true }
+  keeper: { file: 'keeper.svg', accent: '#ffc700', monochrome: true },
+  ubiquiti: { file: 'ubiquiti.svg', accent: '#0559c9', monochrome: true },
+  lumen: { file: 'lumen.svg', accent: '#00c389', monochrome: true },
+  wasabi: { file: 'wasabi.svg', accent: '#28a745', monochrome: true },
+  'bitdefender-gravityzone': { file: 'bitdefender.svg', accent: '#d71920', monochrome: true },
+  'elastic-cloud': { file: 'elastic.svg', accent: '#00bfb3', monochrome: true }
 };
 
 const generatedBrands: Record<string, GeneratedBrand> = {
@@ -62,9 +67,6 @@ const generatedBrands: Record<string, GeneratedBrand> = {
   connectwise: { label: 'CW', accent: '#f47b20', secondary: '#943b08', motif: 'split' },
   halopsa: { label: 'HALO', accent: '#6d4dff', secondary: '#2f1c8f', motif: 'orbit' },
   ninjaone: { label: 'N', accent: '#f26b38', secondary: '#18181b', motif: 'diamond' },
-  ubiquiti: { label: 'UI', accent: '#0559c9', secondary: '#082956', motif: 'bars' },
-  lumen: { label: 'L', accent: '#00c389', secondary: '#005f4a', motif: 'wave' },
-  wasabi: { label: 'W', accent: '#28a745', secondary: '#0f5d22', motif: 'wave' },
   jumpcloud: { label: 'JC', accent: '#5566ff', secondary: '#2634aa', motif: 'orbit' },
   jamf: { label: 'J', accent: '#00a4e4', secondary: '#00577b', motif: 'wave' },
   addigy: { label: 'A', accent: '#6366f1', secondary: '#272a88', motif: 'orbit' },
@@ -75,7 +77,6 @@ const generatedBrands: Record<string, GeneratedBrand> = {
   superops: { label: 'SO', accent: '#7b45ff', secondary: '#341b88', motif: 'orbit' },
   crowdstrike: { label: 'CS', accent: '#d71920', secondary: '#690a0d', motif: 'wave' },
   huntress: { label: 'H', accent: '#6b4cf6', secondary: '#2b1b86', motif: 'diamond' },
-  'bitdefender-gravityzone': { label: 'BD', accent: '#d71920', secondary: '#5c080c', motif: 'split' },
   eset: { label: 'ESET', accent: '#0096a6', secondary: '#004d57', motif: 'orbit' },
   proofpoint: { label: 'PP', accent: '#e4002b', secondary: '#670014', motif: 'bars' },
   mimecast: { label: 'M', accent: '#ef4023', secondary: '#7d1709', motif: 'wave' },
@@ -91,7 +92,6 @@ const generatedBrands: Record<string, GeneratedBrand> = {
   nextiva: { label: 'N', accent: '#005fec', secondary: '#002b6b', motif: 'wave' },
   intermedia: { label: 'I', accent: '#005b96', secondary: '#002c49', motif: 'bars' },
   twilio: { label: 'T', accent: '#f22f46', secondary: '#7a1020', motif: 'orbit' },
-  'elastic-cloud': { label: 'E', accent: '#00bfb3', secondary: '#005a54', motif: 'split' },
   salesforce: { label: 'SF', accent: '#00a1e0', secondary: '#005473', motif: 'wave' },
   'monday-com': { label: 'm', accent: '#6161ff', secondary: '#2f2f8c', motif: 'bars' },
   docusign: { label: 'DS', accent: '#ffcc22', secondary: '#4b3a00', motif: 'diamond' },
