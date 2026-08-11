@@ -74,6 +74,21 @@ jobs:
             echo "Microsoft 365 browser profile cleanup did not complete." >&2
             exit 1
           fi
+      - name: Verify deployed provider identity and NUSO
+        env:
+          PAGE_URL: https://dmo18.github.io/sst/
+        run: |
+          BROWSER="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
+          test -n "$BROWSER"
+          export BROWSER
+          TARGET_URL="${PAGE_URL}?providerIdentityProbe=${GITHUB_RUN_ID}"
+          set -o pipefail
+          node scripts/verify-provider-identity.mjs "$TARGET_URL" /tmp/operator-providers.png /tmp/operator-providers-mobile.png 2>&1 | tee /tmp/provider-identity-verifier.log
+          rm -rf /tmp/provider-identity-* || true
+          if find /tmp -maxdepth 1 -name 'provider-identity-*' -print -quit | grep -q .; then
+            echo "Provider identity browser profile cleanup did not complete." >&2
+            exit 1
+          fi
       - name: Upload product experience evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -90,8 +105,11 @@ jobs:
             /tmp/operator-universe-mobile.png
             /tmp/operator-m365.png
             /tmp/operator-m365-mobile.png
+            /tmp/operator-providers.png
+            /tmp/operator-providers-mobile.png
             /tmp/operator-experience-verifier.log
             /tmp/product-depth-verifier.log
             /tmp/microsoft365-verifier.log
+            /tmp/provider-identity-verifier.log
           if-no-files-found: warn
           retention-days: 14
