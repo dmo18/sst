@@ -1,260 +1,150 @@
 # Repository architecture report
 
+Status: current reconciled architecture
+Updated: 2026-08-10
+
 ## Product and trust model
 
-This repository builds a static MSP operations command center from free public sources owned by monitored vendors. The production catalog contains 79 active providers after consolidation from 80 raw entries, including GitHub through the official GitHub Status source.
-
-Collection pipeline version `3.0.0` separates service state from source health and publishes provider, request, evidence, freshness, parser, quality, and blind-spot metrics.
+This repository builds a static MSP operations command center from free first-party public sources owned by monitored vendors. The current catalog contains 80 raw entries and 79 active providers after consolidation. Those numbers are descriptive observations, not validation constants; active membership is derived from the raw catalog, exclusions, and overrides.
 
 The system fails closed:
 
 - A source failure is not a vendor outage.
+- A parser canary or parser quarantine is not a vendor outage.
+- A source-reliability SLO breach is not a vendor outage.
 - A readable but limited source is not operational confirmation.
 - Missing data cannot produce a green conclusion.
 - Routine maintenance, resolved history, marketing posts, release notes, generic headings, and collector errors do not become active incidents.
-- Browser code validates the payload independently before presenting it.
+- Public browser code validates the complete wire contract independently before rendering it.
 
-Retrieval is bounded by global and per-origin concurrency, timeouts, streamed response-size limits, parser-specific content types, and one transient retry. Parser, schema, size, and content-type failures are not retried as incidents. Writes are atomic and generated status payloads are build outputs.
+No customer, tenant, ticket, device, user, credential, authenticated vendor API, paid status feed, or third-party outage aggregator is part of the public Pages application.
 
-## Repository map
-
-### Runtime application
-
-- `src/App.tsx`: data lifecycle, payload refresh, browser-check timestamp, route selection, URL-controlled wallboard refresh interval ownership, independent one-minute operator refresh cadence, and operator or wallboard rendering.
-- `src/IssueConsole.tsx`: operator workspace.
-- `src/WallboardV2.tsx`: sole active wallboard implementation, including overlay state, freshness telemetry, alert filtering, and marquee ownership.
-- `src/wallboardRoute.ts`: wallboard mode, `alerts` duration parsing, bounded `refresh` duration parsing, three-minute wallboard default, and route state.
-- `src/statusViewModel.ts`: command-center and action-queue model.
-- `src/payloadValidation.ts`: browser payload validation.
-- `src/types.ts`: payload and UI contracts.
-- `src/main.tsx`: application entrypoint plus the legacy signage capability check that adds `no-css-layers` only when `CSSLayerBlockRule` is unavailable.
-- `src/styles/wallboard-v2.css`: dedicated modern-browser wallboard overlay, compact geometry, provider rail, incident list, and marquee presentation.
-- `src/styles/wallboard-compat.css`: unlayered structural fallback for signage browsers that do not support CSS Cascade Layers. Every selector is gated by `html.no-css-layers`.
-- `src/styles/wallboard-tv.css`: compact 458 by 291 TV-specific spacing, typography, provider-rail, and incident-card tuning applied after both wallboard presentation paths.
-- `src/styles/command-center.css`: shared application tokens and generic base primitives used by operator and wallboard surfaces.
-- `public/help.html`: static deployed wallboard and Yodeck help page copied into the GitHub Pages artifact by Vite.
-
-The legacy `src/Wallboard.tsx`, `src/wallboard.ts`, `src/wallboardDomEnhancements.ts`, `src/styles/wallboard-focus.css`, and the legacy wallboard test have been removed. There is one React wallboard implementation. The compatibility and TV stylesheets are not second wallboard implementations or controllers. They only provide browser compatibility and compact presentation rules around the same React tree.
-
-### Collection and normalization
-
-- `config/providers.json`: raw provider catalog.
-- `config/provider-consolidation.json`: active catalog exclusions and overrides.
-- `scripts/update-status.mjs`: collection orchestration.
-- `scripts/update-public-status.mjs`: public-source collection and normalization.
-- `scripts/structured-source-adapters.mjs`: structured platform and provider adapters.
-- `scripts/public-source-repairs.mjs`: provider-specific source handling.
-- `scripts/incident-detail-repairs.mjs`: bounded incident detail cleanup.
-- `scripts/incident-freshness.mjs`: current-evidence policy.
-- `scripts/source-intelligence.mjs`: source evidence and reliability history.
-- `scripts/collection-intelligence.mjs`: request and run metrics.
-- `scripts/ensure-valid-status.mjs`: server-side payload validation and safe fallback behavior.
-
-### Validation and tests
-
-- `scripts/__tests__/`: collector, parser, maintenance, freshness, workflow, visual, compatibility, payload, compact-TV, refresh, and help tests.
-- `src/__tests__/`: lifecycle, view-model, telemetry, icons, wallboard route, and browser validation tests.
-- `src/__tests__/wallboardRoute.test.ts`: deterministic alert-window and browser-refresh URL parsing tests, including bounds and the 180-second safe fallback behavior.
-- `scripts/__tests__/wallboard-compatibility.test.js`: contract that requires the legacy signage fallback to remain unlayered, marker-scoped, and structurally complete for compact wallboard use.
-- `scripts/__tests__/wallboard-tv-detail.test.js`: compact 458 by 291 presentation contract that preserves full incident text, provider names, telemetry, and icon-to-text spacing.
-- `scripts/__tests__/wallboard-refresh-help.test.js`: contract for three-minute wallboard refresh ownership, one-minute operator ownership, safe interval bounds, deployed help content, and no-script help delivery.
-- `scripts/production-smoke.mjs`: deployed asset, payload, and release-identity verification.
-- `scripts/verify-yodeck-wallboard.mjs`: Chrome DevTools Protocol verification at an exact 458 by 291 CSS viewport, including DOM and screenshot evidence.
-- `scripts/write-deploy-version.mjs`: generated deployment identity from `GITHUB_SHA` and `GITHUB_RUN_ID`.
-- `scripts/validate-browser-payload.mjs`: browser contract validation outside the browser.
-- `scripts/validate-providers.mjs`: catalog and metadata validation.
-
-The deterministic suite includes structural contracts that prevent the removed imperative wallboard controller, legacy wallboard component, and checked-in deployment marker from returning. It also verifies that the compatibility fallback cannot affect modern browsers unless the `no-css-layers` marker is present, that compact TV presentation does not hide incident detail, and that browser-refresh URL values remain bounded.
-
-### Automation
-
-- `.github/workflows/test.yml`: pull-request validation without live vendor retrieval.
-- `.github/workflows/refresh-pages.yml`: scheduled, push, and manual status generation plus Pages deployment and post-deploy verification.
-- `.github/workflows/status-freshness-watch.yml`: deployed-payload age check and bounded recovery dispatch that defers while a release is active.
-
-The Pages release path uses one `pages-release` concurrency group with in-progress cancellation disabled. Every release event runs tests, type checking, dependency audit, live collection, payload validation, build, Pages publication, production smoke, normal browser rendering, and exact Yodeck verification.
-
-## GitHub monitoring architecture
-
-GitHub is a production provider with high criticality and priority 90. It uses the public first-party source:
+## Canonical data path
 
 ```text
-https://www.githubstatus.com/api/v2/summary.json
+config/providers.json
+  + config/provider-consolidation.json
+  -> canonical active provider catalog
+  -> deterministic catalog hash
+  -> bounded first-party source retrieval
+  -> structured adapters / registry-backed current-page adapter SDK
+  -> fail-closed internal status draft
+  -> source/collection intelligence
+  -> 7-day + 30-day reliability and parser canary/quarantine
+  -> internal draft validation
+  -> Status Contract v3 envelope
+  -> public/status.json
+  -> browser wire validation
+  -> React operator app or wallboard
+  -> GitHub Pages
 ```
 
-The structured Statuspage adapter preserves:
+The public wire envelope is Status Contract v3. It publishes `schema_version: 3`, `contract_version: 3`, and a deterministic `catalog_hash` for the canonical active provider catalog. Browser validation, release validation, and production smoke all require the same provider identity.
 
-- unresolved incident title and lifecycle;
-- first detection and latest update timestamps;
-- latest official incident note;
-- official incident link;
-- affected components;
-- component-level current states;
-- scheduled maintenance as a separate record type.
+The collector may construct and internally validate a schema-2 draft before the final envelope is emitted. This is an implementation-stage compatibility detail, not the public contract. A narrow compatibility shim accepts a previous deployed schema-3 snapshot only so rolling source history survives the next collection; parser ownership does not return to that shim.
 
-The declared service scope includes Git Operations, API Requests, Actions, GitHub Pages, Webhooks, Pull Requests, and Issues.
+## Source adapters and evidence
 
-A readable GitHub Status response may support an operational or incident conclusion. A failed or unreadable response produces only a source-health gap. Repository API failures, failed workflows, deployment failures, and synthetic requests are not GitHub service evidence.
+Current-page provider-specific conclusions are exposed through `scripts/public-source-repairs.mjs`, which is a registry facade over `scripts/source-adapter-sdk.mjs` and the isolated provider implementation module.
 
-Deterministic coverage validates GitHub provider metadata, structured incident and component parsing, provider loading, and the generated `GH` icon label.
+The SDK owns:
 
-## Runtime behavior
+- registered adapter identity;
+- accepted result kinds;
+- stable provider-scoped fallback incident identity;
+- current-page provenance defaults for untimed issue conclusions;
+- one normalized boundary before current-page conclusions reach payload construction.
 
-The browser requests only static assets and `status.json`. The operator application keeps the one-minute browser payload-check cadence. Wallboard mode defaults to three minutes, or 180 seconds, but can override that cadence with the `refresh` URL parameter. A payload older than 20 minutes produces a freshness warning. Browser check and payload ages are maintained in React state and rendered directly into the wallboard without a DOM enhancement module.
+Vendor-timed incident evidence remains distinct from current-page snapshot evidence. `observed_at` is an observation time and may be used only under the explicit current-page evidence policy; it is not reclassified as a vendor incident start time.
 
-The operator application exposes incidents, provider diagnostics, source reliability, request evidence, maintenance intelligence, timeline history, and cautious communication drafts.
+Cross-layer policies for effective incident time, component disposition, and region scope each have one canonical exported definition. The repository quality gate checks that these policies do not fork into competing implementations.
 
-The active wallboard presents newest-first vendor incidents. In compact mode the active-provider rail occupies the top row, with provider icons and names scrolling horizontally when needed. Payload and browser freshness telemetry remain fixed at the right. The incident list occupies the remaining height and loops vertically when needed. Maintenance and collector failures are excluded from Priority signals. The target non-interactive Yodeck region is 458 by 291 pixels.
+## Reliability, canaries, and source trust
 
-Complete incident detail remains present in compact mode. The current TV-specific rules use an 11-pixel gap between the provider icon column and the incident text column, preserve provider name and update age, and keep title and detail text unclamped.
+Every provider publishes two bounded observation windows:
 
-## Browser refresh URL contract
+- a seven-day UTC window;
+- a nested thirty-day UTC window.
 
-`src/wallboardRoute.ts` owns wallboard refresh parsing through `parseRefreshIntervalMs` and `readWallboardRoute`.
+Both reconcile daily live, limited, unavailable, and schema-change counts. SLO states are `warming`, `meeting`, `watch`, and `breach`.
 
-Accepted units are:
+Parser schema canaries publish `stable`, `changed`, or `unobserved` observation state plus a quarantine lifecycle of `clear`, `observing`, or `quarantined`.
 
-- seconds: `refresh=30s`;
-- minutes: `refresh=1m`, `refresh=3m`, or `refresh=5m`;
-- hours: `refresh=1h`.
+Quarantine affects source trust only. An observing or quarantined parser receives a source-quality penalty and cannot remain source-health `healthy`; it becomes `watch` unless the source is already blind. This does not modify vendor `service_state`, `source_state`, accepted incident severity, component state, or a successful transport observation.
 
-The accepted interval range is 15 seconds through one hour. Missing, malformed, too-small, or too-large wallboard values return `DEFAULT_BROWSER_REFRESH_MS`, which is three minutes.
+Active-event correlation is browser-derived from accepted vendor-timed incidents only. Same-category correlations require at least two providers within twenty minutes; cross-category correlations require at least three. Current-page snapshot observation times are excluded. Every correlation is explicitly non-causal.
 
-`App.tsx` keeps the two browser polling contracts separate:
+## Browser architecture
 
-```text
-wallboard mode -> route.refreshIntervalMs, default 180 seconds
-operator mode  -> OPERATOR_BROWSER_REFRESH_MS, fixed at 60 seconds
-```
+`src/usePayloadPoller.ts` owns browser payload lifecycle:
 
-This separation keeps the operator console's existing refresh-countdown contract truthful while allowing unattended wallboards to use a lower default polling frequency or an explicit URL override.
+- same-origin `status.json` retrieval;
+- 5 MiB response-size ceiling;
+- request ownership and overlap prevention;
+- Status Contract v3 and catalog-hash validation;
+- generated-at freshness/future-skew checks;
+- successful browser-check telemetry;
+- wallboard/operator polling cadence;
+- hidden-page deferral;
+- overdue refresh on visibility resume.
 
-The refresh loop continues to respect page visibility. The scheduled interval checks `document.hidden` before starting a browser retrieval. The option controls retrieval and validation of the deployed static `status.json` only. It does not invoke vendor sources directly, trigger a GitHub Actions collection run, or control Yodeck's full-page Refresh Interval.
+`src/App.tsx` is a composition layer. It selects the 60-second operator cadence or the URL-controlled wallboard cadence and renders the operator application or wallboard using the poller output.
 
-## Wallboard ownership contract
+The static HTML carries a restrictive CSP. Application scripts are local-only and inline script execution is not permitted. Same-origin data retrieval is allowed. Inline styles remain allowed because the React UI uses style attributes.
 
-React owns:
+## Wallboard and browser compatibility
 
-- incident filtering and ordering;
-- provider deduplication;
-- duplicate groups for seamless loops;
-- header mode and local-storage persistence;
-- overlay control rendering;
-- payload and browser freshness telemetry;
-- wallboard route and refresh state;
-- the Yodeck layout-probe state.
+The primary compact signage contract is exactly 458 by 291 pixels. Wallboard URL refresh defaults to three minutes and remains bounded from 15 seconds through one hour. Operator browser polling remains 60 seconds. These are browser retrieval settings and do not change vendor collection cadence.
 
-`wallboard-v2.css` owns the normal wallboard-specific geometry, overlay presentation, compact breakpoints, and marquee animation for browsers with CSS Cascade Layer support. Shared application design tokens and generic base wallboard primitives may remain in `command-center.css`.
+The production build targets Chrome 98 syntax/CSS compatibility. Non-scheduled code releases run two independent browser gates after deployment:
 
-`wallboard-compat.css` is a compatibility-only structural fallback. It is loaded after `wallboard-v2.css`, contains no `@layer` block, and scopes its selectors to `html.no-css-layers`. `main.tsx` adds that marker only when `CSSLayerBlockRule` is unavailable. This keeps the approved modern Chromium presentation unchanged while allowing older signage Chromium builds to receive equivalent structural rules.
+1. A published Chromium snapshot at or below the Chrome 98 branch-base ceiling exercises the real pre-cascade-layer fallback and must activate the `no-css-layers` path while rendering operational wallboard content.
+2. Current hosted Chromium runs the exact 458 by 291 Yodeck geometry, filtering, marquee, overlap, and screenshot verifier.
 
-`wallboard-tv.css` is loaded after the modern and compatibility presentation paths. It contains one compact TV media query and adjusts presentation only. It must not change incident selection, filtering, provider ownership, refresh ownership, or collection behavior.
+Untrusted vendor-page collection is a separate trust boundary. Those pages use sandboxed Chromium with disposable profiles and no GitHub credentials. The legacy compatibility browser renders only this repository's already-deployed static application.
 
-The runtime must not add a MutationObserver, query and replace rendered signal articles, clone live DOM nodes, inject runtime styles, or load a second wallboard controller.
+## Security and engineering gates
 
-## Physical TV presentation history
+Third-party GitHub Actions references are immutable commit SHAs and use current action generations. The repository has:
 
-The physical 46-inch Yodeck deployment is the practical acceptance environment for compact wallboard readability.
+- pinned checkout/setup-node/Pages/artifact actions;
+- pinned CodeQL v4 for JavaScript/TypeScript on pull requests, `main`, and weekly schedule;
+- complete high-severity dependency auditing;
+- Dependabot for npm and GitHub Actions;
+- dependency-free source-quality and formatting hygiene gates;
+- an opt-in executable pre-commit hook running the same quality command.
 
-The recent presentation work deliberately separates information preservation from density tuning:
+Checkout credentials are not persisted. Live vendor collection explicitly removes `GITHUB_TOKEN` and `GH_TOKEN` from its process environment. Pages/OIDC/status write permissions are isolated to the deploy job.
 
-1. PR 78 introduced compact TV tuning while keeping full incident descriptions visible.
-2. PR 79 moved the active-provider marquee into the compact top row and moved incident age onto the provider line to recover width.
-3. PR 80 restored provider names beside header icons and increased incident padding, line height, and card separation after physical-TV review showed the content was too compressed.
-4. PR 81 increased the incident icon-to-text gap from 8 pixels to 11 pixels after another physical-TV review.
+## Release architecture
 
-The current contract specifically prevents compact mode from hiding or line-clamping incident paragraphs. This protects the operational detail that the TV is intended to surface.
+Pages releases use one concurrency group with `cancel-in-progress: false`.
 
-## Yodeck legacy-browser compatibility
+A code-changing push or manual release performs the complete immutable verification path:
 
-### Observed failure
+1. provider validation;
+2. repository quality gates;
+3. all deterministic tests;
+4. TypeScript;
+5. complete dependency audit;
+6. token-free live collection;
+7. Status Contract v3/hash validation;
+8. release reconciliation;
+9. application build;
+10. publication of a commit-keyed verified application-shell artifact;
+11. Pages deployment;
+12. production smoke;
+13. current-browser operator render;
+14. legacy-browser compatibility render;
+15. exact current-browser Yodeck verification;
+16. artifact/status publication.
 
-The physical Yodeck deployment exposed a browser compatibility gap that the normal modern-Chromium production probe did not reproduce.
+Scheduled live-data refreshes reuse the verified application shell for the exact same commit. When that artifact exists they skip unchanged quality, deterministic test, TypeScript, dependency-audit, and application-compilation work. They still perform provider validation, live collection, Status Contract v3/hash validation, release reconciliation, Pages deployment, production smoke, current-browser rendering, exact Yodeck verification, artifact upload, and live-coverage status publication. If the shell artifact is unavailable, the schedule performs a fail-safe build instead of allowing status freshness to lapse.
 
-When the web page occupied a small Yodeck region, the region could render blank. When the same page was made full-screen, the application and data loaded, but the UI collapsed into vertically stacked KPI blocks instead of the intended compact Priority signals wallboard.
+`status-freshness-watch.yml` remains a separate safety mechanism that dispatches a refresh only when the deployed payload is stale and no release is active.
 
-This established that networking, GitHub Pages, React startup, `status.json`, and route parsing were functioning. The failure was presentation-specific.
+## Verification status
 
-### Root cause
+The complete implementation was merged through PR #111 and the legacy Chromium snapshot-resolution production blocker was repaired through PR #112. Full production release evidence and the required same-commit scheduled shell-reuse evidence are recorded in `docs/architecture-reconciliation.md` once closure is finalized.
 
-The primary wallboard structural rules are inside CSS Cascade Layers. An older Chromium build without Cascade Layer support can ignore those layered blocks. Unlayered responsive CSS can still apply, including the mobile rule that hides `.wallboard-shell` below 900 pixels. Without the layered wallboard override, a small signage region can therefore become blank. At larger widths the page can remain visible while losing the intended grid and compact wallboard geometry.
-
-### Compatibility design
-
-PR 74 introduced a narrow fallback instead of changing the normal wallboard architecture:
-
-1. `main.tsx` checks for `CSSLayerBlockRule` before mounting React.
-2. Browsers without that capability receive `html.no-css-layers`.
-3. `wallboard-compat.css` provides unlayered structural rules only beneath that marker.
-4. The fallback reproduces fixed wallboard geometry, compact media queries, provider and incident layouts, overlay visibility, and marquee keyframes.
-5. Modern browsers never match those selectors and continue using the existing layered wallboard presentation.
-
-This design preserves the single React wallboard ownership model. The fallback has no separate state, data path, rendering tree, or DOM controller.
-
-### Validation and production evidence
-
-PR 74, `Fix Yodeck wallboard rendering on pre-layer Chromium`, passed pull-request checks and merged into `main` at commit `33f7d873a3a22000030beec23091027b4fc9cee8`.
-
-Production release run 614 completed successfully after the merge. The release included the full first-party collection and payload gate, production smoke, normal browser rendering, exact 458 by 291 Yodeck verification, artifact publication, and deployment identity verification.
-
-The production verification uses modern Chromium, so the physical TV remains the acceptance point for the legacy fallback itself. The automated contract ensures that the existing modern layout is not changed and that the fallback remains structurally present for browsers without Cascade Layer support.
-
-## Online help architecture
-
-`public/help.html` is a static, script-free help document. It is copied into the built Pages artifact by Vite and deploys at `/sst/help.html`.
-
-The help page documents:
-
-- the recommended 46-inch wallboard URL;
-- `alerts` duration syntax and range;
-- `refresh` duration syntax, range, three-minute wallboard default, and fallback behavior;
-- payload-age and browser-check-age meanings;
-- the distinction between browser payload polling, GitHub Actions collection, and Yodeck full-page refresh;
-- compact provider rail and incident-list behavior;
-- Yodeck configuration guidance;
-- repository documentation and source links.
-
-The static design intentionally introduces no runtime JavaScript, external font, analytics, credential, or network dependency beyond ordinary document and link loading.
-
-The current help recommendation uses `refresh=3m` explicitly for auditability even though that value now matches the wallboard default.
-
-## Deployment identity
-
-`public/deploy-version.txt` is generated during `npm run build:app` with:
-
-- the workflow commit from `GITHUB_SHA`;
-- the workflow run ID from `GITHUB_RUN_ID`;
-- an ISO generation timestamp.
-
-`production-smoke.mjs` retrieves the deployed marker and rejects a release when the deployed commit or run ID differs from the workflow being verified. This separates artifact creation from proof that the intended revision is actually live.
-
-## Security posture
-
-- No credentials or secrets are stored in the repository or browser.
-- No server runtime or database exists.
-- No authenticated tenant APIs are used.
-- No commercial status aggregation service is a runtime dependency.
-- No crowdsourced outage data is treated as operational truth.
-- No browser-side vendor collection occurs.
-- Build permissions are read-only.
-- Pages and OIDC write permissions are restricted to the deploy job.
-- GitHub monitoring uses the public GitHub Status source and does not require repository credentials.
-- The Yodeck compatibility path introduces no network endpoint, credential, persistence layer, or data-source change.
-- The `refresh` URL option changes only retrieval frequency for the repository's deployed `status.json` and does not authorize new data sources.
-- The online help page is static and script-free.
-
-## Current operational state
-
-Step 1 stabilization and Step 2 architecture cleanup are complete on main. PR 71 merged the consolidated React-owned wallboard architecture, generated deployment identity, and exact viewport verification changes. Scheduled production runs 606, 607, 608, 610, and 611 passed, and freshness-watch run 29 completed successfully.
-
-PR 69 merged GitHub monitoring at commit `2f5dc9c1f644982b4f31e58839d6070a5388d719`. Pull-request run 311 passed the deterministic gate, and production release run 612 passed live collection, payload reconciliation, Pages publication, production smoke, normal browser rendering, exact 458 by 291 Yodeck verification, artifact upload, and deployed-intelligence verification.
-
-PR 74 merged the Yodeck legacy-browser compatibility fallback at commit `33f7d873a3a22000030beec23091027b4fc9cee8`. Pull-request checks passed before merge, and production release run 614 completed successfully.
-
-PR 81, `Add URL-controlled wallboard refresh and online help`, passed pull-request run 322 and merged at commit `43e25da05e1178109b32ca5dcb0f68fcc98904b4`. Production release run 623 passed the complete build and deployment path, including live collection, browser validation, exact 458 by 291 Yodeck verification, artifact upload, and deployed-intelligence verification.
-
-Commit `e8d7319f6661e80815d1812588865c4363bbd9a1` changed the wallboard browser default to three minutes as part of a broader production repair. This follow-up isolates that wallboard default from the operator console's one-minute cadence and adds explicit regression coverage for the split.
-
-GitHub monitoring, the Yodeck compatibility fallback, current physical-TV tuning, URL-controlled browser refresh, and the deployed online help remain governed by the repository release gate.
-
-See [system-status.md](system-status.md), [wallboard-url-options.md](wallboard-url-options.md), and [open-issues.md](open-issues.md) for current completion and deployment guidance. The deployed online help is available at `https://dmo18.github.io/sst/help.html`.
+The historical `docs/architecture-overhaul.md` documents the earlier reduced-scope pass and is not the authoritative architecture record.
