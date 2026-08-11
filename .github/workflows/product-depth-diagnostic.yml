@@ -9,6 +9,17 @@ permissions:
 
 jobs:
   architecture-contract:
+    strategy:
+      fail-fast: false
+      matrix:
+        contract:
+          - product-depth system
+          - command palette
+          - incident focus action loop
+          - signature experience
+          - workspace supports
+          - persistent launcher
+    name: contract / ${{ matrix.contract }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6
@@ -19,7 +30,7 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: node --import ./scripts/__tests__/test-clock.mjs --test --experimental-strip-types scripts/__tests__/product-depth.test.js
+      - run: node --import ./scripts/__tests__/test-clock.mjs --test --experimental-strip-types --test-name-pattern="${{ matrix.contract }}" scripts/__tests__/product-depth.test.js
 
   workspace-model:
     runs-on: ubuntu-latest
