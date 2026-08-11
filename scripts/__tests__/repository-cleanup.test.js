@@ -24,9 +24,23 @@ test('obsolete heartbeat, release trigger, and unreferenced legacy styles stay r
 test('the runtime stylesheet entrypoint names only active owned stylesheets', () => {
   const main = fs.readFileSync(path.join(root, 'src', 'main.tsx'), 'utf8');
   for (const legacy of ['intelligence.css', 'mobile.css', 'site-guide.css', 'status-tweaks.css']) {
-    assert.doesNotMatch(main, new RegExp(legacy.replace('.', '\\.')));
+    assert.equal(main.includes(`'./styles/${legacy}'`), false, `${legacy} must not return as a runtime stylesheet`);
   }
-  for (const active of ['command-center.css', 'ultra-hd.css', 'mobile-ops.css', 'ultra-hd-tuning.css', 'wallboard-v2.css', 'wallboard-compat.css', 'wallboard-tv.css']) {
+  for (const active of [
+    'command-center.css',
+    'ultra-hd.css',
+    'mobile-ops.css',
+    'ultra-hd-tuning.css',
+    'premium-experience.css',
+    'premium-interactions.css',
+    'premium-icons.css',
+    'premium-state.css',
+    'premium-mobile.css',
+    'wallboard-v2.css',
+    'wallboard-compat.css',
+    'wallboard-tv.css',
+    'wallboard-premium.css'
+  ]) {
     assert.match(main, new RegExp(active.replace('.', '\\.')));
   }
 });
