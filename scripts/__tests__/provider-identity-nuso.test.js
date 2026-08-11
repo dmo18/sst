@@ -63,7 +63,8 @@ test('provider identity is bundled locally with a pinned source record and no ru
   const main = await read('src/main.tsx');
   assert.match(sources, /Simple Icons 16\.27\.1/);
   assert.match(sources, /CC0-1\.0/);
-  assert.doesNotMatch(logos, /https?:\/\//);
+  const runtimeLogoSource = logos.replaceAll('http://www.w3.org/2000/svg', '');
+  assert.doesNotMatch(runtimeLogoSource, /https?:\/\//);
   assert.match(providerIcon, /provider-logo--brand-mask/);
   assert.match(providerIcon, /--provider-logo-mask/);
   assert.ok(main.indexOf("./styles/provider-identity.css") < main.indexOf("./styles/wallboard-v2.css"));
