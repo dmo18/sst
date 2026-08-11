@@ -18,6 +18,18 @@ test('legacy signage verification inspects the running page through CDP', async 
   assert.doesNotMatch(source, /--dump-dom/);
 });
 
+test('legacy runtime readiness follows structural wallboard content instead of incidental copy', async () => {
+  const source = await read('scripts/verify-legacy-wallboard.mjs');
+
+  assert.match(source, /structuralWallboardReady/);
+  assert.match(source, /\.wallboard-priority-v2/);
+  assert.match(source, /\.wallboard-mini-telemetry/);
+  assert.match(source, /\.wallboard-alert-provider-rail/);
+  assert.match(source, /\.wallboard-priority-group:not\(\.wallboard-priority-copy\) article/);
+  assert.match(source, /\.wallboard-priority-list > \.empty-state/);
+  assert.doesNotMatch(source, /\/Provider\|ServiceOps\|Status\/i/);
+});
+
 test('legacy runtime probe keeps the exact signage viewport and compatibility-only sandbox exception', async () => {
   const source = await read('scripts/verify-legacy-wallboard.mjs');
 
