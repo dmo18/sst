@@ -12,7 +12,7 @@ test('operational posture copy agrees in singular and plural states', async () =
   assert.doesNotMatch(source, /issue\$\{model\.summary\.major_count === 1 \? '' : 's'\} require validation/);
 });
 
-test('last-mile polish clears the desktop pulse and compacts mobile intelligence', async () => {
+test('persistent operator controls live in application chrome rather than over workspace content', async () => {
   const main = await read('src/main.tsx');
   const polish = await read('src/styles/premium-final-polish.css');
   const polishIndex = main.indexOf("./styles/premium-final-polish.css");
@@ -20,8 +20,16 @@ test('last-mile polish clears the desktop pulse and compacts mobile intelligence
 
   assert.ok(polishIndex >= 0, 'final polish stylesheet must be loaded');
   assert.ok(wallboardIndex > polishIndex, 'wallboard geometry must still override operator polish');
-  assert.match(polish, /\.workspace-main\s*\{[\s\S]*padding-bottom: 112px/);
-  assert.match(polish, /\.ops-intel-trigger\s*\{[\s\S]*width: 48px[\s\S]*height: 48px/);
+  assert.match(polish, /@media \(min-width: 901px\)[\s\S]*\.experience-pulse\s*\{[\s\S]*left: 14px[\s\S]*width: calc\(var\(--px-sidebar\) - 28px\)/);
+  assert.match(polish, /@media \(min-width: 901px\)[\s\S]*\.ops-intel-trigger\s*\{[\s\S]*left: 14px[\s\S]*width: calc\(var\(--px-sidebar\) - 28px\)/);
+  assert.match(polish, /\.experience-pulse > div span\s*\{[\s\S]*display: none/);
+  assert.match(polish, /\.experience-pulse > button span\s*\{[\s\S]*display: none/);
+});
+
+test('mobile intelligence control is docked into the sticky topbar', async () => {
+  const polish = await read('src/styles/premium-final-polish.css');
+  assert.match(polish, /@media \(max-width: 900px\)[\s\S]*\.ops-intel-trigger\s*\{[\s\S]*top: 13px[\s\S]*right: 116px[\s\S]*bottom: auto/);
+  assert.match(polish, /\.ops-intel-trigger\s*\{[\s\S]*width: 40px[\s\S]*height: 40px/);
   assert.match(polish, /\.ops-intel-trigger::before/);
   assert.match(polish, /\.ops-intel-trigger span\s*\{[\s\S]*position: absolute/);
 });
