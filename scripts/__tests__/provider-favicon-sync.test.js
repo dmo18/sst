@@ -18,9 +18,11 @@ test('provider favicon source list covers every generated recognition brand', as
   for (const id of ['sophos', 'halopsa', 'kaseya', 'superops', 'proofpoint', 'mimecast', 'cove-data-protection', 'ultradns', 'salesforce', 'docusign']) {
     assert.match(settings.websiteOverrides[id], /^https:\/\//);
   }
-  for (const id of ['superops', 'cove-data-protection', 'ultradns']) {
+  for (const id of ['superops', 'cove-data-protection']) {
     assert.match(settings.assetOverrides[id].url, /^https:\/\//);
   }
+  assert.equal(settings.websiteOverrides.ultradns, 'https://portal.ultradns.com/');
+  assert.equal(settings.assetOverrides.ultradns, undefined);
   assert.equal(settings.assetOverrides['cove-data-protection'].background, '#005255');
 });
 
