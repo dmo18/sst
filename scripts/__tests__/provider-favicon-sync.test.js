@@ -13,13 +13,14 @@ test('provider favicon source list covers every generated recognition brand', as
     'barracuda', 'knowbe4', 'crashplan', 'cove-data-protection', 'sharefile', 'ultradns', 'linode', 'ringcentral',
     '8x8', 'nextiva', 'intermedia', 'twilio', 'salesforce', 'monday-com', 'docusign', 'nuso'
   ];
-  assert.equal(settings.minimumResolved, 34);
+  assert.equal(settings.minimumResolved, 35);
   assert.deepEqual([...settings.providers].sort(), [...expected].sort());
   for (const id of ['sophos', 'halopsa', 'kaseya', 'superops', 'proofpoint', 'mimecast', 'cove-data-protection', 'ultradns', 'salesforce', 'docusign']) {
     assert.match(settings.websiteOverrides[id], /^https:\/\//);
   }
-  assert.match(settings.assetOverrides.superops.url, /^https:\/\//);
-  assert.match(settings.assetOverrides['cove-data-protection'].url, /^https:\/\//);
+  for (const id of ['superops', 'cove-data-protection', 'ultradns']) {
+    assert.match(settings.assetOverrides[id].url, /^https:\/\//);
+  }
   assert.equal(settings.assetOverrides['cove-data-protection'].background, '#005255');
 });
 
