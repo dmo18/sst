@@ -38,6 +38,9 @@
     "nuso"
   ],
   "assetOverrides": {
+    "jamf": {
+      "url": "https://dka575ofm4ao0.cloudfront.net/pages-favicon_logos/original/4655/jamf_fav.png"
+    },
     "superops": {
       "url": "https://us-west-2.graphassets.com/AsRMKMrtKTFW6TGbr4KgUz/cmo8lbrrc1xga07n3l58jhure"
     },
