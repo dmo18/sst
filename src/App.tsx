@@ -55,6 +55,7 @@ export function App(): JSX.Element {
 
   const productFocus = new URLSearchParams(location.search).get('focus') || '';
   const replayBoundaryVisible = productFocus === 'universe' || productFocus.startsWith('category:') || productFocus.startsWith('correlation:');
+  const liveTruth = state.data?.live_truth;
 
   const exitWallboard = () => {
     const search = new URLSearchParams(location.search);
@@ -65,7 +66,16 @@ export function App(): JSX.Element {
   const requestRefresh = () => void refresh();
 
   return (
-    <main className="app-frame">
+    <main
+      className="app-frame"
+      data-live-truth-checked-at={liveTruth?.checked_at || ''}
+      data-live-truth-attempted={liveTruth?.attempted_provider_count ?? 0}
+      data-live-truth-successes={liveTruth?.success_provider_count ?? 0}
+      data-live-truth-failures={liveTruth?.failure_provider_count ?? 0}
+      data-live-truth-active-providers={(liveTruth?.active_provider_ids || []).join(',')}
+      data-live-truth-successful-providers={(liveTruth?.successful_provider_ids || []).join(',')}
+      data-live-truth-failed-providers={(liveTruth?.failed_provider_ids || []).join(',')}
+    >
       {route.wallboardMode
         ? <WallboardV2 model={model} lifecycle={state} now={now} browserCheckedAt={lastBrowserCheckAt} browserRefreshMs={browserRefreshMs} alertWindowMs={route.alertWindowMs} onExit={exitWallboard} />
         : <>
