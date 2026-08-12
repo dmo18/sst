@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import type { IssueConsoleModel } from './statusViewModel';
 import {
   buildChangeDigest,
@@ -58,6 +59,12 @@ function replaceProductLocation(focus: string | null, lensId?: string | null): v
 
 function copyText(value: string): Promise<void> {
   return navigator.clipboard.writeText(value);
+}
+
+function activateSvgButton(event: ReactKeyboardEvent<SVGGElement>, action: () => void): void {
+  if (event.key !== 'Enter' && event.key !== ' ') return;
+  event.preventDefault();
+  action();
 }
 
 function SearchResult({ entry, onOpen }: { entry: WorkspaceSearchEntry; onOpen: (target: string) => void }): JSX.Element {
@@ -124,6 +131,11 @@ export function ProductDepthLayer({ model }: ProductDepthLayerProps): JSX.Elemen
       else if (detail.command) openTarget(detail.command);
     };
     const onKeyboard = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && focus) {
+        event.preventDefault();
+        close();
+        return;
+      }
       const target = event.target as HTMLElement;
       const typing = ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) || target.isContentEditable;
       if (typing) return;
@@ -219,7 +231,7 @@ export function ProductDepthLayer({ model }: ProductDepthLayerProps): JSX.Elemen
         {(focus === 'universe' || categoryFocus || correlationId) && <div className="depth-universe-layout">
           <main className="depth-universe-stage">
             <div className="depth-stage-heading"><div><span>Live dependency field</span><h3>{selectedLens ? selectedLens.name : categoryFocus || correlation?.label || 'Your monitored service estate'}</h3><p>Category gravity shows dependency domains. Bright links are vendor-timed temporal correlations only, never inferred causality.</p></div><div className="depth-stage-legend"><span className="is-critical">Major / blind</span><span className="is-warning">Degraded / watch</span><span className="is-positive">Operational</span><span className="is-correlation">Temporal cluster</span></div></div>
-            <svg className="dependency-universe" viewBox="0 0 1200 720" role="img" aria-label="Interactive provider dependency universe">
+            <svg className="dependency-universe" viewBox="0 0 1200 720" role="group" aria-label="Interactive provider dependency universe">
               <defs>
                 <radialGradient id="depth-core" cx="50%" cy="50%" r="50%"><stop offset="0%" stopColor="rgba(104,129,255,.24)"/><stop offset="100%" stopColor="rgba(104,129,255,0)"/></radialGradient>
                 <filter id="depth-glow"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
@@ -231,16 +243,18 @@ export function ProductDepthLayer({ model }: ProductDepthLayerProps): JSX.Elemen
                 if (!from || !to) return null;
                 return <line key={edge.id} x1={from.x} y1={from.y} x2={to.x} y2={to.y} className={`depth-edge depth-edge-${edge.kind} ${edge.confidence ? `is-${edge.confidence}` : ''}`} />;
               })}
-              {graph.nodes.filter(node => node.kind === 'category').map(node => <g key={node.id} className={`depth-node depth-category-node depth-tone-${node.tone}`} onClick={() => openTarget(`category:${node.category}`)} role="button" tabIndex={0}>
+              {graph.nodes.filter(node => node.kind === 'category').map(node => <g key={node.id} className={`depth-node depth-category-node depth-tone-${node.tone}`} onClick={() => openTarget(`category:${node.category}`)} onKeyDown={event => activateSvgButton(event, () => openTarget(`category:${node.category}`))} role="button" aria-label={`${node.label} category`} tabIndex={0}>
                 <circle cx={node.x} cy={node.y} r="33" />
                 <text x={node.x} y={node.y + 4}>{node.label.slice(0, 18)}</text>
+                <title>{`${node.label} category`}</title>
               </g>)}
               {graph.nodes.filter(node => node.kind === 'provider').map(node => {
                 const dimmed = selectedLens && node.providerId ? !lensProviderIds.has(node.providerId) : categoryFocus ? node.category !== categoryFocus : false;
                 const replayed = node.providerId ? replayTrailIds.has(node.providerId) : false;
                 const pinned = node.providerId ? workspace.pinnedProviderIds.includes(node.providerId) : false;
                 const showLabel = node.tone !== 'positive' || node.criticality === 'high' || pinned || replayed;
-                return <g key={node.id} className={`depth-node depth-provider-node depth-tone-${node.tone} ${dimmed ? 'is-dimmed' : ''} ${replayed ? 'is-replayed' : ''} ${pinned ? 'is-pinned' : ''}`} onClick={() => node.providerId && openTarget(`provider:${node.providerId}`)} role="button" tabIndex={0}>
+                const openProvider = () => node.providerId && openTarget(`provider:${node.providerId}`);
+                return <g key={node.id} className={`depth-node depth-provider-node depth-tone-${node.tone} ${dimmed ? 'is-dimmed' : ''} ${replayed ? 'is-replayed' : ''} ${pinned ? 'is-pinned' : ''}`} onClick={openProvider} onKeyDown={event => activateSvgButton(event, openProvider)} role="button" aria-label={`${node.label}, ${node.category}, ${node.tone}`} tabIndex={0}>
                   <circle cx={node.x} cy={node.y} r={node.criticality === 'high' ? 10 : 7} />
                   {showLabel && <text x={node.x + 13} y={node.y + 4}>{node.label.slice(0, 18)}</text>}
                   <title>{`${node.label} · ${node.category} · ${node.tone}`}</title>
