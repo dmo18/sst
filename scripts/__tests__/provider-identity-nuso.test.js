@@ -98,10 +98,13 @@ test('deployed provider identity verification uses structural and computed-style
   assert.match(verifier, /remote-debugging-port/);
   assert.match(verifier, /provider-data-table\[aria-label=/);
   assert.match(verifier, /brandMaskCount < 35/);
-  assert.match(verifier, /localLogoAssets < 45/);
-  assert.match(verifier, /generatedCount > 35/);
-  assert.match(verifier, /embeddedSvgCount !== desktop\.generatedCount/);
-  assert.match(verifier, /data:image\/svg\+xml,/);
+  assert.match(verifier, /faviconCount !== 35/);
+  assert.match(verifier, /generatedCount !== 0/);
+  assert.match(verifier, /embeddedSvgCount !== 0/);
+  assert.match(verifier, /faviconAssetCount !== desktop\.faviconCount/);
+  assert.match(verifier, /exactLocalAssets < 45/);
+  assert.match(verifier, /localLogoAssets < 80/);
+  assert.match(verifier, /provider-favicons/);
   assert.match(verifier, /unexpectedData/);
   assert.match(verifier, /networkRefs/);
   assert.match(verifier, /failedAssets/);
@@ -109,7 +112,7 @@ test('deployed provider identity verification uses structural and computed-style
   assert.match(verifier, /styleContract/);
   assert.match(verifier, /shellStyle\?\.display === 'grid'/);
   assert.match(verifier, /sidebarStyle\?\.position === 'fixed'/);
-  assert.match(verifier, /generatedStyle\?\.paddingTop === '0px'/);
+  assert.match(verifier, /faviconStyle\?\.paddingTop === '0px'/);
   assert.match(verifier, /NAVIGATION_ATTEMPTS = 3/);
 });
 
