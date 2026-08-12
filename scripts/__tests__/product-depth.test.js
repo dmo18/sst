@@ -66,15 +66,18 @@ test('signature experience contains dependency universe cautious correlation and
   assert.match(workspace, /providerRadius = 305/);
 });
 
-test('dependency universe visual layer suppresses healthy label noise and magnifies mobile evidence', async () => {
+test('dependency universe visual layer keeps mobile topology inside the viewport and labels only urgent nodes by default', async () => {
   const css = await read('src/styles/product-quality-cleanup.css');
   assert.match(css, /\.depth-provider-node text,[\s\S]*\.depth-category-node text[\s\S]*opacity: 0/);
-  assert.match(css, /\.depth-provider-node\.depth-tone-warning text/);
+  assert.match(css, /\.depth-category-node circle[\s\S]*r: 16px/);
+  assert.match(css, /transform: scale\(1\.28\)/);
+  assert.match(css, /font-size: 30px/);
   assert.match(css, /\.depth-provider-node\.depth-tone-critical text/);
-  assert.match(css, /\.depth-category-node\.depth-tone-warning text/);
-  assert.match(css, /min-height: 430px/);
-  assert.match(css, /transform: scale\(1\.72\)/);
-  assert.match(css, /font-size: 18px/);
+  assert.match(css, /\.depth-provider-node\.depth-tone-warning circle/);
+  assert.match(css, /\.depth-truth-boundary[\s\S]*display: none/);
+  const mobileBlock = css.slice(css.indexOf('@media (max-width: 900px)'), css.indexOf('@media (max-width: 470px)'));
+  assert.match(mobileBlock, /\.depth-provider-node text[\s\S]*display: none/);
+  assert.doesNotMatch(mobileBlock, /\.depth-provider-node\.depth-tone-warning text,[\s\S]*display: block/);
 });
 
 test('workspace supports deep links universal search change catch-up and persistent lenses', async () => {
@@ -120,6 +123,9 @@ test('deployed product-depth verification captures readable universe search inci
   assert.match(verifier, /temporal correlations only\|Temporal correlation only/i);
   assert.match(verifier, /recorded changes only/i);
   assert.match(verifier, /assertUniverseReadability/);
+  assert.match(verifier, /maximumGraphWidth/);
+  assert.match(verifier, /clippedLabels/);
+  assert.match(verifier, /clips \$\{metrics\.clippedLabels\} visible labels/);
   assert.match(verifier, /medianLabelHeight/);
   assert.match(verifier, /labelCollisions/);
   assert.match(verifier, /duplicate semantic result rows/);

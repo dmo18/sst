@@ -176,18 +176,25 @@ async function viewportContract(session) {
 }
 
 function assertUniverseReadability(metrics, label, mobile = false) {
-  const minimumGraphWidth = mobile ? MOBILE_WIDTH * 1.35 : 700;
+  const minimumGraphWidth = mobile ? MOBILE_WIDTH * 1.15 : 700;
+  const maximumGraphWidth = mobile ? MOBILE_WIDTH * 1.4 : Number.POSITIVE_INFINITY;
   const minimumGraphHeight = mobile ? 360 : 430;
-  const minimumLabelHeight = mobile ? 8 : 7;
-  const collisionLimit = Math.max(4, Math.ceil(metrics.visibleLabels * (mobile ? 0.45 : 0.35)));
+  const minimumLabelHeight = mobile ? 10 : 7;
+  const collisionLimit = Math.max(mobile ? 2 : 4, Math.ceil(metrics.visibleLabels * (mobile ? 0.2 : 0.35)));
   if (metrics.graphWidth < minimumGraphWidth || metrics.graphHeight < minimumGraphHeight) {
     throw new Error(`${label} graph footprint is too small: ${metrics.graphWidth}x${metrics.graphHeight}`);
+  }
+  if (metrics.graphWidth > maximumGraphWidth) {
+    throw new Error(`${label} graph is oversized for the viewport: ${metrics.graphWidth}px > ${maximumGraphWidth}px`);
   }
   if (metrics.visibleLabels > 0 && metrics.medianLabelHeight < minimumLabelHeight) {
     throw new Error(`${label} labels are too small to scan: median=${metrics.medianLabelHeight}px`);
   }
   if (metrics.labelCollisions > collisionLimit) {
     throw new Error(`${label} label collisions are too dense: ${metrics.labelCollisions}/${metrics.visibleLabels}`);
+  }
+  if (mobile && metrics.clippedLabels > 0) {
+    throw new Error(`${label} clips ${metrics.clippedLabels} visible labels against the viewport.`);
   }
 }
 
@@ -240,7 +247,8 @@ try {
       graphHeight: Math.round((graphRect?.height || 0) * 10) / 10,
       visibleLabels: rects.length,
       medianLabelHeight: heights.length ? Math.round(heights[Math.floor(heights.length / 2)] * 10) / 10 : 0,
-      labelCollisions
+      labelCollisions,
+      clippedLabels: 0
     };
   })()`, 'Dependency Universe');
   if (!universe.cautious) throw new Error('Dependency Universe does not expose the cautious temporal-correlation boundary.');
@@ -325,6 +333,7 @@ try {
       }
     }
     const heights = rects.map(rect => rect.height).sort((a, b) => a - b);
+    const clippedLabels = rects.filter(rect => rect.left < 4 || rect.right > innerWidth - 4).length;
     return {
       ready: Boolean(shell && graph && launcher),
       width: innerWidth,
@@ -336,7 +345,8 @@ try {
       graphHeight: Math.round((graphRect?.height || 0) * 10) / 10,
       visibleLabels: rects.length,
       medianLabelHeight: heights.length ? Math.round(heights[Math.floor(heights.length / 2)] * 10) / 10 : 0,
-      labelCollisions
+      labelCollisions,
+      clippedLabels
     };
   })()`, 'Mobile Dependency Universe');
   if (mobile.width !== MOBILE_WIDTH || mobile.height !== MOBILE_HEIGHT) throw new Error(`Mobile Dependency Universe viewport mismatch: ${mobile.width}x${mobile.height}`);
@@ -351,7 +361,7 @@ try {
   console.log(`PRODUCT_DEPTH_UNIVERSE providers=${universe.nodes} categories=${universe.categories} correlations=${universe.correlationEdges} labels=${universe.visibleLabels} collisions=${universe.labelCollisions} label_height=${universe.medianLabelHeight} graph=${universe.graphWidth}x${universe.graphHeight} screenshot=${universeBytes}`);
   console.log(`PRODUCT_DEPTH_SEARCH query=${JSON.stringify(providerName)} results=${search.count} duplicates=${search.duplicates} kinds=${search.kinds.join(',')} screenshot=${searchBytes}`);
   console.log(`PRODUCT_DEPTH_INCIDENT ${incidentVerified ? `verified id=${incidentId} screenshot=${incidentBytes}` : 'skipped no-live-incident'}`);
-  console.log(`PRODUCT_DEPTH_MOBILE ${MOBILE_WIDTH}x${MOBILE_HEIGHT} providers=${mobile.nodes} labels=${mobile.visibleLabels} collisions=${mobile.labelCollisions} label_height=${mobile.medianLabelHeight} graph=${mobile.graphWidth}x${mobile.graphHeight} screenshot=${mobileUniverseBytes}`);
+  console.log(`PRODUCT_DEPTH_MOBILE ${MOBILE_WIDTH}x${MOBILE_HEIGHT} providers=${mobile.nodes} labels=${mobile.visibleLabels} collisions=${mobile.labelCollisions} clipped=${mobile.clippedLabels} label_height=${mobile.medianLabelHeight} graph=${mobile.graphWidth}x${mobile.graphHeight} screenshot=${mobileUniverseBytes}`);
 }
 finally {
   session?.close();

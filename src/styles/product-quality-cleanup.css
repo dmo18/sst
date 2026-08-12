@@ -1,5 +1,5 @@
 /* Product quality cleanup driven by production screenshot review.
-   Keep the dependency field useful at a glance instead of rendering every healthy label at once. */
+   Keep the dependency field useful at a glance instead of rendering every label at once. */
 
 .dependency-universe {
   min-height: 500px;
@@ -17,7 +17,6 @@
 .depth-provider-node.is-replayed text,
 .depth-provider-node:hover text,
 .depth-provider-node:focus text,
-.depth-category-node.depth-tone-warning text,
 .depth-category-node:hover text,
 .depth-category-node:focus text {
   opacity: 1;
@@ -35,7 +34,7 @@
 }
 
 .depth-category-node circle {
-  r: 28px;
+  r: 16px;
 }
 
 @media (max-width: 900px) {
@@ -45,43 +44,63 @@
 
   .depth-shell-universe .dependency-universe {
     min-height: 430px;
-    transform: scale(1.72);
+    transform: scale(1.28);
     transform-origin: 50% 50%;
   }
 
   .depth-shell-universe .depth-provider-node text {
-    font-size: 18px;
-    stroke-width: 5px;
+    display: none;
+    font-size: 30px;
+    stroke-width: 7px;
+  }
+
+  .depth-shell-universe .depth-provider-node.depth-tone-critical text,
+  .depth-shell-universe .depth-provider-node.is-pinned text,
+  .depth-shell-universe .depth-provider-node.is-replayed text,
+  .depth-shell-universe .depth-provider-node:hover text,
+  .depth-shell-universe .depth-provider-node:focus text {
+    display: block;
+    opacity: 1;
   }
 
   .depth-shell-universe .depth-category-node text {
     display: none;
   }
 
-  .depth-shell-universe .depth-provider-node.depth-tone-positive:not(.is-pinned):not(.is-replayed) text {
-    display: none;
+  .depth-shell-universe .depth-category-node circle {
+    r: 11px;
+    opacity: .72;
   }
 
   .depth-shell-universe .depth-provider-node circle {
     stroke-width: 2px;
   }
 
-  .depth-shell-universe .depth-provider-node.depth-tone-warning circle,
+  .depth-shell-universe .depth-provider-node.depth-tone-warning circle {
+    r: 9px;
+  }
+
   .depth-shell-universe .depth-provider-node.depth-tone-critical circle,
   .depth-shell-universe .depth-provider-node.is-pinned circle,
   .depth-shell-universe .depth-provider-node.is-replayed circle {
     r: 12px;
+  }
+
+  /* The replay panel already states this boundary in context. The separate fixed
+     truth pill duplicated that message and obscured the mobile replay controls. */
+  .depth-truth-boundary {
+    display: none;
   }
 }
 
 @media (max-width: 470px) {
   .depth-shell-universe .dependency-universe {
     min-height: 390px;
-    transform: scale(1.9);
+    transform: scale(1.24);
   }
 
   .depth-shell-universe .depth-provider-node text {
-    font-size: 19px;
+    font-size: 32px;
   }
 }
 
