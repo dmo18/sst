@@ -1,222 +1,268 @@
 # Status truth, wallboard, and Microsoft reliability continuation record
 
 Date: 2026-08-12
-Status: implementation in progress
+Status: closed, production accepted
 Baseline main: `9bda370bbe52578df34a0642bf5fbe26868cd2a0`
-Branch: `agent/status-truth-wallboard-microsoft-2026-08-12`
-Pull request: #140, `Harden live status truth, Microsoft coverage, and wallboard telemetry`
+Primary implementation PR: #140, `Harden live status truth, Microsoft coverage, and wallboard telemetry`
+Yodeck readiness follow-up PR: #141, `Wait for wallboard freshness before Yodeck acceptance`
+Accepted implementation main: `4e5d16533d5c028c054164d748b0af50bcac4a93`
+Accepted production release: #867, run `31610194911`
+Accepted product verification: run `31610444476`
 
-## Why this stream exists
+## Why this stream existed
 
-A production review identified four release-blocking reliability defects after the prior product cleanup:
+Four production defects were treated as release blocking:
 
 1. the wallboard header no longer exposed absolute last-update and browser-refresh timing;
 2. compact wallboard alert-provider icons could remain static when multiple providers fit within the rail;
-3. Microsoft Entra could look degraded even while Microsoft publicly reported it as operational because source evidence health was being treated as service health;
-4. a newly opened Claude incident was not visible in SST because the scheduled collection completed immediately before the vendor created the incident and no truth-drift recovery path existed for a fresh-but-now-wrong payload.
+3. Microsoft Entra could look degraded even while Microsoft publicly reported it operational because evidence health was being treated as service health;
+4. a newly opened Claude incident was not visible in SST because collection completed immediately before the vendor created the incident and there was no low-latency truth recovery path for a fresh-but-now-wrong payload.
 
-The acceptance target for this stream is not source-level correctness alone. The deployed site must prove accurate current incident truth, explicit freshness timing, moving wallboard provider rotation, Microsoft service/evidence separation, and recovery behavior that can detect vendor truth changes between full collections.
+The stream was not closed from source review. Closure required current production data, modern and legacy browser validation, exact 458x291 signage verification, independent Claude official-state comparison, Microsoft service/evidence consistency checks, and direct screenshot review.
 
-## Baseline evidence
+## Root causes and resolutions
 
-### Claude race
+### Claude incident timing and detection confidence
 
-The last deployed collection before the report checked Anthropic at `2026-08-12T13:49:38.017Z` and generated the payload at `2026-08-12T13:49:53.565Z`.
+The pre-fix collection checked Anthropic at `2026-08-12T13:49:38.017Z` and generated the payload at `2026-08-12T13:49:53.565Z`.
 
-Claude's official Statuspage then created incident `rk6gkg2gwfny`, `Degraded performance for multiple models`, at `2026-08-12T13:50:28.458Z`. The incident affected claude.ai, the Claude API, Claude Code, and Claude Cowork. The deployed Anthropic record was therefore truthful when collected but stale relative to a vendor event created about 35 seconds after payload generation.
+Claude then created incident `rk6gkg2gwfny`, `Degraded performance for multiple models`, at `2026-08-12T13:50:28.458Z`, about 35 seconds after payload generation. The production `parseStatuspageSummary()` parser correctly interpreted the later official Claude summary as active. The miss was therefore a collection timing and recovery failure, not a Claude parser-format failure.
 
-The production `parseStatuspageSummary()` parser correctly interpreted the later official Claude summary as an active issue. The miss was therefore a collection timing and recovery failure, not a Claude parser-format failure.
+Validation also showed GitHub scheduled workflows can themselves run late, so a more frequent cron could not be the sole answer.
 
-### Scheduler delay exposed a second failure mode
+The accepted architecture now has two truth layers:
 
-The first recovery design improved the freshness workflow so a fresh-but-wrong payload could trigger a collection when official truth changed. During validation, GitHub's scheduled workflows themselves ran late enough that neither the full collector nor the fallback watcher could be treated as a low-latency detection boundary.
+- Layer 1 is the audited static `status.json` collection. It remains the durable validated baseline.
+- Layer 2 is a nonblocking browser live-truth overlay for configured standardized official Statuspage JSON sources.
 
-That changed the architecture. Scheduled collection remains the audited durable baseline, and scheduled truth-drift recovery remains a useful fallback, but the operator browser now performs a constrained first-party live truth overlay for standardized Statuspage vendors. The product no longer waits for GitHub scheduler timing before it can surface a newly opened or newly cleared Statuspage incident.
+`src/liveStatusTruth.ts` re-observes standard `/api/v2/summary.json` provider sources after the audited payload has already rendered. Successful observations can surface a newly opened incident or clear a stale resolved one. Failed live observations leave the audited static provider and incident rows untouched.
 
-### Entra ghost state
+`src/usePayloadPoller.ts` owns static and live requests separately. Static validation and rendering happen first. A newer static refresh cancels older live work, and slow or broken CORS origins do not hold the operator UI hostage.
 
-The deployed Entra record was:
+`src/dataLifecycle.ts` has an explicit overlay action that cannot create data before static validation succeeds and cannot erase a stale-payload warning.
 
-- `service_state=operational`
-- `truth_basis=confirmed-operational`
-- public component `Non-Regional=Good`
-- `source_state=available`
-- `source_health=watch`
-- `source_confidence=low`
+`vite.config.ts` derives the browser `connect-src` allowlist from exact configured official Statuspage origins. It does not enable arbitrary HTTPS access. Provider artwork remains local and does not use runtime external image requests.
 
-The Microsoft coverage UI classified `source_health=watch` as a service warning. This conflated evidence quality with vendor service state and produced a ghost issue even though the adapter and payload were operational.
+`scripts/status-truth-watch.mjs` and `.github/workflows/status-freshness-watch.yml` remain a durable server-side recovery path. They compare the deployed payload against current official structured truth and can dispatch one refresh for newly opened, cleared, or changed official incidents, unless another release is already active.
 
-### Wallboard freshness regression
+`scripts/verify-live-status-truth.mjs` independently fetches Claude's official current summary and compares it with the deployed browser result. The production gate requires Anthropic to be successfully observed and browser active/clear state to match the direct official result.
 
-`App.tsx` retained the wallboard browser refresh interval, but `WallboardV2` received only the last browser-check timestamp. The header showed a clock, lifecycle state, and relative payload age, while absolute payload update, browser check, next browser refresh, and cadence were absent.
+### Microsoft Entra ghost issues and Microsoft coverage semantics
 
-### Provider rotation regression
+The pre-fix deployed Entra record was operational and confirmed operational, but its source evidence health was `watch`. The UI promoted that evidence-quality warning into a service warning.
 
-`useProviderMarquee()` only enabled the provider animation when multiple providers existed and their combined chip width overflowed the viewport. When two or more active providers fit in the rail, the row was static. The existing 458x291 verifier checked the CSS class only when overflow existed and never measured actual movement.
-
-### Provider artwork build fragility found during this stream
-
-The first full pull-request build passed all deterministic tests and TypeScript but stopped at 34 of 35 provider artwork identities because a single Jamf status-site request terminated transiently. The 35-provider release gate correctly failed.
-
-The gate was not weakened. Jamf now uses its already-verified official Statuspage artwork asset directly, and the artwork fetcher retries transient network failures, HTTP 408, 425, 429, and 5xx responses up to three attempts with short backoff. The release requirement remains 35 of 35.
-
-## Implementation
-
-### Layer 1: audited static collection
-
-The existing signed/validated `status.json` remains the durable application baseline. Browser payload schema, catalog hash, provider count, size limits, freshness, and compatibility are still validated before the application trusts it.
-
-The UI renders this validated static payload immediately. It does not wait for any vendor-side live request.
-
-### Layer 2: nonblocking browser live official truth
-
-`src/liveStatusTruth.ts` re-observes standardized official Statuspage JSON sources after the audited payload has rendered.
-
-The live layer:
-
-- targets only configured providers whose source is the standard `/api/v2/summary.json` Statuspage endpoint;
-- uses CORS with credentials omitted and no referrer;
-- uses bounded concurrency and a six-second per-source timeout compatible with the pinned legacy Chromium runtime;
-- treats current unresolved incidents, overall Statuspage indicator, and current component states as service truth;
-- replaces static incident rows only for providers successfully re-observed;
-- can surface an incident opened after static collection or clear one that has since resolved;
-- leaves the audited static provider and its incidents untouched when a live request fails or cannot be parsed;
-- records live check time, attempted/success/failure counts, active provider ids, and per-provider observation success.
-
-`src/usePayloadPoller.ts` has independent request ownership for static payload work and live truth work. Static success is dispatched first. A new static refresh cancels an older live overlay, and component unmount cancels both owners. Slow or broken vendor CORS therefore cannot block initial rendering and stale async live work cannot overwrite a newer static payload.
-
-`src/dataLifecycle.ts` has an explicit `overlay` action. An overlay cannot create data before the audited payload exists, and an overlay preserves a stale-payload failure state rather than pretending a stale static collection became fresh merely because some live vendor requests succeeded.
-
-### Exact-origin CSP contract
-
-`vite.config.ts` derives the browser `connect-src` allowlist from enabled configured `statuspage` provider source origins at build time. The generated CSP adds only those exact official Statuspage origins. It does not permit arbitrary `https:` network access.
-
-This intentionally changes the old zero-runtime-vendor-request assumption only for machine-readable status truth. Provider artwork remains local build output and does not use runtime external image requests.
-
-### Scheduled live official truth drift recovery
-
-`scripts/status-truth-watch.mjs` independently compares the deployed payload with current official structured truth:
-
-- every deployed `statuspage-json` provider using the production `parseStatuspageSummary()` parser;
-- Microsoft Entra using the production `parseAzureEntraStatus()` adapter.
-
-The watcher detects:
-
-- official source changed from clear to active;
-- official source changed from active to clear;
-- the active official incident-id set changed while the provider remained affected.
-
-Unknown or limited parser results do not clear an incident. Individual live-source request failures are logged and do not synthesize service truth.
-
-`.github/workflows/status-freshness-watch.yml` runs the live truth comparison in addition to payload-age recovery. If the payload is stale or official truth drift exists, it dispatches exactly one full refresh unless a release is already queued or active. This workflow is a durable recovery mechanism, not the only low-latency detection path.
-
-### Deployed live-truth verification
-
-`scripts/verify-live-status-truth.mjs` independently fetches Claude's current official Statuspage summary from the verifier runner, then launches the deployed application and reads the browser live-truth evidence exposed on the application root.
-
-The deployed gate requires:
-
-- a valid browser live-truth timestamp;
-- at least ten standardized providers attempted;
-- consistent attempted/success/failure accounting;
-- at least 75 percent successful browser live truth coverage;
-- Anthropic successfully observed in the browser;
-- the browser's current Anthropic active/clear state to equal Claude's direct official current state;
-- when Claude currently has an unresolved incident title, at least one current official title to appear in the deployed DOM.
-
-This check runs before the broader premium product evidence workflow. It is specifically designed to catch a recurrence of the reported Claude failure even when `status.json` itself is still fresh.
-
-### Microsoft service truth versus evidence truth
-
-`src/microsoft365Coverage.ts` now has separate service and evidence classifications:
+`src/microsoft365Coverage.ts` now separates service truth from evidence truth:
 
 - `microsoft365ServiceTone()` derives only from `serviceState`;
-- `microsoft365EvidenceTone()` derives from source availability and source health;
-- evidence `watch` or `blind` can no longer create a service warning or critical state.
+- `microsoft365EvidenceTone()` derives from source availability and source evidence health;
+- evidence `watch` or `blind` cannot create a warning or critical service state.
 
-Umbrella-only Microsoft 365 facets no longer claim individual public operational status. When the broad Microsoft source is clear:
+The Microsoft 365 model also stopped overclaiming. A clear broad Microsoft 365 feed means no broad public Microsoft incident is active. It does not mean Exchange Online, Teams, SharePoint Online, OneDrive, Intune, Microsoft 365 Apps, Defender for Microsoft 365, and Power Platform have each been independently publicly verified healthy. Those umbrella-only facets remain informational until tenant or service-specific evidence exists.
 
-- the Microsoft 365 suite can say no broad public incident is active;
-- individual Exchange, Teams, SharePoint, OneDrive, Intune, Apps, Defender, and Power Platform facets remain informational because tenant/facet-specific health is not publicly verified;
-- Entra retains its dedicated public service state;
-- tenant-specific Microsoft Graph remains the explicit private truth boundary.
+Microsoft Entra retains its dedicated public service signal. Tenant-specific Microsoft Graph service communications remain an explicit private evidence boundary.
 
-The Microsoft workspace now includes current public Microsoft/Entra incident evidence and exposes service-state/evidence-state attributes for post-deploy consistency checks.
+`src/Microsoft365CriticalSuite.tsx` exposes service state and evidence state separately for production verification, includes current public Microsoft/Entra incident evidence, and labels the tenant Graph boundary clearly.
 
-### Wallboard freshness header
+`scripts/verify-microsoft365-experience.mjs` dynamically proves an operational source renders positive even when its evidence tone is watch.
 
-`WallboardV2` receives the browser refresh interval and exposes:
+### Wallboard update and refresh timing
+
+`WallboardV2` now receives the actual browser refresh interval and exposes:
 
 - absolute payload `Updated` time in Eastern Time;
 - absolute browser `Checked` time;
 - absolute `Next` browser refresh time;
 - browser refresh cadence.
 
-The compact wallboard priority heading keeps payload age, browser-check age, and refresh cadence.
+The compact 458x291 heading also preserves payload age, browser-check age, and refresh cadence.
 
-### Provider rotation
+The wallboard shell publishes machine-verifiable update, check, and cadence attributes. The exact Yodeck verifier requires those values before acceptance.
+
+### Wallboard provider rotation
 
 The compact alert-provider rail now loops whenever more than one provider is active, independent of whether the chips overflow the viewport.
 
-The layout probe requires the loop class whenever more than one provider exists. `scripts/verify-yodeck-wallboard.mjs` samples the rendered transform twice and fails if a required provider rail does not actually move.
+`scripts/verify-yodeck-wallboard.mjs` samples the rendered transform twice and requires actual movement whenever multiple providers are present. A CSS class by itself is no longer enough to pass.
 
-The same production verifier validates the wallboard freshness header contract and timing data attributes.
+### Provider artwork build resilience found during this stream
 
-## Regression coverage
+The first reliability pull-request build passed deterministic tests and TypeScript but stopped at 34 of 35 provider artwork identities because a Jamf status-site request terminated transiently. The release gate correctly failed.
 
-- `src/__tests__/liveStatusTruth.test.ts` verifies a fresh static clear Claude state can be promoted by an incident opened seconds later, a successful live clear can remove a stale incident, canonical degraded color remains `amber`, and failed live observations leave static truth untouched.
-- `src/__tests__/lifecycle.test.ts` verifies overlays preserve stale-payload warnings and cannot create data before static validation succeeds.
-- `scripts/__tests__/status-truth-watch.test.js` includes a Claude-shaped active Statuspage fixture and verifies opened, cleared, and changed incident-set drift detection, scheduler-independent browser live truth, exact-origin CSP generation, nonblocking overlay ownership, and deployed Claude comparison requirements.
-- The same tests lock the rule that `source_health=watch` does not create an Entra service incident.
-- Wallboard runtime contract tests require absolute header timing, refresh cadence, continuous multi-provider rotation, and production movement verification.
-- Microsoft critical coverage tests require service/evidence separation and prohibit umbrella clear state from becoming facet-specific public health claims.
-- Microsoft production verification dynamically checks that an operational source card renders positive even when its evidence tone is watch.
-- Provider favicon tests retain the 35-provider gate and cover retry policy plus the pinned Jamf official asset.
+The 35-provider requirement was not weakened. Jamf now uses its already-verified official Statuspage artwork asset directly, and transient artwork fetches retry network errors, HTTP 408, 425, 429, and 5xx responses up to three attempts with short backoff.
 
-## Pull-request verification history
+## Pull-request and production history
 
-### First reliability build
+### PR #140
 
-Pull-request run `31607302240` passed provider validation, repository quality, 346 deterministic tests, and TypeScript, then failed at application build because Jamf artwork resolved 34 of 35 after a transient network termination. The release gate correctly stopped the build.
+Final head: `3ae4aa678e53febd023dfc7c066e75a7c2f5bfcd`
 
-### Artwork-hardened build
+Final pull-request checks:
 
-Pull-request run `31607663278` passed provider validation, repository quality, 347 deterministic tests, TypeScript, application build, and dependency audit. Artwork sync returned 35 of 35 with zero failures. The main JavaScript bundle was 328.40 kB minified, 118.62 kB gzip. CodeQL run `31607663304` succeeded.
+- pull-request run `31609454847`, success;
+- CodeQL run `31609454860`, success.
 
-### First browser-live-truth build
+Merge SHA: `e0abe5f04e0578883107edaa13bdfe0f1e3f5007`.
 
-Pull-request run `31608505346` passed provider validation, repository quality, and 350 deterministic tests, then TypeScript rejected five uses of the non-canonical color name `yellow`. The application contract permits `green`, `amber`, `red`, and `blue`. Runtime and fixtures were corrected to `amber`; no type suppression was added.
+Earlier PR history deliberately retained useful failures:
 
-### Current pull-request head
+- run `31607302240` stopped at the 34/35 Jamf artwork failure;
+- run `31607663278` passed after artwork resilience hardening, with 35/35 artwork and main JavaScript at 328.40 kB minified, 118.62 kB gzip;
+- run `31608505346` stopped when TypeScript rejected non-canonical `yellow` status colors. The runtime and fixtures were corrected to canonical `amber`; no type suppression was added.
 
-Current head: `8a0dff4d19e2fa90991900f79a2d7c408dd3ae58`.
+### Rejected production release #866
 
-Pull-request run `31609201112` has passed provider validation, repository quality, deterministic tests, TypeScript, application build, and dependency audit on the static-first nonblocking browser-live-truth architecture. Current-head CodeQL run `31609201004` is the remaining pre-merge gate at the time of this update.
+Run `31609594986` published successfully enough for deployed asset smoke, current Chrome rendering, and pinned legacy Chromium to pass, but exact 458x291 Yodeck verification failed.
 
-## Required completion evidence
+Failure:
 
-Do not close this stream until all of the following are true:
+`Wallboard freshness timestamps are incomplete: updated=missing checked=missing refreshMs=180000`
 
-1. current-head pull-request provider validation, quality, deterministic tests, TypeScript, real application build, audit, and CodeQL pass;
-2. after merge, the full Pages release and deployed smoke/render/legacy/Yodeck stack pass;
-3. deployed browser live truth meets its 75 percent coverage floor, successfully observes Anthropic, and agrees with Claude's direct official current active/clear state;
-4. if Claude remains active, the deployed product renders a current official Claude incident title; if Claude resolves before verification, both the official verifier and browser overlay agree that it is clear;
-5. Yodeck logs prove freshness timestamps are present and the provider rail moves whenever multiple active providers exist;
-6. post-deploy Microsoft verification proves operational Entra is not rendered as a warning solely because evidence health is watch;
-7. direct wallboard and Microsoft screenshots are reviewed, not merely accepted from structural CI;
-8. final PR head, merge SHA, pull-request run IDs, production release run, post-merge CodeQL, product-experience run, artifact IDs, live-truth output, Microsoft truth output, Yodeck telemetry, and visual observations are appended here before closure.
+The layout probe had already reported pass during React's initial empty render, before audited payload freshness fields arrived. Release #866 was rejected. The gate was not weakened.
 
-## Continuation point
+### PR #141
 
-If work resumes from this record before closure, preserve these contracts:
+PR #141 fixed the Yodeck readiness race by requiring resolved layout plus real payload update time, browser-check time, and refresh cadence before the exact-signage verifier begins acceptance assertions.
 
-- static payload validation is the audited baseline and renders before live vendor work;
+Final head: `d7e4fcf3a769bee63be4920191d9a79d1f22ffdb`
+
+Pull-request checks:
+
+- pull-request run `31610059615`, success;
+- CodeQL run `31610059675`, success.
+
+Merge SHA: `4e5d16533d5c028c054164d748b0af50bcac4a93`.
+
+## Accepted production evidence
+
+### Release #867
+
+Run `31610194911` completed successfully from implementation main `4e5d16533d5c028c054164d748b0af50bcac4a93`.
+
+The full release passed:
+
+- fresh official provider collection;
+- provider and payload validation;
+- truth and freshness validation;
+- verified application build;
+- Pages deployment;
+- deployed asset/payload smoke;
+- current Chrome render;
+- pinned legacy Chromium runtime;
+- exact 458x291 Yodeck verification.
+
+Post-merge CodeQL run `31610195014` also completed successfully.
+
+Deployed smoke reported 80 of 80 live sources, zero blind spots, and four active incidents affecting four providers at the accepted run.
+
+### Exact 458x291 Yodeck proof
+
+Yodeck artifact:
+
+- artifact id `9146922697`;
+- name `yodeck-wallboard-31610194911`;
+- digest `sha256:d322475f393acd261baa544bad3e605c309a5599234101754710c043f84f2ffe`.
+
+Accepted verifier output:
+
+`YODECK_VIEWPORT 458x291 dpr=1`
+
+`YODECK_LAYOUT_PROBE pass`
+
+`YODECK_LAYOUT_DETAIL viewport:458x291;signals:4;providers:4`
+
+`YODECK_READINESS updated=2026-08-12T15:03:50.797Z checked=1755011153026 refresh_ms=180000`
+
+`YODECK_PROVIDER_ROTATION providers=4 looping=true moved=true required=true`
+
+`YODECK_FRESHNESS updated=2026-08-12T15:03:50.797Z checked=1755011153026 refresh_ms=180000`
+
+The retained compact frame was directly reviewed and accepted. It visibly showed `Payload 2m`, `Browser 0s`, and `Refresh 3m`. The retained DOM also contained the full absolute header contract: `Updated 11:03:50 AM`, `Checked 11:05:53 AM`, `Next 11:08:53 AM`, `Browser refresh 3m`.
+
+### Claude dual-layer proof
+
+The fresh static collector independently caught the Claude incident. Published `status.json` contained:
+
+- Anthropic `service_state=degraded`;
+- `truth_basis=vendor-incident`;
+- `source_health=healthy`;
+- one active incident;
+- four affected Claude surfaces;
+- incident id `anthropic:rk6gkg2gwfny`;
+- title `Degraded performance for multiple models`;
+- status `investigating`;
+- affected service `claude.ai, Claude API (api.anthropic.com), Claude Code, Claude Cowork`.
+
+The browser live-truth layer independently agreed with the official current Claude state during post-deploy verification:
+
+`LIVE_TRUTH_COVERAGE attempted=41 successes=38 failures=3 checked=2026-08-12T15:07:26.760Z`
+
+`LIVE_TRUTH_CLAUDE official=active browser=active indicator=minor incidents=rk6gkg2gwfny components=claude.ai,Claude API (api.anthropic.com),Claude Code,Claude Cowork`
+
+`LIVE_TRUTH_ACTIVE_PROVIDERS anthropic,jumpcloud,tailscale,huntress`
+
+Browser live coverage was 38 of 41 successful observations, about 92.7 percent, above the 75 percent production floor. Anthropic was one of the successful observations. The three failed browser live observations were fail-preserving and did not clear or overwrite their audited static states.
+
+### Microsoft production proof
+
+Post-deploy product run `31610444476` completed successfully.
+
+Microsoft output:
+
+`MICROSOFT365_CRITICAL facets=10 desktop=412755 mobile=145467`
+
+`MICROSOFT365_SERVICE_TRUTH microsoft365=operational/m365-source-card is-positive evidence=healthy entra=operational/m365-source-card is-positive evidence=watch`
+
+`MICROSOFT365_EVIDENCE public-broad + dedicated-entra; tenant-detail=private-graph-required; evidence-health-does-not-set-service-tone`
+
+This is the direct production proof for the Entra ghost-state defect: Entra was operational and rendered positive while its evidence tone remained watch.
+
+Desktop and mobile Microsoft screenshots were directly reviewed. The service/evidence distinction was readable, Entra was green, broad Microsoft 365 facets did not claim individual tenant health, and the private Graph boundary was explicit.
+
+### Broader product verification
+
+Product artifact:
+
+- artifact id `9146957173`;
+- name `product-experience-31610194911`;
+- size `3,768,139` bytes;
+- digest `sha256:a9acb5a8ed5b2893b0efe478e62bfa1a550cc7a2b221b1c69f218f5d1cfb5adf`.
+
+Run `31610444476` passed:
+
+- deployed browser live status truth;
+- premium operator experience;
+- Product Depth;
+- Microsoft 365 critical coverage;
+- provider identity and NUSO;
+- evidence upload.
+
+Provider verification still reported 80 providers, 35 exact masks, 35 favicon-backed identities, zero generated fallbacks, 80 local assets, and NUSO visible on mobile.
+
+## Closure decision
+
+All four reported defects are closed in accepted production:
+
+1. wallboard update/check/next-refresh timing is restored and production verified;
+2. multi-provider wallboard rotation is actual movement, not just animation markup;
+3. Entra evidence-health watch no longer creates a ghost service warning, and Microsoft broad-versus-tenant evidence semantics are explicit;
+4. Claude-style newly opened Statuspage incidents are covered by both durable collection and a nonblocking live browser truth layer, with a production comparison against Claude's direct official state.
+
+The work also hardened provider-artwork release reliability and the Yodeck readiness verifier without lowering existing gates.
+
+## Retained limitations and continuation contract
+
+The browser live-truth overlay intentionally covers standardized official Statuspage JSON providers only. Non-Statuspage sources still rely on their dedicated durable collector adapters and the server-side truth watcher where implemented. Do not generalize browser network access without a provider-specific, first-party, structured, CORS-safe contract and exact-origin CSP review.
+
+Preserve these contracts in future work:
+
+- static payload validation remains the audited baseline and renders before live vendor work;
 - browser live truth is first-party, structured, exact-origin, nonblocking, provider-scoped, and fail-preserving;
 - failed live observations never clear an audited incident;
-- scheduled truth-drift recovery remains a fallback but is not the only detection mechanism;
-- Microsoft service truth and evidence quality stay separate;
+- scheduled truth-drift recovery remains a fallback but is not the only Statuspage detection mechanism;
+- Microsoft service truth and evidence quality remain separate;
 - broad Microsoft 365 public clear state never becomes a claim of facet-specific tenant health;
 - wallboard freshness includes absolute update/check/next times plus cadence;
 - more than one active wallboard provider means the provider rail must actually move;
+- exact Yodeck acceptance waits for loaded freshness state before evaluating the frame;
 - provider artwork remains 35 of 35 and runtime external image fetches remain prohibited;
-- substantial changes to these contracts require this continuation record to be updated with production evidence.
+- substantial changes to these contracts require production evidence and an updated continuation record.
