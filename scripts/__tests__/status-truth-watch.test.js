@@ -114,3 +114,30 @@ test('freshness workflow compares official live truth and can recover fresh-but-
   assert.match(watcher, /parseAzureEntraStatus/);
   assert.match(watcher, /official-incident-set-changed/);
 });
+
+test('browser live truth does not depend on GitHub scheduler timing', async () => {
+  const poller = await read('src/usePayloadPoller.ts');
+  const overlay = await read('src/liveStatusTruth.ts');
+  const app = await read('src/App.tsx');
+  const vite = await read('vite.config.ts');
+  const workflow = await read('.github/workflows/product-experience.yml');
+  const verifier = await read('scripts/verify-live-status-truth.mjs');
+
+  assert.match(poller, /applyBrowserLiveTruth\(staticPayload, signal\)/);
+  assert.match(overlay, /source_type === 'statuspage-json'/);
+  assert.match(overlay, /STATUSPAGE_SOURCE/);
+  assert.match(overlay, /mode: 'cors'/);
+  assert.match(overlay, /credentials: 'omit'/);
+  assert.doesNotMatch(overlay, /AbortSignal\.timeout|AbortSignal\.any/);
+  assert.match(app, /data-live-truth-active-providers/);
+  assert.match(app, /data-live-truth-successful-providers/);
+  assert.match(vite, /officialStatuspageConnectPolicy/);
+  assert.match(vite, /provider\.sourceType === 'statuspage'/);
+  assert.doesNotMatch(vite, /connect-src[^\n]*https:/);
+  assert.match(workflow, /Verify deployed browser live status truth/);
+  assert.match(workflow, /verify-live-status-truth\.mjs/);
+  assert.match(verifier, /status\.claude\.com\/api\/v2\/summary\.json/);
+  assert.match(verifier, /successes < Math\.ceil\(attempted \* 0\.75\)/);
+  assert.match(verifier, /successfulProviders\.includes\('anthropic'\)/);
+  assert.match(verifier, /browserClaudeActive !== official\.active/);
+});
