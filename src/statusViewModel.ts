@@ -335,7 +335,7 @@ function buildCategoryPulse(diagnostics: DiagnosticSource[]): CategoryPulse[] {
   })).sort((a, b) => b.affected - a.affected || b.blind - a.blind || b.total - a.total || a.category.localeCompare(b.category));
 }
 
-function buildActionQueue(briefs: IssueBrief[], maintenance: Maintenance[], diagnostics: DiagnosticSource[]): ActionItem[] {
+function buildActionQueue(briefs: IssueBrief[], diagnostics: DiagnosticSource[]): ActionItem[] {
   const items: ActionItem[] = [];
   for (const incident of briefs) {
     items.push({
@@ -350,21 +350,6 @@ function buildActionQueue(briefs: IssueBrief[], maintenance: Maintenance[], diag
       updatedAt: effectiveIncidentTime(incident),
       source: incident.url,
       score: incident.service_state === 'major' ? 1200 + incident.priority : 1000 + incident.priority
-    });
-  }
-  for (const item of maintenance.filter(entry => entry.status === 'in_progress')) {
-    items.push({
-      id: `maintenance:${item.id}`,
-      kind: 'maintenance',
-      attention: 'action',
-      providerId: item.providerId,
-      provider: item.provider,
-      title: item.title,
-      detail: item.note,
-      action: 'Confirm whether the maintenance window overlaps reported client symptoms before troubleshooting locally.',
-      updatedAt: item.latest_update || item.starts_at || item.announced_at || '',
-      source: item.url,
-      score: 800 + item.priority
     });
   }
   for (const source of diagnostics) {
@@ -525,7 +510,7 @@ export function buildIssueConsoleModel(payload: StatusPayload, version: string, 
     maintenance,
     diagnostics,
     correlations,
-    actionQueue: buildActionQueue(briefs, maintenance, diagnostics),
+    actionQueue: buildActionQueue(briefs, diagnostics),
     categoryPulse: buildCategoryPulse(diagnostics),
     changes: payload.changes,
     history: payload.history,
