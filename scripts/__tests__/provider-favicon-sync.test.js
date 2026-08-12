@@ -69,6 +69,9 @@ test('provider UI prefers build-embedded favicons without adding runtime externa
   assert.match(sync, /faviconCandidates/);
   assert.match(sync, /websiteOverrides/);
   assert.match(sync, /assetOverrides/);
+  assert.match(sync, /MAX_ICON_BYTES = 64 \* 1024/);
+  assert.match(sync, /MAX_OFFICIAL_ASSET_BYTES = 512 \* 1024/);
+  assert.match(sync, /fetchIconCandidate\(\{ url: assetOverride\.url \}, MAX_OFFICIAL_ASSET_BYTES\)/);
   assert.match(sync, /official-asset/);
   assert.match(sync, /vendor-website/);
   assert.match(sync, /status-site/);
