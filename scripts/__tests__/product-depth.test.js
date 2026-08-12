@@ -41,6 +41,16 @@ test('incident focus action loop is local and cannot rewrite vendor truth', asyn
   assert.doesNotMatch(layer, /source_health\s*=/);
 });
 
+test('command workspace keyboard contract supports Escape and interactive SVG nodes', async () => {
+  const layer = await read('src/ProductDepthLayer.tsx');
+  assert.match(layer, /activateSvgButton/);
+  assert.match(layer, /event\.key === 'Escape' && focus/);
+  assert.match(layer, /event\.key !== 'Enter' && event\.key !== ' '/);
+  assert.match(layer, /role="group" aria-label="Interactive provider dependency universe"/);
+  assert.match(layer, /onKeyDown=\{event => activateSvgButton/);
+  assert.match(layer, /aria-label=\{`\$\{node\.label\}, \$\{node\.category\}, \$\{node\.tone\}`\}/);
+});
+
 test('signature experience contains dependency universe cautious correlation and signal replay', async () => {
   const layer = await read('src/ProductDepthLayer.tsx');
   const workspace = await read('src/operatorWorkspace.ts');
