@@ -2,9 +2,10 @@
    a local mask in the provider accent; native multicolor assets remain untouched.
 
    Recognition rule: curated identities must read as distinct brands at table scale.
-   Do not place generated or masked marks inside the shared pale padded logo shell. */
+   Real fetched artwork and fallback tiles are intentionally different runtime states. */
 
 .provider-logo--brand-mask,
+.provider-logo--favicon,
 .provider-logo--generated {
   padding: 0;
   overflow: hidden;
@@ -31,8 +32,20 @@
   mask: var(--provider-logo-mask) center / contain no-repeat;
 }
 
+.provider-logo--favicon,
 .provider-logo--generated {
   object-fit: cover;
+}
+
+.provider-logo--favicon {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+  box-shadow:
+    0 8px 20px rgba(0, 0, 0, .18),
+    0 1px 0 rgba(255, 255, 255, .5) inset;
+}
+
+.provider-logo--generated {
   border-color: var(--provider-accent, #4b5563);
   background: var(--provider-accent, #27364b);
   box-shadow:
@@ -41,7 +54,7 @@
 }
 
 /* Native multicolor marks keep a restrained light plate so their own brand geometry wins. */
-.provider-logo:not(.provider-logo--brand-mask):not(.provider-logo--generated) {
+.provider-logo:not(.provider-logo--brand-mask):not(.provider-logo--favicon):not(.provider-logo--generated) {
   padding: 3px;
   background: #f7fafc;
 }
@@ -57,6 +70,7 @@
 }
 
 html.no-css-layers .provider-logo--brand-mask,
+html.no-css-layers .provider-logo--favicon,
 html.no-css-layers .provider-logo--generated {
   box-shadow: 0 4px 12px rgba(0, 0, 0, .22);
 }

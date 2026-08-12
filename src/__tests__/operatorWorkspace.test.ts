@@ -109,12 +109,35 @@ test('universal search spans incidents providers correlations categories and his
   assert.ok(searchWorkspace(index, 'source recovered').some(entry => entry.kind === 'change'));
 });
 
+test('universal search collapses repeated semantic history records', () => {
+  const model = fixture();
+  model.history = [
+    ...model.history,
+    { id: 'change-old-repeat', type: 'source_recovered', provider_id: 'beta', provider: 'Beta', detected_at: '2026-08-11T10:05:00.000Z', title: 'Beta source recovered', attention: 'informational' },
+    { id: 'change-old-repeat-2', type: 'source_recovered', provider_id: 'beta', provider: 'Beta', detected_at: '2026-08-11T10:10:00.000Z', title: 'Beta source recovered', attention: 'informational' }
+  ];
+  const matches = searchWorkspace(buildWorkspaceSearchIndex(model), 'Beta source recovered', 30)
+    .filter(entry => entry.kind === 'change' && entry.title === 'Beta source recovered');
+  assert.equal(matches.length, 1);
+});
+
 test('dependency universe contains category gravity membership and temporal correlation edges', () => {
   const graph = buildUniverseGraph(fixture());
   assert.ok(graph.nodes.some(node => node.id === 'category:Identity'));
   assert.ok(graph.nodes.some(node => node.id === 'provider:alpha' && node.tone === 'critical'));
   assert.equal(graph.edges.filter(edge => edge.kind === 'membership').length, 2);
   assert.equal(graph.edges.filter(edge => edge.kind === 'correlation').length, 1);
+});
+
+test('dependency universe keeps provider orbit outside category anchors', () => {
+  const graph = buildUniverseGraph(fixture());
+  const distance = (node: { x: number; y: number }) => Math.hypot(node.x - 600, node.y - 360);
+  const categoryDistances = graph.nodes.filter(node => node.kind === 'category').map(distance);
+  const providerDistances = graph.nodes.filter(node => node.kind === 'provider').map(distance);
+  assert.ok(categoryDistances.length > 0);
+  assert.ok(providerDistances.length > 0);
+  assert.ok(Math.min(...providerDistances) >= Math.max(...categoryDistances) + 60);
+  assert.equal(new Set(graph.nodes.filter(node => node.kind === 'provider').map(node => `${node.x.toFixed(2)},${node.y.toFixed(2)}`)).size, providerDistances.length);
 });
 
 test('handoff text preserves vendor truth and labels local operator state', () => {

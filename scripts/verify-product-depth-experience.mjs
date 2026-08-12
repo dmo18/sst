@@ -175,6 +175,22 @@ async function viewportContract(session) {
   }))()`);
 }
 
+function assertUniverseReadability(metrics, label, mobile = false) {
+  const minimumGraphWidth = mobile ? MOBILE_WIDTH * 1.35 : 700;
+  const minimumGraphHeight = mobile ? 360 : 430;
+  const minimumLabelHeight = mobile ? 8 : 7;
+  const collisionLimit = Math.max(4, Math.ceil(metrics.visibleLabels * (mobile ? 0.45 : 0.35)));
+  if (metrics.graphWidth < minimumGraphWidth || metrics.graphHeight < minimumGraphHeight) {
+    throw new Error(`${label} graph footprint is too small: ${metrics.graphWidth}x${metrics.graphHeight}`);
+  }
+  if (metrics.visibleLabels > 0 && metrics.medianLabelHeight < minimumLabelHeight) {
+    throw new Error(`${label} labels are too small to scan: median=${metrics.medianLabelHeight}px`);
+  }
+  if (metrics.labelCollisions > collisionLimit) {
+    throw new Error(`${label} label collisions are too dense: ${metrics.labelCollisions}/${metrics.visibleLabels}`);
+  }
+}
+
 const deployedStatusUrl = new URL('status.json', targetUrl).href;
 const payload = await fetchJson(deployedStatusUrl);
 const providerName = String(payload.providers?.[0]?.provider || payload.providers?.[0]?.name || '').trim();
@@ -198,18 +214,39 @@ try {
     const nodes = document.querySelectorAll('.depth-provider-node').length;
     const categories = document.querySelectorAll('.depth-category-node').length;
     const correlationEdges = document.querySelectorAll('.depth-edge-correlation').length;
+    const graphRect = graph?.getBoundingClientRect();
+    const labels = [...document.querySelectorAll('.depth-provider-node text, .depth-category-node text')].filter(element => {
+      const style = getComputedStyle(element);
+      return style.display !== 'none' && style.visibility !== 'hidden' && Number(style.opacity || 1) > .05;
+    });
+    const rects = labels.map(element => element.getBoundingClientRect()).filter(rect => rect.width > 0 && rect.height > 0);
+    let labelCollisions = 0;
+    for (let left = 0; left < rects.length; left += 1) {
+      for (let right = left + 1; right < rects.length; right += 1) {
+        const a = rects[left];
+        const b = rects[right];
+        if (a.right > b.left + 2 && b.right > a.left + 2 && a.bottom > b.top + 2 && b.bottom > a.top + 2) labelCollisions += 1;
+      }
+    }
+    const heights = rects.map(rect => rect.height).sort((a, b) => a - b);
     return {
       ready: Boolean(shell && graph && launcher && nodes > 0 && categories > 0),
       nodes, categories, correlationEdges,
       cautious: /temporal correlations only|Temporal correlation only/i.test(document.body.innerText),
       replay: /Signal replay/i.test(document.body.innerText),
       localBoundary: /recorded changes only/i.test(document.body.innerText),
-      overflow: document.documentElement.scrollWidth - innerWidth
+      overflow: document.documentElement.scrollWidth - innerWidth,
+      graphWidth: Math.round((graphRect?.width || 0) * 10) / 10,
+      graphHeight: Math.round((graphRect?.height || 0) * 10) / 10,
+      visibleLabels: rects.length,
+      medianLabelHeight: heights.length ? Math.round(heights[Math.floor(heights.length / 2)] * 10) / 10 : 0,
+      labelCollisions
     };
   })()`, 'Dependency Universe');
   if (!universe.cautious) throw new Error('Dependency Universe does not expose the cautious temporal-correlation boundary.');
   if (!universe.replay || !universe.localBoundary) throw new Error('Dependency Universe signal-replay evidence boundary is missing.');
   if (universe.overflow > 1) throw new Error(`Dependency Universe has horizontal overflow: ${universe.overflow}px`);
+  assertUniverseReadability(universe, 'Dependency Universe');
   const universeBytes = await capture(session, universeScreenshot);
 
   await navigate(session, urlWith({ focus: 'search', depthProbe: String(Date.now()) }));
@@ -221,15 +258,22 @@ try {
   await session.send('Input.insertText', { text: providerName });
   const search = await waitFor(session, `(() => {
     const results = [...document.querySelectorAll('.depth-search-result')];
+    const keys = results.map(item => [
+      item.querySelector('.depth-kind')?.textContent || '',
+      item.querySelector('b')?.textContent || '',
+      item.querySelector('small')?.textContent || ''
+    ].join('|').toLowerCase());
     return {
       ready: results.length > 0,
       count: results.length,
       first: results[0]?.innerText || '',
       kinds: results.map(item => item.querySelector('.depth-kind')?.textContent || ''),
+      duplicates: keys.length - new Set(keys).size,
       overflow: document.documentElement.scrollWidth - innerWidth
     };
   })()`, 'Universal search results', 5_000);
   if (search.overflow > 1) throw new Error(`Universal search has horizontal overflow: ${search.overflow}px`);
+  if (search.duplicates > 0) throw new Error(`Universal search contains ${search.duplicates} duplicate semantic result rows.`);
   if (!search.first.toLowerCase().includes(providerName.toLowerCase())) throw new Error(`Universal search did not rank the live provider query: ${providerName}`);
   const searchBytes = await capture(session, searchScreenshot);
 
@@ -266,27 +310,48 @@ try {
     const overlaps = launcherRect && intelligenceRect
       ? !(launcherRect.right <= intelligenceRect.left || launcherRect.left >= intelligenceRect.right || launcherRect.bottom <= intelligenceRect.top || launcherRect.top >= intelligenceRect.bottom)
       : false;
+    const graphRect = graph?.getBoundingClientRect();
+    const labels = [...document.querySelectorAll('.depth-provider-node text, .depth-category-node text')].filter(element => {
+      const style = getComputedStyle(element);
+      return style.display !== 'none' && style.visibility !== 'hidden' && Number(style.opacity || 1) > .05;
+    });
+    const rects = labels.map(element => element.getBoundingClientRect()).filter(rect => rect.width > 0 && rect.height > 0);
+    let labelCollisions = 0;
+    for (let left = 0; left < rects.length; left += 1) {
+      for (let right = left + 1; right < rects.length; right += 1) {
+        const a = rects[left];
+        const b = rects[right];
+        if (a.right > b.left + 2 && b.right > a.left + 2 && a.bottom > b.top + 2 && b.bottom > a.top + 2) labelCollisions += 1;
+      }
+    }
+    const heights = rects.map(rect => rect.height).sort((a, b) => a - b);
     return {
       ready: Boolean(shell && graph && launcher),
       width: innerWidth,
       height: innerHeight,
       overflow: document.documentElement.scrollWidth - innerWidth,
       overlaps,
-      nodes: document.querySelectorAll('.depth-provider-node').length
+      nodes: document.querySelectorAll('.depth-provider-node').length,
+      graphWidth: Math.round((graphRect?.width || 0) * 10) / 10,
+      graphHeight: Math.round((graphRect?.height || 0) * 10) / 10,
+      visibleLabels: rects.length,
+      medianLabelHeight: heights.length ? Math.round(heights[Math.floor(heights.length / 2)] * 10) / 10 : 0,
+      labelCollisions
     };
   })()`, 'Mobile Dependency Universe');
   if (mobile.width !== MOBILE_WIDTH || mobile.height !== MOBILE_HEIGHT) throw new Error(`Mobile Dependency Universe viewport mismatch: ${mobile.width}x${mobile.height}`);
   if (mobile.overflow > 1) throw new Error(`Mobile Dependency Universe has horizontal overflow: ${mobile.overflow}px`);
   if (mobile.overlaps) throw new Error('Mobile Dependency Universe launcher overlaps Operations Intelligence chrome.');
+  assertUniverseReadability(mobile, 'Mobile Dependency Universe', true);
   const mobileUniverseBytes = await capture(session, mobileUniverseScreenshot);
 
   const finalViewport = await viewportContract(session);
   if (finalViewport.unavailable) throw new Error('Product-depth verification rendered the unavailable state.');
 
-  console.log(`PRODUCT_DEPTH_UNIVERSE providers=${universe.nodes} categories=${universe.categories} correlations=${universe.correlationEdges} screenshot=${universeBytes}`);
-  console.log(`PRODUCT_DEPTH_SEARCH query=${JSON.stringify(providerName)} results=${search.count} kinds=${search.kinds.join(',')} screenshot=${searchBytes}`);
+  console.log(`PRODUCT_DEPTH_UNIVERSE providers=${universe.nodes} categories=${universe.categories} correlations=${universe.correlationEdges} labels=${universe.visibleLabels} collisions=${universe.labelCollisions} label_height=${universe.medianLabelHeight} graph=${universe.graphWidth}x${universe.graphHeight} screenshot=${universeBytes}`);
+  console.log(`PRODUCT_DEPTH_SEARCH query=${JSON.stringify(providerName)} results=${search.count} duplicates=${search.duplicates} kinds=${search.kinds.join(',')} screenshot=${searchBytes}`);
   console.log(`PRODUCT_DEPTH_INCIDENT ${incidentVerified ? `verified id=${incidentId} screenshot=${incidentBytes}` : 'skipped no-live-incident'}`);
-  console.log(`PRODUCT_DEPTH_MOBILE ${MOBILE_WIDTH}x${MOBILE_HEIGHT} providers=${mobile.nodes} screenshot=${mobileUniverseBytes}`);
+  console.log(`PRODUCT_DEPTH_MOBILE ${MOBILE_WIDTH}x${MOBILE_HEIGHT} providers=${mobile.nodes} labels=${mobile.visibleLabels} collisions=${mobile.labelCollisions} label_height=${mobile.medianLabelHeight} graph=${mobile.graphWidth}x${mobile.graphHeight} screenshot=${mobileUniverseBytes}`);
 }
 finally {
   session?.close();

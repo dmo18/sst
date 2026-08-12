@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { faviconCandidates, faviconWrapperDataUri, normalizeFavicon, providerPageUrl } from '../provider-favicon-utils.mjs';
+import { faviconCandidates, faviconWrapperSvg, normalizeFavicon, providerPageUrl } from '../provider-favicon-utils.mjs';
 
 const read = path => readFile(new URL(`../../${path}`, import.meta.url), 'utf8');
 
@@ -37,13 +37,13 @@ test('favicon candidates prefer explicit sized icons and retain conventional fal
   assert.ok(candidates.some(candidate => candidate.url === 'https://status.example.com/favicon.ico'));
 });
 
-test('favicon bytes are wrapped into the existing embedded SVG identity contract', () => {
+test('favicon bytes are wrapped into a static SVG identity asset', () => {
   const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3]);
   const normalized = normalizeFavicon(png, 'image/png');
   assert.equal(normalized?.mime, 'image/png');
-  const dataUri = faviconWrapperDataUri(normalized.bytes, normalized.mime);
-  assert.match(dataUri, /^data:image\/svg\+xml,/);
-  assert.match(decodeURIComponent(dataUri), /data:image\/png;base64,/);
+  const svg = faviconWrapperSvg(normalized.bytes, normalized.mime);
+  assert.match(svg, /^<svg/);
+  assert.match(svg, /data:image\/png;base64,/);
 });
 
 test('legacy ICO artwork remains usable when it does not contain an embedded PNG frame', () => {
@@ -54,12 +54,12 @@ test('legacy ICO artwork remains usable when it does not contain an embedded PNG
 });
 
 test('provider artwork wrappers can preserve a dark official-product plate', () => {
-  const svg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><path fill="white" d="M0 0h1v1H0z"/></svg>');
-  const dataUri = faviconWrapperDataUri(svg, 'image/svg+xml', { background: '#005255' });
-  assert.match(decodeURIComponent(dataUri), /fill="#005255"/);
+  const svgBytes = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><path fill="white" d="M0 0h1v1H0z"/></svg>');
+  const svg = faviconWrapperSvg(svgBytes, 'image/svg+xml', { background: '#005255' });
+  assert.match(svg, /fill="#005255"/);
 });
 
-test('provider UI prefers build-embedded favicons without adding runtime external image requests', async () => {
+test('provider UI uses build-generated local artwork paths without runtime external image requests', async () => {
   const providerIcon = await read('src/providerIcon.tsx');
   const generated = await read('src/generated/providerFavicons.ts');
   const sync = await read('scripts/sync-provider-favicons.mjs');
@@ -67,8 +67,10 @@ test('provider UI prefers build-embedded favicons without adding runtime externa
 
   assert.match(providerIcon, /providerFavicons\[id\]/);
   assert.match(providerIcon, /provider-logo--favicon/);
+  assert.match(providerIcon, /generatedFallback = !favicon/);
   assert.match(generated, /Readonly<Record<string, string>>/);
   assert.match(sync, /faviconCandidates/);
+  assert.match(sync, /faviconWrapperSvg/);
   assert.match(sync, /websiteOverrides/);
   assert.match(sync, /assetOverrides/);
   assert.match(sync, /MAX_ICON_BYTES = 64 \* 1024/);
@@ -77,7 +79,10 @@ test('provider UI prefers build-embedded favicons without adding runtime externa
   assert.match(sync, /official-asset/);
   assert.match(sync, /vendor-website/);
   assert.match(sync, /status-site/);
+  assert.match(sync, /generatedArtworkDirUrl/);
+  assert.match(sync, /assets\/logos\/provider-favicons/);
   assert.match(sync, /provider-favicon-sources\.json/);
+  assert.doesNotMatch(sync, /dataUri:/);
   assert.equal(packageJson.scripts['sync-provider-favicons'], 'node scripts/sync-provider-favicons.mjs');
   assert.match(packageJson.scripts['build:app'], /sync-provider-favicons/);
   assert.doesNotMatch(providerIcon, /https?:\/\//);

@@ -75,18 +75,22 @@ test('provider identity is bundled locally with a pinned source record and no ru
   assert.equal(existsSync(new URL('../../public/assets/logos/quickbooks.svg', import.meta.url)), true);
 });
 
-test('desktop shell guard waits for styles before rendering a narrow desktop viewport', async () => {
+test('all compact shell media queries are constrained before browser runtime', async () => {
+  const vite = await read('vite.config.ts');
   const main = await read('src/main.tsx');
-  assert.match(main, /waitForApplicationStylesheets/);
-  assert.match(main, /await waitForApplicationStylesheets\(\)/);
-  assert.match(main, /keepDesktopDevicesOutOfCompactShell/);
-  assert.match(main, /max-device-width: 900px/);
-  assert.match(main, /max-device-width: 370px/);
-  assert.match(main, /rule\.media\.mediaText = replacement/);
-  assert.match(main, /dataset\.desktopShellGuard/);
-  assert.match(main, /async function startApplication/);
-  assert.match(main, /await keepDesktopDevicesOutOfCompactShell\(\)/);
-  assert.doesNotMatch(main, /^keepDesktopDevicesOutOfCompactShell\(\);$/m);
+  assert.match(vite, /compactDeviceMediaContract/);
+  assert.match(vite, /COMPACT_DEVICE_MAX_WIDTH = 900/);
+  assert.match(vite, /enforce: 'pre'/);
+  assert.match(vite, /cleanId\.endsWith\('\.css'\)/);
+  assert.match(vite, /max-width/);
+  assert.match(vite, /max-device-width/);
+  assert.match(vite, /width > COMPACT_DEVICE_MAX_WIDTH/);
+  assert.match(vite, /max-device-width: \$\{width\}px/);
+  assert.doesNotMatch(main, /document\.styleSheets/);
+  assert.doesNotMatch(main, /CSSMediaRule/);
+  assert.doesNotMatch(main, /waitForApplicationStylesheets/);
+  assert.doesNotMatch(main, /desktopShellGuard/);
+  assert.match(main, /createRoot\(/);
 });
 
 test('deployed provider identity verification uses structural and computed-style CDP checks', async () => {
@@ -96,10 +100,13 @@ test('deployed provider identity verification uses structural and computed-style
   assert.match(verifier, /remote-debugging-port/);
   assert.match(verifier, /provider-data-table\[aria-label=/);
   assert.match(verifier, /brandMaskCount < 35/);
-  assert.match(verifier, /localLogoAssets < 45/);
-  assert.match(verifier, /generatedCount > 35/);
-  assert.match(verifier, /embeddedSvgCount !== desktop\.generatedCount/);
-  assert.match(verifier, /data:image\/svg\+xml,/);
+  assert.match(verifier, /faviconCount !== 35/);
+  assert.match(verifier, /generatedCount !== 0/);
+  assert.match(verifier, /embeddedSvgCount !== 0/);
+  assert.match(verifier, /faviconAssetCount !== desktop\.faviconCount/);
+  assert.match(verifier, /exactLocalAssets < 45/);
+  assert.match(verifier, /localLogoAssets < 80/);
+  assert.match(verifier, /provider-favicons/);
   assert.match(verifier, /unexpectedData/);
   assert.match(verifier, /networkRefs/);
   assert.match(verifier, /failedAssets/);
@@ -107,7 +114,7 @@ test('deployed provider identity verification uses structural and computed-style
   assert.match(verifier, /styleContract/);
   assert.match(verifier, /shellStyle\?\.display === 'grid'/);
   assert.match(verifier, /sidebarStyle\?\.position === 'fixed'/);
-  assert.match(verifier, /generatedStyle\?\.paddingTop === '0px'/);
+  assert.match(verifier, /faviconStyle\?\.paddingTop === '0px'/);
   assert.match(verifier, /NAVIGATION_ATTEMPTS = 3/);
 });
 

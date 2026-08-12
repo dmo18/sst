@@ -1,0 +1,93 @@
+/* Product quality cleanup driven by production screenshot review.
+   Keep the dependency field useful at a glance instead of rendering every healthy label at once. */
+
+.dependency-universe {
+  min-height: 500px;
+}
+
+.depth-provider-node text,
+.depth-category-node text {
+  opacity: 0;
+  transition: opacity .16s ease, fill .16s ease;
+}
+
+.depth-provider-node.depth-tone-warning text,
+.depth-provider-node.depth-tone-critical text,
+.depth-provider-node.is-pinned text,
+.depth-provider-node.is-replayed text,
+.depth-provider-node:hover text,
+.depth-provider-node:focus text,
+.depth-category-node.depth-tone-warning text,
+.depth-category-node:hover text,
+.depth-category-node:focus text {
+  opacity: 1;
+}
+
+.depth-provider-node text {
+  font-size: 12px;
+  font-weight: 780;
+  stroke-width: 3.5px;
+}
+
+.depth-category-node text {
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.depth-category-node circle {
+  r: 28px;
+}
+
+@media (max-width: 900px) {
+  .depth-shell-universe .depth-stage-heading {
+    padding-bottom: 4px;
+  }
+
+  .depth-shell-universe .dependency-universe {
+    min-height: 430px;
+    transform: scale(1.72);
+    transform-origin: 50% 50%;
+  }
+
+  .depth-shell-universe .depth-provider-node text {
+    font-size: 18px;
+    stroke-width: 5px;
+  }
+
+  .depth-shell-universe .depth-category-node text {
+    display: none;
+  }
+
+  .depth-shell-universe .depth-provider-node.depth-tone-positive:not(.is-pinned):not(.is-replayed) text {
+    display: none;
+  }
+
+  .depth-shell-universe .depth-provider-node circle {
+    stroke-width: 2px;
+  }
+
+  .depth-shell-universe .depth-provider-node.depth-tone-warning circle,
+  .depth-shell-universe .depth-provider-node.depth-tone-critical circle,
+  .depth-shell-universe .depth-provider-node.is-pinned circle,
+  .depth-shell-universe .depth-provider-node.is-replayed circle {
+    r: 12px;
+  }
+}
+
+@media (max-width: 470px) {
+  .depth-shell-universe .dependency-universe {
+    min-height: 390px;
+    transform: scale(1.9);
+  }
+
+  .depth-shell-universe .depth-provider-node text {
+    font-size: 19px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .depth-provider-node text,
+  .depth-category-node text {
+    transition: none;
+  }
+}

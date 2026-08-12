@@ -21,12 +21,15 @@ export function ProviderIcon({ id, name }: { id: string; name: string }): JSX.El
     return <span className="provider-logo provider-logo--brand-mask" style={style} role="img" aria-label={`${name} logo`} />;
   }
 
+  const generatedFallback = !favicon && presentation.generated;
   const className = [
     'provider-logo',
-    presentation.generated ? 'provider-logo--generated' : '',
+    generatedFallback ? 'provider-logo--generated' : '',
     favicon ? 'provider-logo--favicon' : ''
   ].filter(Boolean).join(' ');
-  const style = presentation.accent ? ({ '--provider-accent': presentation.accent } as ProviderIconStyle) : undefined;
+  const style = generatedFallback && presentation.accent
+    ? ({ '--provider-accent': presentation.accent } as ProviderIconStyle)
+    : undefined;
   const onError = (event: SyntheticEvent<HTMLImageElement>) => {
     if (event.currentTarget.src === fallback) return;
     event.currentTarget.src = fallback;
