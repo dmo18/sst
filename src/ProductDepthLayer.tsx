@@ -253,10 +253,11 @@ export function ProductDepthLayer({ model }: ProductDepthLayerProps): JSX.Elemen
                 const replayed = node.providerId ? replayTrailIds.has(node.providerId) : false;
                 const pinned = node.providerId ? workspace.pinnedProviderIds.includes(node.providerId) : false;
                 const showLabel = node.tone !== 'positive' || node.criticality === 'high' || pinned || replayed;
+                const labelOnLeft = node.x > 600;
                 const openProvider = () => node.providerId && openTarget(`provider:${node.providerId}`);
                 return <g key={node.id} className={`depth-node depth-provider-node depth-tone-${node.tone} ${dimmed ? 'is-dimmed' : ''} ${replayed ? 'is-replayed' : ''} ${pinned ? 'is-pinned' : ''}`} onClick={openProvider} onKeyDown={event => activateSvgButton(event, openProvider)} role="button" aria-label={`${node.label}, ${node.category}, ${node.tone}`} tabIndex={0}>
                   <circle cx={node.x} cy={node.y} r={node.criticality === 'high' ? 10 : 7} />
-                  {showLabel && <text x={node.x + 13} y={node.y + 4}>{node.label.slice(0, 18)}</text>}
+                  {showLabel && <text x={node.x + (labelOnLeft ? -13 : 13)} y={node.y + 4} textAnchor={labelOnLeft ? 'end' : 'start'}>{node.label.slice(0, 18)}</text>}
                   <title>{`${node.label} · ${node.category} · ${node.tone}`}</title>
                 </g>;
               })}
