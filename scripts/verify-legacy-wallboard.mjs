@@ -303,6 +303,17 @@ finally {
     new Promise(resolve => browserProcess.once('exit', resolve)),
     sleep(1000)
   ]);
-  if (browserProcess.exitCode === null) browserProcess.kill('SIGKILL');
-  fs.rmSync(profileDir, { recursive: true, force: true });
+  if (browserProcess.exitCode === null) {
+    browserProcess.kill('SIGKILL');
+    await Promise.race([
+      new Promise(resolve => browserProcess.once('exit', resolve)),
+      sleep(1000)
+    ]);
+  }
+  try {
+    fs.rmSync(profileDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+  }
+  catch (error) {
+    console.warn(`Legacy wallboard browser profile cleanup warning: ${error?.code || error?.message || error}`);
+  }
 }

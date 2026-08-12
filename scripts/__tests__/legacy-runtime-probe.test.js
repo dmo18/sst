@@ -40,3 +40,13 @@ test('legacy runtime probe keeps the exact signage viewport and compatibility-on
   assert.match(source, /STATUS_BASE_URL/);
   assert.match(source, /view=wallboard&alerts=24h/);
 });
+
+test('legacy runtime success is not converted into failure by Chromium profile cleanup races', async () => {
+  const source = await read('scripts/verify-legacy-wallboard.mjs');
+
+  assert.match(source, /browserProcess\.kill\('SIGKILL'\)/);
+  assert.match(source, /maxRetries: 5/);
+  assert.match(source, /retryDelay: 100/);
+  assert.match(source, /Legacy wallboard browser profile cleanup warning/);
+  assert.match(source, /catch \(error\) \{\s*console\.warn/);
+});
