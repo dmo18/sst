@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { dataLifecycleReducer, initialDataLifecycle } from './dataLifecycle';
+import { applyBrowserLiveTruth } from './liveStatusTruth';
 import { ACTIVE_PROVIDER_CATALOG_HASH, ACTIVE_PROVIDER_IDS } from './providerCatalog';
 import { RequestOwnership } from './requestOwnership';
 import type { StatusPayload } from './types';
@@ -59,14 +60,18 @@ async function fetchStatus(signal: AbortSignal): Promise<StatusFetchResult> {
     console.error('status.json validation failed:', errors);
     throw new Error(`status.json has an invalid or unsupported payload (${errors.join('; ')})`);
   }
-  const payload = operationalPayload(data as StatusPayload);
-  const generatedAt = Date.parse(payload.generated_at || '');
+  const staticPayload = operationalPayload(data as StatusPayload);
+  const generatedAt = Date.parse(staticPayload.generated_at || '');
   const payloadAgeMs = Date.now() - generatedAt;
   if (!Number.isFinite(generatedAt)) throw new Error('status.json generated_at is invalid');
   if (payloadAgeMs < -MAX_FUTURE_SKEW_MS) throw new Error('status.json was generated too far in the future');
   const freshnessWarning = payloadAgeMs > MAX_PAYLOAD_AGE_MS
     ? `status.json is stale (${Math.round(payloadAgeMs / 60000)} minutes old; maximum 20 minutes)`
     : null;
+
+  // The signed/static payload remains the audited baseline. Standard official Statuspage JSON is then
+  // re-observed in the browser so newly opened or cleared incidents are not hidden by scheduler delay.
+  const payload = await applyBrowserLiveTruth(staticPayload, signal);
   return { data: payload, freshnessWarning };
 }
 
