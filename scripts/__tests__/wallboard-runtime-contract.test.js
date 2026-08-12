@@ -34,12 +34,14 @@ test('Pages deployment is serialized, fully validated, bounded, and schedule-opt
   assert.match(workflow, /view=wallboard&alerts=36h&layoutProbe=yodeck/);
 });
 
-test('freshness recovery never dispatches over an active release', async () => {
+test('freshness and live-truth recovery never dispatch over an active release', async () => {
   const workflow = await read('.github/workflows/status-freshness-watch.yml');
   assert.match(workflow, /actions\/workflows\/refresh-pages\.yml\/runs\?per_page=20/);
   assert.match(workflow, /new Set\(\['queued', 'in_progress', 'waiting', 'requested', 'pending'\]\)/);
-  assert.match(workflow, /steps\.freshness\.outputs\.stale == 'true' && steps\.release\.outputs\.active == 'true'/);
-  assert.match(workflow, /steps\.freshness\.outputs\.stale == 'true' && steps\.release\.outputs\.active != 'true'/);
+  assert.match(workflow, /steps\.truth\.outputs\.stale == 'true' \|\| steps\.truth\.outputs\.drift == 'true'/);
+  assert.match(workflow, /steps\.release\.outputs\.active == 'true'/);
+  assert.match(workflow, /steps\.release\.outputs\.active != 'true'/);
+  assert.match(workflow, /node scripts\/status-truth-watch\.mjs/);
   assert.match(workflow, /group:\s*status-freshness-watch\s*\n\s*cancel-in-progress:\s*false/);
 });
 
@@ -67,27 +69,36 @@ test('wallboard controls and persistence are React-owned', async () => {
   assert.doesNotMatch(css, /\.wallboard-shell:hover/);
 });
 
-test('wallboard overlay geometry and telemetry live in the dedicated stylesheet', async () => {
+test('wallboard header exposes absolute update, browser check, next refresh, and cadence', async () => {
   const source = await read('src/WallboardV2.tsx');
   const app = await read('src/App.tsx');
   const poller = await read('src/usePayloadPoller.ts');
   const main = await read('src/main.tsx');
-  const css = await read('src/styles/wallboard-v2.css');
+  const baseCss = await read('src/styles/wallboard-v2.css');
+  const truthCss = await read('src/styles/wallboard-truth-hardening.css');
 
   assert.match(main, /styles\/wallboard-v2\.css/);
-  assert.doesNotMatch(main, /styles\/wallboard-focus\.css/);
-  assert.match(css, /--wallboard-header-height:\s*72px/);
-  assert.match(css, /--wallboard-kpi-height:\s*88px/);
-  assert.match(css, /top:\s*calc\(var\(--wallboard-overlay-inset\) \+ var\(--wallboard-header-height\) \+ var\(--wallboard-overlay-gap\)\)/);
-  assert.match(css, /grid-template-columns:\s*repeat\(5, minmax\(0, 1fr\)\)/);
-  assert.match(css, /\.wallboard-v2 \.wallboard-mini-telemetry/);
+  assert.match(main, /styles\/wallboard-truth-hardening\.css/);
+  assert.match(baseCss, /--wallboard-header-height:\s*72px/);
+  assert.match(baseCss, /--wallboard-kpi-height:\s*88px/);
+  assert.match(baseCss, /\.wallboard-v2 \.wallboard-mini-telemetry/);
+  assert.match(truthCss, /\.wallboard-v2 \.wallboard-freshness/);
 
-  assert.match(source, /className="wallboard-mini-telemetry"/);
+  assert.match(source, /className="wallboard-freshness"/);
+  assert.match(source, /<b>Updated<\/b>/);
+  assert.match(source, /<b>Checked<\/b>/);
+  assert.match(source, /<b>Next<\/b>/);
+  assert.match(source, /Browser refresh \{durationLabel\(browserRefreshMs\)\}/);
+  assert.match(source, /data-wallboard-updated-at/);
+  assert.match(source, /data-wallboard-browser-checked-at/);
+  assert.match(source, /data-wallboard-refresh-ms/);
   assert.match(source, /Payload <b>\{compactAgeLabel\(model\?\.generatedAt, now\)\}<\/b>/);
   assert.match(source, /Browser <b>\{compactAgeLabel\(browserCheckedAt, now\)\}<\/b>/);
+  assert.match(source, /Refresh <b>\{durationLabel\(browserRefreshMs\)\}<\/b>/);
   assert.match(poller, /const \[lastBrowserCheckAt, setLastBrowserCheckAt\]/);
   assert.match(poller, /setLastBrowserCheckAt\(checkedAt\)/);
   assert.match(app, /browserCheckedAt=\{lastBrowserCheckAt\}/);
+  assert.match(app, /browserRefreshMs=\{browserRefreshMs\}/);
   assert.doesNotMatch(app, /sst:browser-check/);
 });
 
@@ -130,7 +141,7 @@ test('wallboard priority list uses a seamless continuous marquee even on reduced
   assert.doesNotMatch(css, /-webkit-line-clamp:\s*2/);
 });
 
-test('compact wallboard continuously loops labeled alert provider chips whenever needed', async () => {
+test('compact wallboard continuously loops labeled alert provider chips whenever more than one provider is active', async () => {
   const source = await read('src/WallboardV2.tsx');
   const css = await read('src/styles/wallboard-v2.css');
   const providerMarquee = source.match(/function useProviderMarquee[\s\S]*?(?=function rectsOverlap)/)?.[0] || '';
@@ -140,7 +151,8 @@ test('compact wallboard continuously loops labeled alert provider chips whenever
   assert.match(source, /wallboard-alert-provider-copy/);
   assert.match(source, /--wallboard-provider-loop-distance/);
   assert.match(source, /--wallboard-provider-loop-duration/);
-  assert.match(source, /groupWidth > viewport\.clientWidth \+ 2/);
+  assert.match(providerMarquee, /const shouldLoop = itemCount > 1/);
+  assert.doesNotMatch(providerMarquee, /shouldLoop = itemCount > 1 && groupWidth > viewport\.clientWidth/);
   assert.match(source, /<b>\{item\.provider\}<\/b>/);
   assert.match(source, /const seen = new Set<string>\(\)/);
   assert.doesNotMatch(providerMarquee, /prefers-reduced-motion|reducedMotion/);
@@ -153,7 +165,7 @@ test('compact wallboard continuously loops labeled alert provider chips whenever
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)[\s\S]*wallboard-alert-provider-track\.is-looping[\s\S]*linear infinite !important/);
 });
 
-test('the 458x291 production probe checks compact geometry, filtering, and marquee state', async () => {
+test('the 458x291 production probe checks compact geometry, freshness, filtering, and real marquee movement', async () => {
   const source = await read('src/WallboardV2.tsx');
   const workflow = await read('.github/workflows/refresh-pages.yml');
   const verifier = await read('scripts/verify-yodeck-wallboard.mjs');
@@ -175,6 +187,11 @@ test('the 458x291 production probe checks compact geometry, filtering, and marqu
   assert.match(verifier, /Emulation\.setDeviceMetricsOverride/);
   assert.match(verifier, /viewport\.width !== WIDTH \|\| viewport\.height !== HEIGHT/);
   assert.match(verifier, /YODECK_LAYOUT_PROBE/);
+  assert.match(verifier, /providerRotationProbe/);
+  assert.match(verifier, /YODECK_PROVIDER_ROTATION/);
+  assert.match(verifier, /before\.transform !== afterTransform/);
+  assert.match(verifier, /Wallboard header freshness telemetry is incomplete/);
+  assert.match(verifier, /YODECK_FRESHNESS/);
   assert.match(verifier, /probe\.state !== 'pass'/);
   assert.match(verifier, /alertWindowMs !== '129600000'/);
   assert.match(verifier, /Page\.captureScreenshot/);
