@@ -221,6 +221,19 @@ export function buildChangeDigest(model: IssueConsoleModel, lastSeenGeneratedAt?
   };
 }
 
+function distinctRecentChanges(history: StatusChange[], limit = 80): StatusChange[] {
+  const seen = new Set<string>();
+  const result: StatusChange[] = [];
+  for (const change of [...history].sort((a, b) => Date.parse(b.detected_at) - Date.parse(a.detected_at))) {
+    const key = `${change.provider_id}|${change.type}|${change.title.trim().toLowerCase()}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(change);
+    if (result.length >= limit) break;
+  }
+  return result;
+}
+
 export function buildWorkspaceSearchIndex(model: IssueConsoleModel): WorkspaceSearchEntry[] {
   const entries: WorkspaceSearchEntry[] = [];
   for (const incident of model.briefs) entries.push({
@@ -263,7 +276,7 @@ export function buildWorkspaceSearchIndex(model: IssueConsoleModel): WorkspaceSe
     keywords: `${category.category} dependency group ${category.total} providers`.toLowerCase(),
     target: `category:${category.category}`
   });
-  for (const change of model.history.slice(0, 80)) entries.push({
+  for (const change of distinctRecentChanges(model.history)) entries.push({
     id: `change:${change.id}`,
     kind: 'change',
     title: change.title,
@@ -312,10 +325,29 @@ export function buildUniverseGraph(model: IssueConsoleModel): UniverseGraph {
   const nodes: UniverseNode[] = [];
   const edges: UniverseEdge[] = [];
   const categoryPositions = new Map<string, { x: number; y: number }>();
-  const categoryRadius = Math.min(250, 150 + categories.length * 7);
+  const providerPositions = new Map<string, { x: number; y: number }>();
+  const categoryRadius = 220;
+  const providerRadius = 305;
+  const startAngle = -Math.PI / 2;
+  const orderedProviders = categories.flatMap(category => model.diagnostics
+    .filter(provider => provider.category === category.category)
+    .sort((a, b) => b.priority - a.priority || a.provider.localeCompare(b.provider)));
+  const providerCount = Math.max(1, orderedProviders.length);
+  const providerAngle = new Map<string, number>();
+
+  orderedProviders.forEach((provider, index) => {
+    providerAngle.set(provider.id, startAngle + (Math.PI * 2 * index / providerCount));
+  });
 
   categories.forEach((category, index) => {
-    const angle = -Math.PI / 2 + (Math.PI * 2 * index / Math.max(1, categories.length));
+    const providers = orderedProviders.filter(provider => provider.category === category.category);
+    const angles = providers.map(provider => providerAngle.get(provider.id) as number);
+    const angle = angles.length
+      ? Math.atan2(
+        angles.reduce((sum, value) => sum + Math.sin(value), 0),
+        angles.reduce((sum, value) => sum + Math.cos(value), 0)
+      )
+      : startAngle + (Math.PI * 2 * index / Math.max(1, categories.length));
     const x = centerX + Math.cos(angle) * categoryRadius;
     const y = centerY + Math.sin(angle) * categoryRadius;
     categoryPositions.set(category.category, { x, y });
@@ -330,39 +362,34 @@ export function buildUniverseGraph(model: IssueConsoleModel): UniverseGraph {
     });
   });
 
-  for (const category of categories) {
-    const position = categoryPositions.get(category.category) as { x: number; y: number };
-    const providers = model.diagnostics
-      .filter(provider => provider.category === category.category)
-      .sort((a, b) => b.priority - a.priority || a.provider.localeCompare(b.provider));
-    const providerRadius = Math.min(118, 52 + providers.length * 2.5);
-    providers.forEach((provider, index) => {
-      const angle = -Math.PI / 2 + (Math.PI * 2 * index / Math.max(1, providers.length));
-      const x = position.x + Math.cos(angle) * providerRadius;
-      const y = position.y + Math.sin(angle) * providerRadius;
-      nodes.push({
-        id: `provider:${provider.id}`,
-        kind: 'provider',
-        label: provider.provider,
-        category: provider.category,
-        x,
-        y,
-        tone: nodeTone(provider),
-        providerId: provider.id,
-        sourceHealth: provider.sourceHealth,
-        criticality: provider.criticality
-      });
-      edges.push({
-        id: `membership:${category.category}:${provider.id}`,
-        from: `category:${category.category}`,
-        to: `provider:${provider.id}`,
-        kind: 'membership'
-      });
+  orderedProviders.forEach((provider, index) => {
+    const angle = providerAngle.get(provider.id) as number;
+    const radius = providerRadius + (index % 2 === 0 ? -10 : 10);
+    const x = centerX + Math.cos(angle) * radius;
+    const y = centerY + Math.sin(angle) * radius;
+    providerPositions.set(provider.id, { x, y });
+    nodes.push({
+      id: `provider:${provider.id}`,
+      kind: 'provider',
+      label: provider.provider,
+      category: provider.category,
+      x,
+      y,
+      tone: nodeTone(provider),
+      providerId: provider.id,
+      sourceHealth: provider.sourceHealth,
+      criticality: provider.criticality
     });
-  }
+    edges.push({
+      id: `membership:${provider.category}:${provider.id}`,
+      from: `category:${provider.category}`,
+      to: `provider:${provider.id}`,
+      kind: 'membership'
+    });
+  });
 
   for (const correlation of model.correlations) {
-    const providerIds = correlation.providerIds.filter(id => model.diagnostics.some(provider => provider.id === id));
+    const providerIds = correlation.providerIds.filter(id => providerPositions.has(id));
     for (let index = 1; index < providerIds.length; index += 1) {
       edges.push({
         id: `correlation:${correlation.id}:${index}`,
