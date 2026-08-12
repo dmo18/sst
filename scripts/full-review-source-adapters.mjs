@@ -248,6 +248,13 @@ function fireHydrantColor(value) {
   return /\b(?:unavailable|offline|major|critical|complete outage|down)\b/i.test(text) ? 'red' : 'amber';
 }
 
+function fireHydrantMaintenanceOnly(title, note, status, components, timeline) {
+  if (!/\bmaintenance\b/i.test(clean(`${title} ${status}`))) return false;
+  if (components.some(component => componentStatusIsProblem(component.status))) return false;
+  const explicitImpact = clean(`${title} ${note} ${status} ${(timeline || []).map(update => `${update.status} ${update.note}`).join(' ')}`);
+  return !serviceImpact(explicitImpact);
+}
+
 function fireHydrantMaintenance(json, source = {}) {
   const records = Array.isArray(json?.scheduledMaintenances) ? json.scheduledMaintenances : [];
   return records.map(item => {
@@ -294,6 +301,7 @@ export function parseFireHydrantPayload(value, provider = {}, source = {}) {
       explicitNonUsCount += 1;
       continue;
     }
+    if (fireHydrantMaintenanceOnly(title, note, status, components, timeline)) continue;
     const firstDetected = toIso(incident?.timestamps?.started || incident?.startedAt || incident?.createdAt || timeline.at(-1)?.at || '');
     const latestUpdate = toIso(latest.at || incident?.updatedAt || incident?.timestamps?.started || '');
     if (!incidentEvidenceIsCurrent({ title, note, status, firstDetected, latestUpdate }, Date.now(), INCIDENT_MAX_AGE_DAYS, { requireTimestamp: true })) continue;
