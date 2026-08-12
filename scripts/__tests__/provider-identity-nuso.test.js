@@ -75,15 +75,17 @@ test('provider identity is bundled locally with a pinned source record and no ru
   assert.equal(existsSync(new URL('../../public/assets/logos/quickbooks.svg', import.meta.url)), true);
 });
 
-test('compact shell media queries are constrained before browser runtime', async () => {
+test('all compact shell media queries are constrained before browser runtime', async () => {
   const vite = await read('vite.config.ts');
   const main = await read('src/main.tsx');
   assert.match(vite, /compactDeviceMediaContract/);
+  assert.match(vite, /COMPACT_DEVICE_MAX_WIDTH = 900/);
   assert.match(vite, /enforce: 'pre'/);
-  assert.match(vite, /id\.endsWith\('\.css'\)/);
+  assert.match(vite, /cleanId\.endsWith\('\.css'\)/);
+  assert.match(vite, /max-width/);
   assert.match(vite, /max-device-width/);
-  assert.match(vite, /width: 900, deviceWidth: 900/);
-  assert.match(vite, /width: 370, deviceWidth: 370/);
+  assert.match(vite, /width > COMPACT_DEVICE_MAX_WIDTH/);
+  assert.match(vite, /max-device-width: \$\{width\}px/);
   assert.doesNotMatch(main, /document\.styleSheets/);
   assert.doesNotMatch(main, /CSSMediaRule/);
   assert.doesNotMatch(main, /waitForApplicationStylesheets/);
