@@ -94,6 +94,7 @@ export function Microsoft365CriticalSuite({ model }: { model: IssueConsoleModel 
                 data-provider-id="microsoft365"
                 data-source-role="public-incident-fallback"
                 data-service-state={snapshot.microsoft365?.serviceState || 'unknown'}
+                data-source-state={snapshot.microsoft365?.sourceState || 'unavailable'}
                 data-evidence-tone={microsoftEvidenceTone}
                 onClick={() => openProvider('microsoft365')}
               >
@@ -107,6 +108,7 @@ export function Microsoft365CriticalSuite({ model }: { model: IssueConsoleModel 
                 data-provider-id="entra"
                 data-source-role="azure-public-entra"
                 data-service-state={snapshot.entra?.serviceState || 'unknown'}
+                data-source-state={snapshot.entra?.sourceState || 'unavailable'}
                 data-evidence-tone={entraEvidenceTone}
                 onClick={() => openProvider('entra')}
               >
