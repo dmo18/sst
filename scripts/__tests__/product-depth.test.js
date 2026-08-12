@@ -68,6 +68,7 @@ test('signature experience contains dependency universe cautious correlation and
 
 test('dependency universe visual layer keeps mobile topology inside the viewport and labels only urgent nodes by default', async () => {
   const css = await read('src/styles/product-quality-cleanup.css');
+  const layer = await read('src/ProductDepthLayer.tsx');
   assert.match(css, /\.depth-provider-node text,[\s\S]*\.depth-category-node text[\s\S]*opacity: 0/);
   assert.match(css, /\.depth-category-node circle[\s\S]*r: 16px/);
   assert.match(css, /transform: scale\(1\.28\)/);
@@ -78,6 +79,9 @@ test('dependency universe visual layer keeps mobile topology inside the viewport
   const mobileBlock = css.slice(css.indexOf('@media (max-width: 900px)'), css.indexOf('@media (max-width: 470px)'));
   assert.match(mobileBlock, /\.depth-provider-node text[\s\S]*display: none/);
   assert.doesNotMatch(mobileBlock, /\.depth-provider-node\.depth-tone-warning text,[\s\S]*display: block/);
+  assert.match(layer, /const labelOnLeft = node\.x > 600/);
+  assert.match(layer, /textAnchor=\{labelOnLeft \? 'end' : 'start'\}/);
+  assert.match(layer, /node\.x \+ \(labelOnLeft \? -13 : 13\)/);
 });
 
 test('workspace supports deep links universal search change catch-up and persistent lenses', async () => {
@@ -126,6 +130,11 @@ test('deployed product-depth verification captures readable universe search inci
   assert.match(verifier, /maximumGraphWidth/);
   assert.match(verifier, /clippedLabels/);
   assert.match(verifier, /clips \$\{metrics\.clippedLabels\} visible labels/);
+  assert.match(verifier, /PRODUCT_DEPTH_MOBILE_METRICS/);
+  assert.ok(
+    verifier.indexOf('const mobileUniverseBytes = await capture') < verifier.indexOf("assertUniverseReadability(mobile, 'Mobile Dependency Universe', true)"),
+    'mobile evidence must be captured before strict visual assertions so failures retain the rejected frame'
+  );
   assert.match(verifier, /medianLabelHeight/);
   assert.match(verifier, /labelCollisions/);
   assert.match(verifier, /duplicate semantic result rows/);
