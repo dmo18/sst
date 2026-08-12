@@ -1,0 +1,99 @@
+/* Wallboard freshness visibility and provider-rotation hardening. Loaded after wallboard base/premium styles. */
+
+.wallboard-v2 > header {
+  grid-template-columns: minmax(220px, 1fr) auto minmax(250px, auto) auto auto auto !important;
+  gap: 10px !important;
+}
+
+.wallboard-v2 .wallboard-freshness {
+  min-width: 250px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, auto));
+  align-items: center;
+  gap: 2px 12px;
+  border-left: 1px solid rgba(116, 149, 190, .2);
+  border-right: 1px solid rgba(116, 149, 190, .2);
+  padding: 2px 12px;
+}
+
+.wallboard-v2 .wallboard-freshness > span {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.wallboard-v2 .wallboard-freshness b {
+  color: #7087a5;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .09em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.wallboard-v2 .wallboard-freshness time {
+  color: #e2edf9;
+  font-size: 10px;
+  font-weight: 760;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.wallboard-v2 .wallboard-freshness > small {
+  grid-column: 1 / -1;
+  color: #7087a5;
+  font-size: 8px;
+  line-height: 1;
+}
+
+.wallboard-v2 .wallboard-mini-telemetry {
+  gap: 7px;
+}
+
+.wallboard-v2 .wallboard-alert-provider-track.is-looping {
+  animation-play-state: running !important;
+}
+
+@media (max-width: 1100px), (max-height: 620px) {
+  .wallboard-v2 > header {
+    grid-template-columns: minmax(180px, 1fr) auto minmax(220px, auto) auto auto auto !important;
+    gap: 7px !important;
+  }
+
+  .wallboard-v2 .wallboard-freshness {
+    min-width: 220px;
+    gap: 2px 8px;
+    padding-inline: 9px;
+  }
+
+  .wallboard-v2 .wallboard-freshness time {
+    font-size: 9px;
+  }
+}
+
+@media (max-width: 900px) {
+  .wallboard-v2 > header {
+    grid-template-columns: minmax(190px, 1fr) auto auto auto !important;
+  }
+
+  .wallboard-v2 > header > div:first-child,
+  .wallboard-v2 .wallboard-clock {
+    display: none !important;
+  }
+
+  .wallboard-v2 .wallboard-freshness {
+    min-width: 190px;
+    padding-inline: 7px;
+  }
+
+  .wallboard-v2 .wallboard-freshness > small {
+    display: none;
+  }
+}
+
+@media (max-width: 620px) {
+  .wallboard-v2 .wallboard-mini-telemetry {
+    gap: 5px;
+    font-size: 8px;
+  }
+}
