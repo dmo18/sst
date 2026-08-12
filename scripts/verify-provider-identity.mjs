@@ -184,19 +184,19 @@ async function styleContract(session, mobile) {
     const shell = document.querySelector('.enterprise-shell');
     const sidebar = document.querySelector('.app-sidebar');
     const head = document.querySelector('.provider-data-table .data-table-head');
-    const generated = document.querySelector('.provider-logo--generated');
+    const favicon = document.querySelector('.provider-logo--favicon');
     const bodyStyle = getComputedStyle(document.body);
     const shellStyle = shell ? getComputedStyle(shell) : null;
     const sidebarStyle = sidebar ? getComputedStyle(sidebar) : null;
     const headStyle = head ? getComputedStyle(head) : null;
-    const generatedStyle = generated ? getComputedStyle(generated) : null;
+    const faviconStyle = favicon ? getComputedStyle(favicon) : null;
     const styleSheets = [...document.styleSheets];
     return {
       bodyFont: bodyStyle.fontFamily,
       shellDisplay: shellStyle?.display || '',
       sidebarPosition: sidebarStyle?.position || '',
       tableHeadDisplay: headStyle?.display || '',
-      generatedPadding: generatedStyle?.paddingTop || '',
+      faviconPadding: faviconStyle?.paddingTop || '',
       stylesheetCount: styleSheets.length,
       cssLinkCount: document.querySelectorAll('link[rel="stylesheet"]').length,
       viewportWidth: innerWidth,
@@ -206,7 +206,7 @@ async function styleContract(session, mobile) {
         styleSheets.length > 0 &&
         document.querySelector('link[rel="stylesheet"]') &&
         /Inter|system-ui/i.test(bodyStyle.fontFamily) &&
-        generatedStyle?.paddingTop === '0px' &&
+        faviconStyle?.paddingTop === '0px' &&
         (${mobile ? "sidebarStyle?.position === 'fixed' && headStyle?.display === 'none'" : "shellStyle?.display === 'grid' && sidebarStyle?.position !== 'fixed' && headStyle?.display !== 'none'"})
       )
     };
@@ -273,6 +273,8 @@ async function identityContract(session) {
       const parsed = new URL(value);
       return parsed.origin === location.origin && parsed.pathname.includes('/assets/logos/');
     });
+    const faviconAssets = localAssets.filter(value => new URL(value).pathname.includes('/assets/logos/provider-favicons/'));
+    const exactLocalAssets = localAssets.filter(value => !new URL(value).pathname.includes('/assets/logos/provider-favicons/'));
     const external = networkRefs.filter(value => new URL(value).origin !== location.origin);
     const uniqueLocalAssets = [...new Set(localAssets)];
     const failedAssets = [];
@@ -289,10 +291,13 @@ async function identityContract(session) {
     return {
       providerIdentityCount: identities.length,
       brandMaskCount: logos.filter(element => element.classList.contains('provider-logo--brand-mask')).length,
+      faviconCount: logos.filter(element => element.classList.contains('provider-logo--favicon')).length,
       generatedCount: logos.filter(element => element.classList.contains('provider-logo--generated')).length,
       embeddedSvgCount: embeddedSvg.length,
       unexpectedData,
       localLogoAssets: localAssets.length,
+      exactLocalAssets: exactLocalAssets.length,
+      faviconAssetCount: faviconAssets.length,
       uniqueLocalLogoAssets: uniqueLocalAssets.length,
       externalLogoSrc: external,
       failedAssets,
@@ -320,10 +325,13 @@ try {
   if (!desktop.nusoPresent || !desktop.nusoHasLogo) throw new Error('NUSO is missing its deployed provider identity.');
   if (desktop.providerIdentityCount < 80) throw new Error(`Expected at least 80 provider identities, found ${desktop.providerIdentityCount}.`);
   if (desktop.brandMaskCount < 35) throw new Error(`Expected at least 35 exact masked brand marks, found ${desktop.brandMaskCount}.`);
-  if (desktop.generatedCount > 35) throw new Error(`Too many providers regressed to generated recognition tiles: ${desktop.generatedCount}.`);
-  if (desktop.embeddedSvgCount !== desktop.generatedCount) throw new Error(`Embedded local SVG count ${desktop.embeddedSvgCount} does not match generated identity count ${desktop.generatedCount}.`);
+  if (desktop.faviconCount !== 35) throw new Error(`Expected 35 fetched provider artwork marks, found ${desktop.faviconCount}.`);
+  if (desktop.generatedCount !== 0) throw new Error(`Provider identities regressed to generated fallback tiles: ${desktop.generatedCount}.`);
+  if (desktop.embeddedSvgCount !== 0) throw new Error(`Provider artwork regressed to JavaScript-embedded SVG data: ${desktop.embeddedSvgCount}.`);
+  if (desktop.faviconAssetCount !== desktop.faviconCount) throw new Error(`Static favicon asset count ${desktop.faviconAssetCount} does not match rendered favicon count ${desktop.faviconCount}.`);
+  if (desktop.exactLocalAssets < 45) throw new Error(`Expected at least 45 exact local logo references, found ${desktop.exactLocalAssets}.`);
+  if (desktop.localLogoAssets < 80) throw new Error(`Expected all provider identities to resolve locally, found ${desktop.localLogoAssets}.`);
   if (desktop.unexpectedData.length) throw new Error(`Unexpected embedded provider asset type: ${desktop.unexpectedData[0]}`);
-  if (desktop.localLogoAssets < 45) throw new Error(`Expected at least 45 local exact-logo references, found ${desktop.localLogoAssets}.`);
   if (desktop.externalLogoSrc.length) throw new Error(`Provider identity attempted external logo loading: ${desktop.externalLogoSrc[0]}`);
   if (desktop.failedAssets.length) throw new Error(`Bundled provider logo assets failed to load: ${desktop.failedAssets.join('; ')}`);
   if (desktop.horizontalOverflow > 1) throw new Error(`Provider desktop view has horizontal overflow: ${desktop.horizontalOverflow}px`);
@@ -366,7 +374,7 @@ try {
   if (mobile.unavailable) throw new Error('Mobile provider identity verification rendered the unavailable state.');
   const mobileBytes = await capture(session, mobileScreenshot);
 
-  console.log(`PROVIDER_IDENTITY providers=${desktop.providerIdentityCount} exact_masks=${desktop.brandMaskCount} curated_generated=${desktop.generatedCount} embedded_svg=${desktop.embeddedSvgCount} local_assets=${desktop.localLogoAssets} unique_assets=${desktop.uniqueLocalLogoAssets}`);
+  console.log(`PROVIDER_IDENTITY providers=${desktop.providerIdentityCount} exact_masks=${desktop.brandMaskCount} favicons=${desktop.faviconCount} generated_fallbacks=${desktop.generatedCount} static_favicon_assets=${desktop.faviconAssetCount} local_assets=${desktop.localLogoAssets} unique_assets=${desktop.uniqueLocalLogoAssets}`);
   console.log(`PROVIDER_IDENTITY_STYLE desktop_shell=${desktopStyle.shellDisplay} desktop_sidebar=${desktopStyle.sidebarPosition} scaled_viewport=${scaledDesktopStyle.viewportWidth} scaled_screen=${scaledDesktopStyle.screenWidth} scaled_shell=${scaledDesktopStyle.shellDisplay} mobile_sidebar=${mobileStyle.sidebarPosition} stylesheets=${desktopStyle.stylesheetCount}`);
   console.log(`PROVIDER_IDENTITY_NUSO present=true visible_mobile=true desktop=${desktopBytes} mobile=${mobileBytes}`);
 }
