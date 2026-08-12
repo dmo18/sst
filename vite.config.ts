@@ -1,26 +1,23 @@
 import react from '@vitejs/plugin-react';
 import { defineConfig, type Plugin } from 'vite';
 
+const COMPACT_DEVICE_MAX_WIDTH = 900;
+
 function compactDeviceMediaContract(): Plugin {
-  const compactQueries = [
-    { width: 900, deviceWidth: 900 },
-    { width: 370, deviceWidth: 370 }
-  ];
+  const compactMedia = /@media\s*\(\s*max-width\s*:\s*(\d+)px\s*\)(?!\s*and\s*\(\s*max-device-width)/g;
 
   return {
     name: 'compact-device-media-contract',
     enforce: 'pre',
     transform(code, id) {
-      if (!id.endsWith('.css')) return null;
+      const cleanId = id.split('?')[0];
+      if (!cleanId.endsWith('.css')) return null;
 
-      let transformed = code;
-      for (const query of compactQueries) {
-        const media = new RegExp(`@media\\s*\\(\\s*max-width\\s*:\\s*${query.width}px\\s*\\)(?!\\s*and\\s*\\(\\s*max-device-width)`, 'g');
-        transformed = transformed.replace(
-          media,
-          `@media (max-width: ${query.width}px) and (max-device-width: ${query.deviceWidth}px)`
-        );
-      }
+      const transformed = code.replace(compactMedia, (match, rawWidth) => {
+        const width = Number(rawWidth);
+        if (!Number.isFinite(width) || width > COMPACT_DEVICE_MAX_WIDTH) return match;
+        return `@media (max-width: ${width}px) and (max-device-width: ${width}px)`;
+      });
 
       return transformed === code ? null : { code: transformed, map: null };
     }
