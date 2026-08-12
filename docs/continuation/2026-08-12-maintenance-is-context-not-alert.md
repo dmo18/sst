@@ -1,12 +1,14 @@
 # Maintenance is context, not an alert
 
 Date: 2026-08-12
-Status: implementation in progress
+Status: Closed
 Baseline main: `9488cf75741339a3b646098c0effc0109a1170b0`
 Initial branch: `agent/maintenance-is-context-not-alert-2026-08-12`
 Initial pull request: #143, `Keep maintenance context out of alerts`
 Initial merge: `728a9ae9f7d38ab86a4f7e7f262feecd0be35dcd`
 Follow-up branch: `fix/backblaze-maintenance-incident-promotion-2026-08-12`
+Follow-up pull request: #144, `Stop FireHydrant maintenance from becoming incidents`
+Accepted product implementation: `e082ff8efe9e391683d375a2d88e8ab860fd973c`
 
 ## Reported production defect
 
@@ -38,7 +40,7 @@ Backblaze documents CA East as its Canada East region in Toronto, Ontario. The r
 
 ### 3. FireHydrant can move active maintenance into the incidents array
 
-PR #143 passed 357 deterministic tests, TypeScript, application build, dependency audit, and CodeQL. Its first production release, run `31637357593`, also passed the full Pages build/deploy, modern Chrome, pinned legacy Chromium, and 458x291 Yodeck checks.
+PR #143 passed deterministic tests, TypeScript, application build, dependency audit, and CodeQL. Its first production release, run `31637357593`, also passed the full Pages build/deploy, modern Chrome, pinned legacy Chromium, and 458x291 Yodeck checks.
 
 The release artifact was then inspected directly instead of relying on those green structural gates. The fresh production payload proved the CA East scope fix worked: the old CA East incident and maintenance records were emitted as resolved/ended changes, and only US components remained in Backblaze component status.
 
@@ -49,7 +51,7 @@ However, the same live payload exposed another vendor-shape behavior. Backblaze 
 - there was no independent customer-impact statement;
 - the public Backblaze page still reported all systems operational.
 
-That caused the first production payload after PR #143 to publish Backblaze as `degraded`, `attention=action`, with one active incident. Release `31637357593` is therefore not accepted as final evidence for this stream even though its deployment and rendering jobs were green.
+That caused the first production payload after PR #143 to publish Backblaze as `degraded`, `attention=action`, with one active incident. Release `31637357593` is therefore rejected as final evidence for this stream even though its deployment and rendering jobs were green.
 
 The follow-up adapter rule is semantic rather than array-based:
 
@@ -58,7 +60,7 @@ The follow-up adapter rule is semantic rather than array-based:
 - ordinary future US maintenance may remain maintenance context;
 - CA East remains excluded from US scope.
 
-## Required invariants
+## Permanent product invariants
 
 1. Scheduled or in-progress maintenance is context, never an alert or operator action by itself.
 2. Maintenance can become an incident only when the vendor reports active customer service impact and the incident-classification path independently accepts that impact.
@@ -81,7 +83,7 @@ The follow-up adapter rule is semantic rather than array-based:
 Final PR #143 head: `09958617702e572ca71f9b77acf82d5f6bebb136`.
 
 - pull-request checks: `31637236607`, success;
-- deterministic tests: 357 passed, 0 failed;
+- deterministic tests: success;
 - TypeScript: success;
 - real application build: success;
 - dependency audit: success;
@@ -105,12 +107,66 @@ The retained Pages artifact `9157494035` was inspected directly. It showed:
 
 This direct payload inspection overruled the green deployment checks and triggered the FireHydrant semantic follow-up.
 
-## Completion requirement
+## PR #144 verification
 
-Do not close this record until the follow-up pull-request tests, TypeScript, application build, audit, and CodeQL pass, the fix is merged, a new main production release succeeds, and the new production payload proves all of the following:
+Final PR #144 head: `cb23b6d0fb3219e47275bb7d1e93dc1dd6935703`.
 
-1. Backblaze is operational while its public page remains all-systems-operational;
-2. neither CA East maintenance nor maintenance-only US East FireHydrant records are published as active incidents;
-3. legitimate US maintenance context may remain in the maintenance collection;
-4. Backblaze is absent from incident-only priority/alert surfaces unless separate service-impact evidence exists;
-5. final production and repository evidence are appended here before closure.
+- pull-request checks: `31638247490`, success;
+- deterministic tests, including both maintenance-only and explicit-impact FireHydrant fixtures: success;
+- TypeScript: success;
+- real application build: success;
+- dependency audit: success;
+- CodeQL: `31638247464`, success;
+- merge SHA: `e082ff8efe9e391683d375a2d88e8ab860fd973c`.
+
+## Accepted production evidence
+
+Production release `31638367724` on `e082ff8efe9e391683d375a2d88e8ab860fd973c` completed successfully.
+
+The release passed:
+
+- repository provider validation, quality, deterministic tests, TypeScript, and dependency audit;
+- fresh public vendor collection without GitHub credentials;
+- browser payload compatibility;
+- truth, coverage, and freshness verification;
+- real application build and Pages deployment;
+- deployed asset and payload smoke checks;
+- current Chrome rendering;
+- pinned pre-cascade-layer Chromium runtime;
+- exact 458x291 Yodeck wallboard verification.
+
+Post-merge CodeQL run `31638367825` succeeded.
+
+The accepted Pages artifact is `9157865212`, digest `sha256:8137408d46ac132180b6f0dc746438370f66f3c453f02a577d1ed1fb16eacb33`.
+
+Direct inspection of its freshly collected `status.json` proved:
+
+- Backblaze status: `All systems operational. Nothing to report.`;
+- `service_state=operational`;
+- `source_state=available`;
+- `source_health=healthy`;
+- `attention=informational`;
+- `truth_basis=confirmed-operational`;
+- active Backblaze incident count: 0;
+- problem Backblaze component count: 0;
+- current components: US West Region operational, US East Region operational;
+- current CA East records: 0;
+- current `US East Core Services Maintenance - 8/12/2026` incident records: 0;
+- retained Backblaze maintenance context: future `US West Core Services Maintenance`, scheduled for 2026-08-19;
+- change history contains `incident_resolved` for the false US East maintenance alert and `service_recovered` for Backblaze.
+
+The accepted Yodeck evidence artifact is `9157892822`, digest `sha256:1a0dc42a4f68ebd675b8b731485f3af91121c8cb4e02c1bcc7359146ac930bee`.
+
+The retained 458x291 screenshot was reviewed directly. The active-provider rail and priority list contained Salesforce and Kaseya, with no Backblaze alert chip and no Backblaze priority row. This visually agrees with the corrected production payload.
+
+The downstream Premium product experience verification run `31638495173` also succeeded across browser live truth, premium operator experience, Product Depth, Microsoft 365, and provider identity/NUSO. Its evidence artifact is `9157919013`, digest `sha256:9368a18fb153723fdebf33c951aad04968b57538cbe65fbebe1b7f5b08e38741`.
+
+## Closure
+
+This stream is closed because the accepted production payload and rendered wallboard now enforce the intended distinction:
+
+- incidents are alerts;
+- maintenance is context;
+- maintenance becomes an alert only when separate current vendor evidence demonstrates actual service impact.
+
+Future changes to FireHydrant parsing, maintenance modeling, region scope, the operator action queue, or wallboard priority composition must preserve these invariants and retain direct production evidence when the behavior changes.
