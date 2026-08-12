@@ -30,7 +30,7 @@ export function Microsoft365CriticalSuite({ model }: { model: IssueConsoleModel 
   const entraEvidenceTone = microsoft365EvidenceTone(snapshot.entra);
   const activeMicrosoftIncidents = useMemo(() => (model?.briefs || [])
     .filter(item => item.providerId === 'microsoft365' || item.providerId === 'entra')
-    .sort((a, b) => Date.parse(b.latest_update || b.rawTime || '') - Date.parse(a.latest_update || a.rawTime || '')),
+    .sort((a, b) => Date.parse(b.latest_update || '') - Date.parse(a.latest_update || '')),
   [model?.briefs]);
   const overallTone = microsoftTone === 'critical' || entraTone === 'critical'
     ? 'critical'
@@ -78,12 +78,26 @@ export function Microsoft365CriticalSuite({ model }: { model: IssueConsoleModel 
             </header>
 
             <div className="m365-summary-grid">
-              <button type="button" className={`m365-source-card is-${microsoftTone}`} data-evidence-tone={microsoftEvidenceTone} onClick={() => openProvider('microsoft365')}>
+              <button
+                type="button"
+                className={`m365-source-card is-${microsoftTone}`}
+                data-provider-id="microsoft365"
+                data-service-state={snapshot.microsoft365?.serviceState || 'unknown'}
+                data-evidence-tone={microsoftEvidenceTone}
+                onClick={() => openProvider('microsoft365')}
+              >
                 <span>Microsoft 365 broad public signal</span>
                 <strong>{snapshot.microsoft365?.provider || 'Microsoft 365'}</strong>
                 <small>{publicSourceSummary('Microsoft 365', snapshot.microsoft365)}</small>
               </button>
-              <button type="button" className={`m365-source-card is-${entraTone}`} data-evidence-tone={entraEvidenceTone} onClick={() => openProvider('entra')}>
+              <button
+                type="button"
+                className={`m365-source-card is-${entraTone}`}
+                data-provider-id="entra"
+                data-service-state={snapshot.entra?.serviceState || 'unknown'}
+                data-evidence-tone={entraEvidenceTone}
+                onClick={() => openProvider('entra')}
+              >
                 <span>Microsoft Entra dedicated public signal</span>
                 <strong>{snapshot.entra?.provider || 'Microsoft Entra ID'}</strong>
                 <small>{publicSourceSummary('Microsoft Entra ID', snapshot.entra)}</small>
@@ -104,11 +118,13 @@ export function Microsoft365CriticalSuite({ model }: { model: IssueConsoleModel 
                 <div className="m365-service-grid">
                   {MICROSOFT_365_CRITICAL_SERVICES.map(service => {
                     const assessment = microsoft365FacetAssessment(service, snapshot);
+                    const publicSource = service.providerId === 'entra' ? snapshot.entra : snapshot.microsoft365;
                     return (
                       <article
                         key={service.id}
                         className={`m365-service-card is-${assessment.serviceTone}`}
                         data-m365-service={service.id}
+                        data-public-service-state={publicSource?.serviceState || 'unknown'}
                         data-evidence-tone={assessment.evidenceTone}
                       >
                         <header><span>{service.label}</span><em>{service.coverageMode === 'dedicated-public' ? 'Dedicated public + tenant' : 'Broad public + tenant detail'}</em></header>
