@@ -60,18 +60,14 @@ async function fetchStatus(signal: AbortSignal): Promise<StatusFetchResult> {
     console.error('status.json validation failed:', errors);
     throw new Error(`status.json has an invalid or unsupported payload (${errors.join('; ')})`);
   }
-  const staticPayload = operationalPayload(data as StatusPayload);
-  const generatedAt = Date.parse(staticPayload.generated_at || '');
+  const payload = operationalPayload(data as StatusPayload);
+  const generatedAt = Date.parse(payload.generated_at || '');
   const payloadAgeMs = Date.now() - generatedAt;
   if (!Number.isFinite(generatedAt)) throw new Error('status.json generated_at is invalid');
   if (payloadAgeMs < -MAX_FUTURE_SKEW_MS) throw new Error('status.json was generated too far in the future');
   const freshnessWarning = payloadAgeMs > MAX_PAYLOAD_AGE_MS
     ? `status.json is stale (${Math.round(payloadAgeMs / 60000)} minutes old; maximum 20 minutes)`
     : null;
-
-  // The signed/static payload remains the audited baseline. Standard official Statuspage JSON is then
-  // re-observed in the browser so newly opened or cleared incidents are not hidden by scheduler delay.
-  const payload = await applyBrowserLiveTruth(staticPayload, signal);
   return { data: payload, freshnessWarning };
 }
 
@@ -79,30 +75,52 @@ export function usePayloadPoller(browserRefreshMs: number) {
   const [state, dispatch] = useReducer(dataLifecycleReducer, initialDataLifecycle);
   const [lastBrowserCheckAt, setLastBrowserCheckAt] = useState<number | null>(null);
   const lastBrowserCheckAtRef = useRef<number | null>(null);
-  const ownership = useRef(new RequestOwnership());
+  const payloadOwnership = useRef(new RequestOwnership());
+  const liveTruthOwnership = useRef(new RequestOwnership());
   const mounted = useRef(true);
 
+  const overlayLiveTruth = useCallback((payload: StatusPayload) => {
+    liveTruthOwnership.current.cancel();
+    const slot = liveTruthOwnership.current.begin();
+    if (!slot) return;
+    const { controller, sequence } = slot;
+
+    void applyBrowserLiveTruth(payload, controller.signal)
+      .then(livePayload => {
+        if (mounted.current && liveTruthOwnership.current.owns(controller, sequence))
+          dispatch({ type: 'overlay', data: livePayload });
+      })
+      .catch(error => {
+        if (!controller.signal.aborted)
+          console.warn('Browser live truth overlay failed; retaining audited static payload.', error);
+      })
+      .finally(() => liveTruthOwnership.current.finish(controller));
+  }, []);
+
   const refresh = useCallback(async () => {
-    const slot = ownership.current.begin();
+    const slot = payloadOwnership.current.begin();
     if (!slot) return;
     const { controller: request, sequence } = slot;
     dispatch({ type: 'request' });
     try {
       const result = await fetchStatus(request.signal);
-      if (mounted.current && ownership.current.owns(request, sequence)) {
+      if (mounted.current && payloadOwnership.current.owns(request, sequence)) {
         const checkedAt = Date.now();
+        // Render the validated audited payload immediately. Live first-party checks run independently and
+        // may replace only providers they successfully observe, so a slow CORS origin never blocks the UI.
         dispatch({ type: 'success', data: result.data });
         lastBrowserCheckAtRef.current = checkedAt;
         setLastBrowserCheckAt(checkedAt);
         if (result.freshnessWarning) dispatch({ type: 'failure', message: result.freshnessWarning });
+        overlayLiveTruth(result.data);
       }
     } catch (error) {
-      if (mounted.current && ownership.current.owns(request, sequence))
+      if (mounted.current && payloadOwnership.current.owns(request, sequence))
         dispatch({ type: 'failure', message: error instanceof Error ? error.message : String(error) });
     } finally {
-      ownership.current.finish(request);
+      payloadOwnership.current.finish(request);
     }
-  }, []);
+  }, [overlayLiveTruth]);
 
   useEffect(() => {
     mounted.current = true;
@@ -120,7 +138,8 @@ export function usePayloadPoller(browserRefreshMs: number) {
       mounted.current = false;
       window.clearInterval(id);
       document.removeEventListener('visibilitychange', refreshWhenVisible);
-      ownership.current.cancel();
+      payloadOwnership.current.cancel();
+      liveTruthOwnership.current.cancel();
     };
   }, [browserRefreshMs, refresh]);
 
