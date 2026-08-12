@@ -117,7 +117,3 @@ export function faviconWrapperSvg(bytes, mime, options = {}) {
   const nested = `data:${mime};base64,${Buffer.from(bytes).toString('base64')}`;
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img"><rect width="64" height="64" rx="14" fill="${background}"/><rect x="2" y="2" width="60" height="60" rx="12" fill="none" stroke="#cbd5e1" stroke-width="2"/><image x="7" y="7" width="50" height="50" preserveAspectRatio="xMidYMid meet" href="${nested}"/></svg>`;
 }
-
-export function faviconWrapperDataUri(bytes, mime, options = {}) {
-  return `data:image/svg+xml,${encodeURIComponent(faviconWrapperSvg(bytes, mime, options))}`;
-}
