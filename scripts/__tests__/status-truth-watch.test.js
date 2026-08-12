@@ -115,15 +115,23 @@ test('freshness workflow compares official live truth and can recover fresh-but-
   assert.match(watcher, /official-incident-set-changed/);
 });
 
-test('browser live truth does not depend on GitHub scheduler timing', async () => {
+test('browser live truth does not depend on GitHub scheduler timing or block audited payload rendering', async () => {
   const poller = await read('src/usePayloadPoller.ts');
+  const lifecycle = await read('src/dataLifecycle.ts');
   const overlay = await read('src/liveStatusTruth.ts');
   const app = await read('src/App.tsx');
   const vite = await read('vite.config.ts');
   const workflow = await read('.github/workflows/product-experience.yml');
   const verifier = await read('scripts/verify-live-status-truth.mjs');
 
-  assert.match(poller, /applyBrowserLiveTruth\(staticPayload, signal\)/);
+  assert.match(poller, /dispatch\(\{ type: 'success', data: result\.data \}\)/);
+  assert.match(poller, /overlayLiveTruth\(result\.data\)/);
+  assert.match(poller, /void applyBrowserLiveTruth\(payload, controller\.signal\)/);
+  assert.match(poller, /dispatch\(\{ type: 'overlay', data: livePayload \}\)/);
+  assert.match(poller, /liveTruthOwnership\.current\.cancel\(\)/);
+  assert.match(poller, /slow CORS origin never blocks the UI/);
+  assert.match(lifecycle, /type: 'overlay'/);
+  assert.match(lifecycle, /state\.phase === 'stale'/);
   assert.match(overlay, /source_type === 'statuspage-json'/);
   assert.match(overlay, /STATUSPAGE_SOURCE/);
   assert.match(overlay, /mode: 'cors'/);
