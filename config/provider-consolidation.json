@@ -12,8 +12,8 @@
       "services": [
         "Microsoft 365 public incident status"
       ],
-      "client_impact": "This source can confirm broad public Microsoft 365 incidents and the scope Microsoft publishes. It does not certify tenant or workload health for Exchange Online, Teams, SharePoint, OneDrive, Intune, Microsoft 365 Apps, Defender, Power Platform, or other subscribed services.",
-      "technician_action": "Use the public incident feed only for the incident scope Microsoft actually publishes. Check tenant Microsoft 365 Service Health or Microsoft Graph service communications before concluding that a workload is healthy or affected."
+      "client_impact": "May confirm a broad public Microsoft 365 incident, but does not certify tenant or workload health for Exchange, Teams, SharePoint, OneDrive, Intune, Apps, Defender, Power Platform, or other subscribed services.",
+      "technician_action": "Use only the incident scope Microsoft publishes. Check tenant Microsoft 365 Service Health or Graph service communications before concluding that an individual workload is healthy or affected."
     },
     "kaseya": {
       "criticality": "high",
