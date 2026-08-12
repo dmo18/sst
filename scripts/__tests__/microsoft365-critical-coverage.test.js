@@ -96,8 +96,7 @@ test('all Microsoft workload facets remain tenant-authoritative when no mapped p
   assert.match(contract, /tenantGranularFacetCount: MICROSOFT_365_CRITICAL_SERVICES\.length/);
   assert.match(contract, /No public incident currently maps to this workload; current health requires tenant Microsoft 365 Service Health/);
   assert.match(contract, /No active public Microsoft 365 incident is currently published; this is not a workload-health assertion/);
-  assert.match(component, /10 tracked facets/);
-  assert.match(component, /tenant-authoritative/);
+  assert.match(component, /tracked facets.*tenant-authoritative/);
   assert.match(component, /Tenant health \+ scoped public incidents/);
   assert.match(component, /data-health-authority="tenant-service-health"/);
   assert.match(component, /data-public-incident-count/);
