@@ -44,9 +44,6 @@
     "cove-data-protection": {
       "url": "https://www.n-able.com/wp-content/uploads/2026/03/shield-icon-data-protection-reversed.svg",
       "background": "#005255"
-    },
-    "ultradns": {
-      "url": "https://docs.ultradns.com/Content/img/company_logo.png"
     }
   },
   "websiteOverrides": {
@@ -57,7 +54,7 @@
     "proofpoint": "https://www.proofpoint.com/",
     "mimecast": "https://www.mimecast.com/",
     "cove-data-protection": "https://www.n-able.com/products/cove-data-protection",
-    "ultradns": "https://docs.ultradns.com/Content/",
+    "ultradns": "https://portal.ultradns.com/",
     "salesforce": "https://www.salesforce.com/",
     "docusign": "https://www.docusign.com/"
   }
