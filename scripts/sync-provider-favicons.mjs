@@ -9,6 +9,7 @@ const consolidationUrl = new URL('../config/provider-consolidation.json', import
 const generatedModuleUrl = new URL('../src/generated/providerFavicons.ts', import.meta.url);
 const manifestUrl = new URL('../public/assets/logos/provider-favicon-sources.json', import.meta.url);
 const MAX_ICON_BYTES = 64 * 1024;
+const MAX_OFFICIAL_ASSET_BYTES = 512 * 1024;
 const CONCURRENCY = 6;
 
 async function readJson(url) {
@@ -28,18 +29,18 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 8_000) {
   });
 }
 
-async function fetchIconCandidate(candidate) {
+async function fetchIconCandidate(candidate, maxBytes = MAX_ICON_BYTES) {
   const response = await fetchWithTimeout(candidate.url, {
     accept: 'image/avif,image/webp,image/svg+xml,image/png,image/*,*/*;q=0.8'
   });
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
   const declaredLength = Number(response.headers.get('content-length') || 0);
-  if (declaredLength > MAX_ICON_BYTES) throw new Error(`asset exceeds ${MAX_ICON_BYTES} bytes`);
+  if (declaredLength > maxBytes) throw new Error(`asset exceeds ${maxBytes} bytes`);
   const bytes = Buffer.from(await response.arrayBuffer());
-  if (!bytes.length || bytes.length > MAX_ICON_BYTES) throw new Error(`asset size ${bytes.length} is invalid`);
+  if (!bytes.length || bytes.length > maxBytes) throw new Error(`asset size ${bytes.length} is invalid`);
   const normalized = normalizeFavicon(bytes, response.headers.get('content-type') || '');
   if (!normalized) throw new Error('unsupported favicon format');
-  if (normalized.bytes.length > MAX_ICON_BYTES) throw new Error(`normalized asset exceeds ${MAX_ICON_BYTES} bytes`);
+  if (normalized.bytes.length > maxBytes) throw new Error(`normalized asset exceeds ${maxBytes} bytes`);
   return {
     bytes: normalized.bytes,
     mime: normalized.mime,
@@ -91,7 +92,7 @@ async function resolveProviderFavicon(provider, websiteOverride, assetOverride) 
 
   if (assetOverride?.url) {
     try {
-      const icon = await fetchIconCandidate({ url: assetOverride.url });
+      const icon = await fetchIconCandidate({ url: assetOverride.url }, MAX_OFFICIAL_ASSET_BYTES);
       return recordForIcon(
         provider,
         websiteOverride || statusPageUrl,
@@ -101,7 +102,7 @@ async function resolveProviderFavicon(provider, websiteOverride, assetOverride) 
       );
     }
     catch (error) {
-      attempts.push(`${assetOverride.url}: ${error instanceof Error ? error.message : String(error)}`);
+      attempts.push(`official asset ${assetOverride.url}: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -122,7 +123,11 @@ async function resolveProviderFavicon(provider, websiteOverride, assetOverride) 
     const resolved = await resolvePageFavicon(provider, page.pageUrl, page.sourceKind, attempts);
     if (resolved) return resolved;
   }
-  throw new Error(attempts.slice(-5).join(' | ') || 'no favicon candidates');
+
+  const firstAttempt = attempts[0];
+  const tail = attempts.slice(-4);
+  const detail = [firstAttempt, ...tail].filter((value, index, values) => value && values.indexOf(value) === index);
+  throw new Error(detail.join(' | ') || 'no favicon candidates');
 }
 
 async function mapConcurrent(items, worker, concurrency) {
