@@ -49,12 +49,37 @@ test('statuspage API URLs resolve to public pages and feeds', () => {
   ]);
 });
 
-test('Microsoft 365 uses the free official public RSS feed', () => {
+test('Microsoft 365 uses the official public RSS only as an incident signal', () => {
   const source = resolvePublicSource({ id: 'microsoft365', url: 'https://invalid.example', sourceType: 'limited-microsoft' });
   assert.equal(source.mode, 'feed');
   assert.equal(source.url, 'https://status.cloud.microsoft/api/feed/mac');
   assert.equal(source.allowEmpty, true);
-  assert.equal(source.confirmHealthyFromFeed, true);
+  assert.equal(source.confirmHealthyFromFeed, false);
+  assert.equal(source.sourceName, 'Microsoft 365 public incident RSS');
+});
+
+test('clear Microsoft public feed remains available without asserting Microsoft 365 workload health', async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => response('<?xml version="1.0"?><rss><channel></channel></rss>', 200, 'application/rss+xml');
+  try {
+    const provider = {
+      id: 'microsoft365',
+      name: 'Microsoft 365 public status',
+      category: 'Cloud',
+      priority: 100,
+      sourceType: 'limited-microsoft',
+      url: 'https://status.cloud.microsoft/api/'
+    };
+    const result = await parsePublicFeed(provider, resolvePublicSource(provider));
+    assert.equal(result.source_state, 'available');
+    assert.equal(result.service_state, 'unknown');
+    assert.equal(result.color, 'blue');
+    assert.equal(result.ok, true);
+    assert.match(result.status, /incident feed is readable; no active incident was found/i);
+    assert.match(result.message, /does not confirm current component health/i);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test('Entra uses the current Azure public status table instead of the latency-prone RSS feed', () => {
@@ -153,6 +178,7 @@ test('legacy Entra RSS parsing remains scoped when exercised explicitly', async 
 
 test('verified public source overrides use current first-party sources', () => {
   const expectedModes = {
+    microsoft365: 'feed',
     ringcentral: 'status-html',
     sophos: 'status-html',
     'bitdefender-gravityzone': 'status-html',
@@ -181,6 +207,7 @@ test('verified public source overrides use current first-party sources', () => {
     assert.equal(source.mode, expectedMode);
     assert.match(source.url, /^https:\/\//);
   }
+  assert.equal(additionalPublicOverrides.microsoft365.confirmHealthyFromFeed, false);
   assert.equal(additionalPublicOverrides.kaseya.regionScope, 'us');
   assert.equal(additionalPublicOverrides.okta.regionScope, 'us');
   assert.equal(additionalPublicOverrides.crowdstrike.healthAccess, 'authenticated');
