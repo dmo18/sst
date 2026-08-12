@@ -1,5 +1,5 @@
 {
-  "minimumResolved": 24,
+  "minimumResolved": 28,
   "providers": [
     "sentinelone",
     "sophos",
@@ -36,5 +36,17 @@
     "monday-com",
     "docusign",
     "nuso"
-  ]
+  ],
+  "websiteOverrides": {
+    "sophos": "https://www.sophos.com/",
+    "halopsa": "https://usehalo.com/halopsa/",
+    "kaseya": "https://www.kaseya.com/",
+    "superops": "https://superops.com/",
+    "proofpoint": "https://www.proofpoint.com/",
+    "mimecast": "https://www.mimecast.com/",
+    "cove-data-protection": "https://www.n-able.com/products/cove-data-protection",
+    "ultradns": "https://docs.ultradns.com/Content/",
+    "salesforce": "https://www.salesforce.com/",
+    "docusign": "https://www.docusign.com/"
+  }
 }
