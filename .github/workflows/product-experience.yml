@@ -27,6 +27,21 @@ jobs:
           node-version: "22"
           cache: npm
       - run: npm ci
+      - name: Verify deployed browser live status truth
+        env:
+          PAGE_URL: https://dmo18.github.io/sst/
+        run: |
+          BROWSER="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
+          test -n "$BROWSER"
+          export BROWSER
+          TARGET_URL="${PAGE_URL}?liveTruthProbe=${GITHUB_RUN_ID}"
+          set -o pipefail
+          node scripts/verify-live-status-truth.mjs "$TARGET_URL" /tmp/operator-live-truth.html 2>&1 | tee /tmp/live-status-truth-verifier.log
+          rm -rf /tmp/live-truth-* || true
+          if find /tmp -maxdepth 1 -name 'live-truth-*' -print -quit | grep -q .; then
+            echo "Live status truth browser profile cleanup did not complete." >&2
+            exit 1
+          fi
       - name: Verify deployed premium operator experience
         env:
           PAGE_URL: https://dmo18.github.io/sst/
@@ -95,6 +110,7 @@ jobs:
         with:
           name: product-experience-${{ github.event.workflow_run.id || github.run_id }}
           path: |
+            /tmp/operator-live-truth.html
             /tmp/operator-experience.html
             /tmp/operator-experience.png
             /tmp/operator-command.png
@@ -107,6 +123,7 @@ jobs:
             /tmp/operator-m365-mobile.png
             /tmp/operator-providers.png
             /tmp/operator-providers-mobile.png
+            /tmp/live-status-truth-verifier.log
             /tmp/operator-experience-verifier.log
             /tmp/product-depth-verifier.log
             /tmp/microsoft365-verifier.log
