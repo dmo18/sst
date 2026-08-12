@@ -16,6 +16,7 @@ const NON_US_GCP_REGION = /\b(?:asia|australia|europe|southamerica|me|africa)-[a
 const US_AZURE_REGION = /\b(?:azure[- _]?)?(?:centralus|eastus2?|westus2?|westus3|northcentralus|southcentralus|westcentralus)\b/i;
 const NON_US_AZURE_REGION = /\bazure[- _]?(?:australia|brazil|canada|centralindia|eastasia|france|germany|japan|korea|northcentralindia|northeurope|norway|qatar|southafrica|southcentralindia|southeastasia|sweden|switzerland|uae|uksouth|ukwest|westeurope|westindia|poland|italy|israel|mexico|newzealand|spain|chile)[a-z0-9-]*\b/i;
 const NON_US_VENDOR_CELL = /\b(?:aue|gbe|cae|de|eu|uk|ap|sg|jp)\d+(?:[-_a-z0-9]*)\b/i;
+const NON_US_VENDOR_REGION = /\bCA East(?:\s+(?:Region|Core Services))?\b/i;
 
 function popLocationScope(value) {
   const text = clean(value);
@@ -40,7 +41,7 @@ export function hasExplicitUsScope(value) {
 export function hasExplicitNonUsScope(value) {
   const text = clean(value);
   if (!text) return false;
-  if (NON_US_NAMED_SCOPE.test(text) || NON_US_AWS_REGION.test(text) || NON_US_GCP_REGION.test(text) || NON_US_AZURE_REGION.test(text) || NON_US_VENDOR_CELL.test(text)) return true;
+  if (NON_US_NAMED_SCOPE.test(text) || NON_US_AWS_REGION.test(text) || NON_US_GCP_REGION.test(text) || NON_US_AZURE_REGION.test(text) || NON_US_VENDOR_CELL.test(text) || NON_US_VENDOR_REGION.test(text)) return true;
   return popLocationScope(text) === 'non-us';
 }
 
