@@ -67,7 +67,7 @@ export function App(): JSX.Element {
   return (
     <main className="app-frame">
       {route.wallboardMode
-        ? <WallboardV2 model={model} lifecycle={state} now={now} browserCheckedAt={lastBrowserCheckAt} alertWindowMs={route.alertWindowMs} onExit={exitWallboard} />
+        ? <WallboardV2 model={model} lifecycle={state} now={now} browserCheckedAt={lastBrowserCheckAt} browserRefreshMs={browserRefreshMs} alertWindowMs={route.alertWindowMs} onExit={exitWallboard} />
         : <>
             <IssueConsole model={model} lifecycle={state} onRefresh={requestRefresh} browserCheckedAt={lastBrowserCheckAt} browserRefreshMs={browserRefreshMs} />
             <OperationsIntelligencePanel model={model} />
