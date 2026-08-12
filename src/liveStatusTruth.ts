@@ -47,14 +47,6 @@ function text(value: unknown): string {
   return typeof value === 'string' ? value.replace(/\s+/g, ' ').trim() : '';
 }
 
-function serviceRank(value: ServiceState): number {
-  return value === 'major' ? 4 : value === 'degraded' ? 3 : value === 'unknown' ? 2 : 1;
-}
-
-function maxServiceState(...values: ServiceState[]): ServiceState {
-  return [...values].sort((a, b) => serviceRank(b) - serviceRank(a))[0] || 'unknown';
-}
-
 function incidentServiceState(incident: StatuspageIncident): Exclude<ServiceState, 'operational' | 'unknown'> {
   const impact = text(incident.impact).toLowerCase();
   if (impact === 'critical' || impact === 'major') return 'major';
@@ -163,10 +155,11 @@ function liveAttention(provider: ProviderStatus, state: ServiceState): Attention
 function applyObservation(provider: ProviderStatus, observation: LiveProviderObservation): ProviderStatus {
   const state = observation.serviceState;
   const active = observation.incidents.length;
+  const signalCount = active + observation.problemComponentCount;
   const status = state === 'major'
-    ? `${active || observation.problemComponentCount} major live official Statuspage signal${active + observation.problemComponentCount === 1 ? '' : 's'}`
+    ? `${signalCount} major live official Statuspage signal${signalCount === 1 ? '' : 's'}`
     : state === 'degraded'
-      ? `${active || observation.problemComponentCount} degraded live official Statuspage signal${active + observation.problemComponentCount === 1 ? '' : 's'}`
+      ? `${signalCount} degraded live official Statuspage signal${signalCount === 1 ? '' : 's'}`
       : state === 'operational'
         ? 'Live official Statuspage reports operational'
         : 'Live official Statuspage state is inconclusive';
@@ -261,22 +254,31 @@ function liveTargets(payload: StatusPayload): ProviderStatus[] {
   );
 }
 
-async function fetchObservation(provider: ProviderStatus, signal: AbortSignal, checkedAt: string): Promise<LiveProviderObservation> {
+async function fetchObservation(provider: ProviderStatus, parentSignal: AbortSignal, checkedAt: string): Promise<LiveProviderObservation> {
   const url = new URL(provider.source);
   url.searchParams.set('browserTruth', String(Date.now()));
-  const timeout = AbortSignal.timeout(LIVE_TIMEOUT_MS);
-  const combined = AbortSignal.any([signal, timeout]);
-  const response = await fetch(url, {
-    cache: 'no-store',
-    credentials: 'omit',
-    mode: 'cors',
-    referrerPolicy: 'no-referrer',
-    headers: { accept: 'application/json' },
-    signal: combined
-  });
-  if (!response.ok) throw new Error(`HTTP ${response.status}`);
-  const body = await response.json();
-  return parseBrowserStatuspage(provider, body, checkedAt);
+  const controller = new AbortController();
+  const abortFromParent = () => controller.abort();
+  parentSignal.addEventListener('abort', abortFromParent, { once: true });
+  const timeout = window.setTimeout(() => controller.abort(), LIVE_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(url, {
+      cache: 'no-store',
+      credentials: 'omit',
+      mode: 'cors',
+      referrerPolicy: 'no-referrer',
+      headers: { accept: 'application/json' },
+      signal: controller.signal
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const body = await response.json();
+    return parseBrowserStatuspage(provider, body, checkedAt);
+  }
+  finally {
+    window.clearTimeout(timeout);
+    parentSignal.removeEventListener('abort', abortFromParent);
+  }
 }
 
 async function mapConcurrent<T, R>(items: T[], limit: number, worker: (item: T) => Promise<R>): Promise<PromiseSettledResult<R>[]> {
