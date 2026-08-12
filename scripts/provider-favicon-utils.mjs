@@ -107,12 +107,14 @@ export function normalizeFavicon(buffer, contentType = '') {
   if (type === 'image/x-icon' || type === 'image/vnd.microsoft.icon' || startsWith(buffer, [0x00, 0x00, 0x01, 0x00])) {
     const png = pngFromIco(buffer);
     if (png) return { bytes: png, mime: 'image/png' };
+    if (startsWith(buffer, [0x00, 0x00, 0x01, 0x00])) return { bytes: buffer, mime: 'image/x-icon' };
   }
   return null;
 }
 
-export function faviconWrapperDataUri(bytes, mime) {
+export function faviconWrapperDataUri(bytes, mime, options = {}) {
+  const background = options.background || '#f8fafc';
   const nested = `data:${mime};base64,${Buffer.from(bytes).toString('base64')}`;
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img"><rect width="64" height="64" rx="14" fill="#f8fafc"/><rect x="2" y="2" width="60" height="60" rx="12" fill="none" stroke="#cbd5e1" stroke-width="2"/><image x="7" y="7" width="50" height="50" preserveAspectRatio="xMidYMid meet" href="${nested}"/></svg>`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img"><rect width="64" height="64" rx="14" fill="${background}"/><rect x="2" y="2" width="60" height="60" rx="12" fill="none" stroke="#cbd5e1" stroke-width="2"/><image x="7" y="7" width="50" height="50" preserveAspectRatio="xMidYMid meet" href="${nested}"/></svg>`;
   return `data:image/svg+xml,${encodeURIComponent(svg)}`;
 }
