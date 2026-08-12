@@ -70,6 +70,8 @@ test('clear Microsoft public incident source renders informational instead of wo
   assert.match(component, /not workload health/);
   assert.match(component, /data-source-role="public-incident-fallback"/);
   assert.match(component, /data-source-role="azure-public-entra"/);
+  assert.match(component, /data-source-state=\{snapshot\.microsoft365\?\.sourceState \|\| 'unavailable'\}/);
+  assert.match(component, /data-source-state=\{snapshot\.entra\?\.sourceState \|\| 'unavailable'\}/);
 });
 
 test('Microsoft public incident scope maps only to explicitly named workloads', async () => {
@@ -142,6 +144,8 @@ test('post-deploy evidence verifies Microsoft workload truth on desktop and mobi
   assert.match(workflow, /operator-m365-mobile\.png/);
   assert.match(workflow, /microsoft365-verifier\.log/);
   assert.match(verifier, /data-m365-critical-suite/);
+  assert.match(verifier, /data-source-state/);
+  assert.match(verifier, /card\.sourceState === 'available'/);
   assert.match(verifier, /facetCount !== 10/);
   assert.match(verifier, /tenant-authoritative/i);
   assert.match(verifier, /public-incident-fallback/);
