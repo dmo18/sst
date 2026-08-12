@@ -5,10 +5,28 @@
   background: linear-gradient(180deg, rgba(15, 24, 38, .72), rgba(7, 12, 21, .68));
 }
 
+.m365-source-card.is-informational {
+  border-color: rgba(83, 159, 232, .2);
+  box-shadow: inset 3px 0 0 rgba(83, 159, 232, .62);
+}
+
+.m365-launcher.is-informational em {
+  color: #8fc7ff;
+}
+
 .m365-service-card.is-unknown,
 .m365-source-card.is-unknown {
   border-color: rgba(132, 145, 166, .18);
   box-shadow: inset 3px 0 0 rgba(132, 145, 166, .42);
+}
+
+.m365-service-card[data-health-authority="tenant-service-health"] header em {
+  color: #7f9bc1;
+}
+
+.m365-source-card[data-source-role="public-incident-fallback"] strong,
+.m365-source-card[data-source-role="azure-public-entra"] strong {
+  color: #edf5ff;
 }
 
 .m365-source-card[data-evidence-tone="watch"] small,
@@ -22,7 +40,7 @@
 }
 
 .m365-rail section.is-clear {
-  border-color: rgba(72, 200, 153, .16);
+  border-color: rgba(83, 159, 232, .16);
 }
 
 .m365-rail section.is-active {

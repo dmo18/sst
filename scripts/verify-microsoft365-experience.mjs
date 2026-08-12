@@ -38,24 +38,29 @@ function sourceCardState(html, providerId) {
   return {
     className: /class="([^"]*)"/i.exec(attributes)?.[1] || '',
     serviceState: /data-service-state="([^"]*)"/i.exec(attributes)?.[1] || '',
-    evidenceTone: /data-evidence-tone="([^"]*)"/i.exec(attributes)?.[1] || ''
+    evidenceTone: /data-evidence-tone="([^"]*)"/i.exec(attributes)?.[1] || '',
+    sourceRole: /data-source-role="([^"]*)"/i.exec(attributes)?.[1] || ''
   };
 }
 
-function assertServiceTone(providerId, card) {
+function assertPublicSignalTone(providerId, card) {
   const expected = card.serviceState === 'major'
     ? 'is-critical'
     : card.serviceState === 'degraded'
       ? 'is-warning'
       : card.serviceState === 'operational'
-        ? 'is-positive'
+        ? 'is-informational'
         : 'is-unknown';
   if (!card.className.split(/\s+/).includes(expected)) {
-    throw new Error(`${providerId} service state ${card.serviceState || 'missing'} rendered ${card.className || 'no class'} instead of ${expected}; evidence=${card.evidenceTone || 'missing'}.`);
+    throw new Error(`${providerId} public signal state ${card.serviceState || 'missing'} rendered ${card.className || 'no class'} instead of ${expected}; evidence=${card.evidenceTone || 'missing'}.`);
   }
-  if (card.serviceState === 'operational' && card.className.includes('is-warning')) {
-    throw new Error(`${providerId} operational service was promoted to a warning by evidence state.`);
+  if (card.serviceState === 'operational' && card.className.includes('is-positive')) {
+    throw new Error(`${providerId} clear public signal rendered as positive workload health.`);
   }
+}
+
+function countTenantAuthoritativeFacets(html) {
+  return (html.match(/<article\b[^>]*data-m365-service="[^"]+"[^>]*data-health-authority="tenant-service-health"/gi) || []).length;
 }
 
 try {
@@ -63,8 +68,12 @@ try {
   const html = String(domResult.stdout || '');
   for (const required of [
     'data-m365-critical-suite="open"',
+    'Microsoft workload truth',
     'Microsoft 365 coverage',
-    'Microsoft 365 broad public signal',
+    'Public incident fallback',
+    'Azure public Entra signal',
+    'Tenant workload authority',
+    'Microsoft 365 Service Health',
     'Microsoft 365 suite',
     'Exchange Online',
     'Microsoft Teams',
@@ -75,30 +84,42 @@ try {
     'Microsoft 365 Apps',
     'Microsoft Defender for Microsoft 365',
     'Microsoft Power Platform',
-    'Public does not mean tenant-complete',
-    'Service truth and evidence quality are deliberately separate',
+    'Public incident feeds are not workload health',
+    'A clear public feed never green-lights the whole Microsoft estate',
+    'Tenant health + scoped public incidents',
+    'Health authority: tenant Microsoft 365 Service Health',
     'ServiceHealth.Read.All',
     '/admin/serviceAnnouncement/healthOverviews',
     '/admin/serviceAnnouncement/issues',
     'data-m365-current-incidents=',
-    'data-evidence-tone='
+    'data-evidence-tone=',
+    'data-public-incident-count=',
+    'data-health-authority="tenant-service-health"'
   ]) {
     if (!html.includes(required)) throw new Error(`Microsoft 365 deployed surface is missing ${JSON.stringify(required)}.`);
   }
+
   const facetCount = (html.match(/data-m365-service=/g) || []).length;
   if (facetCount !== 10) throw new Error(`Microsoft 365 deployed surface expected 10 service facets, found ${facetCount}.`);
+  const tenantAuthoritativeCount = countTenantAuthoritativeFacets(html);
+  if (tenantAuthoritativeCount !== 10) {
+    throw new Error(`Microsoft 365 deployed surface expected 10 tenant-authoritative workload facets, found ${tenantAuthoritativeCount}.`);
+  }
   if (/Status intelligence unavailable/i.test(html)) throw new Error('Microsoft 365 verification rendered the unavailable state.');
 
   const microsoft = sourceCardState(html, 'microsoft365');
   const entra = sourceCardState(html, 'entra');
-  assertServiceTone('microsoft365', microsoft);
-  assertServiceTone('entra', entra);
+  assertPublicSignalTone('microsoft365', microsoft);
+  assertPublicSignalTone('entra', entra);
 
-  if (microsoft.serviceState === 'operational') {
-    const umbrellaInformationalCount = (html.match(/m365-service-card is-informational/g) || []).length;
-    if (umbrellaInformationalCount < 8) {
-      throw new Error(`Microsoft broad source is operational but only ${umbrellaInformationalCount} umbrella facets preserve the non-granular informational boundary.`);
-    }
+  if (microsoft.sourceRole !== 'public-incident-fallback') {
+    throw new Error(`Microsoft 365 public source role is ${microsoft.sourceRole || 'missing'} instead of public-incident-fallback.`);
+  }
+  if (entra.sourceRole !== 'azure-public-entra') {
+    throw new Error(`Entra public source role is ${entra.sourceRole || 'missing'} instead of azure-public-entra.`);
+  }
+  if (microsoft.serviceState === 'operational' && /Microsoft 365 broad public signal|operational service ·/i.test(html)) {
+    throw new Error('Clear Microsoft public status is still presented as umbrella operational service health.');
   }
 
   run([...common, '--window-size=1440,960', `--screenshot=${desktopScreenshot}`, url.href], 'Microsoft 365 desktop screenshot');
@@ -108,9 +129,9 @@ try {
   const mobileBytes = fs.statSync(mobileScreenshot).size;
   if (desktopBytes <= 10_000 || mobileBytes <= 10_000) throw new Error(`Microsoft 365 screenshots are unexpectedly small: desktop=${desktopBytes}, mobile=${mobileBytes}.`);
 
-  console.log(`MICROSOFT365_CRITICAL facets=${facetCount} desktop=${desktopBytes} mobile=${mobileBytes}`);
-  console.log(`MICROSOFT365_SERVICE_TRUTH microsoft365=${microsoft.serviceState}/${microsoft.className} evidence=${microsoft.evidenceTone} entra=${entra.serviceState}/${entra.className} evidence=${entra.evidenceTone}`);
-  console.log('MICROSOFT365_EVIDENCE public-broad + dedicated-entra; tenant-detail=private-graph-required; evidence-health-does-not-set-service-tone');
+  console.log(`MICROSOFT365_CRITICAL facets=${facetCount} tenant_authoritative=${tenantAuthoritativeCount} desktop=${desktopBytes} mobile=${mobileBytes}`);
+  console.log(`MICROSOFT365_PUBLIC_SIGNAL microsoft365=${microsoft.serviceState}/${microsoft.className} role=${microsoft.sourceRole} evidence=${microsoft.evidenceTone} entra=${entra.serviceState}/${entra.className} role=${entra.sourceRole} evidence=${entra.evidenceTone}`);
+  console.log('MICROSOFT365_EVIDENCE public-incidents=supplemental; workload-health=tenant-authoritative; clear-public-signal-does-not-greenlight-workloads');
 }
 finally {
   try { fs.rmSync(profile, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 }); } catch { }
