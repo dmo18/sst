@@ -109,7 +109,7 @@ function liveIncident(provider: ProviderStatus, incident: StatuspageIncident, ch
     time: startedAt,
     rawTime: startedAt,
     status: status || 'active',
-    color: serviceState === 'major' ? 'red' : 'yellow',
+    color: serviceState === 'major' ? 'red' : 'amber',
     service_state: serviceState,
     attention: serviceState === 'major' ? 'critical' : 'action',
     priority: provider.priority,
@@ -168,7 +168,7 @@ function applyObservation(provider: ProviderStatus, observation: LiveProviderObs
     status,
     message: active ? observation.incidents[0]?.note || status : status,
     service_state: state,
-    color: state === 'major' ? 'red' : state === 'degraded' ? 'yellow' : state === 'operational' ? 'green' : 'blue',
+    color: state === 'major' ? 'red' : state === 'degraded' ? 'amber' : state === 'operational' ? 'green' : 'blue',
     attention: liveAttention(provider, state),
     ok: state === 'operational',
     truth_basis: state === 'major' || state === 'degraded'
