@@ -1,6 +1,8 @@
 import type { DiagnosticSource, IssueConsoleModel } from './statusViewModel';
 
 export type Microsoft365CoverageMode = 'dedicated-public' | 'public-umbrella-plus-tenant';
+export type Microsoft365ServiceTone = 'critical' | 'warning' | 'positive' | 'informational' | 'unknown';
+export type Microsoft365EvidenceTone = 'healthy' | 'watch' | 'blind' | 'unknown';
 
 export interface Microsoft365ServiceFacet {
   id: string;
@@ -8,6 +10,13 @@ export interface Microsoft365ServiceFacet {
   providerId: 'microsoft365' | 'entra';
   coverageMode: Microsoft365CoverageMode;
   operatorImpact: string;
+}
+
+export interface Microsoft365FacetAssessment {
+  serviceTone: Microsoft365ServiceTone;
+  serviceLabel: string;
+  evidenceTone: Microsoft365EvidenceTone;
+  evidenceLabel: string;
 }
 
 export const MICROSOFT_365_CRITICAL_SERVICES: readonly Microsoft365ServiceFacet[] = [
@@ -109,10 +118,90 @@ export function microsoft365CoverageSnapshot(model: IssueConsoleModel | null): M
   };
 }
 
-export function microsoft365PublicTone(source: DiagnosticSource | null): 'critical' | 'warning' | 'positive' | 'unknown' {
+export function microsoft365ServiceTone(source: DiagnosticSource | null): Microsoft365ServiceTone {
   if (!source) return 'unknown';
-  if (source.serviceState === 'major' || source.sourceHealth === 'blind') return 'critical';
-  if (source.serviceState === 'degraded' || source.sourceHealth === 'watch' || source.sourceState !== 'available') return 'warning';
-  if (source.serviceState === 'operational' && source.sourceHealth === 'healthy') return 'positive';
+  if (source.serviceState === 'major') return 'critical';
+  if (source.serviceState === 'degraded') return 'warning';
+  if (source.serviceState === 'operational') return 'positive';
   return 'unknown';
 }
+
+export function microsoft365EvidenceTone(source: DiagnosticSource | null): Microsoft365EvidenceTone {
+  if (!source) return 'unknown';
+  if (source.sourceHealth === 'blind' || source.sourceState === 'unavailable') return 'blind';
+  if (source.sourceHealth === 'watch' || source.sourceState !== 'available') return 'watch';
+  if (source.sourceHealth === 'healthy' && source.sourceState === 'available') return 'healthy';
+  return 'unknown';
+}
+
+export function microsoft365EvidenceLabel(source: DiagnosticSource | null): string {
+  const tone = microsoft365EvidenceTone(source);
+  if (tone === 'healthy') return 'high-confidence current public evidence';
+  if (tone === 'watch') return 'current public evidence with limited confidence';
+  if (tone === 'blind') return 'public evidence unavailable';
+  return 'public evidence state unknown';
+}
+
+export function microsoft365FacetAssessment(
+  service: Microsoft365ServiceFacet,
+  snapshot: Microsoft365CoverageSnapshot
+): Microsoft365FacetAssessment {
+  const source = service.providerId === 'entra' ? snapshot.entra : snapshot.microsoft365;
+  const sourceTone = microsoft365ServiceTone(source);
+  const evidenceTone = microsoft365EvidenceTone(source);
+  const evidenceLabel = microsoft365EvidenceLabel(source);
+
+  if (!source) {
+    return {
+      serviceTone: 'unknown',
+      serviceLabel: 'public signal unavailable',
+      evidenceTone,
+      evidenceLabel
+    };
+  }
+
+  if (service.coverageMode === 'dedicated-public') {
+    return {
+      serviceTone: sourceTone,
+      serviceLabel: source.serviceState === 'operational'
+        ? 'dedicated public signal reports operational'
+        : source.serviceState === 'major'
+          ? 'dedicated public signal reports major impact'
+          : source.serviceState === 'degraded'
+            ? 'dedicated public signal reports degradation'
+            : 'dedicated public signal is inconclusive',
+      evidenceTone,
+      evidenceLabel
+    };
+  }
+
+  if (source.serviceState === 'major' || source.serviceState === 'degraded') {
+    return {
+      serviceTone: sourceTone,
+      serviceLabel: 'broad Microsoft public incident is active; facet scope requires incident or tenant detail',
+      evidenceTone,
+      evidenceLabel
+    };
+  }
+
+  if (service.id === 'microsoft-365-suite' && source.serviceState === 'operational') {
+    return {
+      serviceTone: 'positive',
+      serviceLabel: 'no broad Microsoft 365 public incident is active',
+      evidenceTone,
+      evidenceLabel
+    };
+  }
+
+  return {
+    serviceTone: 'informational',
+    serviceLabel: source.serviceState === 'operational'
+      ? 'no broad Microsoft incident is active; this individual service is not publicly verified'
+      : 'broad public state is inconclusive; tenant service health remains authoritative',
+    evidenceTone,
+    evidenceLabel
+  };
+}
+
+// Compatibility alias retained for existing callers while service truth is now explicitly separated from evidence health.
+export const microsoft365PublicTone = microsoft365ServiceTone;
