@@ -47,6 +47,20 @@ async function fetchIconCandidate(candidate) {
   };
 }
 
+function recordForIcon(provider, pageUrl, sourceKind, icon, background) {
+  return {
+    providerId: provider.id,
+    providerName: provider.name,
+    pageUrl,
+    sourceKind,
+    iconUrl: icon.finalUrl,
+    mime: icon.mime,
+    bytes: icon.bytes.length,
+    sha256: crypto.createHash('sha256').update(icon.bytes).digest('hex'),
+    dataUri: faviconWrapperDataUri(icon.bytes, icon.mime, { background })
+  };
+}
+
 async function resolvePageFavicon(provider, pageUrl, sourceKind, attempts) {
   let html = '';
   try {
@@ -62,17 +76,7 @@ async function resolvePageFavicon(provider, pageUrl, sourceKind, attempts) {
   for (const candidate of faviconCandidates(html, pageUrl).slice(0, 8)) {
     try {
       const icon = await fetchIconCandidate(candidate);
-      return {
-        providerId: provider.id,
-        providerName: provider.name,
-        pageUrl,
-        sourceKind,
-        iconUrl: icon.finalUrl,
-        mime: icon.mime,
-        bytes: icon.bytes.length,
-        sha256: crypto.createHash('sha256').update(icon.bytes).digest('hex'),
-        dataUri: faviconWrapperDataUri(icon.bytes, icon.mime)
-      };
+      return recordForIcon(provider, pageUrl, sourceKind, icon);
     }
     catch (error) {
       attempts.push(`${candidate.url}: ${error instanceof Error ? error.message : String(error)}`);
@@ -81,8 +85,26 @@ async function resolvePageFavicon(provider, pageUrl, sourceKind, attempts) {
   return null;
 }
 
-async function resolveProviderFavicon(provider, websiteOverride) {
+async function resolveProviderFavicon(provider, websiteOverride, assetOverride) {
   const statusPageUrl = providerPageUrl(provider.url);
+  const attempts = [];
+
+  if (assetOverride?.url) {
+    try {
+      const icon = await fetchIconCandidate({ url: assetOverride.url });
+      return recordForIcon(
+        provider,
+        websiteOverride || statusPageUrl,
+        'official-asset',
+        icon,
+        assetOverride.background
+      );
+    }
+    catch (error) {
+      attempts.push(`${assetOverride.url}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
   const pages = [];
   if (websiteOverride) pages.push({ pageUrl: websiteOverride, sourceKind: 'vendor-website' });
   pages.push({ pageUrl: statusPageUrl, sourceKind: 'status-site' });
@@ -96,7 +118,6 @@ async function resolveProviderFavicon(provider, websiteOverride) {
     uniquePages.push({ ...page, pageUrl: href });
   }
 
-  const attempts = [];
   for (const page of uniquePages) {
     const resolved = await resolvePageFavicon(provider, page.pageUrl, page.sourceKind, attempts);
     if (resolved) return resolved;
@@ -132,20 +153,23 @@ const consolidation = await readJson(consolidationUrl);
 const canonical = canonicalizeProviderCatalog(rawProviders, consolidation);
 const byId = new Map(canonical.map(provider => [provider.id, provider]));
 const websiteOverrides = settings.websiteOverrides || {};
+const assetOverrides = settings.assetOverrides || {};
 const selected = settings.providers.map(id => {
   const provider = byId.get(id);
   if (!provider) throw new Error(`Configured favicon provider is not canonical: ${id}`);
   if (!provider.url) throw new Error(`Configured favicon provider has no official source URL: ${id}`);
   const websiteOverride = websiteOverrides[id] || '';
+  const assetOverride = assetOverrides[id] || null;
   if (websiteOverride) new URL(websiteOverride);
-  return { provider, websiteOverride };
+  if (assetOverride?.url) new URL(assetOverride.url);
+  return { provider, websiteOverride, assetOverride };
 });
 
 const resolved = [];
 const failures = [];
-await mapConcurrent(selected, async ({ provider, websiteOverride }) => {
+await mapConcurrent(selected, async ({ provider, websiteOverride, assetOverride }) => {
   try {
-    const record = await resolveProviderFavicon(provider, websiteOverride);
+    const record = await resolveProviderFavicon(provider, websiteOverride, assetOverride);
     resolved.push(record);
     console.log(`FAVICON_OK ${provider.id} ${record.sourceKind} ${record.mime} ${record.bytes} ${record.iconUrl}`);
   }
