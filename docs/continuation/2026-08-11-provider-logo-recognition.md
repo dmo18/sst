@@ -6,83 +6,118 @@ Baseline: `main` after render recovery merge `8cc2e21cd4cb0bf6dbe7a19e8b14509767
 
 ## Why this record exists
 
-Provider identity was visually improved in the earlier product-depth work, but 35 canonical providers still used generated recognition tiles made from letters such as `S1`, `CW`, `HALO`, and `NUSO`. Those tiles are deterministic and colorful, but they are not sufficiently recognizable for fast operator scanning.
+Provider identity was visually improved in the earlier product-depth work, but 35 canonical providers still used generated recognition tiles made from letters such as `S1`, `CW`, `HALO`, and `NUSO`. Those tiles were deterministic and colorful, but they were not sufficiently recognizable for fast operator scanning.
 
-The requested outcome is provider marks that resemble the real service logos and colors, with website favicons used as a practical source where a committed exact vector mark is not already available.
+The requested outcome is provider marks that resemble the real service logos and colors, with official website favicons used as a practical long-tail source where a committed exact vector mark is not already available.
 
-## Existing identity contract preserved
+## Identity contract preserved
 
 The implementation keeps the existing provider identity guarantees:
 
-1. Committed exact vector marks remain preferred where they already exist.
+1. Existing committed exact vector and native local marks remain preferred.
 2. The deployed browser does not load provider art from external domains at runtime.
-3. Provider identity remains available when a favicon cannot be resolved.
-4. NUSO remains a first-class canonical provider.
-5. The existing provider identity verifier continues to see embedded SVG identity assets and local exact-logo references.
+3. NUSO remains a first-class canonical provider.
+4. Existing provider identity verification continues to see local or embedded assets rather than third-party browser requests.
+5. The deterministic letter tile remains only as a defensive runtime decode fallback, not the normal presentation for the 35 targeted providers.
 
-## Implementation
+## Final source hierarchy
 
-### Build-time favicon acquisition
+The provider identity source order is:
 
-`config/provider-favicon-sources.json` lists the 35 canonical providers that previously depended on generated letter tiles. It also defines the minimum favicon resolution count required for a verified build and optional official vendor website overrides.
+1. Existing committed exact vector or native local mark.
+2. Explicit pinned artwork from an official vendor or official product documentation site.
+3. Favicon discovered from an explicit official vendor website override.
+4. Favicon discovered from the provider's configured official status-site origin.
+5. Deterministic provider-specific letter tile only if an already built identity unexpectedly cannot be decoded at runtime.
+
+The source configuration lives in `config/provider-favicon-sources.json`. It names the exact 35 providers that previously depended on generated letter tiles and requires all 35 to resolve during a verified application build.
+
+## Build-time implementation
 
 `scripts/sync-provider-favicons.mjs` runs as part of `npm run build:app` before Vite builds the application. For each configured provider it:
 
 1. Reads the canonical provider catalog after consolidation.
-2. Uses an explicit official vendor website first when the source configuration provides one.
-3. Falls back to the provider's official status-site origin derived from the configured public status source.
-4. Loads each candidate page when available and inspects standard `link rel="icon"` and Apple touch icon declarations.
-5. Falls back to conventional `/favicon.png`, `/favicon.ico`, and `/apple-touch-icon.png` paths for each page.
-6. Rejects oversized or unsupported image responses.
-7. Extracts embedded PNG images from modern ICO containers when necessary.
-8. Wraps the real favicon bytes in a local SVG data URI for consistent 40px provider rendering.
+2. Tries an explicit pinned official asset when one is configured.
+3. Tries an explicit official vendor website when one is configured.
+4. Falls back to the provider's official status-site origin derived from the configured public status source.
+5. Inspects standard favicon and Apple touch icon declarations and conventional favicon paths.
+6. Validates image media type and byte size.
+7. Supports PNG, SVG, JPEG, GIF, WEBP, modern ICO files with embedded PNG frames, and legacy ICO files.
+8. Wraps the accepted bytes in a local SVG data URI for consistent provider rendering.
 9. Generates `src/generated/providerFavicons.ts` for the release build.
-10. Writes `public/assets/logos/provider-favicon-sources.json` with source kind, source page, resolved icon URL, media type, size, and SHA-256 digest.
+10. Writes `public/assets/logos/provider-favicon-sources.json` with source kind, page, resolved asset URL, media type, size, and SHA-256 digest.
 
-The vendor website override exists for two reasons. Some official status sites block favicon requests or expose no usable icon, and some hosted status systems expose a generic platform favicon instead of the monitored vendor's visual identity. Vendor-site priority makes operator recognition the primary objective while retaining the official status page as a useful fallback.
+Discovered favicons remain capped at 64 KB. Explicitly pinned official assets use a separate 512 KB ceiling. This permits a documented vendor or product logo to be used without weakening the size limit applied to arbitrary favicon discovery.
 
-### Runtime behavior
+## Runtime behavior
 
-`src/providerIcon.tsx` checks the generated favicon map before falling back to the existing recognition tile. Favicon-backed providers keep the existing embedded SVG class contract so current render verification remains compatible.
+`src/providerIcon.tsx` checks the generated provider artwork map before falling back to the pre-existing recognition tile for the formerly generated provider set. Exact committed brand-mask and native assets continue through their existing paths.
 
-If a favicon image fails to decode, the component immediately falls back to the existing deterministic tile. No runtime network request is introduced.
+The favicon and official artwork bytes are already embedded in the built application. The browser does not contact the provider, a logo CDN, or a favicon service. If an embedded image unexpectedly cannot decode, the deterministic provider-specific tile is used as an emergency presentation fallback.
 
-## Verification strategy
+## Regression coverage
 
-The new `scripts/__tests__/provider-favicon-sync.test.js` covers:
+`scripts/__tests__/provider-favicon-sync.test.js` covers:
 
-1. Exact coverage of the 35 providers that previously used generated recognition brands.
-2. Presence of official website overrides for known missing or generic status-page favicon cases.
-3. Correct status-site origin derivation.
-4. Favicon link discovery and conventional fallback paths.
-5. Image normalization and SVG data URI wrapping.
-6. Provider UI preference for the build-generated favicon map.
-7. Vendor website priority with status-site fallback.
-8. Presence of the favicon sync step in the application build command.
+1. Exact coverage of all 35 formerly generated recognition brands.
+2. A required `minimumResolved` value of 35.
+3. Vendor website and official asset override configuration.
+4. Status-site origin derivation.
+5. Favicon link discovery and conventional fallback paths.
+6. Image normalization and SVG data URI wrapping.
+7. Legacy ICO support.
+8. Product-specific background plates for reversed artwork.
+9. Separate 64 KB discovered-icon and 512 KB pinned-official-asset ceilings.
+10. Provider UI preference for the build-generated artwork map.
+11. Presence of the artwork sync step in the application build command.
+12. No runtime external image URL added to `src/providerIcon.tsx`.
 
-The existing provider identity and NUSO verification remains in place. Because fetched favicons are embedded inside SVG data URIs, the browser verifier still sees embedded local provider identity rather than external image sources.
+The existing provider identity and NUSO verification remains in place.
 
-## CI evidence
+## CI investigation and refinements
 
-The first pull request build used status-site favicons only. All 333 tests, typecheck, production build, dependency audit, provider validation, and source quality checks passed. The real GitHub-hosted build resolved 26 of the 35 target providers, above the original minimum of 24.
+### Pass 1: status-site favicon discovery
 
-That run also exposed the quality gap that motivated the source refinement. Nine providers did not resolve from their status origins, and at least one hosted status site exposed generic platform artwork. The implementation was therefore tightened before merge rather than accepting the first green build.
+The first implementation used status-site favicons only. All repository gates were green and the GitHub-hosted build resolved 26 of the 35 target providers. Nine providers did not resolve, and at least one hosted status page exposed generic platform artwork rather than the monitored vendor's identity.
 
-The refined configuration prioritizes official vendor websites for Sophos, HaloPSA, Kaseya, SuperOps, Proofpoint, Mimecast, Cove Data Protection, UltraDNS, Salesforce, and DocuSign, then falls back to the status site. The release minimum is now 28 resolved favicon-backed providers. The next CI result is the merge gate for this refined policy.
+That result proved the build-time approach but was not visually strong enough to merge.
+
+### Pass 2: official vendor website priority
+
+Official vendor website overrides were added for known missing or generic hosted-status cases. The next GitHub-hosted build resolved 32 of 35 targets while the full test suite, typecheck, production build, provider validation, source quality checks, and dependency audit remained green.
+
+### Pass 3: legacy ICO and pinned product artwork
+
+Legacy ICO support restored Salesforce and similar vendor artwork. SuperOps and Cove Data Protection were moved to explicitly pinned official artwork so they did not depend on a generic hosted-status icon or missing website favicon. The resulting build resolved 34 of 35 targets and remained green. UltraDNS was the only unresolved provider.
+
+### Pass 4: all-provider release gate
+
+UltraDNS was given an explicit asset from its official documentation site and the release minimum was raised to 35 of 35. The first 35-of-35 run deliberately failed the build at 34 because the explicit UltraDNS documentation logo exceeded the general 64 KB favicon cap. All 335 tests and typecheck still passed. The failure confirmed the release gate prevents a normal letter tile from slipping through simply to obtain a green build.
+
+The implementation was then refined so trusted, explicitly configured official assets use a separate 512 KB maximum while discovered favicons stay at 64 KB. The next CI run is the final merge gate for the full 35-of-35 policy.
 
 ## Release gate
 
-A merge is acceptable only when all repository checks remain green and the GitHub-hosted application build resolves at least 28 of the 35 target providers. Do not weaken the runtime no-external-image contract to increase this number.
+Do not merge unless all repository checks are green and the GitHub-hosted application build reports:
 
-After deployment, inspect the provider desktop and mobile evidence. The success criterion is visual, not only numeric: providers that previously displayed letter tiles should show distinctive real favicon geometry and native brand colors wherever an official vendor or status site exposes usable artwork.
+`FAVICON_SYNC resolved=35 configured=35 minimum=35 failures=0`
+
+After deployment, run the existing premium product-experience workflow and inspect both provider desktop and mobile screenshots. Structural verification alone is not sufficient. The visual acceptance criterion is that the formerly generated providers display recognizable real geometry and brand color rather than ordinary initial tiles.
+
+## Bundle-size watchpoint
+
+Embedding provider artwork inside the JavaScript bundle increased the application asset to slightly above Vite's default 500 KB warning threshold during the intermediate builds. This is acceptable for the current correctness and CSP-preserving recovery, but it should not become the long-term storage strategy if additional provider artwork is added.
+
+The preferred follow-up is to emit generated artwork as local static files under the built application and keep only their local paths in the generated TypeScript manifest. That preserves the no-runtime-third-party contract while reducing JavaScript parse weight.
 
 ## Continuation point
 
 After this change is deployed and visually verified:
 
-1. Promote especially important providers from favicon recognition to pinned exact vector marks when official brand assets are available and licensing is clear.
-2. Keep official vendor website favicons as the preferred long-tail recognition layer when a committed vector is unavailable.
-3. Keep official status-site favicons as secondary fallback because they are often convenient but may be generic on hosted status platforms.
-4. Keep the generated letter tile only as the final error and unknown-provider fallback.
-5. Watch bundle size because embedded favicon data increases the application JavaScript payload. If it becomes material, move generated favicon wrappers to local static files without changing the no-runtime-external-image contract.
-6. Record future provider identity source changes in `public/assets/logos/BRAND-SOURCES.md` and the relevant continuation record.
+1. Record the final merge SHA, deployment run, provider verification run, and screenshot evidence in this continuation stream.
+2. Promote especially important providers from favicon recognition to pinned exact vector marks when official assets are available and licensing is clear.
+3. Keep pinned official assets and vendor website favicons as the preferred long-tail recognition layer when a committed vector is unavailable.
+4. Keep status-site favicons as a secondary fallback because hosted status platforms can expose generic artwork.
+5. Move generated artwork out of the JavaScript bundle into local static files if bundle growth continues.
+6. Keep the generated letter tile only as a runtime error and true unknown-provider fallback.
+7. Record future provider identity source changes in `public/assets/logos/BRAND-SOURCES.md` and the relevant continuation record.
