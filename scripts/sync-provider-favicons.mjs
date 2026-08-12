@@ -47,8 +47,7 @@ async function fetchIconCandidate(candidate) {
   };
 }
 
-async function resolveProviderFavicon(provider) {
-  const pageUrl = providerPageUrl(provider.url);
+async function resolvePageFavicon(provider, pageUrl, sourceKind, attempts) {
   let html = '';
   try {
     const response = await fetchWithTimeout(pageUrl, { accept: 'text/html,application/xhtml+xml' });
@@ -56,11 +55,10 @@ async function resolveProviderFavicon(provider) {
       html = await response.text();
     }
   }
-  catch {
-    // Standard favicon paths below still provide a useful fallback when the page is protected.
+  catch (error) {
+    attempts.push(`${pageUrl}: ${error instanceof Error ? error.message : String(error)}`);
   }
 
-  const attempts = [];
   for (const candidate of faviconCandidates(html, pageUrl).slice(0, 8)) {
     try {
       const icon = await fetchIconCandidate(candidate);
@@ -68,6 +66,7 @@ async function resolveProviderFavicon(provider) {
         providerId: provider.id,
         providerName: provider.name,
         pageUrl,
+        sourceKind,
         iconUrl: icon.finalUrl,
         mime: icon.mime,
         bytes: icon.bytes.length,
@@ -79,7 +78,30 @@ async function resolveProviderFavicon(provider) {
       attempts.push(`${candidate.url}: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
-  throw new Error(attempts.slice(-3).join(' | ') || 'no favicon candidates');
+  return null;
+}
+
+async function resolveProviderFavicon(provider, websiteOverride) {
+  const statusPageUrl = providerPageUrl(provider.url);
+  const pages = [];
+  if (websiteOverride) pages.push({ pageUrl: websiteOverride, sourceKind: 'vendor-website' });
+  pages.push({ pageUrl: statusPageUrl, sourceKind: 'status-site' });
+
+  const uniquePages = [];
+  const seen = new Set();
+  for (const page of pages) {
+    const href = new URL(page.pageUrl).href;
+    if (seen.has(href)) continue;
+    seen.add(href);
+    uniquePages.push({ ...page, pageUrl: href });
+  }
+
+  const attempts = [];
+  for (const page of uniquePages) {
+    const resolved = await resolvePageFavicon(provider, page.pageUrl, page.sourceKind, attempts);
+    if (resolved) return resolved;
+  }
+  throw new Error(attempts.slice(-5).join(' | ') || 'no favicon candidates');
 }
 
 async function mapConcurrent(items, worker, concurrency) {
@@ -109,20 +131,23 @@ const rawProviders = await readJson(providersUrl);
 const consolidation = await readJson(consolidationUrl);
 const canonical = canonicalizeProviderCatalog(rawProviders, consolidation);
 const byId = new Map(canonical.map(provider => [provider.id, provider]));
+const websiteOverrides = settings.websiteOverrides || {};
 const selected = settings.providers.map(id => {
   const provider = byId.get(id);
   if (!provider) throw new Error(`Configured favicon provider is not canonical: ${id}`);
   if (!provider.url) throw new Error(`Configured favicon provider has no official source URL: ${id}`);
-  return provider;
+  const websiteOverride = websiteOverrides[id] || '';
+  if (websiteOverride) new URL(websiteOverride);
+  return { provider, websiteOverride };
 });
 
 const resolved = [];
 const failures = [];
-await mapConcurrent(selected, async provider => {
+await mapConcurrent(selected, async ({ provider, websiteOverride }) => {
   try {
-    const record = await resolveProviderFavicon(provider);
+    const record = await resolveProviderFavicon(provider, websiteOverride);
     resolved.push(record);
-    console.log(`FAVICON_OK ${provider.id} ${record.mime} ${record.bytes} ${record.iconUrl}`);
+    console.log(`FAVICON_OK ${provider.id} ${record.sourceKind} ${record.mime} ${record.bytes} ${record.iconUrl}`);
   }
   catch (error) {
     const message = error instanceof Error ? error.message : String(error);
