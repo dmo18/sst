@@ -12,22 +12,46 @@ const manifestUrl = new URL('../public/assets/logos/provider-favicon-sources.jso
 const MAX_ICON_BYTES = 64 * 1024;
 const MAX_OFFICIAL_ASSET_BYTES = 512 * 1024;
 const CONCURRENCY = 6;
+const FETCH_ATTEMPTS = 3;
+const RETRYABLE_STATUS = new Set([408, 425, 429]);
 
 async function readJson(url) {
   return JSON.parse(await fs.readFile(url, 'utf8'));
 }
 
+function retryableResponse(response) {
+  return RETRYABLE_STATUS.has(response.status) || response.status >= 500;
+}
+
 async function fetchWithTimeout(url, options = {}, timeoutMs = 8_000) {
-  return fetch(url, {
-    ...options,
-    redirect: 'follow',
-    signal: AbortSignal.timeout(timeoutMs),
-    headers: {
-      accept: options.accept || '*/*',
-      'user-agent': 'ServiceOps provider identity build/3.3',
-      ...(options.headers || {})
+  let lastError = null;
+
+  for (let attempt = 1; attempt <= FETCH_ATTEMPTS; attempt += 1) {
+    try {
+      const response = await fetch(url, {
+        ...options,
+        redirect: 'follow',
+        signal: AbortSignal.timeout(timeoutMs),
+        headers: {
+          accept: options.accept || '*/*',
+          'user-agent': 'ServiceOps provider identity build/3.3',
+          ...(options.headers || {})
+        }
+      });
+
+      if (!retryableResponse(response) || attempt === FETCH_ATTEMPTS) return response;
+      lastError = new Error(`HTTP ${response.status}`);
+      try { await response.body?.cancel(); } catch { }
     }
-  });
+    catch (error) {
+      lastError = error;
+      if (attempt === FETCH_ATTEMPTS) throw error;
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 150 * attempt));
+  }
+
+  throw lastError || new Error(`Unable to fetch ${url}`);
 }
 
 async function fetchIconCandidate(candidate, maxBytes = MAX_ICON_BYTES) {
