@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { dataLifecycleReducer, initialDataLifecycle } from './dataLifecycle';
+import { applyBrowserLiveTruth } from './liveStatusTruth';
 import { ACTIVE_PROVIDER_CATALOG_HASH, ACTIVE_PROVIDER_IDS } from './providerCatalog';
 import { RequestOwnership } from './requestOwnership';
 import type { StatusPayload } from './types';
@@ -74,30 +75,52 @@ export function usePayloadPoller(browserRefreshMs: number) {
   const [state, dispatch] = useReducer(dataLifecycleReducer, initialDataLifecycle);
   const [lastBrowserCheckAt, setLastBrowserCheckAt] = useState<number | null>(null);
   const lastBrowserCheckAtRef = useRef<number | null>(null);
-  const ownership = useRef(new RequestOwnership());
+  const payloadOwnership = useRef(new RequestOwnership());
+  const liveTruthOwnership = useRef(new RequestOwnership());
   const mounted = useRef(true);
 
+  const overlayLiveTruth = useCallback((payload: StatusPayload) => {
+    liveTruthOwnership.current.cancel();
+    const slot = liveTruthOwnership.current.begin();
+    if (!slot) return;
+    const { controller, sequence } = slot;
+
+    void applyBrowserLiveTruth(payload, controller.signal)
+      .then(livePayload => {
+        if (mounted.current && liveTruthOwnership.current.owns(controller, sequence))
+          dispatch({ type: 'overlay', data: livePayload });
+      })
+      .catch(error => {
+        if (!controller.signal.aborted)
+          console.warn('Browser live truth overlay failed; retaining audited static payload.', error);
+      })
+      .finally(() => liveTruthOwnership.current.finish(controller));
+  }, []);
+
   const refresh = useCallback(async () => {
-    const slot = ownership.current.begin();
+    const slot = payloadOwnership.current.begin();
     if (!slot) return;
     const { controller: request, sequence } = slot;
     dispatch({ type: 'request' });
     try {
       const result = await fetchStatus(request.signal);
-      if (mounted.current && ownership.current.owns(request, sequence)) {
+      if (mounted.current && payloadOwnership.current.owns(request, sequence)) {
         const checkedAt = Date.now();
+        // Render the validated audited payload immediately. Live first-party checks run independently and
+        // may replace only providers they successfully observe, so a slow CORS origin never blocks the UI.
         dispatch({ type: 'success', data: result.data });
         lastBrowserCheckAtRef.current = checkedAt;
         setLastBrowserCheckAt(checkedAt);
         if (result.freshnessWarning) dispatch({ type: 'failure', message: result.freshnessWarning });
+        overlayLiveTruth(result.data);
       }
     } catch (error) {
-      if (mounted.current && ownership.current.owns(request, sequence))
+      if (mounted.current && payloadOwnership.current.owns(request, sequence))
         dispatch({ type: 'failure', message: error instanceof Error ? error.message : String(error) });
     } finally {
-      ownership.current.finish(request);
+      payloadOwnership.current.finish(request);
     }
-  }, []);
+  }, [overlayLiveTruth]);
 
   useEffect(() => {
     mounted.current = true;
@@ -115,7 +138,8 @@ export function usePayloadPoller(browserRefreshMs: number) {
       mounted.current = false;
       window.clearInterval(id);
       document.removeEventListener('visibilitychange', refreshWhenVisible);
-      ownership.current.cancel();
+      payloadOwnership.current.cancel();
+      liveTruthOwnership.current.cancel();
     };
   }, [browserRefreshMs, refresh]);
 

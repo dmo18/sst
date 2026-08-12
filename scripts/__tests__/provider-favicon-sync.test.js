@@ -18,9 +18,10 @@ test('provider favicon source list covers every generated recognition brand', as
   for (const id of ['sophos', 'halopsa', 'kaseya', 'superops', 'proofpoint', 'mimecast', 'cove-data-protection', 'ultradns', 'salesforce', 'docusign']) {
     assert.match(settings.websiteOverrides[id], /^https:\/\//);
   }
-  for (const id of ['superops', 'cove-data-protection']) {
+  for (const id of ['jamf', 'superops', 'cove-data-protection']) {
     assert.match(settings.assetOverrides[id].url, /^https:\/\//);
   }
+  assert.match(settings.assetOverrides.jamf.url, /pages-favicon_logos\/original\/4655\/jamf_fav\.png$/);
   assert.equal(settings.websiteOverrides.ultradns, 'https://portal.ultradns.com/');
   assert.equal(settings.assetOverrides.ultradns, undefined);
   assert.equal(settings.assetOverrides['cove-data-protection'].background, '#005255');
@@ -57,6 +58,17 @@ test('provider artwork wrappers can preserve a dark official-product plate', () 
   const svgBytes = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><path fill="white" d="M0 0h1v1H0z"/></svg>');
   const svg = faviconWrapperSvg(svgBytes, 'image/svg+xml', { background: '#005255' });
   assert.match(svg, /fill="#005255"/);
+});
+
+test('provider artwork fetching retries transient network and server failures without lowering the 35-provider gate', async () => {
+  const sync = await read('scripts/sync-provider-favicons.mjs');
+  const settings = JSON.parse(await read('config/provider-favicon-sources.json'));
+  assert.match(sync, /const FETCH_ATTEMPTS = 3/);
+  assert.match(sync, /new Set\(\[408, 425, 429\]\)/);
+  assert.match(sync, /response\.status >= 500/);
+  assert.match(sync, /attempt <= FETCH_ATTEMPTS/);
+  assert.match(sync, /150 \* attempt/);
+  assert.equal(settings.minimumResolved, 35);
 });
 
 test('provider UI uses build-generated local artwork paths without runtime external image requests', async () => {

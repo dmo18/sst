@@ -46,6 +46,34 @@ test('Microsoft 365 is a first-class critical service estate', async () => {
   assert.match(app, /<Microsoft365CriticalSuite model=\{model\} \/>/);
 });
 
+test('Microsoft service truth is never synthesized from evidence health', async () => {
+  const contract = await read('src/microsoft365Coverage.ts');
+  const component = await read('src/Microsoft365CriticalSuite.tsx');
+
+  const serviceTone = contract.match(/export function microsoft365ServiceTone[\s\S]*?(?=export function microsoft365EvidenceTone)/)?.[0] || '';
+  const evidenceTone = contract.match(/export function microsoft365EvidenceTone[\s\S]*?(?=export function microsoft365EvidenceLabel)/)?.[0] || '';
+  assert.match(serviceTone, /source\.serviceState === 'major'/);
+  assert.match(serviceTone, /source\.serviceState === 'degraded'/);
+  assert.match(serviceTone, /source\.serviceState === 'operational'/);
+  assert.doesNotMatch(serviceTone, /sourceHealth|sourceState/);
+  assert.match(evidenceTone, /source\.sourceHealth === 'watch'/);
+  assert.match(evidenceTone, /source\.sourceHealth === 'blind'/);
+  assert.match(component, /Service truth and evidence quality are deliberately separate/);
+  assert.match(component, /Source-quality warnings remain evidence warnings only/);
+  assert.match(component, /data-evidence-tone/);
+});
+
+test('umbrella Microsoft 365 coverage does not claim facet-specific public health', async () => {
+  const contract = await read('src/microsoft365Coverage.ts');
+  const component = await read('src/Microsoft365CriticalSuite.tsx');
+  assert.match(contract, /serviceTone: 'informational'/);
+  assert.match(contract, /this individual service is not publicly verified/);
+  assert.match(contract, /no broad Microsoft 365 public incident is active/);
+  assert.match(component, /Broad public \+ tenant detail/);
+  assert.match(component, /facet-specific health requires Microsoft service communications for the tenant/i);
+  assert.match(component, /data-m365-current-incidents/);
+});
+
 test('Microsoft tenant health contract is explicit and cannot leak into the public browser pipeline', async () => {
   const contract = await read('src/microsoft365Coverage.ts');
   const component = await read('src/Microsoft365CriticalSuite.tsx');
@@ -54,8 +82,8 @@ test('Microsoft tenant health contract is explicit and cannot leak into the publ
   assert.match(contract, /\/admin\/serviceAnnouncement\/healthOverviews/);
   assert.match(contract, /\/admin\/serviceAnnouncement\/issues/);
   assert.match(contract, /ServiceHealth\.Read\.All/);
-  assert.match(component, /never exposed to the public browser or status payload/);
   assert.match(component, /authenticated private backend/);
+  assert.match(component, /tenant-only health is never invented from the public feed/);
   assert.doesNotMatch(workflow, /graph\.microsoft\.com/);
   assert.doesNotMatch(workflow, /AZURE_CLIENT_SECRET|MICROSOFT_CLIENT_SECRET|ServiceHealth\.Read\.All/);
 });
@@ -64,9 +92,12 @@ test('Microsoft 365 critical suite styles load before wallboard geometry and rem
   const main = await read('src/main.tsx');
   const app = await read('src/App.tsx');
   const css = await read('src/styles/microsoft365-critical-suite.css');
+  const truthCss = await read('src/styles/microsoft365-truth-hardening.css');
   assert.ok(main.indexOf("./styles/microsoft365-critical-suite.css") < main.indexOf("./styles/wallboard-v2.css"));
+  assert.ok(main.indexOf("./styles/microsoft365-truth-hardening.css") < main.indexOf("./styles/wallboard-v2.css"));
   assert.match(css, /bottom: 306px/);
   assert.match(css, /\.depth-truth-boundary/);
+  assert.match(truthCss, /\.m365-service-card\.is-informational/);
   const wallboardBranch = app.slice(app.indexOf('? <WallboardV2'), app.indexOf(': <>'));
   assert.doesNotMatch(wallboardBranch, /Microsoft365CriticalSuite|ProductTruthBoundary/);
 });

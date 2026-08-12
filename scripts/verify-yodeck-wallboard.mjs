@@ -155,6 +155,30 @@ async function waitForProbe(session, timeoutMs = DEFAULT_TIMEOUT_MS) {
   throw new Error(`Yodeck layout probe timed out${last?.detail ? `: ${last.detail}` : ''}`);
 }
 
+async function providerRotationProbe(session) {
+  const before = await evaluate(session, `(() => {
+    const rail = document.querySelector('.wallboard-alert-provider-rail');
+    const track = document.querySelector('.wallboard-alert-provider-track');
+    return {
+      count: Number(rail?.getAttribute('data-provider-count') || '0'),
+      looping: Boolean(track?.classList.contains('is-looping')),
+      transform: track ? getComputedStyle(track).transform : 'none'
+    };
+  })()`);
+  if (!before || before.count <= 1) return { ...before, moved: false, required: false };
+  await sleep(750);
+  const afterTransform = await evaluate(session, `(() => {
+    const track = document.querySelector('.wallboard-alert-provider-track');
+    return track ? getComputedStyle(track).transform : 'none';
+  })()`);
+  return {
+    ...before,
+    required: true,
+    afterTransform,
+    moved: Boolean(before.looping && before.transform !== afterTransform)
+  };
+}
+
 let session;
 try {
   const page = await waitForPageTarget();
@@ -196,11 +220,17 @@ try {
 
   const contract = await evaluate(session, `(() => {
     const html = document.documentElement.outerHTML;
+    const shell = document.querySelector('.wallboard-shell');
+    const freshness = document.querySelector('.wallboard-freshness');
     return {
       html,
       hasPrioritySignals: /Priority signals/i.test(document.body.innerText),
       alertWindowMs: document.querySelector('[data-alert-window-ms]')?.getAttribute('data-alert-window-ms') || null,
-      hasUnavailableState: /Status intelligence unavailable/i.test(document.body.innerText)
+      hasUnavailableState: /Status intelligence unavailable/i.test(document.body.innerText),
+      freshnessText: freshness?.textContent?.replace(/\\s+/g, ' ').trim() || '',
+      updatedAt: shell?.getAttribute('data-wallboard-updated-at') || '',
+      browserCheckedAt: shell?.getAttribute('data-wallboard-browser-checked-at') || '',
+      refreshMs: Number(shell?.getAttribute('data-wallboard-refresh-ms') || '0')
     };
   })()`);
 
@@ -210,6 +240,18 @@ try {
   if (!contract.hasPrioritySignals) throw new Error('Priority signals heading is missing.');
   if (contract.alertWindowMs !== '129600000') throw new Error(`Unexpected alert window: ${contract.alertWindowMs || 'missing'}`);
   if (contract.hasUnavailableState) throw new Error('Wallboard rendered Status intelligence unavailable.');
+  if (!/Updated/i.test(contract.freshnessText) || !/Checked/i.test(contract.freshnessText) || !/Next/i.test(contract.freshnessText) || !/Browser refresh/i.test(contract.freshnessText)) {
+    throw new Error(`Wallboard header freshness telemetry is incomplete: ${contract.freshnessText || 'missing'}`);
+  }
+  if (!contract.updatedAt || !contract.browserCheckedAt || contract.refreshMs < 15_000) {
+    throw new Error(`Wallboard freshness timestamps are incomplete: updated=${contract.updatedAt || 'missing'} checked=${contract.browserCheckedAt || 'missing'} refreshMs=${contract.refreshMs}`);
+  }
+
+  const rotation = await providerRotationProbe(session);
+  console.log(`YODECK_PROVIDER_ROTATION providers=${rotation?.count || 0} looping=${Boolean(rotation?.looping)} moved=${Boolean(rotation?.moved)} required=${Boolean(rotation?.required)}`);
+  if (rotation?.required && !rotation.moved) {
+    throw new Error(`Wallboard provider header rail did not move while ${rotation.count} alert providers were present.`);
+  }
 
   const screenshot = await session.send('Page.captureScreenshot', {
     format: 'png',
@@ -221,6 +263,7 @@ try {
   const screenshotBytes = fs.statSync(screenshotPath).size;
   if (screenshotBytes <= 3000) throw new Error(`Yodeck screenshot is unexpectedly small: ${screenshotBytes} bytes`);
 
+  console.log(`YODECK_FRESHNESS updated=${contract.updatedAt} checked=${contract.browserCheckedAt} refresh_ms=${contract.refreshMs}`);
   console.log(`YODECK_HTML_BYTES ${Buffer.byteLength(contract.html, 'utf8')}`);
   console.log(`YODECK_SCREENSHOT_BYTES ${screenshotBytes}`);
 }

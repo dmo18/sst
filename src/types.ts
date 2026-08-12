@@ -303,6 +303,16 @@ export interface CollectionRun {
   public_health_source_count?: number;
 }
 
+export interface BrowserLiveTruth {
+  checked_at: string;
+  attempted_provider_count: number;
+  success_provider_count: number;
+  failure_provider_count: number;
+  active_provider_ids: string[];
+  successful_provider_ids: string[];
+  failed_provider_ids: string[];
+}
+
 export interface StatusPayload {
   schema_version: 2 | 3;
   contract_version?: 3;
@@ -315,6 +325,7 @@ export interface StatusPayload {
   maintenance?: Maintenance[];
   changes: StatusChange[];
   history: StatusChange[];
+  live_truth?: BrowserLiveTruth;
 }
 
 export type DataLifecycle =

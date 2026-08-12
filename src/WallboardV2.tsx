@@ -36,6 +36,28 @@ function dateLabel(now: number): string {
   }).format(new Date(now));
 }
 
+function timeOfDayLabel(value: string | number | null | undefined): string {
+  const parsed = typeof value === 'number' ? value : Date.parse(value || '');
+  if (!Number.isFinite(parsed) || parsed <= 0) return 'pending';
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: EASTERN_TIME_ZONE,
+    hour: 'numeric',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true
+  }).format(new Date(parsed));
+}
+
+function durationLabel(value: number): string {
+  if (!Number.isFinite(value) || value <= 0) return 'unknown';
+  const seconds = Math.round(value / 1000);
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.round(minutes / 60);
+  return `${hours}h`;
+}
+
 function titleCase(value: string): string {
   return value.replaceAll('_', ' ').replaceAll('-', ' ').replace(/\b\w/g, letter => letter.toUpperCase());
 }
@@ -225,7 +247,7 @@ function useProviderMarquee(
 
     const measure = () => {
       const groupWidth = Math.ceil(group.getBoundingClientRect().width);
-      const shouldLoop = itemCount > 1 && groupWidth > viewport.clientWidth + 2;
+      const shouldLoop = itemCount > 1;
 
       track.classList.remove('is-looping');
       track.style.removeProperty('--wallboard-provider-loop-distance');
@@ -352,9 +374,8 @@ function useWallboardLayoutProbe(
         if (contentHeight > priorityList.clientHeight + 2 && !priorityTrack.classList.contains('is-looping')) reasons.push('priority-marquee-not-running');
       }
 
-      if (providerRail && providerTrack && providerGroup && providerCount > 1) {
-        const contentWidth = Math.ceil(providerGroup.getBoundingClientRect().width);
-        if (contentWidth > providerRail.clientWidth + 2 && !providerTrack.classList.contains('is-looping')) reasons.push('provider-marquee-not-running');
+      if (providerRail && providerTrack && providerGroup && providerCount > 1 && !providerTrack.classList.contains('is-looping')) {
+        reasons.push('provider-marquee-not-running');
       }
 
       const dataReady = signalCount === 0 ? Boolean(emptyState) : primaryArticles.length === signalCount;
@@ -427,6 +448,7 @@ export function WallboardV2({
   lifecycle,
   now,
   browserCheckedAt,
+  browserRefreshMs,
   alertWindowMs,
   onExit
 }: {
@@ -434,6 +456,7 @@ export function WallboardV2({
   lifecycle: DataLifecycle;
   now: number;
   browserCheckedAt: number | null;
+  browserRefreshMs: number;
   alertWindowMs: number | null;
   onExit: () => void;
 }): JSX.Element {
@@ -477,12 +500,26 @@ export function WallboardV2({
     headerMode === 'open' ? 'wallboard-controls-pinned-open' : '',
     headerMode === 'closed' ? 'wallboard-controls-pinned-closed' : ''
   ].filter(Boolean).join(' ');
+  const nextBrowserRefreshAt = browserCheckedAt ? browserCheckedAt + browserRefreshMs : null;
 
   return (
-    <section className={shellClassName} data-header-mode={headerMode} ref={shellRef}>
+    <section
+      className={shellClassName}
+      data-header-mode={headerMode}
+      data-wallboard-updated-at={model?.generatedAt || ''}
+      data-wallboard-browser-checked-at={browserCheckedAt || ''}
+      data-wallboard-refresh-ms={browserRefreshMs}
+      ref={shellRef}
+    >
       <header>
         <div><span>MSP service operations</span><h1>Enterprise service intelligence</h1></div>
         <div className="wallboard-clock"><strong>{clockLabel(now)}</strong><span>{dateLabel(now)} · ET</span></div>
+        <div className="wallboard-freshness" aria-label={`Status updated ${timeOfDayLabel(model?.generatedAt)}. Browser checked ${timeOfDayLabel(browserCheckedAt)}. Next refresh ${timeOfDayLabel(nextBrowserRefreshAt)}.`}>
+          <span><b>Updated</b><time>{timeOfDayLabel(model?.generatedAt)}</time></span>
+          <span><b>Checked</b><time>{timeOfDayLabel(browserCheckedAt)}</time></span>
+          <span><b>Next</b><time>{timeOfDayLabel(nextBrowserRefreshAt)}</time></span>
+          <small>Browser refresh {durationLabel(browserRefreshMs)}</small>
+        </div>
         <div className="wallboard-connection"><span className={`connection-indicator lifecycle-${lifecycle.phase}`} /><b>{titleCase(lifecycle.phase)}</b><small>{relativeAgeAt(model?.generatedAt, now)}</small></div>
         <div className="wallboard-overlay-actions">
           <button
@@ -516,11 +553,13 @@ export function WallboardV2({
             <span className="wallboard-mini-telemetry" aria-label="Wallboard freshness telemetry">
               <span>Payload <b>{compactAgeLabel(model?.generatedAt, now)}</b></span>
               <span>Browser <b>{compactAgeLabel(browserCheckedAt, now)}</b></span>
+              <span>Refresh <b>{durationLabel(browserRefreshMs)}</b></span>
             </span>
           </h2>
           <div
             className="wallboard-alert-provider-rail"
             aria-label="Providers with active alerts"
+            data-provider-count={alertProviders.length}
             ref={providerViewportRef}
           >
             {alertProviders.length ? (

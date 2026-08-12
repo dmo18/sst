@@ -2,7 +2,7 @@ name: Status Freshness Watch
 
 on:
   schedule:
-    - cron: "0,12,24,36,48 * * * *"
+    - cron: "8,18,28,38,48,58 * * * *"
   workflow_dispatch:
 
 permissions:
@@ -16,8 +16,18 @@ concurrency:
 jobs:
   verify-and-recover:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     steps:
+      - name: Checkout watcher code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      - name: Use Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22
+
       - name: Check for an active Pages release
         id: release
         env:
@@ -46,35 +56,27 @@ jobs:
             ? `Release already active: ${activeRuns.map(run => `#${run.run_number}:${run.status}`).join(', ')}`
             : 'No queued or active Pages release.');
           NODE
-      - name: Check deployed payload age
-        id: freshness
+
+      - name: Compare deployed state with live official structured truth
+        id: truth
         env:
           STATUS_URL: https://dmo18.github.io/sst/status.json
-        run: |
-          node --input-type=module <<'NODE'
-          const response = await fetch(`${process.env.STATUS_URL}?watch=${Date.now()}`, { cache: 'no-store' });
-          if (!response.ok) throw new Error(`status.json returned HTTP ${response.status}`);
-          const payload = await response.json();
-          const generatedAt = Date.parse(payload.generated_at || '');
-          if (!Number.isFinite(generatedAt)) throw new Error('status.json generated_at is invalid');
-          const ageMinutes = Math.floor((Date.now() - generatedAt) / 60000);
-          console.log(`Deployed payload age: ${ageMinutes} minutes`);
-          const stale = ageMinutes > 20;
-          await import('node:fs').then(({ appendFileSync }) => {
-            appendFileSync(process.env.GITHUB_OUTPUT, `stale=${stale}\n`);
-            appendFileSync(process.env.GITHUB_OUTPUT, `age_minutes=${ageMinutes}\n`);
-          });
-          NODE
+        run: node scripts/status-truth-watch.mjs
+
       - name: Defer recovery while a release is active
-        if: steps.freshness.outputs.stale == 'true' && steps.release.outputs.active == 'true'
-        run: echo "Payload is stale, but ${{ steps.release.outputs.active_count }} release run(s) are already queued or active. Recovery dispatch deferred."
+        if: (steps.truth.outputs.stale == 'true' || steps.truth.outputs.drift == 'true') && steps.release.outputs.active == 'true'
+        run: |
+          echo "Recovery condition exists, but ${{ steps.release.outputs.active_count }} release run(s) are already queued or active. Dispatch deferred."
+          echo "Payload age: ${{ steps.truth.outputs.age_minutes }} minutes; live truth drift count: ${{ steps.truth.outputs.drift_count }}."
+
       - name: Dispatch one recovery refresh
-        if: steps.freshness.outputs.stale == 'true' && steps.release.outputs.active != 'true'
+        if: (steps.truth.outputs.stale == 'true' || steps.truth.outputs.drift == 'true') && steps.release.outputs.active != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-          AGE_MINUTES: ${{ steps.freshness.outputs.age_minutes }}
+          AGE_MINUTES: ${{ steps.truth.outputs.age_minutes }}
+          DRIFT_COUNT: ${{ steps.truth.outputs.drift_count }}
         run: |
-          echo "Payload is ${AGE_MINUTES} minutes old and no release is active. Dispatching one recovery refresh."
+          echo "Payload age=${AGE_MINUTES}m, live truth drift=${DRIFT_COUNT}, no release active. Dispatching one recovery refresh."
           curl --fail-with-body --request POST \
             --header "Accept: application/vnd.github+json" \
             --header "Authorization: Bearer ${GH_TOKEN}" \

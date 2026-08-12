@@ -31,13 +31,40 @@ function run(args, label, encoding) {
   return result;
 }
 
+function sourceCardState(html, providerId) {
+  const match = new RegExp(`<button\\b([^>]*)data-provider-id="${providerId}"([^>]*)>`, 'i').exec(html);
+  if (!match) throw new Error(`Microsoft 365 deployed surface is missing source card ${providerId}.`);
+  const attributes = `${match[1]} ${match[2]}`;
+  return {
+    className: /class="([^"]*)"/i.exec(attributes)?.[1] || '',
+    serviceState: /data-service-state="([^"]*)"/i.exec(attributes)?.[1] || '',
+    evidenceTone: /data-evidence-tone="([^"]*)"/i.exec(attributes)?.[1] || ''
+  };
+}
+
+function assertServiceTone(providerId, card) {
+  const expected = card.serviceState === 'major'
+    ? 'is-critical'
+    : card.serviceState === 'degraded'
+      ? 'is-warning'
+      : card.serviceState === 'operational'
+        ? 'is-positive'
+        : 'is-unknown';
+  if (!card.className.split(/\s+/).includes(expected)) {
+    throw new Error(`${providerId} service state ${card.serviceState || 'missing'} rendered ${card.className || 'no class'} instead of ${expected}; evidence=${card.evidenceTone || 'missing'}.`);
+  }
+  if (card.serviceState === 'operational' && card.className.includes('is-warning')) {
+    throw new Error(`${providerId} operational service was promoted to a warning by evidence state.`);
+  }
+}
+
 try {
   const domResult = run([...common, '--window-size=1440,960', '--dump-dom', url.href], 'Microsoft 365 DOM probe', 'utf8');
   const html = String(domResult.stdout || '');
   for (const required of [
     'data-m365-critical-suite="open"',
     'Microsoft 365 coverage',
-    'Microsoft 365 public signal',
+    'Microsoft 365 broad public signal',
     'Microsoft 365 suite',
     'Exchange Online',
     'Microsoft Teams',
@@ -49,15 +76,30 @@ try {
     'Microsoft Defender for Microsoft 365',
     'Microsoft Power Platform',
     'Public does not mean tenant-complete',
+    'Service truth and evidence quality are deliberately separate',
     'ServiceHealth.Read.All',
     '/admin/serviceAnnouncement/healthOverviews',
-    '/admin/serviceAnnouncement/issues'
+    '/admin/serviceAnnouncement/issues',
+    'data-m365-current-incidents=',
+    'data-evidence-tone='
   ]) {
     if (!html.includes(required)) throw new Error(`Microsoft 365 deployed surface is missing ${JSON.stringify(required)}.`);
   }
   const facetCount = (html.match(/data-m365-service=/g) || []).length;
   if (facetCount !== 10) throw new Error(`Microsoft 365 deployed surface expected 10 service facets, found ${facetCount}.`);
   if (/Status intelligence unavailable/i.test(html)) throw new Error('Microsoft 365 verification rendered the unavailable state.');
+
+  const microsoft = sourceCardState(html, 'microsoft365');
+  const entra = sourceCardState(html, 'entra');
+  assertServiceTone('microsoft365', microsoft);
+  assertServiceTone('entra', entra);
+
+  if (microsoft.serviceState === 'operational') {
+    const umbrellaInformationalCount = (html.match(/m365-service-card is-informational/g) || []).length;
+    if (umbrellaInformationalCount < 8) {
+      throw new Error(`Microsoft broad source is operational but only ${umbrellaInformationalCount} umbrella facets preserve the non-granular informational boundary.`);
+    }
+  }
 
   run([...common, '--window-size=1440,960', `--screenshot=${desktopScreenshot}`, url.href], 'Microsoft 365 desktop screenshot');
   run([...common, '--window-size=390,844', `--screenshot=${mobileScreenshot}`, url.href], 'Microsoft 365 mobile screenshot');
@@ -67,7 +109,8 @@ try {
   if (desktopBytes <= 10_000 || mobileBytes <= 10_000) throw new Error(`Microsoft 365 screenshots are unexpectedly small: desktop=${desktopBytes}, mobile=${mobileBytes}.`);
 
   console.log(`MICROSOFT365_CRITICAL facets=${facetCount} desktop=${desktopBytes} mobile=${mobileBytes}`);
-  console.log('MICROSOFT365_EVIDENCE public-broad + dedicated-entra; tenant-detail=private-graph-required');
+  console.log(`MICROSOFT365_SERVICE_TRUTH microsoft365=${microsoft.serviceState}/${microsoft.className} evidence=${microsoft.evidenceTone} entra=${entra.serviceState}/${entra.className} evidence=${entra.evidenceTone}`);
+  console.log('MICROSOFT365_EVIDENCE public-broad + dedicated-entra; tenant-detail=private-graph-required; evidence-health-does-not-set-service-tone');
 }
 finally {
   try { fs.rmSync(profile, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 }); } catch { }

@@ -1,0 +1,58 @@
+/* Microsoft truth/evidence separation layered after the base Microsoft 365 workspace. */
+
+.m365-service-card.is-informational {
+  border-color: rgba(105, 148, 211, .18);
+  background: linear-gradient(180deg, rgba(15, 24, 38, .72), rgba(7, 12, 21, .68));
+}
+
+.m365-service-card.is-unknown,
+.m365-source-card.is-unknown {
+  border-color: rgba(132, 145, 166, .18);
+  box-shadow: inset 3px 0 0 rgba(132, 145, 166, .42);
+}
+
+.m365-source-card[data-evidence-tone="watch"] small,
+.m365-service-card[data-evidence-tone="watch"] footer small {
+  color: #a99c7d;
+}
+
+.m365-source-card[data-evidence-tone="blind"] small,
+.m365-service-card[data-evidence-tone="blind"] footer small {
+  color: #c18b91;
+}
+
+.m365-rail section.is-clear {
+  border-color: rgba(72, 200, 153, .16);
+}
+
+.m365-rail section.is-active {
+  border-color: rgba(255, 103, 114, .26);
+  box-shadow: inset 3px 0 0 rgba(255, 103, 114, .52);
+}
+
+.m365-incident {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+  border-top: 1px solid rgba(126, 157, 198, .11);
+  padding-top: 8px;
+}
+
+.m365-incident b {
+  color: #8aa6cc;
+  font-size: .55rem;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.m365-incident strong {
+  color: #edf5ff;
+  font-size: .68rem;
+  line-height: 1.35;
+}
+
+.m365-incident small {
+  color: #778da9;
+  font-size: .58rem;
+  line-height: 1.35;
+}
