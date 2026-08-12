@@ -38,6 +38,7 @@ function sourceCardState(html, providerId) {
   return {
     className: /class="([^"]*)"/i.exec(attributes)?.[1] || '',
     serviceState: /data-service-state="([^"]*)"/i.exec(attributes)?.[1] || '',
+    sourceState: /data-source-state="([^"]*)"/i.exec(attributes)?.[1] || '',
     evidenceTone: /data-evidence-tone="([^"]*)"/i.exec(attributes)?.[1] || '',
     sourceRole: /data-source-role="([^"]*)"/i.exec(attributes)?.[1] || ''
   };
@@ -48,14 +49,17 @@ function assertPublicSignalTone(providerId, card) {
     ? 'is-critical'
     : card.serviceState === 'degraded'
       ? 'is-warning'
-      : card.serviceState === 'operational'
+      : card.sourceState === 'available'
         ? 'is-informational'
         : 'is-unknown';
   if (!card.className.split(/\s+/).includes(expected)) {
-    throw new Error(`${providerId} public signal state ${card.serviceState || 'missing'} rendered ${card.className || 'no class'} instead of ${expected}; evidence=${card.evidenceTone || 'missing'}.`);
+    throw new Error(`${providerId} public signal service=${card.serviceState || 'missing'} source=${card.sourceState || 'missing'} rendered ${card.className || 'no class'} instead of ${expected}; evidence=${card.evidenceTone || 'missing'}.`);
   }
-  if (card.serviceState === 'operational' && card.className.includes('is-positive')) {
-    throw new Error(`${providerId} clear public signal rendered as positive workload health.`);
+  if (card.className.includes('is-positive')) {
+    throw new Error(`${providerId} public signal rendered as positive workload health.`);
+  }
+  if (providerId === 'microsoft365' && card.serviceState === 'unknown' && card.sourceState !== 'available') {
+    throw new Error(`Microsoft 365 no-health-conclusion state must retain an available public incident source; got source=${card.sourceState || 'missing'}.`);
   }
 }
 
@@ -93,6 +97,7 @@ try {
     '/admin/serviceAnnouncement/issues',
     'data-m365-current-incidents=',
     'data-evidence-tone=',
+    'data-source-state=',
     'data-public-incident-count=',
     'data-health-authority="tenant-service-health"'
   ]) {
@@ -118,8 +123,8 @@ try {
   if (entra.sourceRole !== 'azure-public-entra') {
     throw new Error(`Entra public source role is ${entra.sourceRole || 'missing'} instead of azure-public-entra.`);
   }
-  if (microsoft.serviceState === 'operational' && /Microsoft 365 broad public signal|operational service ·/i.test(html)) {
-    throw new Error('Clear Microsoft public status is still presented as umbrella operational service health.');
+  if (/Microsoft 365 broad public signal|operational service ·/i.test(html)) {
+    throw new Error('Microsoft 365 surface still contains the old umbrella operational-health presentation.');
   }
 
   run([...common, '--window-size=1440,960', `--screenshot=${desktopScreenshot}`, url.href], 'Microsoft 365 desktop screenshot');
@@ -130,7 +135,7 @@ try {
   if (desktopBytes <= 10_000 || mobileBytes <= 10_000) throw new Error(`Microsoft 365 screenshots are unexpectedly small: desktop=${desktopBytes}, mobile=${mobileBytes}.`);
 
   console.log(`MICROSOFT365_CRITICAL facets=${facetCount} tenant_authoritative=${tenantAuthoritativeCount} desktop=${desktopBytes} mobile=${mobileBytes}`);
-  console.log(`MICROSOFT365_PUBLIC_SIGNAL microsoft365=${microsoft.serviceState}/${microsoft.className} role=${microsoft.sourceRole} evidence=${microsoft.evidenceTone} entra=${entra.serviceState}/${entra.className} role=${entra.sourceRole} evidence=${entra.evidenceTone}`);
+  console.log(`MICROSOFT365_PUBLIC_SIGNAL microsoft365=${microsoft.serviceState}/${microsoft.sourceState}/${microsoft.className} role=${microsoft.sourceRole} evidence=${microsoft.evidenceTone} entra=${entra.serviceState}/${entra.sourceState}/${entra.className} role=${entra.sourceRole} evidence=${entra.evidenceTone}`);
   console.log('MICROSOFT365_EVIDENCE public-incidents=supplemental; workload-health=tenant-authoritative; clear-public-signal-does-not-greenlight-workloads');
 }
 finally {
