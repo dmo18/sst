@@ -1,5 +1,5 @@
 {
-  "minimumResolved": 28,
+  "minimumResolved": 34,
   "providers": [
     "sentinelone",
     "sophos",
@@ -37,6 +37,15 @@
     "docusign",
     "nuso"
   ],
+  "assetOverrides": {
+    "superops": {
+      "url": "https://us-west-2.graphassets.com/AsRMKMrtKTFW6TGbr4KgUz/cmo8lbrrc1xga07n3l58jhure"
+    },
+    "cove-data-protection": {
+      "url": "https://www.n-able.com/wp-content/uploads/2026/03/shield-icon-data-protection-reversed.svg",
+      "background": "#005255"
+    }
+  },
   "websiteOverrides": {
     "sophos": "https://www.sophos.com/",
     "halopsa": "https://usehalo.com/halopsa/",
