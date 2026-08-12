@@ -352,8 +352,9 @@ try {
   if (mobile.width !== MOBILE_WIDTH || mobile.height !== MOBILE_HEIGHT) throw new Error(`Mobile Dependency Universe viewport mismatch: ${mobile.width}x${mobile.height}`);
   if (mobile.overflow > 1) throw new Error(`Mobile Dependency Universe has horizontal overflow: ${mobile.overflow}px`);
   if (mobile.overlaps) throw new Error('Mobile Dependency Universe launcher overlaps Operations Intelligence chrome.');
-  assertUniverseReadability(mobile, 'Mobile Dependency Universe', true);
   const mobileUniverseBytes = await capture(session, mobileUniverseScreenshot);
+  console.log(`PRODUCT_DEPTH_MOBILE_METRICS ${MOBILE_WIDTH}x${MOBILE_HEIGHT} providers=${mobile.nodes} labels=${mobile.visibleLabels} collisions=${mobile.labelCollisions} clipped=${mobile.clippedLabels} label_height=${mobile.medianLabelHeight} graph=${mobile.graphWidth}x${mobile.graphHeight} screenshot=${mobileUniverseBytes}`);
+  assertUniverseReadability(mobile, 'Mobile Dependency Universe', true);
 
   const finalViewport = await viewportContract(session);
   if (finalViewport.unavailable) throw new Error('Product-depth verification rendered the unavailable state.');
