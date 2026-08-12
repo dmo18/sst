@@ -13,11 +13,14 @@ test('provider favicon source list covers every generated recognition brand', as
     'barracuda', 'knowbe4', 'crashplan', 'cove-data-protection', 'sharefile', 'ultradns', 'linode', 'ringcentral',
     '8x8', 'nextiva', 'intermedia', 'twilio', 'salesforce', 'monday-com', 'docusign', 'nuso'
   ];
-  assert.equal(settings.minimumResolved, 28);
+  assert.equal(settings.minimumResolved, 34);
   assert.deepEqual([...settings.providers].sort(), [...expected].sort());
   for (const id of ['sophos', 'halopsa', 'kaseya', 'superops', 'proofpoint', 'mimecast', 'cove-data-protection', 'ultradns', 'salesforce', 'docusign']) {
     assert.match(settings.websiteOverrides[id], /^https:\/\//);
   }
+  assert.match(settings.assetOverrides.superops.url, /^https:\/\//);
+  assert.match(settings.assetOverrides['cove-data-protection'].url, /^https:\/\//);
+  assert.equal(settings.assetOverrides['cove-data-protection'].background, '#005255');
 });
 
 test('provider favicon resolver derives the official status-site origin', () => {
@@ -40,6 +43,19 @@ test('favicon bytes are wrapped into the existing embedded SVG identity contract
   assert.match(decodeURIComponent(dataUri), /data:image\/png;base64,/);
 });
 
+test('legacy ICO artwork remains usable when it does not contain an embedded PNG frame', () => {
+  const ico = Buffer.from([0x00, 0x00, 0x01, 0x00, 0x00, 0x00]);
+  const normalized = normalizeFavicon(ico, 'image/x-icon');
+  assert.equal(normalized?.mime, 'image/x-icon');
+  assert.deepEqual(normalized?.bytes, ico);
+});
+
+test('provider artwork wrappers can preserve a dark official-product plate', () => {
+  const svg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><path fill="white" d="M0 0h1v1H0z"/></svg>');
+  const dataUri = faviconWrapperDataUri(svg, 'image/svg+xml', { background: '#005255' });
+  assert.match(decodeURIComponent(dataUri), /fill="#005255"/);
+});
+
 test('provider UI prefers build-embedded favicons without adding runtime external image requests', async () => {
   const providerIcon = await read('src/providerIcon.tsx');
   const generated = await read('src/generated/providerFavicons.ts');
@@ -51,6 +67,8 @@ test('provider UI prefers build-embedded favicons without adding runtime externa
   assert.match(generated, /Readonly<Record<string, string>>/);
   assert.match(sync, /faviconCandidates/);
   assert.match(sync, /websiteOverrides/);
+  assert.match(sync, /assetOverrides/);
+  assert.match(sync, /official-asset/);
   assert.match(sync, /vendor-website/);
   assert.match(sync, /status-site/);
   assert.match(sync, /provider-favicon-sources\.json/);
