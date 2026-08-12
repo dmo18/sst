@@ -99,7 +99,9 @@ test('browser live truth promotes a fresh static clear state when Claude opens a
   assert.equal(merged.incidents.length, 1);
   assert.equal(merged.incidents[0].id, 'anthropic:rk6gkg2gwfny');
   assert.equal(merged.incidents[0].title, 'Degraded performance for multiple models');
+  assert.equal(merged.incidents[0].color, 'amber');
   assert.equal(merged.providers[0].service_state, 'degraded');
+  assert.equal(merged.providers[0].color, 'amber');
   assert.equal(merged.providers[0].active_incident_count, 1);
   assert.equal(merged.providers[0].problem_component_count, 3);
   assert.equal(merged.providers[0].status_data_basis, 'live-official');
@@ -111,7 +113,7 @@ test('browser live truth promotes a fresh static clear state when Claude opens a
 test('browser live truth removes a stale resolved incident only after a successful official summary says clear', () => {
   const staleProvider = provider({
     status: 'Incident active',
-    color: 'yellow',
+    color: 'amber',
     service_state: 'degraded',
     truth_basis: 'vendor-incident',
     attention: 'action',
@@ -129,7 +131,7 @@ test('browser live truth removes a stale resolved incident only after a successf
     source: staleProvider.source,
     url: 'https://status.claude.com/',
     time: '2026-08-12T13:00:00.000Z',
-    color: 'yellow',
+    color: 'amber',
     service_state: 'degraded',
     attention: 'action',
     priority: 62
@@ -152,7 +154,7 @@ test('browser live truth removes a stale resolved incident only after a successf
 });
 
 test('failed browser live truth leaves the audited static provider and incidents unchanged', () => {
-  const staticProvider = provider({ service_state: 'degraded', active_incident_count: 1, attention: 'action', ok: false });
+  const staticProvider = provider({ service_state: 'degraded', color: 'amber', active_incident_count: 1, attention: 'action', ok: false });
   const staticPayload = payload(staticProvider, [{
     id: 'anthropic:static',
     providerId: 'anthropic',
@@ -163,7 +165,7 @@ test('failed browser live truth leaves the audited static provider and incidents
     source: staticProvider.source,
     url: 'https://status.claude.com/',
     time: '2026-08-12T13:00:00.000Z',
-    color: 'yellow',
+    color: 'amber',
     service_state: 'degraded',
     attention: 'action',
     priority: 62
