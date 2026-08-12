@@ -137,22 +137,28 @@ async function evaluate(session, expression) {
 
 async function waitForProbe(session, timeoutMs = DEFAULT_TIMEOUT_MS) {
   const deadline = Date.now() + timeoutMs;
-  let last = { state: null, detail: null };
+  let last = { state: null, detail: null, updatedAt: '', browserCheckedAt: '', refreshMs: 0 };
 
   while (Date.now() < deadline) {
     last = await evaluate(session, `(() => {
       const shell = document.querySelector('.wallboard-shell');
       return {
         state: shell?.dataset.layoutProbe || null,
-        detail: shell?.dataset.layoutProbeDetail || null
+        detail: shell?.dataset.layoutProbeDetail || null,
+        updatedAt: shell?.getAttribute('data-wallboard-updated-at') || '',
+        browserCheckedAt: shell?.getAttribute('data-wallboard-browser-checked-at') || '',
+        refreshMs: Number(shell?.getAttribute('data-wallboard-refresh-ms') || '0')
       };
     })()`);
 
-    if (last?.state === 'pass' || last?.state === 'fail') return last;
+    const layoutResolved = last?.state === 'pass' || last?.state === 'fail';
+    const freshnessReady = Boolean(last?.updatedAt && last?.browserCheckedAt && last?.refreshMs >= 15_000);
+    if (layoutResolved && freshnessReady) return last;
     await sleep(250);
   }
 
-  throw new Error(`Yodeck layout probe timed out${last?.detail ? `: ${last.detail}` : ''}`);
+  const readiness = `updated=${last?.updatedAt || 'missing'} checked=${last?.browserCheckedAt || 'missing'} refreshMs=${last?.refreshMs || 0}`;
+  throw new Error(`Yodeck layout/freshness probe timed out${last?.detail ? `: ${last.detail}` : ''}; ${readiness}`);
 }
 
 async function providerRotationProbe(session) {
@@ -217,6 +223,7 @@ try {
   const probe = await waitForProbe(session);
   console.log(`YODECK_LAYOUT_PROBE ${probe.state}`);
   console.log(`YODECK_LAYOUT_DETAIL ${probe.detail || ''}`);
+  console.log(`YODECK_READINESS updated=${probe.updatedAt} checked=${probe.browserCheckedAt} refresh_ms=${probe.refreshMs}`);
 
   const contract = await evaluate(session, `(() => {
     const html = document.documentElement.outerHTML;
