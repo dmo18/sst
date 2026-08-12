@@ -75,18 +75,20 @@ test('provider identity is bundled locally with a pinned source record and no ru
   assert.equal(existsSync(new URL('../../public/assets/logos/quickbooks.svg', import.meta.url)), true);
 });
 
-test('desktop shell guard waits for styles before rendering a narrow desktop viewport', async () => {
+test('compact shell media queries are constrained before browser runtime', async () => {
+  const vite = await read('vite.config.ts');
   const main = await read('src/main.tsx');
-  assert.match(main, /waitForApplicationStylesheets/);
-  assert.match(main, /await waitForApplicationStylesheets\(\)/);
-  assert.match(main, /keepDesktopDevicesOutOfCompactShell/);
-  assert.match(main, /max-device-width: 900px/);
-  assert.match(main, /max-device-width: 370px/);
-  assert.match(main, /rule\.media\.mediaText = replacement/);
-  assert.match(main, /dataset\.desktopShellGuard/);
-  assert.match(main, /async function startApplication/);
-  assert.match(main, /await keepDesktopDevicesOutOfCompactShell\(\)/);
-  assert.doesNotMatch(main, /^keepDesktopDevicesOutOfCompactShell\(\);$/m);
+  assert.match(vite, /compactDeviceMediaContract/);
+  assert.match(vite, /enforce: 'pre'/);
+  assert.match(vite, /id\.endsWith\('\.css'\)/);
+  assert.match(vite, /max-device-width/);
+  assert.match(vite, /width: 900, deviceWidth: 900/);
+  assert.match(vite, /width: 370, deviceWidth: 370/);
+  assert.doesNotMatch(main, /document\.styleSheets/);
+  assert.doesNotMatch(main, /CSSMediaRule/);
+  assert.doesNotMatch(main, /waitForApplicationStylesheets/);
+  assert.doesNotMatch(main, /desktopShellGuard/);
+  assert.match(main, /createRoot\(/);
 });
 
 test('deployed provider identity verification uses structural and computed-style CDP checks', async () => {
