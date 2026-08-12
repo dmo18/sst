@@ -1,5 +1,5 @@
 {
-  "minimumResolved": 34,
+  "minimumResolved": 35,
   "providers": [
     "sentinelone",
     "sophos",
@@ -44,6 +44,9 @@
     "cove-data-protection": {
       "url": "https://www.n-able.com/wp-content/uploads/2026/03/shield-icon-data-protection-reversed.svg",
       "background": "#005255"
+    },
+    "ultradns": {
+      "url": "https://docs.ultradns.com/Content/img/company_logo.png"
     }
   },
   "websiteOverrides": {
