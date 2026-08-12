@@ -1,8 +1,11 @@
 # Microsoft 365 workload truth
 
-Status: workload-truth v2 implementation in progress
+Status: production accepted
 Started: 2026-08-11
-Revised: 2026-08-12
+Accepted: 2026-08-12
+Accepted implementation main: `6cd42c344b1e392148cda5b8402adcabc0678f27`
+Accepted release: `31642257830` (#888)
+Accepted product evidence: `31642398270` / artifact `9159385364`
 
 Microsoft 365 is a critical dependency for the ServiceOps MSP operating model. It must not be represented as one generic cloud health card, and an unauthenticated Microsoft public status signal must never be used as current health for every Microsoft 365 workload.
 
@@ -33,7 +36,9 @@ It is not a workload health API.
 
 A clear public incident feed means only that ServiceOps did not find a currently published public incident. It does not certify current health for Exchange Online, Teams, SharePoint Online, OneDrive for Business, Intune, Microsoft 365 Apps, Defender for Microsoft 365, Power Platform, or any tenant.
 
-The canonical `microsoft365` public source is therefore named `Microsoft 365 public status` and exposes only `Microsoft 365 public incident status` as its configured service. It no longer aliases the individual workload names in the provider catalog or universal search.
+The canonical `microsoft365` public source is named `Microsoft 365 public status` and exposes only `Microsoft 365 public incident status` as its configured service. It does not alias individual workload names in the provider catalog or universal search.
+
+The collector also sets `confirmHealthyFromFeed=false` for this source. When the public incident feed is readable but contains no active incident, the provider remains `service_state=unknown`, `source_state=available`, and `truth_basis=observed-no-conclusion`. It does not become operational merely because the public feed is clear.
 
 ### Scoped public incidents
 
@@ -86,20 +91,35 @@ The operator contract is: scope the public incident first, then use tenant Servi
 
 1. A clear Microsoft public incident source cannot render as positive workload health in the Microsoft workspace.
 2. The generic Microsoft public source cannot list individual Microsoft workloads as its configured services.
-3. Public Microsoft incidents cannot degrade every workload by default.
-4. Individual workload warnings require explicit public incident scope or tenant health evidence.
-5. All ten workload facets remain tenant-authoritative for current tenant health.
-6. The public pipeline remains token-free and contains no tenant credentials.
-7. Microsoft public source health and parser confidence remain evidence-quality signals, not service outages.
+3. A readable empty Microsoft public incident feed cannot set `service_state=operational`.
+4. Public Microsoft incidents cannot degrade every workload by default.
+5. Individual workload warnings require explicit public incident scope or tenant health evidence.
+6. All ten workload facets remain tenant-authoritative for current tenant health.
+7. The public pipeline remains token-free and contains no tenant credentials.
+8. Microsoft public source health and parser confidence remain evidence-quality signals, not service outages.
+9. Deployed verification rejects any `is-positive` Microsoft public source card.
+10. Pinned legacy Chromium and exact 458x291 Yodeck remain part of the production acceptance chain.
 
-## Completion gate
+## Production proof
 
-This phase is complete only when:
+Accepted release `31642257830` on implementation main `6cd42c344b1e392148cda5b8402adcabc0678f27` passed fresh collection, Pages deployment, current Chrome, pinned pre-Cascade-Layers Chromium, exact 458x291 Yodeck, and deployed intelligence verification.
 
-1. deterministic regression tests, strict TypeScript, production build, audit, and CodeQL pass;
-2. the change is merged and a fresh production collection succeeds;
-3. current Chrome, pinned pre-Cascade-Layers Chromium, and exact 458x291 Yodeck remain green;
-4. deployed product-experience verification passes Dependency Universe, universal search, live Incident Focus when available, Microsoft workload truth, provider identity, desktop, and mobile;
-5. the production Microsoft screenshot is visually inspected and contains no green umbrella claim caused solely by a clear public incident feed;
-6. the deployed payload confirms the generic Microsoft public provider no longer aliases Exchange, Teams, SharePoint, OneDrive, Entra, Intune, Apps, Defender, or Power Platform through `services`;
-7. final continuation documentation records the PR, merge, release, evidence artifact, production payload, and visual acceptance.
+The accepted Pages payload reports `Microsoft 365 public status` as:
+
+- blue;
+- `service_state=unknown`;
+- `source_state=available`;
+- `truth_basis=observed-no-conclusion`;
+- source health healthy;
+- zero active incidents at collection time;
+- services exactly `Microsoft 365 public incident status`.
+
+Product-experience run `31642398270` passed the Microsoft gate and all other deployed product gates. Artifact `9159385364` recorded:
+
+`MICROSOFT365_CRITICAL facets=10 tenant_authoritative=10`
+
+`MICROSOFT365_PUBLIC_SIGNAL microsoft365=unknown/available/m365-source-card is-informational role=public-incident-fallback evidence=healthy entra=operational/available/m365-source-card is-informational role=azure-public-entra evidence=watch`
+
+Desktop and mobile Microsoft screenshots were directly reviewed. Both show neutral public evidence, a separate tenant workload authority, 10 tenant-authoritative facets, and no green Microsoft 365 umbrella inheritance.
+
+For the detailed implementation, rejected releases, verifier corrections, and acceptance chronology, see `docs/continuation/2026-08-12-microsoft-workload-truth-v2.md`.
