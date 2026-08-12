@@ -12,6 +12,8 @@ test('product-depth system is operator-only and loads before wallboard geometry'
   assert.ok(app.indexOf('<ProductDepthLayer model={model} />') > app.indexOf('<ExperienceLayer'));
   assert.ok(main.indexOf("./styles/product-depth.css") < main.indexOf("./styles/wallboard-v2.css"));
   assert.ok(main.indexOf("./styles/product-depth-launcher.css") < main.indexOf("./styles/wallboard-v2.css"));
+  assert.ok(main.indexOf("./styles/product-depth-final-polish.css") < main.indexOf("./styles/product-quality-cleanup.css"));
+  assert.ok(main.indexOf("./styles/product-quality-cleanup.css") < main.indexOf("./styles/wallboard-v2.css"));
   const wallboardBranch = app.slice(app.indexOf('? <WallboardV2'), app.indexOf(': <>'));
   assert.doesNotMatch(wallboardBranch, /ProductDepth/);
 });
@@ -50,6 +52,19 @@ test('signature experience contains dependency universe cautious correlation and
   assert.match(layer, /does not reconstruct unobserved service state/);
   assert.match(workspace, /kind: 'correlation'/);
   assert.match(workspace, /categoryPositions/);
+  assert.match(workspace, /providerPositions/);
+  assert.match(workspace, /providerRadius = 305/);
+});
+
+test('dependency universe visual layer suppresses healthy label noise and magnifies mobile evidence', async () => {
+  const css = await read('src/styles/product-quality-cleanup.css');
+  assert.match(css, /\.depth-provider-node text,[\s\S]*\.depth-category-node text[\s\S]*opacity: 0/);
+  assert.match(css, /\.depth-provider-node\.depth-tone-warning text/);
+  assert.match(css, /\.depth-provider-node\.depth-tone-critical text/);
+  assert.match(css, /\.depth-category-node\.depth-tone-warning text/);
+  assert.match(css, /min-height: 430px/);
+  assert.match(css, /transform: scale\(1\.72\)/);
+  assert.match(css, /font-size: 18px/);
 });
 
 test('workspace supports deep links universal search change catch-up and persistent lenses', async () => {
@@ -63,6 +78,7 @@ test('workspace supports deep links universal search change catch-up and persist
   assert.match(layer, /Save pinned lens/);
   assert.match(workspace, /OPERATOR_WORKSPACE_STORAGE_KEY/);
   assert.match(workspace, /buildWorkspaceSearchIndex/);
+  assert.match(workspace, /distinctRecentChanges/);
   assert.match(workspace, /buildChangeDigest/);
   assert.match(workspace, /saveLens/);
 });
@@ -77,7 +93,7 @@ test('persistent launcher makes the signature feature discoverable without overl
   assert.match(css, /@media \(max-width: 900px\)/);
 });
 
-test('deployed product-depth verification captures universe search incident and mobile evidence without schedule churn', async () => {
+test('deployed product-depth verification captures readable universe search incident and mobile evidence without schedule churn', async () => {
   const workflow = await read('.github/workflows/product-experience.yml');
   const verifier = await read('scripts/verify-product-depth-experience.mjs');
   assert.match(workflow, /workflow_run\.event != 'schedule'/);
@@ -93,6 +109,10 @@ test('deployed product-depth verification captures universe search incident and 
   assert.match(verifier, /Mobile Dependency Universe launcher overlaps Operations Intelligence chrome/);
   assert.match(verifier, /temporal correlations only\|Temporal correlation only/i);
   assert.match(verifier, /recorded changes only/i);
+  assert.match(verifier, /assertUniverseReadability/);
+  assert.match(verifier, /medianLabelHeight/);
+  assert.match(verifier, /labelCollisions/);
+  assert.match(verifier, /duplicate semantic result rows/);
 });
 
 test('product-depth closure record is backed by final production and product evidence', async () => {
