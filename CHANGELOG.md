@@ -23,6 +23,14 @@ The project uses semantic versioning. Dates are shown in ISO format. The newest 
 - Added production smoke validation that rejects a live deployment when its generated commit or run ID does not match the workflow being verified.
 - Added regression contracts preventing the removed legacy wallboard ownership paths and checked-in deployment marker from returning.
 
+## [3.3.1] - 2026-08-19
+
+### Fixed
+
+- Reduced the wallboard `Priority signals` label to the same 9px scale as Payload, Browser, and Refresh telemetry.
+- Kept the label and freshness telemetry inline in a 28px compact header row so more wallboard height is available for incident content.
+- Preserved the dedicated 458 by 291 provider-first signage composition and added regression coverage for the compact header behavior.
+
 ## [3.3.0] - 2026-08-02
 
 ### Fixed
