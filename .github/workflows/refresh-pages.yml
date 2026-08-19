@@ -63,7 +63,7 @@ jobs:
           rm -f /tmp/verified-app-shell/status.json /tmp/verified-app-shell/previous-status.json /tmp/verified-app-shell/deploy-version.txt
       - name: Publish verified application shell
         if: github.event_name != 'schedule'
-        uses: actions/upload-artifact@043fb46d1a93e67c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: verified-app-shell-${{ github.sha }}
           path: /tmp/verified-app-shell
