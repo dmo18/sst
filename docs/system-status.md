@@ -1,6 +1,6 @@
 # Current system status
 
-Status timestamp: 2026-08-11 17:50 Eastern Time
+Status timestamp: 2026-08-19 18:33 Eastern Time
 
 ## Executive status
 
@@ -12,9 +12,9 @@ Status timestamp: 2026-08-11 17:50 Eastern Time
 | Microsoft 365 critical suite | Complete within public architecture | Ten explicit facets are represented. Public broad status + dedicated Entra evidence are separated from tenant-only Microsoft Graph service health. |
 | NUSO | Healthy / first-class | NUSO is a high-criticality VoIP provider in the canonical catalog and live collection path. |
 | Provider recognition | Complete | 80/80 active providers have curated recognition identities; 45 exact/local brand references and 35 provider-specific embedded recognition SVGs. |
-| Current implementation baseline | Healthy | `357021b38a955b402af03d35415d1c1eae2a1550` |
-| Full production release | Healthy | Run #833 (`31539557831`) passed the complete release path. |
-| Main CodeQL | Healthy | Run #125 (`31539557679`) passed on the final implementation commit. |
+| Current implementation baseline | Healthy | Current `main` is `1e3f733d6c35f2fec3eacc97aab7cc8e0dbe5a5a`; the current application baseline is `0f151684a913671b00c8dd2f00ef484599351614`. |
+| Full production release | Healthy | Recovery release #1345 (`32306973123`) passed the complete release path on the current application baseline. |
+| Current validation | Healthy | Pull request checks #671 (`32308187854`) and CodeQL #222 (`32308187883`) passed on the source head for current `main`. |
 | Product evidence | Healthy | Run #34 (`31539671901`) passed premium, product-depth, Microsoft 365, provider/NUSO, desktop, and mobile browser gates. |
 | Status Contract | Healthy | Public payloads use Status Contract v3 and canonical provider catalog identity. |
 | Provider catalog | Healthy | 80 raw entries canonicalize to 80 active providers; membership/counts are derived rather than hardcoded. |
@@ -25,17 +25,18 @@ Status timestamp: 2026-08-11 17:50 Eastern Time
 | Parser trust | Healthy | Canary/quarantine affects source trust without changing vendor service truth. |
 | Public browser security | Healthy | Restrictive CSP, same-origin data retrieval, local application/logo assets. |
 | Supply chain | Healthy | Immutable current action SHAs, CodeQL v4, complete dependency audit, Dependabot, quality gates, and opt-in pre-commit hook. |
-| Current-browser render | Healthy | Run #833 passed deployed current-Chromium rendering. |
-| Legacy-browser render | Healthy | Run #833 passed pinned pre-Cascade-Layers Chromium CDP runtime verification. |
-| Exact Yodeck | Healthy | Run #833 passed exact current-Chromium 458x291 wallboard verification. |
+| Current-browser render | Healthy | Recovery release #1345 passed deployed current-Chromium rendering. |
+| Legacy-browser render | Healthy | Recovery release #1345 passed pinned pre-Cascade-Layers Chromium CDP runtime verification. |
+| Exact Yodeck | Healthy | Recovery release #1345 passed exact current-Chromium 458x291 wallboard verification, including freshness telemetry and provider rotation. |
 
 ## Current repository identity
 
 - Repository: `dmo18/sst`
 - Visibility: public
 - Default branch: `main`
-- Package: `msp-status-hud` 3.3.0
-- Final implementation commit: `357021b38a955b402af03d35415d1c1eae2a1550`
+- Package: `msp-status-hud` 3.3.1
+- Current main commit: `1e3f733d6c35f2fec3eacc97aab7cc8e0dbe5a5a`
+- Current application baseline: `0f151684a913671b00c8dd2f00ef484599351614`
 - Active production catalog: 80 providers across 31 categories
 - Public contract: Status Contract v3
 - Hosting: GitHub Pages
