@@ -3,7 +3,7 @@ on:
   push:
     branches: [main]
   schedule:
-    - cron: "7,19,31,43,55 * * * *"
+    - cron: "*/5 * * * *"
   workflow_dispatch:
 
 concurrency:
@@ -121,13 +121,46 @@ jobs:
       statuses: write
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      url: ${{ steps.page-url.outputs.url }}
     steps:
-      - id: deployment
+      - name: Deploy Pages, attempt 1
+        id: deployment1
+        continue-on-error: true
+        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0
+        with:
+          timeout: 180000
+          reporting_interval: 5000
+      - name: Back off after first Pages failure
+        if: steps.deployment1.outcome == 'failure'
+        run: sleep 20
+      - name: Deploy Pages, attempt 2
+        id: deployment2
+        if: steps.deployment1.outcome == 'failure'
+        continue-on-error: true
+        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0
+        with:
+          timeout: 180000
+          reporting_interval: 5000
+      - name: Back off after second Pages failure
+        if: steps.deployment1.outcome == 'failure' && steps.deployment2.outcome == 'failure'
+        run: sleep 40
+      - name: Deploy Pages, final attempt
+        id: deployment3
+        if: steps.deployment1.outcome == 'failure' && steps.deployment2.outcome == 'failure'
         uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0
         with:
           timeout: 600000
           reporting_interval: 10000
+      - name: Resolve deployed page URL
+        id: page-url
+        env:
+          URL1: ${{ steps.deployment1.outputs.page_url }}
+          URL2: ${{ steps.deployment2.outputs.page_url }}
+          URL3: ${{ steps.deployment3.outputs.page_url }}
+        run: |
+          url="${URL1:-${URL2:-${URL3:-https://dmo18.github.io/sst/}}}"
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "Resolved deployed page URL: $url"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -138,17 +171,18 @@ jobs:
       - run: npm ci
       - name: Smoke-test deployed assets, payload, and collection contract
         env:
-          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+          PAGE_URL: ${{ steps.page-url.outputs.url }}
         run: |
-          for attempt in $(seq 1 5); do
+          for attempt in $(seq 1 10); do
             if node --experimental-strip-types scripts/production-smoke.mjs "$PAGE_URL"; then exit 0; fi
             echo "Production smoke attempt $attempt failed; waiting for Pages propagation."
-            sleep 8
+            sleep 10
           done
           exit 1
       - name: Render deployed enterprise workspace in headless Chrome
+        if: github.event_name != 'schedule'
         env:
-          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+          PAGE_URL: ${{ steps.page-url.outputs.url }}
         run: |
           BROWSER="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
           test -n "$BROWSER"
@@ -175,7 +209,7 @@ jobs:
       - name: Verify pinned pre-cascade-layer Chromium wallboard runtime
         if: github.event_name != 'schedule'
         env:
-          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+          PAGE_URL: ${{ steps.page-url.outputs.url }}
           LEGACY_CHROMIUM_REVISION: ${{ steps.legacy-chromium.outputs.revision }}
           LEGACY_CHROMIUM_URL: ${{ steps.legacy-chromium.outputs.url }}
         run: |
@@ -189,8 +223,9 @@ jobs:
           echo "LEGACY_CHROMIUM_REVISION ${LEGACY_CHROMIUM_REVISION}"
           LEGACY_BROWSER=/tmp/chromium-legacy/chrome-linux/chrome STATUS_BASE_URL="$PAGE_URL" node scripts/verify-legacy-wallboard.mjs
       - name: Verify 458x291 Yodeck wallboard contract
+        if: github.event_name != 'schedule'
         env:
-          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+          PAGE_URL: ${{ steps.page-url.outputs.url }}
         run: |
           BROWSER="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
           test -n "$BROWSER"
@@ -198,7 +233,7 @@ jobs:
           WALLBOARD_URL="${PAGE_URL%/}/?view=wallboard&alerts=36h&layoutProbe=yodeck&smoke=${GITHUB_RUN_ID}"
           node scripts/verify-yodeck-wallboard.mjs "$WALLBOARD_URL" /tmp/yodeck-wallboard.html /tmp/yodeck-wallboard.png
       - name: Upload Yodeck verification artifacts
-        if: always()
+        if: github.event_name != 'schedule' && always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: yodeck-wallboard-${{ github.run_id }}
@@ -212,7 +247,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           STATUS_DESCRIPTION: ${{ needs.build.outputs.status_description }}
           STATUS_STATE: ${{ needs.build.outputs.status_state }}
-          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+          PAGE_URL: ${{ steps.page-url.outputs.url }}
         run: |
           node --input-type=module <<'NODE'
           const endpoint = `https://api.github.com/repos/${process.env.GITHUB_REPOSITORY}/statuses/${process.env.GITHUB_SHA}`;
