@@ -5,7 +5,7 @@ import { parseStatuspageSummary } from './structured-source-adapters.mjs';
 
 const DEFAULT_STATUS_URL = 'https://dmo18.github.io/sst/status.json';
 const REQUEST_TIMEOUT_MS = 8_000;
-const STALE_AFTER_MINUTES = 14;
+const STALE_AFTER_MINUTES = 10;
 const MAX_CONCURRENCY = 8;
 
 function cacheBust(url, token) {
