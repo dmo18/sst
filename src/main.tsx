@@ -23,6 +23,7 @@ import './styles/wallboard-compat.css';
 import './styles/wallboard-tv.css';
 import './styles/wallboard-premium.css';
 import './styles/wallboard-truth-hardening.css';
+import './styles/wallboard-header-compact.css';
 
 if (!('CSSLayerBlockRule' in window)) {
   document.documentElement.classList.add('no-css-layers');
