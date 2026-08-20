@@ -6,6 +6,14 @@ The project uses semantic versioning. Dates are shown in ISO format. The newest 
 
 ## Unreleased
 
+## [3.3.2] - 2026-08-20
+
+### Fixed
+
+- Restored Shopify live-source coverage when its official page publishes a current incident by extracting the vendor incident title and bounded update details instead of reducing the page to an unidentified issue.
+- Preserved fail-closed behavior when Shopify exposes an incident link without readable current update details.
+
+
 ### Wallboard and deployment stabilization
 
 - Added rolling wallboard alert windows such as `alerts=36h` and applied the same filtered incident set to the incident list and provider rail.
