@@ -35,7 +35,7 @@ test('Shopify provider conclusion preserves the vendor incident title and curren
   assert.equal(result.kind, 'issue');
   assert.equal(result.title, 'Live support unavailable for merchants');
   assert.equal(result.evidenceBasis, 'current-page');
-  assert.match(result.id, /^current-page-/);
+  assert.match(result.id, /^live-support-unavailable-for-merchants-[a-f0-9]{8}$/);
 });
 
 test('Shopify does not infer an incident from legend wording without a current incident link', () => {
