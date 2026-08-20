@@ -307,12 +307,20 @@ export function parseShopifyStatusPage(html) {
   }
 
   const note = update[2].trim();
+  const rawTime = timestamp[1].trim();
   return {
     kind: 'issue',
+    id: fallbackIncidentToken({
+      provider: 'shopify',
+      title,
+      note,
+      source: 'shopify-current-page',
+      firstDetected: rawTime
+    }),
     title,
     note,
     status: update[1],
-    rawTime: timestamp[1].trim(),
+    rawTime,
     color: /\b(?:major outage|service unavailable|unavailable|outage)\b/i.test(`${title} ${note}`) ? 'red' : 'amber',
     evidenceBasis: 'current-page'
   };
