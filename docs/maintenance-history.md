@@ -10,6 +10,7 @@ Material autonomous maintenance is recorded here in reverse chronological order.
 - Affected subsystem: Public status collection and Shopify HTML parsing.
 - Version: 3.3.1 to 3.3.2.
 - Regression protection: Added deterministic incident, provenance, severity, and legend-only false-positive tests.
-- CI and security validation: Full pull-request tests, TypeScript checking, build, dependency audit, and CodeQL are required on the exact pull-request head before merge.
+- CI and security validation: Pull-request provider validation, quality gates, deterministic tests, TypeScript checking, application build, complete dependency audit, and CodeQL passed on the exact final head before merge.
 - Production verification method: The merged release must pass collection, Status Contract v3, Pages deployment, production smoke, current and pinned legacy Chromium, exact 458x291 Yodeck verification, and publish successful live-source coverage.
+- Relevant pull request: #159.
 - Remaining risk: A future incompatible Shopify markup change will fail closed rather than fabricate service health.
