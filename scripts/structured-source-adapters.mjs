@@ -215,7 +215,8 @@ const statuspageCandidates = {
   asana: ['https://status.asana.com/api/v2/summary.json', 'Asana'],
   'monday-com': ['https://status.monday.com/api/v2/summary.json', 'monday.com'],
   docusign: ['https://status.docusign.com/api/v2/summary.json', 'DocuSign'],
-  'quickbooks-online': ['https://status.quickbooks.intuit.com/api/v2/summary.json', 'QuickBooks']
+  'quickbooks-online': ['https://status.quickbooks.intuit.com/api/v2/summary.json', 'QuickBooks'],
+  shopify: ['https://www.shopifystatus.com/api/v2/summary.json', 'Shopify']
 };
 
 export const structuredSourceOverrides = Object.fromEntries(
