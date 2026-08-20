@@ -273,6 +273,37 @@ function eightByEightConclusion(text) {
   return normalCount >= 5 ? healthy('8x8 Americas services report normal status') : null;
 }
 
+export function parseShopifyStatusPage(html) {
+  const source = String(html || '');
+  const currentSection = source.split(/\bSubscribe to Incident\b/i)[0];
+  const incidentLinks = Array.from(currentSection.matchAll(
+    /<a\b[^>]*href=["'][^"']*\/incidents\/[^"']+["'][^>]*>([\s\S]*?)<\/a>/gi
+  ));
+  const title = cleanRenderedText(incidentLinks.at(-1)?.[1]);
+  if (!title) return null;
+
+  const currentText = cleanRenderedText(currentSection);
+  const titleIndex = currentText.lastIndexOf(title);
+  const incidentText = titleIndex >= 0 ? currentText.slice(titleIndex + title.length) : currentText;
+  const update = /\b(Investigating|Identified|Monitoring|Update)\s*-\s*([\s\S]{1,1200}?)(?=\b(?:Investigating|Identified|Monitoring|Update)\s*-|\b[A-Z][a-z]{2}\s+\d{1,2},\s+\d{4}\s*-\s*\d{1,2}:\d{2}\b|$)/i.exec(incidentText);
+  if (!update) {
+    return {
+      kind: 'limited',
+      message: 'Shopify publishes a current incident link without readable current update details.'
+    };
+  }
+
+  const note = update[2].trim();
+  return {
+    kind: 'issue',
+    title,
+    note,
+    status: update[1],
+    color: /\b(?:major outage|service unavailable|unavailable|outage)\b/i.test(`${title} ${note}`) ? 'red' : 'amber',
+    evidenceBasis: 'current-page'
+  };
+}
+
 export function providerSpecificConclusion(provider, html) {
   const text = cleanRenderedText(html);
   if (!text) return null;
@@ -286,6 +317,8 @@ export function providerSpecificConclusion(provider, html) {
   if (detailed) return normalizeCurrentPageConclusion(provider, detailed);
 
   switch (provider.id) {
+    case 'shopify':
+      return normalizeCurrentPageConclusion(provider, parseShopifyStatusPage(html));
     case 'ringcentral': {
       const active = /A portion of customers may be experiencing[\s\S]{0,1200}|Incident status updates[\s\S]{0,1200}/i.exec(text);
       if (active) return issue(provider.name, active[0].slice(0, 800));
