@@ -2,7 +2,7 @@
 
 A static, first-party-only service-status intelligence workspace for MSP operations. The application is hosted on GitHub Pages at `https://dmo18.github.io/sst/` and requires no backend, database, credentials, paid API, browser-side vendor calls, runtime logo CDN, or unofficial outage data.
 
-Current package version: `3.3.4`.
+Current package version: `3.3.5`.
 
 For the current repository, build, deployment, and production state, see [docs/system-status.md](docs/system-status.md). For the completed product-depth scope and evidence, see [docs/product-depth-command-system.md](docs/product-depth-command-system.md). For the architecture-overhaul scope and verification record, see [docs/architecture-reconciliation.md](docs/architecture-reconciliation.md).
 

@@ -2,6 +2,18 @@
 
 Material autonomous maintenance is recorded here in reverse chronological order.
 
+## 2026-08-20 - Normalize Shopify split timestamps
+
+- Trigger: Post-merge release #1363 still published Shopify as limited because its visible Statuspage date markup produced spaces around comma and colon punctuation.
+- Verified root cause: The strict timestamp expression accepted plain text but not the rendered split-node form, such as `Aug 19 , 2026 - 19 : 54 EDT`.
+- Corrective action: Accepted bounded whitespace around Shopify date/time punctuation and normalized the vendor time before incident identity and freshness validation.
+- Affected subsystem: Public status collection, incident freshness, and Shopify HTML parsing.
+- Version: 3.3.4 to 3.3.5.
+- Regression protection: Updated the production-shape fixture to split date and time fields across markup while asserting the canonical vendor time.
+- CI and security validation: Pull-request provider validation, quality gates, deterministic tests, TypeScript checking, application build, complete dependency audit, and CodeQL must pass on the exact final head before merge.
+- Production verification method: The merged release must publish 80/80 live official sources and pass Pages, production smoke, current and pinned legacy Chromium, and exact 458x291 Yodeck verification.
+- Remaining risk: A non-textual or locale-changed Shopify timestamp will remain limited until explicitly supported.
+
 ## 2026-08-20 - Preserve Shopify current-evidence time
 
 - Trigger: Post-merge release #1361 parsed Shopify's incident title but still published 79/80 live coverage and kept Shopify blind.

@@ -298,7 +298,7 @@ export function parseShopifyStatusPage(html) {
     };
   }
 
-  const timestamp = /\b([A-Z][a-z]{2}\s+\d{1,2},\s+\d{4}\s*-\s*\d{1,2}:\d{2}\s*(?:[A-Z]{2,5})?)/i.exec(incidentText);
+  const timestamp = /\b([A-Z][a-z]{2}\s+\d{1,2}\s*,\s*\d{4}\s*-\s*\d{1,2}\s*:\s*\d{2}\s*(?:[A-Z]{2,5})?)/i.exec(incidentText);
   if (!timestamp) {
     return {
       kind: 'limited',
@@ -307,7 +307,7 @@ export function parseShopifyStatusPage(html) {
   }
 
   const note = update[2].trim();
-  const rawTime = timestamp[1].trim();
+  const rawTime = timestamp[1].trim().replace(/\s*,\s*/g, ', ').replace(/\s*:\s*/g, ':');
   return {
     kind: 'issue',
     id: fallbackIncidentToken({

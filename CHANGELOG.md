@@ -6,6 +6,14 @@ The project uses semantic versioning. Dates are shown in ISO format. The newest 
 
 ## Unreleased
 
+## [3.3.5] - 2026-08-20
+
+### Fixed
+
+- Accepted Shopify Statuspage timestamps whose visible markup inserts whitespace around date and time punctuation.
+- Normalized the captured vendor time before incident identity and freshness validation.
+
+
 ## [3.3.4] - 2026-08-20
 
 ### Fixed
