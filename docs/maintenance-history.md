@@ -2,6 +2,18 @@
 
 Material autonomous maintenance is recorded here in reverse chronological order.
 
+## 2026-08-20 - Route Shopify JSON through the structured parser
+
+- Trigger: Release #1365 fetched Shopify's official JSON summary successfully but still published Shopify as the sole blind source at 79/80 live coverage.
+- Verified root cause: The source URL override selected `statuspage-json`, but Shopify was absent from the structured-adapter registry, so the JSON body fell through to the legacy HTML parser.
+- Corrective action: Registered Shopify with the existing Statuspage JSON adapter and removed the duplicate URL-only override.
+- Affected subsystem: Public status collection and structured source routing.
+- Version: 3.3.6 to 3.3.7.
+- Regression protection: Added a current-incident JSON fixture that must produce a structured Shopify incident through the production provider conclusion path.
+- CI and security validation: Pull-request provider validation, quality gates, deterministic tests, TypeScript checking, application build, dependency audit, and CodeQL must pass on the exact final head before merge.
+- Production verification method: The merged release must publish 80/80 live official sources and pass Pages, production smoke, current and pinned legacy Chromium, and exact 458x291 Yodeck verification.
+- Remaining risk: Shopify API availability remains an external dependency and will fail closed on future transport or contract failure.
+
 ## 2026-08-20 - Use Shopify's structured status API
 
 - Trigger: Releases #1361 through #1364 showed that Shopify's presentation HTML remained limited despite increasingly permissive timestamp-shape support.
