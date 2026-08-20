@@ -6,6 +6,14 @@ The project uses semantic versioning. Dates are shown in ISO format. The newest 
 
 ## Unreleased
 
+## [3.3.3] - 2026-08-20
+
+### Fixed
+
+- Corrected Shopify current-incident extraction when hidden subscription-template text appears before the visible incident content.
+- Added an explicit unresolved-incident fallback so current vendor title and update evidence remain readable even when the homepage link markup changes.
+
+
 ## [3.3.2] - 2026-08-20
 
 ### Fixed
