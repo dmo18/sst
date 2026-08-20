@@ -6,6 +6,14 @@ The project uses semantic versioning. Dates are shown in ISO format. The newest 
 
 ## Unreleased
 
+## [3.3.6] - 2026-08-20
+
+### Fixed
+
+- Moved Shopify production collection from presentation HTML to Shopify's official Statuspage JSON summary.
+- Preserved current unresolved incidents, component impact, ISO vendor timestamps, and first-party fail-closed behavior through the existing structured adapter.
+
+
 ## [3.3.5] - 2026-08-20
 
 ### Fixed

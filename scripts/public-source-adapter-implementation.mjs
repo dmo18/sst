@@ -9,6 +9,12 @@ import { regionScopeRelevant } from './region-scope.mjs';
 const execFileAsync = promisify(execFile);
 
 export const additionalPublicOverrides = {
+  shopify: {
+    mode: 'statuspage-json',
+    url: 'https://www.shopifystatus.com/api/v2/summary.json',
+    pageUrl: 'https://www.shopifystatus.com/',
+    sourceName: 'Shopify official Statuspage JSON'
+  },
   ringcentral: {
     mode: 'status-html',
     url: 'https://status.ringcentral.com/',

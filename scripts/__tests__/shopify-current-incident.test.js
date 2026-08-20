@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseShopifyStatusPage, providerSpecificConclusion } from '../public-source-adapter-implementation.mjs';
+import { additionalPublicOverrides, parseShopifyStatusPage, providerSpecificConclusion } from '../public-source-adapter-implementation.mjs';
 
 const provider = {
   id: 'shopify',
@@ -71,4 +71,10 @@ test('Shopify remains limited when a current incident has no vendor timestamp', 
   `);
   assert.equal(result.kind, 'limited');
   assert.match(result.message, /vendor update timestamp/);
+});
+
+test('Shopify production collection uses the official structured Statuspage API', () => {
+  assert.equal(additionalPublicOverrides.shopify.mode, 'statuspage-json');
+  assert.equal(additionalPublicOverrides.shopify.url, 'https://www.shopifystatus.com/api/v2/summary.json');
+  assert.equal(additionalPublicOverrides.shopify.pageUrl, 'https://www.shopifystatus.com/');
 });

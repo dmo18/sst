@@ -2,6 +2,18 @@
 
 Material autonomous maintenance is recorded here in reverse chronological order.
 
+## 2026-08-20 - Use Shopify's structured status API
+
+- Trigger: Releases #1361 through #1364 showed that Shopify's presentation HTML remained limited despite increasingly permissive timestamp-shape support.
+- Verified root cause: Production collection depended on presentation markup even though Shopify officially documents a first-party Statuspage v2 summary endpoint containing current status, components, unresolved incidents, and ISO timestamps.
+- Corrective action: Routed Shopify through the existing structured Statuspage JSON adapter at `/api/v2/summary.json`; retained the HTML parser only as fail-closed regression coverage.
+- Affected subsystem: Public status collection and Shopify source routing.
+- Version: 3.3.5 to 3.3.6.
+- Regression protection: Added a production-source contract requiring Shopify's official structured endpoint and page URL.
+- CI and security validation: Pull-request provider validation, quality gates, deterministic tests, TypeScript checking, application build, complete dependency audit, and CodeQL must pass on the exact final head before merge.
+- Production verification method: The merged release must publish 80/80 live official sources and pass Pages, production smoke, current and pinned legacy Chromium, and exact 458x291 Yodeck verification.
+- Remaining risk: Shopify API availability remains an external dependency and will fail closed on future transport or contract failure.
+
 ## 2026-08-20 - Normalize Shopify split timestamps
 
 - Trigger: Post-merge release #1363 still published Shopify as limited because its visible Statuspage date markup produced spaces around comma and colon punctuation.
