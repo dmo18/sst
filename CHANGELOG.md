@@ -6,6 +6,14 @@ The project uses semantic versioning. Dates are shown in ISO format. The newest 
 
 ## Unreleased
 
+## [3.3.7] - 2026-08-20
+
+### Fixed
+
+- Registered Shopify's official Statuspage JSON summary with the structured-adapter registry so current incidents, component impact, and vendor timestamps are parsed instead of falling through to the legacy HTML parser.
+- Added regression coverage that exercises the production Shopify JSON route through provider conclusion generation.
+
+
 ## [3.3.6] - 2026-08-20
 
 ### Fixed
