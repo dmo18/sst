@@ -50,7 +50,7 @@ test('Shopify ignores hidden subscribe templates before the visible current inci
     <main>
       <div>Live support unavailable for merchants</div>
       <div>Monitoring - Twilio is deploying a fix and live support connections are recovering.</div>
-      <time>Aug 19, 2026 - 19:54 EDT</time>
+      <time>Aug <span>19</span> , <span>2026</span> - <span>19</span> : <span>54</span> EDT</time>
       <section>Past Incidents Unresolved incident: Live support unavailable for merchants.</section>
     </main>
   `);
