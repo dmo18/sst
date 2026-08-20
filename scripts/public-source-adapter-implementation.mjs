@@ -275,21 +275,26 @@ function eightByEightConclusion(text) {
 
 export function parseShopifyStatusPage(html) {
   const source = String(html || '');
-  const currentSection = source.split(/\bSubscribe to Incident\b/i)[0];
-  const incidentLinks = Array.from(currentSection.matchAll(
+  const text = cleanRenderedText(source);
+  const incidentLinks = Array.from(source.matchAll(
     /<a\b[^>]*href=["'][^"']*\/incidents\/[^"']+["'][^>]*>([\s\S]*?)<\/a>/gi
   ));
-  const title = cleanRenderedText(incidentLinks.at(-1)?.[1]);
+  const linkedTitle = cleanRenderedText(incidentLinks.at(-1)?.[1]);
+  const unresolved = /\bUnresolved incident:\s*([^.!?]{3,200})[.!?]/i.exec(text);
+  const title = linkedTitle || cleanRenderedText(unresolved?.[1]);
   if (!title) return null;
 
-  const currentText = cleanRenderedText(currentSection);
-  const titleIndex = currentText.lastIndexOf(title);
-  const incidentText = titleIndex >= 0 ? currentText.slice(titleIndex + title.length) : currentText;
+  const titleIndex = text.indexOf(title);
+  const subscribeIndex = text.indexOf('Subscribe to Incident', titleIndex + title.length);
+  const unresolvedIndex = unresolved?.index ?? -1;
+  const boundaries = [subscribeIndex, unresolvedIndex].filter(index => index > titleIndex);
+  const endIndex = boundaries.length ? Math.min(...boundaries) : Math.min(text.length, titleIndex + 5000);
+  const incidentText = text.slice(titleIndex + title.length, endIndex);
   const update = /\b(Investigating|Identified|Monitoring|Update)\s*-\s*([\s\S]{1,1200}?)(?=\b(?:Investigating|Identified|Monitoring|Update)\s*-|\b[A-Z][a-z]{2}\s+\d{1,2},\s+\d{4}\s*-\s*\d{1,2}:\d{2}\b|$)/i.exec(incidentText);
   if (!update) {
     return {
       kind: 'limited',
-      message: 'Shopify publishes a current incident link without readable current update details.'
+      message: 'Shopify publishes a current incident reference without readable current update details.'
     };
   }
 
