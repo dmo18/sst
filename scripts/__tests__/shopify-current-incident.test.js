@@ -27,6 +27,7 @@ test('Shopify current incident link becomes structured live issue evidence', () 
   assert.equal(result.title, 'Live support unavailable for merchants');
   assert.match(result.note, /outage at Twilio/);
   assert.equal(result.status, 'Identified');
+  assert.equal(result.rawTime, 'Aug 19, 2026 - 19:34 EDT');
   assert.equal(result.color, 'red');
 });
 
@@ -56,5 +57,18 @@ test('Shopify ignores hidden subscribe templates before the visible current inci
   assert.equal(result.kind, 'issue');
   assert.equal(result.title, 'Live support unavailable for merchants');
   assert.equal(result.status, 'Monitoring');
+  assert.equal(result.rawTime, 'Aug 19, 2026 - 19:54 EDT');
   assert.match(result.note, /deploying a fix/);
+});
+
+test('Shopify remains limited when a current incident has no vendor timestamp', () => {
+  const result = parseShopifyStatusPage(`
+    <main>
+      <a href="/incidents/abc123">Live support unavailable for merchants</a>
+      <div>Monitoring - Live support connections are recovering.</div>
+      <button>Subscribe to Incident</button>
+    </main>
+  `);
+  assert.equal(result.kind, 'limited');
+  assert.match(result.message, /vendor update timestamp/);
 });
