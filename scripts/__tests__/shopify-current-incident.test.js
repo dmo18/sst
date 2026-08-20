@@ -78,3 +78,28 @@ test('Shopify production collection uses the official structured Statuspage API'
   assert.equal(additionalPublicOverrides.shopify.url, 'https://www.shopifystatus.com/api/v2/summary.json');
   assert.equal(additionalPublicOverrides.shopify.pageUrl, 'https://www.shopifystatus.com/');
 });
+
+
+test('Shopify structured summary is parsed through the structured adapter registry', () => {
+  const recent = new Date(Date.now() - 60_000).toISOString();
+  const result = providerSpecificConclusion(provider, JSON.stringify({
+    page: { url: 'https://www.shopifystatus.com/' },
+    status: { indicator: 'major', description: 'Major Service Outage' },
+    components: [{ id: 'support', name: 'Support', status: 'major_outage' }],
+    incidents: [{
+      id: 'shopify-support',
+      name: 'Live support unavailable for merchants',
+      status: 'investigating',
+      impact: 'major',
+      created_at: recent,
+      updated_at: recent,
+      components: [{ id: 'support', name: 'Support', status: 'major_outage' }],
+      incident_updates: [{ status: 'investigating', body: 'Shopify is investigating unavailable live support.', created_at: recent }]
+    }]
+  }));
+
+  assert.equal(result.kind, 'issues');
+  assert.equal(result.incidents.length, 1);
+  assert.equal(result.incidents[0].title, 'Live support unavailable for merchants');
+  assert.equal(result.incidents[0].color, 'red');
+});
