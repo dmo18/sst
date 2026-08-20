@@ -6,6 +6,14 @@ The project uses semantic versioning. Dates are shown in ISO format. The newest 
 
 ## Unreleased
 
+## [3.3.8] - 2026-08-20
+
+### Fixed
+
+- Increased the Dependency Universe provider-ring stagger so dense live provider labels remain readable without relaxing the collision safety threshold.
+- Added a geometry regression requiring the provider orbit to retain at least 40 units of radial spread.
+
+
 ## [3.3.7] - 2026-08-20
 
 ### Fixed

@@ -2,6 +2,18 @@
 
 Material autonomous maintenance is recorded here in reverse chronological order.
 
+## 2026-08-20 - Stagger Dependency Universe provider rings
+
+- Trigger: Premium product experience #355 (run `32320123952`) failed on release `13337d0` with 14 label collisions across 36 visible Dependency Universe labels.
+- Verified root cause: Provider nodes alternated across radii 295 and 315, leaving only 20 units of radial spread under the current 36-label production payload.
+- Corrective action: Widened the existing alternating provider orbit to radii 285 and 325 without changing category anchors, collision thresholds, or fail-closed verification.
+- Affected subsystem: Dependency Universe graph geometry and product-experience verification.
+- Version: 3.3.7 to 3.3.8.
+- Regression protection: The deterministic graph test now requires at least 40 units of provider-ring spread while preserving the 60-unit provider/category orbit gap.
+- CI and security validation: Pull-request quality gates, deterministic tests, TypeScript checking, application build, dependency audit, and CodeQL must pass on the exact final head before merge.
+- Production verification method: The merged release must pass Pages, production smoke, current and pinned legacy Chromium, exact 458x291 Yodeck verification, and the downstream Premium product experience workflow.
+- Remaining risk: Future payload density can change label geometry; the browser collision gate remains fail closed.
+
 ## 2026-08-20 - Route Shopify JSON through the structured parser
 
 - Trigger: Release #1365 fetched Shopify's official JSON summary successfully but still published Shopify as the sole blind source at 79/80 live coverage.

@@ -137,6 +137,7 @@ test('dependency universe keeps provider orbit outside category anchors', () => 
   assert.ok(categoryDistances.length > 0);
   assert.ok(providerDistances.length > 0);
   assert.ok(Math.min(...providerDistances) >= Math.max(...categoryDistances) + 60);
+  assert.ok(Math.max(...providerDistances) - Math.min(...providerDistances) >= 40);
   assert.equal(new Set(graph.nodes.filter(node => node.kind === 'provider').map(node => `${node.x.toFixed(2)},${node.y.toFixed(2)}`)).size, providerDistances.length);
 });
 
