@@ -6,6 +6,14 @@ The project uses semantic versioning. Dates are shown in ISO format. The newest 
 
 ## Unreleased
 
+## [3.3.4] - 2026-08-20
+
+### Fixed
+
+- Preserved Shopify's official current-update timestamp on parsed incidents so freshness validation accepts readable current evidence.
+- Kept untimestamped Shopify incident references limited and fail-closed.
+
+
 ## [3.3.3] - 2026-08-20
 
 ### Fixed
