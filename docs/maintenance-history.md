@@ -2,6 +2,19 @@
 
 Material autonomous maintenance is recorded here in reverse chronological order.
 
+## 2026-08-20 - Preserve Shopify current-evidence time
+
+- Trigger: Post-merge release #1361 parsed Shopify's incident title but still published 79/80 live coverage and kept Shopify blind.
+- Verified root cause: The source-freshness contract rejects current-page incidents without vendor time; the Shopify adapter extracted title, state, and detail but omitted the visible vendor update timestamp.
+- Corrective action: Extract and preserve Shopify's official update time as current-page evidence, and return limited when a current incident has no readable vendor timestamp.
+- Affected subsystem: Public status collection, incident freshness, and Shopify HTML parsing.
+- Version: 3.3.3 to 3.3.4.
+- Regression protection: Added exact timestamp assertions for Identified and Monitoring states plus an untimestamped fail-closed case.
+- CI and security validation: Pull-request provider validation, quality gates, deterministic tests, TypeScript checking, application build, complete dependency audit, and CodeQL passed on the exact final head before merge.
+- Production verification method: The merged release must publish 80/80 live official sources and pass Pages, production smoke, current and pinned legacy Chromium, and exact 458x291 Yodeck verification.
+- Relevant pull request: #161.
+- Remaining risk: Shopify timestamp formatting changes will remain limited until explicitly supported.
+
 ## 2026-08-20 - Correct Shopify hidden-template ordering
 
 - Trigger: Post-merge release #1360 passed collection gates but remained at 79/80 live official sources, proving the 3.3.2 Shopify repair did not match production markup.

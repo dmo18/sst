@@ -298,12 +298,29 @@ export function parseShopifyStatusPage(html) {
     };
   }
 
+  const timestamp = /\b([A-Z][a-z]{2}\s+\d{1,2},\s+\d{4}\s*-\s*\d{1,2}:\d{2}\s*(?:[A-Z]{2,5})?)/i.exec(incidentText);
+  if (!timestamp) {
+    return {
+      kind: 'limited',
+      message: 'Shopify publishes a current incident without a readable vendor update timestamp.'
+    };
+  }
+
   const note = update[2].trim();
+  const rawTime = timestamp[1].trim();
   return {
     kind: 'issue',
+    id: fallbackIncidentToken({
+      provider: 'shopify',
+      title,
+      note,
+      source: 'shopify-current-page',
+      firstDetected: rawTime
+    }),
     title,
     note,
     status: update[1],
+    rawTime,
     color: /\b(?:major outage|service unavailable|unavailable|outage)\b/i.test(`${title} ${note}`) ? 'red' : 'amber',
     evidenceBasis: 'current-page'
   };
