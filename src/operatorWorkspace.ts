@@ -364,7 +364,7 @@ export function buildUniverseGraph(model: IssueConsoleModel): UniverseGraph {
 
   orderedProviders.forEach((provider, index) => {
     const angle = providerAngle.get(provider.id) as number;
-    const radius = providerRadius + (index % 2 === 0 ? -10 : 10);
+    const radius = providerRadius + (index % 2 === 0 ? -20 : 20);
     const x = centerX + Math.cos(angle) * radius;
     const y = centerY + Math.sin(angle) * radius;
     providerPositions.set(provider.id, { x, y });
