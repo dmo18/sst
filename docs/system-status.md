@@ -34,7 +34,7 @@ Status timestamp: 2026-08-19 18:33 Eastern Time
 - Repository: `dmo18/sst`
 - Visibility: public
 - Default branch: `main`
-- Package: `msp-status-hud` 3.3.1
+- Package: `msp-status-hud` 3.3.2
 - Current application baseline: `0f151684a913671b00c8dd2f00ef484599351614`
 - Active production catalog: 80 providers across 31 categories
 - Public contract: Status Contract v3
