@@ -42,3 +42,19 @@ test('Shopify does not infer an incident from legend wording without a current i
   const result = parseShopifyStatusPage('<main>Operational Degraded Performance Partial Outage Major Outage Maintenance</main>');
   assert.equal(result, null);
 });
+
+test('Shopify ignores hidden subscribe templates before the visible current incident', () => {
+  const result = parseShopifyStatusPage(`
+    <template>Subscribe to Incident</template>
+    <main>
+      <div>Live support unavailable for merchants</div>
+      <div>Monitoring - Twilio is deploying a fix and live support connections are recovering.</div>
+      <time>Aug 19, 2026 - 19:54 EDT</time>
+      <section>Past Incidents Unresolved incident: Live support unavailable for merchants.</section>
+    </main>
+  `);
+  assert.equal(result.kind, 'issue');
+  assert.equal(result.title, 'Live support unavailable for merchants');
+  assert.equal(result.status, 'Monitoring');
+  assert.match(result.note, /deploying a fix/);
+});
