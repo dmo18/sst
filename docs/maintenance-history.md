@@ -10,8 +10,9 @@ Material autonomous maintenance is recorded here in reverse chronological order.
 - Affected subsystem: Public status collection and Shopify HTML parsing.
 - Version: 3.3.2 to 3.3.3.
 - Regression protection: Added deterministic coverage with hidden subscription text before the visible incident and without relying on incident-link markup.
-- CI and security validation: Pull-request provider validation, quality gates, deterministic tests, TypeScript checking, application build, complete dependency audit, and CodeQL must pass on the exact final head before merge.
+- CI and security validation: Pull-request provider validation, quality gates, deterministic tests, TypeScript checking, application build, complete dependency audit, and CodeQL passed on the exact final head before merge.
 - Production verification method: The merged release must publish 80/80 live official sources and pass Pages, production smoke, current and pinned legacy Chromium, and exact 458x291 Yodeck verification.
+- Relevant pull request: #160.
 - Remaining risk: A future Shopify page that removes both current incident links and the explicit unresolved-incident label will remain limited and fail closed.
 
 ## 2026-08-20 - Restore Shopify current incident parsing
