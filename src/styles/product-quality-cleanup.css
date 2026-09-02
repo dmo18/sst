@@ -56,7 +56,6 @@
 
   .depth-shell-universe .depth-provider-node.depth-tone-critical text,
   .depth-shell-universe .depth-provider-node.is-pinned text,
-  .depth-shell-universe .depth-provider-node.is-replayed text,
   .depth-shell-universe .depth-provider-node:hover text,
   .depth-shell-universe .depth-provider-node:focus text {
     display: block;

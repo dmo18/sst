@@ -14,6 +14,13 @@ test('mobile Dependency Universe gets a dedicated screenshot-reviewed compositio
   assert.ok(main.indexOf("./styles/product-depth-final-polish.css") < main.indexOf("./styles/wallboard-v2.css"));
 });
 
+test('mobile Dependency Universe does not label every replayed node', async () => {
+  const css = await read('src/styles/product-quality-cleanup.css');
+  const mobileRules = css.slice(css.indexOf('@media (max-width: 900px)'));
+  assert.match(mobileRules, /\.depth-provider-node\.depth-tone-critical text/);
+  assert.doesNotMatch(mobileRules, /\.depth-provider-node\.is-replayed text/);
+});
+
 test('retained browser evidence proves profile cleanup before removing early cleanup noise', async () => {
   const workflow = await read('.github/workflows/product-experience.yml');
   assert.match(workflow, /Operator browser profile cleanup did not complete/);
