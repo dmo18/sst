@@ -208,7 +208,7 @@ npm run hooks:install
 - `.github/workflows/product-experience.yml` runs after successful non-scheduled releases and browser-verifies premium desktop/command/mobile, Dependency Universe/search/Incident Focus, Microsoft 365 critical coverage, and provider identity/NUSO desktop/mobile evidence. It retains screenshots and verifier logs for human review.
 - `.github/workflows/status-freshness-watch.yml` checks deployed payload age and dispatches one refresh when the payload is older than 20 minutes and no release is active.
 
-Only the deploy job receives Pages/OIDC/status write permissions. The collection/build job is read-only apart from reading its own verified shell artifacts. A single Pages concurrency group prevents overlapping releases.
+The production scheduler and recovery path are GitHub Actions and GitHub Pages only; Agent Deck and its VM are not a production dependency. The freshness watcher has only the short-lived `GITHUB_TOKEN` permissions required to dispatch a recovery refresh and cancel a wedged release. The collection/build job is read-only apart from reading its own verified shell artifacts, while only the deploy job receives Pages/OIDC/status write permissions. A single Pages concurrency group prevents overlapping releases. See [production scheduler and recovery](docs/production-scheduler.md).
 
 ## Current acceptance evidence
 
@@ -223,6 +223,7 @@ Product-experience run #34 (`31539671901`) passed every deployed product gate an
 - [Full architecture reconciliation](docs/architecture-reconciliation.md)
 - [Product-depth command system and completion evidence](docs/product-depth-command-system.md)
 - [Premium product experience overhaul](docs/product-experience-overhaul.md)
+- [Production scheduler, recovery, and operational audit](docs/production-scheduler.md)
 - [Operations intelligence contracts](docs/operations-intelligence.md)
 - [Deployed online help](https://dmo18.github.io/sst/help.html)
 - [Current system status](docs/system-status.md)

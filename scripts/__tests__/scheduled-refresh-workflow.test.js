@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 const workflow = fs.readFileSync(new URL('../../.github/workflows/refresh-pages.yml', import.meta.url), 'utf8');
+const watcher = fs.readFileSync(new URL('../../.github/workflows/status-freshness-watch.yml', import.meta.url), 'utf8');
 
 test('scheduled status refresh runs every five minutes', () => {
   assert.match(workflow, /cron:\s*["']\*\/5 \* \* \* \*["']/);
@@ -47,4 +48,12 @@ test('scheduled refresh keeps collection, payload validation and production smok
 
 test('every deployment exposes an immutable payload selected by deploy-version metadata', () => {
   assert.match(workflow, /node scripts\/prepare-versioned-status\.mjs dist/);
+});
+
+test('recovery is GitHub-native and does not require a VM watchdog', () => {
+  assert.match(watcher, /cron:\s*["']2,7,12,17,22,27,32,37,42,47,52,57 \* \* \* \*["']/);
+  assert.match(watcher, /contents:\s*write/);
+  assert.match(watcher, /actions:\s*write/);
+  assert.match(watcher, /event_type":"freshness-recovery/);
+  assert.doesNotMatch(watcher, /agent[- ]?deck|watchdog|vm-/i);
 });

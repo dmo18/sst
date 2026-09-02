@@ -6,7 +6,9 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  # `repository_dispatch` is a repository API write, while `actions: write`
+  # is limited to cancelling an already-wedged Pages run.
+  contents: write
   actions: write
 
 concurrency:
