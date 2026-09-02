@@ -44,3 +44,7 @@ test('scheduled refresh keeps collection, payload validation and production smok
   assert.doesNotMatch(workflow, /jobs:\n\s+build:\n\s+continue-on-error:/);
   assert.doesNotMatch(workflow, /\n\s+deploy:\n\s+continue-on-error:/);
 });
+
+test('every deployment exposes an immutable payload selected by deploy-version metadata', () => {
+  assert.match(workflow, /node scripts\/prepare-versioned-status\.mjs dist/);
+});

@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { parseAzureEntraStatus } from './entra-status-adapter.mjs';
 import { parseStatuspageSummary } from './structured-source-adapters.mjs';
+import { resolveDeployedStatus } from './deployed-status.mjs';
 
 const DEFAULT_STATUS_URL = 'https://dmo18.github.io/sst/status.json';
 const REQUEST_TIMEOUT_MS = 8_000;
@@ -155,7 +156,8 @@ export async function checkStatusTruth({
   statusUrl = process.env.STATUS_URL || DEFAULT_STATUS_URL,
   now = Date.now()
 } = {}) {
-  const payload = await fetchJson(fetchImpl, cacheBust(statusUrl, now));
+  const deployed = await resolveDeployedStatus(statusUrl.replace(/status\.json(?:\?.*)?$/i, ''), { fetchImpl, token: now });
+  const payload = await fetchJson(fetchImpl, deployed.statusUrl);
   const generatedAt = Date.parse(payload.generated_at || '');
   const ageMinutes = Number.isFinite(generatedAt) ? Math.max(0, Math.floor((now - generatedAt) / 60_000)) : Number.POSITIVE_INFINITY;
   const targets = statuspageWatchTargets(payload);
@@ -166,6 +168,7 @@ export async function checkStatusTruth({
 
   return {
     payload,
+    deployedStatusPath: deployed.statusPath,
     ageMinutes,
     stale: !Number.isFinite(ageMinutes) || ageMinutes > STALE_AFTER_MINUTES,
     inspectedCount: checks.length,
@@ -186,7 +189,7 @@ function githubOutput(values) {
 
 async function main() {
   const result = await checkStatusTruth();
-  console.log(`TRUTH_WATCH payload_age_minutes=${Number.isFinite(result.ageMinutes) ? result.ageMinutes : 'invalid'} inspected=${result.inspectedCount} failures=${result.failureCount} drift=${result.driftCount}`);
+  console.log(`TRUTH_WATCH status_path=${result.deployedStatusPath} payload_age_minutes=${Number.isFinite(result.ageMinutes) ? result.ageMinutes : 'invalid'} inspected=${result.inspectedCount} failures=${result.failureCount} drift=${result.driftCount}`);
   for (const item of result.drifts) {
     console.log(`TRUTH_DRIFT ${item.providerId} reason=${item.reason} deployed=${item.deployed.active ? 'active' : 'clear'} live=${item.live.active ? 'active' : 'clear'} deployed_incidents=${item.deployed.incidentIds.join(',') || 'none'} live_incidents=${item.live.incidentIds.join(',') || 'none'}`);
   }

@@ -212,7 +212,8 @@ test('deployment identity is generated at build time and verified in production'
   assert.match(writer, /process\.env\.GITHUB_SHA \|\| 'local'/);
   assert.match(writer, /process\.env\.GITHUB_RUN_ID \|\| 'local'/);
   assert.match(writer, /deploy-version\.txt/);
-  assert.match(smoke, /deploy-version\.txt/);
+  assert.match(writer, /status_path/);
+  assert.match(smoke, /resolveDeployedStatus/);
   assert.match(smoke, /deployMetadata\.commit !== process\.env\.GITHUB_SHA/);
   assert.match(smoke, /deployMetadata\.run_id !== process\.env\.GITHUB_RUN_ID/);
   await assert.rejects(() => read('public/deploy-version.txt'), /ENOENT/);

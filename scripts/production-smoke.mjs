@@ -1,6 +1,7 @@
 import { ACTIVE_PROVIDER_CATALOG_HASH, ACTIVE_PROVIDER_IDS } from '../src/providerCatalog.ts';
 import { wirePayloadValidationErrors } from '../src/wirePayloadValidation.ts';
 import { verifyReleaseContract } from './release-contract.mjs';
+import { resolveDeployedStatus } from './deployed-status.mjs';
 
 const requestedBase = process.argv[2] || 'https://dmo18.github.io/sst/';
 const base = new URL(requestedBase.endsWith('/') ? requestedBase : `${requestedBase}/`).href;
@@ -10,11 +11,12 @@ console.log(`INDEX ${htmlResponse.status} ${htmlResponse.url} ${htmlResponse.hea
 const html = await htmlResponse.text();
 console.log(`INDEX_BYTES ${Buffer.byteLength(html)}`);
 if (!htmlResponse.ok) throw new Error(`index failed with HTTP ${htmlResponse.status}`);
+const deployedBase = new URL('.', htmlResponse.url).href;
 if (!/<title>ServiceOps \| MSP Service Intelligence<\/title>/i.test(html)) throw new Error('deployed index does not identify the v3.1 ServiceOps enterprise workspace');
 if (!/http-equiv=["']Content-Security-Policy["']/i.test(html)) throw new Error('deployed index is missing the Content Security Policy');
 
-const scripts = [...html.matchAll(/<script[^>]+src=["']([^"']+)["']/gi)].map(match => new URL(match[1], base).href);
-const styles = [...html.matchAll(/<link[^>]+href=["']([^"']+)["'][^>]*>/gi)].map(match => new URL(match[1], base).href).filter(url => /\.css(?:\?|$)/.test(url));
+const scripts = [...html.matchAll(/<script[^>]+src=["']([^"']+)["']/gi)].map(match => new URL(match[1], deployedBase).href);
+const styles = [...html.matchAll(/<link[^>]+href=["']([^"']+)["'][^>]*>/gi)].map(match => new URL(match[1], deployedBase).href).filter(url => /\.css(?:\?|$)/.test(url));
 console.log(`SCRIPTS ${scripts.join(' ') || 'none'}`);
 console.log(`STYLES ${styles.join(' ') || 'none'}`);
 if (!scripts.length) throw new Error('no JavaScript bundle found in index');
@@ -27,20 +29,9 @@ for (const url of [...scripts, ...styles]) {
   if (!response.ok || body.byteLength === 0) throw new Error(`asset failed: ${url}`);
 }
 
-const deployVersionUrl = new URL('deploy-version.txt', base);
-deployVersionUrl.searchParams.set('smoke', String(cacheBust));
-const deployVersionResponse = await fetch(deployVersionUrl, { redirect: 'follow', cache: 'no-store' });
-const deployVersionText = await deployVersionResponse.text();
-console.log(`DEPLOY_VERSION ${deployVersionResponse.status} ${deployVersionText.trim().replaceAll('\n', ' | ')}`);
-if (!deployVersionResponse.ok) throw new Error(`deploy-version.txt failed with HTTP ${deployVersionResponse.status}`);
-
-const deployMetadata = Object.fromEntries(deployVersionText
-  .trim()
-  .split(/\r?\n/)
-  .map(line => {
-    const separator = line.indexOf(':');
-    return separator > 0 ? [line.slice(0, separator).trim(), line.slice(separator + 1).trim()] : [line.trim(), ''];
-  }));
+const deployed = await resolveDeployedStatus(deployedBase, { token: cacheBust });
+const deployMetadata = deployed.metadata;
+console.log(`DEPLOY_VERSION 200 ${Object.entries(deployMetadata).map(([key, value]) => `${key}: ${value}`).join(' | ')}`);
 
 if (process.env.GITHUB_SHA && deployMetadata.commit !== process.env.GITHUB_SHA)
   throw new Error(`deployed commit ${deployMetadata.commit || 'missing'} does not match workflow commit ${process.env.GITHUB_SHA}`);
@@ -49,9 +40,8 @@ if (process.env.GITHUB_RUN_ID && deployMetadata.run_id !== process.env.GITHUB_RU
 if (!Number.isFinite(Date.parse(deployMetadata.generated_at || '')))
   throw new Error('deployed generated_at marker is invalid');
 
-const statusUrl = new URL('status.json', base);
-statusUrl.searchParams.set('smoke', String(cacheBust));
-const statusResponse = await fetch(statusUrl, { redirect: 'follow', cache: 'no-store' });
+console.log(`STATUS_PATH ${deployed.statusPath}`);
+const statusResponse = await fetch(deployed.statusUrl, { redirect: 'follow', cache: 'no-store', headers: { 'cache-control': 'no-cache' } });
 console.log(`STATUS ${statusResponse.status} ${statusResponse.headers.get('content-type') || ''}`);
 const statusText = await statusResponse.text();
 console.log(`STATUS_BYTES ${Buffer.byteLength(statusText)}`);

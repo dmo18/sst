@@ -55,14 +55,16 @@ jobs:
         run: node --experimental-strip-types scripts/verify-release-contract.mjs public/status.json
       - name: Build verified application shell
         if: github.event_name != 'schedule' && github.event_name != 'repository_dispatch'
-        run: npm run build:app
+        run: |
+          npm run build:app
+          node scripts/prepare-versioned-status.mjs dist
       - name: Prepare reusable application shell
         if: github.event_name != 'schedule' && github.event_name != 'repository_dispatch'
         run: |
           rm -rf /tmp/verified-app-shell
           mkdir -p /tmp/verified-app-shell
           cp -a dist/. /tmp/verified-app-shell/
-          rm -f /tmp/verified-app-shell/status.json /tmp/verified-app-shell/previous-status.json /tmp/verified-app-shell/deploy-version.txt
+          rm -f /tmp/verified-app-shell/status.json /tmp/verified-app-shell/status-*.json /tmp/verified-app-shell/previous-status.json /tmp/verified-app-shell/deploy-version.txt
       - name: Publish verified application shell
         if: github.event_name != 'schedule' && github.event_name != 'repository_dispatch'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -101,12 +103,14 @@ jobs:
           unzip -q /tmp/verified-app-shell.zip -d dist
           node scripts/write-deploy-version.mjs
           cp public/status.json public/deploy-version.txt dist/
+          node scripts/prepare-versioned-status.mjs dist
           test ! -f public/previous-status.json || cp public/previous-status.json dist/previous-status.json
       - name: Fail-safe application build when reusable shell is unavailable
         if: (github.event_name == 'schedule' || github.event_name == 'repository_dispatch') && steps.shell.outputs.found != 'true'
         run: |
           echo "Verified app shell artifact is unavailable; performing a fail-safe build for freshness continuity."
           npm run build:app
+          node scripts/prepare-versioned-status.mjs dist
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:

@@ -8,12 +8,14 @@ const outputPath = path.join(publicDir, 'deploy-version.txt');
 const commit = process.env.GITHUB_SHA || 'local';
 const runId = process.env.GITHUB_RUN_ID || 'local';
 const generatedAt = new Date().toISOString();
+const statusPath = `status-${runId}.json`;
 
 fs.mkdirSync(publicDir, { recursive: true });
 fs.writeFileSync(outputPath, [
   `commit: ${commit}`,
   `run_id: ${runId}`,
   `generated_at: ${generatedAt}`,
+  `status_path: ${statusPath}`,
   ''
 ].join('\n'), 'utf8');
 
