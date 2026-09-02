@@ -1,0 +1,141 @@
+name: Bounded Refresh Continuity
+
+on:
+  workflow_run:
+    workflows: ["Deploy ServiceOps Enterprise Workspace"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      test_mode:
+        description: Dispatch one immediate, bounded native recovery refresh for verification.
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  # Recovery dispatch is a repository API write; actions write is used only to
+  # cancel a release that has exceeded the 12-minute takeover threshold.
+  contents: write
+  actions: write
+
+concurrency:
+  # A newer successful scheduled release replaces its predecessor's bridge.
+  group: bounded-refresh-continuity
+  cancel-in-progress: true
+
+jobs:
+  renew:
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'schedule')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SOURCE_RUN_ID: ${{ github.event.workflow_run.id || github.run_id }}
+      SOURCE_RUN_CREATED_AT: ${{ github.event.workflow_run.created_at || github.run_started_at }}
+      MANUAL_TEST: ${{ github.event_name == 'workflow_dispatch' && inputs.test_mode || 'false' }}
+    steps:
+      - name: Bridge missed scheduler windows with bounded native recovery
+        run: |
+          node --input-type=module <<'NODE'
+          const repository = process.env.GITHUB_REPOSITORY;
+          const token = process.env.GH_TOKEN;
+          const sourceRunId = String(process.env.SOURCE_RUN_ID || '');
+          const sourceRunCreatedAt = Date.parse(process.env.SOURCE_RUN_CREATED_AT || '');
+          const testMode = process.env.MANUAL_TEST === 'true';
+          const maxAttempts = testMode ? 1 : 3;
+          const delaySeconds = testMode ? 0 : 330;
+          const activeStates = new Set(['queued', 'in_progress', 'waiting', 'requested', 'pending']);
+          const takeoverAfterMinutes = 12;
+          let terminalApiFailure = false;
+
+          const headers = {
+            accept: 'application/vnd.github+json',
+            authorization: `Bearer ${token}`,
+            'content-type': 'application/json',
+            'x-github-api-version': '2022-11-28'
+          };
+          const request = async (path, options = {}) => {
+            const response = await fetch(`https://api.github.com/repos/${repository}${path}`, { headers, ...options });
+            if (!response.ok) throw new Error(`${options.method || 'GET'} ${path} returned HTTP ${response.status}: ${(await response.text()).slice(0, 500)}`);
+            return response.status === 204 ? null : response.json();
+          };
+          const ageMinutes = run => {
+            const timestamp = Date.parse(run.run_started_at || run.created_at || '');
+            return Number.isFinite(timestamp) ? Math.max(0, Math.floor((Date.now() - timestamp) / 60_000)) : Number.POSITIVE_INFINITY;
+          };
+          const pause = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
+
+          console.log(`Continuity bridge: source=${sourceRunId}, attempts=${maxAttempts}, delay_seconds=${delaySeconds}, manual_test=${testMode}.`);
+          for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+            if (delaySeconds) {
+              console.log(`Continuity attempt ${attempt}/${maxAttempts}: waiting ${delaySeconds}s for the next normal scheduler window.`);
+              await pause(delaySeconds * 1000);
+            }
+
+            let scheduledRuns;
+            let allRuns;
+            try {
+              scheduledRuns = (await request('/actions/workflows/refresh-pages.yml/runs?event=schedule&per_page=20')).workflow_runs || [];
+              allRuns = (await request('/actions/workflows/refresh-pages.yml/runs?per_page=20')).workflow_runs || [];
+            }
+            catch (error) {
+              terminalApiFailure = true;
+              console.error(`Continuity attempt ${attempt}: GitHub API inspection interrupted; no blind dispatch: ${error.message}`);
+              continue;
+            }
+
+            const newerSuccessfulSchedule = scheduledRuns.find(run => run.conclusion === 'success'
+              && String(run.id) !== sourceRunId
+              && (!Number.isFinite(sourceRunCreatedAt) || Date.parse(run.created_at || '') > sourceRunCreatedAt));
+            if (!testMode && newerSuccessfulSchedule) {
+              console.log(`Normal scheduler renewed at release #${newerSuccessfulSchedule.run_number}; ending predecessor bridge.`);
+              process.exit(0);
+            }
+
+            const activeRuns = allRuns.filter(run => activeStates.has(run.status));
+            const wedgedRuns = activeRuns.filter(run => ageMinutes(run) >= takeoverAfterMinutes);
+            for (const run of wedgedRuns) {
+              try {
+                console.warn(`Cancelling wedged Pages release #${run.run_number} after ${ageMinutes(run)}m.`);
+                await request(`/actions/runs/${run.id}/cancel`, { method: 'POST' });
+              }
+              catch (error) {
+                terminalApiFailure = true;
+                console.error(`Could not cancel wedged release #${run.run_number}: ${error.message}`);
+              }
+            }
+
+            const healthyAgeActive = activeRuns.filter(run => !wedgedRuns.some(wedged => wedged.id === run.id));
+            if (healthyAgeActive.length) {
+              console.log(`Continuity attempt ${attempt}: ${healthyAgeActive.length} healthy-age release(s) already active; deferring.`);
+              continue;
+            }
+
+            try {
+              await request('/dispatches', {
+                method: 'POST',
+                body: JSON.stringify({
+                  event_type: 'freshness-recovery',
+                  client_payload: {
+                    source: 'bounded-github-native-continuity',
+                    source_run_id: sourceRunId,
+                    attempt,
+                    max_attempts: maxAttempts,
+                    manual_test: testMode
+                  }
+                })
+              });
+              console.log(`Continuity attempt ${attempt}: dispatched bounded GitHub-native recovery refresh.`);
+            }
+            catch (error) {
+              terminalApiFailure = true;
+              console.error(`Continuity attempt ${attempt}: recovery dispatch failed: ${error.message}`);
+            }
+          }
+
+          if (terminalApiFailure) {
+            throw new Error('Bounded continuity bridge exhausted with an interrupted GitHub API operation; GitHub-only recovery cannot self-heal this condition.');
+          }
+          console.log('Bounded continuity bridge completed without an infinite renewal loop.');
+          NODE

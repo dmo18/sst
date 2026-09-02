@@ -4,6 +4,7 @@ import test from 'node:test';
 
 const workflow = fs.readFileSync(new URL('../../.github/workflows/refresh-pages.yml', import.meta.url), 'utf8');
 const watcher = fs.readFileSync(new URL('../../.github/workflows/status-freshness-watch.yml', import.meta.url), 'utf8');
+const continuity = fs.readFileSync(new URL('../../.github/workflows/refresh-continuity.yml', import.meta.url), 'utf8');
 
 test('scheduled status refresh runs every five minutes', () => {
   assert.match(workflow, /cron:\s*["']\*\/5 \* \* \* \*["']/);
@@ -56,4 +57,18 @@ test('recovery is GitHub-native and does not require a VM watchdog', () => {
   assert.match(watcher, /actions:\s*write/);
   assert.match(watcher, /event_type":"freshness-recovery/);
   assert.doesNotMatch(watcher, /agent[- ]?deck|watchdog|vm-/i);
+});
+
+test('a successful scheduled release creates a bounded native continuity bridge', () => {
+  assert.match(continuity, /workflow_run:\s*\n\s+workflows: \["Deploy ServiceOps Enterprise Workspace"\]/);
+  assert.match(continuity, /github\.event\.workflow_run\.event == 'schedule'/);
+  assert.match(continuity, /const maxAttempts = testMode \? 1 : 3;/);
+  assert.match(continuity, /const delaySeconds = testMode \? 0 : 330;/);
+  assert.match(continuity, /group:\s*bounded-refresh-continuity\s*\n\s*cancel-in-progress:\s*true/);
+  assert.match(continuity, /runs\?event=schedule&per_page=20/);
+  assert.match(continuity, /takeoverAfterMinutes = 12/);
+  assert.match(continuity, /event_type: 'freshness-recovery'/);
+  assert.match(continuity, /no blind dispatch/);
+  assert.match(continuity, /cannot self-heal this condition/);
+  assert.doesNotMatch(continuity, /agent[- ]?deck|watchdog|vm-/i);
 });
