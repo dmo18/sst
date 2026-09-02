@@ -81,7 +81,7 @@ test('premium motion remains accessible and wallboard polish stays geometry-neut
 test('deployed product experience verification covers desktop command and mobile surfaces without schedule churn', async () => {
   const workflow = await read('.github/workflows/product-experience.yml');
   const verifier = await read('scripts/verify-operator-experience.mjs');
-  assert.match(workflow, /workflow_run\.event != 'schedule'/);
+  assert.match(workflow, /workflow_run\.event == 'push' \|\| github\.event\.workflow_run\.event == 'workflow_dispatch'/);
   assert.match(workflow, /operator-experience\.png/);
   assert.match(workflow, /operator-command\.png/);
   assert.match(workflow, /operator-mobile\.png/);

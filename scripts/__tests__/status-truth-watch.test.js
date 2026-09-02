@@ -107,7 +107,8 @@ test('freshness workflow compares official live truth and can recover fresh-but-
   assert.match(workflow, /node scripts\/status-truth-watch\.mjs/);
   assert.match(workflow, /steps\.truth\.outputs\.drift == 'true'/);
   assert.match(workflow, /steps\.truth\.outputs\.stale == 'true'/);
-  assert.match(workflow, /actions\/workflows\/refresh-pages\.yml\/dispatches/);
+  assert.match(workflow, /repos\/\$\{GITHUB_REPOSITORY\}\/dispatches/);
+  assert.match(workflow, /"event_type":"freshness-recovery"/);
   assert.doesNotMatch(workflow, /ageMinutes > 20/);
   assert.match(watcher, /provider\.source_type === 'statuspage-json'/);
   assert.match(watcher, /parseStatuspageSummary/);

@@ -113,7 +113,7 @@ test('persistent launcher makes the signature feature discoverable without overl
 test('deployed product-depth verification captures readable universe search incident and mobile evidence without schedule churn', async () => {
   const workflow = await read('.github/workflows/product-experience.yml');
   const verifier = await read('scripts/verify-product-depth-experience.mjs');
-  assert.match(workflow, /workflow_run\.event != 'schedule'/);
+  assert.match(workflow, /workflow_run\.event == 'push' \|\| github\.event\.workflow_run\.event == 'workflow_dispatch'/);
   assert.match(workflow, /verify-product-depth-experience\.mjs/);
   for (const artifact of ['operator-universe.png', 'operator-search.png', 'operator-incident.png', 'operator-universe-mobile.png', 'product-depth-verifier.log']) {
     assert.match(workflow, new RegExp(artifact.replace('.', '\\.')));

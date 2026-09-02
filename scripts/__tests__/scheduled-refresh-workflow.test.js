@@ -8,6 +8,12 @@ test('scheduled status refresh runs every five minutes', () => {
   assert.match(workflow, /cron:\s*["']\*\/5 \* \* \* \*["']/);
 });
 
+test('freshness recovery is data-only and preserves the five-minute schedule', () => {
+  assert.match(workflow, /repository_dispatch:\s*\n\s+types: \[freshness-recovery\]/);
+  assert.match(workflow, /github\.event_name != 'schedule' && github\.event_name != 'repository_dispatch'/);
+  assert.match(workflow, /github\.event_name == 'schedule' \|\| github\.event_name == 'repository_dispatch'/);
+});
+
 test('scheduled refresh retries transient Pages deployment failures', () => {
   assert.match(workflow, /name: Deploy Pages, attempt 1[\s\S]*continue-on-error: true/);
   assert.match(workflow, /name: Deploy Pages, attempt 2[\s\S]*continue-on-error: true/);

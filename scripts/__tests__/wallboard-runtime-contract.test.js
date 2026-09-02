@@ -17,9 +17,9 @@ test('Pages deployment is serialized, fully validated, bounded, and schedule-opt
   assert.match(workflow, /build:\s*[\s\S]*timeout-minutes:\s*20/);
   assert.match(workflow, /deploy:\s*[\s\S]*timeout-minutes:\s*20/);
   assert.doesNotMatch(workflow, /Cancel superseded Pages deployment/);
-  assert.match(workflow, /name:\s*Run deterministic tests\s*\n\s*if:\s*github\.event_name != 'schedule'\s*\n\s*run:\s*npm test/);
-  assert.match(workflow, /name:\s*Run TypeScript checking\s*\n\s*if:\s*github\.event_name != 'schedule'\s*\n\s*run:\s*npm run typecheck/);
-  assert.match(workflow, /name:\s*Audit complete dependency graph\s*\n\s*if:\s*github\.event_name != 'schedule'\s*\n\s*run:\s*npm audit --audit-level=high/);
+  assert.match(workflow, /name:\s*Run deterministic tests\s*\n\s*if:\s*github\.event_name != 'schedule' && github\.event_name != 'repository_dispatch'\s*\n\s*run:\s*npm test/);
+  assert.match(workflow, /name:\s*Run TypeScript checking\s*\n\s*if:\s*github\.event_name != 'schedule' && github\.event_name != 'repository_dispatch'\s*\n\s*run:\s*npm run typecheck/);
+  assert.match(workflow, /name:\s*Audit complete dependency graph\s*\n\s*if:\s*github\.event_name != 'schedule' && github\.event_name != 'repository_dispatch'\s*\n\s*run:\s*npm audit --audit-level=high/);
   assert.match(workflow, /verified-app-shell-\$\{\{ github\.sha \}\}/);
   assert.match(workflow, /name:\s*Restore verified application shell/);
   assert.doesNotMatch(workflow, /npm audit[^\n]*--omit=dev/);

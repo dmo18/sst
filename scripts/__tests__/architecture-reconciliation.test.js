@@ -138,9 +138,9 @@ test('CI uses current immutable action generations and CodeQL is enabled', () =>
 test('scheduled releases reuse a verified commit-keyed app shell and skip unchanged verification work', () => {
   const workflow = read('.github/workflows/refresh-pages.yml');
   assert.match(workflow, /verified-app-shell-\$\{\{ github\.sha \}\}/);
-  assert.match(workflow, /if: github\.event_name != 'schedule'\n\s+run: npm test/);
-  assert.match(workflow, /if: github\.event_name != 'schedule'\n\s+run: npm run typecheck/);
-  assert.match(workflow, /if: github\.event_name != 'schedule'\n\s+run: npm audit --audit-level=high/);
+  assert.match(workflow, /if: github\.event_name != 'schedule' && github\.event_name != 'repository_dispatch'\n\s+run: npm test/);
+  assert.match(workflow, /if: github\.event_name != 'schedule' && github\.event_name != 'repository_dispatch'\n\s+run: npm run typecheck/);
+  assert.match(workflow, /if: github\.event_name != 'schedule' && github\.event_name != 'repository_dispatch'\n\s+run: npm audit --audit-level=high/);
   assert.match(workflow, /Restore verified application shell/);
   assert.match(workflow, /Fail-safe application build when reusable shell is unavailable/);
 });
