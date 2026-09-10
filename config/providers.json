@@ -507,7 +507,7 @@
     "name": "Proofpoint",
     "category": "Security / Email",
     "priority": 78,
-    "enabled": true,
+    "enabled": false,
     "sourceType": "rendered-official",
     "url": "https://proofpoint.my.site.com/community/s/proofpoint-current-incidents"
   },
@@ -534,7 +534,7 @@
     "name": "KnowBe4",
     "category": "Security Training",
     "priority": 60,
-    "enabled": true,
+    "enabled": false,
     "sourceType": "statuspage",
     "url": "https://status.knowbe4.com/api/v2/summary.json"
   },
@@ -624,7 +624,7 @@
     "name": "8x8",
     "category": "VoIP",
     "priority": 60,
-    "enabled": true,
+    "enabled": false,
     "sourceType": "statuscast-json",
     "url": "https://8x8status.status.page/summary.json"
   },
@@ -769,7 +769,7 @@
     "name": "DocuSign",
     "category": "E-signature",
     "priority": 60,
-    "enabled": true,
+    "enabled": false,
     "sourceType": "statuspage",
     "url": "https://status.docusign.com/api/v2/summary.json"
   },
@@ -816,7 +816,7 @@
     "name": "PayPal",
     "category": "Payments",
     "priority": 60,
-    "enabled": true,
+    "enabled": false,
     "sourceType": "rendered-official",
     "url": "https://www.paypal-status.com/product/production",
     "message": "Current PayPal production health is read from the official rendered Production status page."
