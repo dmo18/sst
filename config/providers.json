@@ -262,7 +262,7 @@
     "name": "Box",
     "category": "Storage",
     "priority": 52,
-    "enabled": true,
+    "enabled": false,
     "sourceType": "statuspage",
     "url": "https://status.box.com/api/v2/summary.json"
   },
@@ -334,7 +334,7 @@
     "name": "Auth0",
     "category": "Identity / Access",
     "priority": 78,
-    "enabled": true,
+    "enabled": false,
     "sourceType": "auth0-next-data",
     "url": "https://status.auth0.com/?environment=Production&region=US",
     "message": "Current Auth0 US Public Cloud health is read from the official server-rendered structured status snapshot."
@@ -371,7 +371,7 @@
     "name": "Jamf",
     "category": "MDM / Apple",
     "priority": 60,
-    "enabled": true,
+    "enabled": false,
     "sourceType": "statuspage",
     "url": "https://status.jamf.com/api/v2/summary.json"
   },
@@ -380,7 +380,7 @@
     "name": "Addigy",
     "category": "MDM / Apple",
     "priority": 60,
-    "enabled": true,
+    "enabled": false,
     "sourceType": "statuspage",
     "url": "https://status.addigy.com/api/v2/summary.json"
   },
@@ -561,7 +561,7 @@
     "name": "ShareFile",
     "category": "File Sharing",
     "priority": 60,
-    "enabled": true,
+    "enabled": false,
     "sourceType": "statuspage",
     "url": "https://status.sharefile.com/api/v2/summary.json"
   },
@@ -760,7 +760,7 @@
     "name": "monday.com",
     "category": "Productivity",
     "priority": 60,
-    "enabled": true,
+    "enabled": false,
     "sourceType": "statuspage",
     "url": "https://status.monday.com/api/v2/summary.json"
   },
