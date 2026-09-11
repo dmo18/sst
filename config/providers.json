@@ -228,7 +228,7 @@
     "name": "Okta",
     "category": "Identity",
     "priority": 86,
-    "enabled": true,
+    "enabled": false,
     "sourceType": "statuspage",
     "url": "https://status.okta.com/api/v2/summary.json",
     "criticality": "high",
@@ -498,7 +498,7 @@
     "name": "Cisco Umbrella",
     "category": "Security / DNS",
     "priority": 78,
-    "enabled": true,
+    "enabled": false,
     "sourceType": "statuspage",
     "url": "https://status.umbrella.com/api/v2/summary.json"
   },
@@ -543,7 +543,7 @@
     "name": "CrashPlan",
     "category": "Backup",
     "priority": 78,
-    "enabled": true,
+    "enabled": false,
     "sourceType": "statuspage",
     "url": "https://status.crashplan.com/api/v2/summary.json"
   },
@@ -642,7 +642,7 @@
     "name": "Intermedia",
     "category": "VoIP",
     "priority": 60,
-    "enabled": true,
+    "enabled": false,
     "sourceType": "authenticated-status-reference",
     "url": "https://support.intermedia.com/",
     "message": "Intermedia current System Status is displayed after authenticated HostPilot login; the public support source verifies the official access channel without inferring service health."
