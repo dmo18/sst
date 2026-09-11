@@ -132,6 +132,17 @@ The primary compact deployment target is a Yodeck tile 458 pixels wide by 291 pi
 - The product-depth and provider-identity layers load before authoritative wallboard geometry and do not mount operator command surfaces in wallboard mode.
 - `src/styles/wallboard-v2.css`, `wallboard-compat.css`, `wallboard-tv.css`, and `wallboard-premium.css` retain final signage ownership.
 
+### Provider selection
+
+Use `providers=ID,ID` to show only enabled catalog providers on a wallboard. This filters Priority signals, the compact provider rail, and Provider Watch without affecting collection or the operator console:
+
+```text
+?view=wallboard&providers=kaseya,eset
+?view=wallboard&providers=microsoft365,entra,aws&alerts=24h
+```
+
+Provider IDs are case-insensitive. Unknown or disabled IDs are ignored; omit the parameter to include all enabled providers.
+
 ### Alert window
 
 Use the `alerts` parameter to limit wallboard incidents by canonical effective incident time:

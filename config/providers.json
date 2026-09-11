@@ -228,7 +228,7 @@
     "name": "Okta",
     "category": "Identity",
     "priority": 86,
-    "enabled": true,
+    "enabled": false,
     "sourceType": "statuspage",
     "url": "https://status.okta.com/api/v2/summary.json",
     "criticality": "high",
@@ -262,7 +262,7 @@
     "name": "Box",
     "category": "Storage",
     "priority": 52,
-    "enabled": true,
+    "enabled": false,
     "sourceType": "statuspage",
     "url": "https://status.box.com/api/v2/summary.json"
   },
@@ -334,7 +334,7 @@
     "name": "Auth0",
     "category": "Identity / Access",
     "priority": 78,
-    "enabled": true,
+    "enabled": false,
     "sourceType": "auth0-next-data",
     "url": "https://status.auth0.com/?environment=Production&region=US",
     "message": "Current Auth0 US Public Cloud health is read from the official server-rendered structured status snapshot."
@@ -371,7 +371,7 @@
     "name": "Jamf",
     "category": "MDM / Apple",
     "priority": 60,
-    "enabled": true,
+    "enabled": false,
     "sourceType": "statuspage",
     "url": "https://status.jamf.com/api/v2/summary.json"
   },
@@ -380,7 +380,7 @@
     "name": "Addigy",
     "category": "MDM / Apple",
     "priority": 60,
-    "enabled": true,
+    "enabled": false,
     "sourceType": "statuspage",
     "url": "https://status.addigy.com/api/v2/summary.json"
   },
@@ -416,7 +416,7 @@
     "name": "Datto",
     "category": "MSP Platforms",
     "priority": 86,
-    "enabled": true,
+    "enabled": false,
     "sourceType": "statuspage",
     "url": "https://status.datto.com/api/v2/summary.json"
   },
@@ -462,7 +462,7 @@
     "name": "Malwarebytes",
     "category": "Security",
     "priority": 78,
-    "enabled": true,
+    "enabled": false,
     "sourceType": "statuspage",
     "url": "https://status.malwarebytes.com/api/v2/summary.json"
   },
@@ -498,7 +498,7 @@
     "name": "Cisco Umbrella",
     "category": "Security / DNS",
     "priority": 78,
-    "enabled": true,
+    "enabled": false,
     "sourceType": "statuspage",
     "url": "https://status.umbrella.com/api/v2/summary.json"
   },
@@ -507,7 +507,7 @@
     "name": "Proofpoint",
     "category": "Security / Email",
     "priority": 78,
-    "enabled": true,
+    "enabled": false,
     "sourceType": "rendered-official",
     "url": "https://proofpoint.my.site.com/community/s/proofpoint-current-incidents"
   },
@@ -516,7 +516,7 @@
     "name": "Mimecast",
     "category": "Security / Email",
     "priority": 78,
-    "enabled": true,
+    "enabled": false,
     "sourceType": "statuspage",
     "url": "https://status.mimecast.com/api/v2/summary.json"
   },
@@ -534,7 +534,7 @@
     "name": "KnowBe4",
     "category": "Security Training",
     "priority": 60,
-    "enabled": true,
+    "enabled": false,
     "sourceType": "statuspage",
     "url": "https://status.knowbe4.com/api/v2/summary.json"
   },
@@ -543,7 +543,7 @@
     "name": "CrashPlan",
     "category": "Backup",
     "priority": 78,
-    "enabled": true,
+    "enabled": false,
     "sourceType": "statuspage",
     "url": "https://status.crashplan.com/api/v2/summary.json"
   },
@@ -561,7 +561,7 @@
     "name": "ShareFile",
     "category": "File Sharing",
     "priority": 60,
-    "enabled": true,
+    "enabled": false,
     "sourceType": "statuspage",
     "url": "https://status.sharefile.com/api/v2/summary.json"
   },
@@ -624,7 +624,7 @@
     "name": "8x8",
     "category": "VoIP",
     "priority": 60,
-    "enabled": true,
+    "enabled": false,
     "sourceType": "statuscast-json",
     "url": "https://8x8status.status.page/summary.json"
   },
@@ -642,7 +642,7 @@
     "name": "Intermedia",
     "category": "VoIP",
     "priority": 60,
-    "enabled": true,
+    "enabled": false,
     "sourceType": "authenticated-status-reference",
     "url": "https://support.intermedia.com/",
     "message": "Intermedia current System Status is displayed after authenticated HostPilot login; the public support source verifies the official access channel without inferring service health."
@@ -652,7 +652,7 @@
     "name": "Twilio",
     "category": "Messaging API",
     "priority": 86,
-    "enabled": true,
+    "enabled": false,
     "sourceType": "statuspage",
     "url": "https://status.twilio.com/api/v2/summary.json"
   },
@@ -670,7 +670,7 @@
     "name": "Docker",
     "category": "DevOps",
     "priority": 60,
-    "enabled": true,
+    "enabled": false,
     "sourceType": "statuspage",
     "url": "https://status.docker.com/api/v2/summary.json"
   },
@@ -706,7 +706,7 @@
     "name": "Elastic Cloud",
     "category": "Search / Observability",
     "priority": 60,
-    "enabled": true,
+    "enabled": false,
     "sourceType": "statuspage",
     "url": "https://status.elastic.co/api/v2/summary.json"
   },
@@ -733,7 +733,7 @@
     "name": "Zendesk",
     "category": "Support",
     "priority": 60,
-    "enabled": true,
+    "enabled": false,
     "sourceType": "statuspage",
     "url": "https://status.zendesk.com/api/v2/summary.json"
   },
@@ -760,7 +760,7 @@
     "name": "monday.com",
     "category": "Productivity",
     "priority": 60,
-    "enabled": true,
+    "enabled": false,
     "sourceType": "statuspage",
     "url": "https://status.monday.com/api/v2/summary.json"
   },
@@ -769,7 +769,7 @@
     "name": "DocuSign",
     "category": "E-signature",
     "priority": 60,
-    "enabled": true,
+    "enabled": false,
     "sourceType": "statuspage",
     "url": "https://status.docusign.com/api/v2/summary.json"
   },
@@ -816,7 +816,7 @@
     "name": "PayPal",
     "category": "Payments",
     "priority": 60,
-    "enabled": true,
+    "enabled": false,
     "sourceType": "rendered-official",
     "url": "https://www.paypal-status.com/product/production",
     "message": "Current PayPal production health is read from the official rendered Production status page."
