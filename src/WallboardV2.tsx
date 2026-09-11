@@ -450,6 +450,7 @@ export function WallboardV2({
   browserCheckedAt,
   browserRefreshMs,
   alertWindowMs,
+  providerIds,
   onExit
 }: {
   model: IssueConsoleModel | null;
@@ -458,6 +459,7 @@ export function WallboardV2({
   browserCheckedAt: number | null;
   browserRefreshMs: number;
   alertWindowMs: number | null;
+  providerIds: readonly string[];
   onExit: () => void;
 }): JSX.Element {
   const shellRef = useRef<HTMLElement>(null);
@@ -468,13 +470,16 @@ export function WallboardV2({
   const providerTrackRef = useRef<HTMLDivElement>(null);
   const providerGroupRef = useRef<HTMLDivElement>(null);
   const { headerMode, controlsVisible, restoreVisible, setHeaderMode } = useWallboardControls();
+  const selectedProviderIds = useMemo(() => new Set(providerIds), [providerIds]);
 
   const signals = useMemo(() => (model?.actionQueue || [])
-    .filter(item => item.kind === 'incident' && isAlertWithinWindow(item.updatedAt, now, alertWindowMs))
+    .filter(item => item.kind === 'incident'
+      && selectedProviderIds.has(item.providerId)
+      && isAlertWithinWindow(item.updatedAt, now, alertWindowMs))
     .sort((a, b) => {
       const timeDifference = timestamp(b.updatedAt) - timestamp(a.updatedAt);
       return timeDifference || a.provider.localeCompare(b.provider) || a.title.localeCompare(b.title);
-    }), [alertWindowMs, model?.actionQueue, now]);
+    }), [alertWindowMs, model?.actionQueue, now, selectedProviderIds]);
 
   const alertProviders = useMemo(() => {
     const seen = new Set<string>();
@@ -490,8 +495,9 @@ export function WallboardV2({
   useWallboardLayoutProbe(shellRef, alertWindowMs, signals.length, alertProviders.length);
 
   const providers = useMemo(() => (model?.diagnostics || [])
-    .filter(item => item.attention !== 'informational' || item.sourceHealth !== 'healthy')
-    .slice(0, 24), [model?.diagnostics]);
+    .filter(item => selectedProviderIds.has(item.id)
+      && (item.attention !== 'informational' || item.sourceHealth !== 'healthy'))
+    .slice(0, 24), [model?.diagnostics, selectedProviderIds]);
 
   const shellClassName = [
     'wallboard-shell',
@@ -509,6 +515,7 @@ export function WallboardV2({
       data-wallboard-updated-at={model?.generatedAt || ''}
       data-wallboard-browser-checked-at={browserCheckedAt || ''}
       data-wallboard-refresh-ms={browserRefreshMs}
+      data-wallboard-provider-ids={providerIds.join(',')}
       ref={shellRef}
     >
       <header>

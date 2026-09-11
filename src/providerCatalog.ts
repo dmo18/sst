@@ -16,6 +16,13 @@ export const ACTIVE_PROVIDER_CATALOG: ProviderConfig[] = (providerCatalog as Pro
 
 export const ACTIVE_PROVIDER_IDS = ACTIVE_PROVIDER_CATALOG.map(provider => provider.id);
 
+// Wallboard URLs are public, long-lived display configuration. Keep their
+// provider allow-list tied to the canonical enabled catalog, rather than
+// trusting arbitrary query-string values or historical payload entries.
+export const ENABLED_PROVIDER_IDS = ACTIVE_PROVIDER_CATALOG
+  .filter(provider => provider.enabled !== false)
+  .map(provider => provider.id);
+
 function canonicalValue(value: unknown): unknown {
   if (Array.isArray(value)) {
     const normalized = value.map(canonicalValue);

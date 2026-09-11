@@ -5,8 +5,11 @@ import {
   isAlertWithinWindow,
   parseAlertWindowMs,
   parseRefreshIntervalMs,
+  parseWallboardProviderIds,
   readWallboardRoute
 } from '../wallboardRoute.ts';
+
+const enabledProviderIds = ['kaseya', 'eset', 'microsoft365'];
 
 test('wallboard alert windows parse minute, hour, and day durations', () => {
   assert.equal(parseAlertWindowMs('90m'), 90 * 60 * 1000);
@@ -30,16 +33,25 @@ test('browser refresh intervals parse bounded second, minute, and hour durations
 });
 
 test('wallboard route reads alert and browser refresh options from the URL', () => {
-  assert.deepEqual(readWallboardRoute('?alerts=36h&view=wallboard&refresh=30s'), {
+  assert.deepEqual(readWallboardRoute('?alerts=36h&view=wallboard&refresh=30s', enabledProviderIds), {
     wallboardMode: true,
     alertWindowMs: 36 * 60 * 60 * 1000,
-    refreshIntervalMs: 30 * 1000
+    refreshIntervalMs: 30 * 1000,
+    providerIds: null
   });
-  assert.deepEqual(readWallboardRoute('?view=operator&alerts=36h'), {
+  assert.deepEqual(readWallboardRoute('?view=operator&alerts=36h', enabledProviderIds), {
     wallboardMode: false,
     alertWindowMs: 36 * 60 * 60 * 1000,
-    refreshIntervalMs: DEFAULT_BROWSER_REFRESH_MS
+    refreshIntervalMs: DEFAULT_BROWSER_REFRESH_MS,
+    providerIds: null
   });
+});
+
+test('wallboard provider selection accepts only enabled canonical IDs', () => {
+  assert.deepEqual(parseWallboardProviderIds(null, enabledProviderIds), null);
+  assert.deepEqual(parseWallboardProviderIds('Kaseya, eset, kaseya, datto, bad/id', enabledProviderIds), ['kaseya', 'eset']);
+  assert.deepEqual(parseWallboardProviderIds('datto,unknown', enabledProviderIds), []);
+  assert.deepEqual(readWallboardRoute('?view=wallboard&providers=kaseya,eset,datto', enabledProviderIds).providerIds, ['kaseya', 'eset']);
 });
 
 test('alerts outside the selected window are excluded', () => {

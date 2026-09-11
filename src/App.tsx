@@ -7,7 +7,7 @@ import { OperationsIntelligencePanel } from './OperationsIntelligencePanel';
 import { ProductDepthLauncher } from './ProductDepthLauncher';
 import { ProductDepthLayer } from './ProductDepthLayer';
 import { ProductTruthBoundary } from './ProductTruthBoundary';
-import { ACTIVE_PROVIDER_CATALOG } from './providerCatalog';
+import { ACTIVE_PROVIDER_CATALOG, ENABLED_PROVIDER_IDS } from './providerCatalog';
 import { buildIssueConsoleModel } from './statusViewModel';
 import { usePayloadPoller } from './usePayloadPoller';
 import { WallboardV2 } from './WallboardV2';
@@ -16,7 +16,7 @@ import { readWallboardRoute } from './wallboardRoute';
 const OPERATOR_BROWSER_REFRESH_MS = 60 * 1000;
 
 export function App(): JSX.Element {
-  const [route, setRoute] = useState(() => readWallboardRoute(location.search));
+  const [route, setRoute] = useState(() => readWallboardRoute(location.search, ENABLED_PROVIDER_IDS));
   const [now, setNow] = useState(() => Date.now());
   const browserRefreshMs = route.wallboardMode ? route.refreshIntervalMs : OPERATOR_BROWSER_REFRESH_MS;
   const { state, lastBrowserCheckAt, refresh } = usePayloadPoller(browserRefreshMs);
@@ -27,7 +27,7 @@ export function App(): JSX.Element {
   }, []);
 
   useEffect(() => {
-    const syncRoute = () => setRoute(readWallboardRoute(location.search));
+    const syncRoute = () => setRoute(readWallboardRoute(location.search, ENABLED_PROVIDER_IDS));
     const originalPushState = history.pushState;
     const originalReplaceState = history.replaceState;
 
@@ -56,6 +56,7 @@ export function App(): JSX.Element {
   const productFocus = new URLSearchParams(location.search).get('focus') || '';
   const replayBoundaryVisible = productFocus === 'universe' || productFocus.startsWith('category:') || productFocus.startsWith('correlation:');
   const liveTruth = state.data?.live_truth;
+  const wallboardProviderIds = route.providerIds || ENABLED_PROVIDER_IDS;
 
   const exitWallboard = () => {
     const search = new URLSearchParams(location.search);
@@ -77,7 +78,7 @@ export function App(): JSX.Element {
       data-live-truth-failed-providers={(liveTruth?.failed_provider_ids || []).join(',')}
     >
       {route.wallboardMode
-        ? <WallboardV2 model={model} lifecycle={state} now={now} browserCheckedAt={lastBrowserCheckAt} browserRefreshMs={browserRefreshMs} alertWindowMs={route.alertWindowMs} onExit={exitWallboard} />
+        ? <WallboardV2 model={model} lifecycle={state} now={now} browserCheckedAt={lastBrowserCheckAt} browserRefreshMs={browserRefreshMs} alertWindowMs={route.alertWindowMs} providerIds={wallboardProviderIds} onExit={exitWallboard} />
         : <>
             <IssueConsole model={model} lifecycle={state} onRefresh={requestRefresh} browserCheckedAt={lastBrowserCheckAt} browserRefreshMs={browserRefreshMs} />
             <OperationsIntelligencePanel model={model} />

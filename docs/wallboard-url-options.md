@@ -16,6 +16,17 @@ https://dmo18.github.io/sst/?view=wallboard
 
 `view=wallboard` selects the active `WallboardV2` interface.
 
+## Provider selection
+
+Use `providers=ID,ID` to restrict the wallboard to specific enabled catalog providers. The selection controls Priority signals, the active-provider rail, and Provider Watch; it does not change collection or operator-console coverage.
+
+```text
+?view=wallboard&providers=kaseya,eset
+?view=wallboard&providers=microsoft365,entra,aws&alerts=24h
+```
+
+Use canonical provider IDs, separated by commas. IDs are case-insensitive, duplicates are ignored, and disabled or unknown IDs are excluded. Omitting `providers` preserves the default of showing every enabled provider. A supplied list containing no enabled IDs intentionally shows no provider-specific wallboard content.
+
 ## Alert window
 
 Use `alerts=NUMBERm`, `alerts=NUMBERh`, or `alerts=NUMBERd` to show only vendor incidents whose latest vendor update falls within that rolling window.
