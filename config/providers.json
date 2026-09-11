@@ -416,7 +416,7 @@
     "name": "Datto",
     "category": "MSP Platforms",
     "priority": 86,
-    "enabled": true,
+    "enabled": false,
     "sourceType": "statuspage",
     "url": "https://status.datto.com/api/v2/summary.json"
   },
