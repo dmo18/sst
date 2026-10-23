@@ -1,0 +1,106 @@
+/* Final, unlayered compact-only presentation: also works on Chromium 92. */
+@media (max-width: 520px) and (max-height: 360px) {
+  .wallboard-glance-mode > header,
+  .wallboard-glance-mode > .wallboard-kpis,
+  .wallboard-glance-mode > .wallboard-overlay-restore {
+    display: none !important;
+  }
+
+  .wallboard-glance-mode > main { inset: 0 !important; }
+  .wallboard-glance-mode .wallboard-priority-v2 {
+    display: block !important;
+    inset: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+  }
+
+  .compact-incident-board {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    grid-template-rows: 29px minmax(0, 1fr) 21px;
+    overflow: hidden;
+    background: #080f1b;
+    color: #f4f7ff;
+    font-family: Arial, sans-serif;
+    text-align: left;
+  }
+
+  .compact-board-heading,
+  .compact-board-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    padding: 0 8px;
+    white-space: nowrap;
+    background: #142238;
+  }
+
+  .compact-board-heading h2 {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    font-size: 14px;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  .compact-board-heading > span { font-size: 11px; color: #d1deef; }
+  .compact-critical-count { color: #ff929b; }
+  .compact-alert-dot, .compact-quiet-dot { width: 7px; height: 7px; border-radius: 50%; background: #ffbc64; }
+  .compact-quiet-dot { background: #a1b2c8; }
+  .compact-board-rows { display: grid; grid-template-rows: repeat(4, minmax(0, 1fr)); min-height: 0; overflow: hidden; }
+  .compact-issue {
+    display: flex;
+    align-items: center;
+    min-height: 0;
+    gap: 8px;
+    padding: 4px 8px 4px 6px;
+    margin: 0;
+    overflow: hidden;
+    border: 0;
+    border-left: 3px solid #69b5ff;
+    border-bottom: 1px solid #26354b;
+    background: #0c1625;
+  }
+
+  .compact-issue:nth-child(even) { background: #111e30; }
+  .compact-issue.attention-critical { border-left-color: #ff6375; }
+  .compact-issue.attention-action { border-left-color: #ffbc64; }
+  .compact-issue > .provider-icon { flex: 0 0 25px; width: 25px; height: 25px; }
+  .compact-issue-text { flex: 1; min-width: 0; }
+  .compact-issue-meta { display: flex; align-items: center; gap: 6px; height: 16px; }
+  .compact-issue-meta b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; line-height: 16px; color: #fff; }
+  .compact-severity { flex: 0 0 auto; color: #8fc8ff; font-size: 9px; font-weight: 700; letter-spacing: .04em; }
+  .attention-critical .compact-severity { color: #ff929b; }
+  .attention-action .compact-severity { color: #ffcc85; }
+  .compact-issue-meta time { flex: 0 0 26px; text-align: right; font-size: 10px; color: #c0cfe3; font-variant-numeric: tabular-nums; }
+  .compact-issue h3 {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    max-height: 29px;
+    margin: 1px 0 0;
+    padding: 0;
+    color: #e0e9f6;
+    font-size: 12.5px;
+    font-weight: 500;
+    line-height: 14.5px;
+    letter-spacing: 0;
+    overflow-wrap: break-word;
+  }
+
+  .compact-board-footer { font-size: 9px; color: #bccce0; background: #142238; }
+  .compact-data-warning { color: #ffcc85; font-weight: 700; }
+  .compact-board-empty { grid-row: 1 / -1; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 9px; padding: 14px; text-align: center; }
+  .compact-board-empty b { font-size: 22px; color: #e4edfa; }
+  .compact-board-empty span { font-size: 12px; color: #b9c9df; }
+}

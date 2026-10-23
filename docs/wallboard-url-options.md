@@ -88,19 +88,20 @@ Width: 458px
 Height: 291px
 ```
 
-At that size the wallboard enters compact mode:
+At that size (up to 520px wide and 360px high), the wallboard now uses the **office glance board**:
 
-- Provider Watch is hidden.
-- The footer is hidden.
-- Priority signals fills the tile.
-- The visible Priority signals text label is replaced by the active-provider rail.
-- Provider icons and provider names share that top rail.
-- Payload age and browser-check age remain fixed at the right side of the top rail.
-- The provider rail loops horizontally when its content exceeds the available width.
-- The incident list loops vertically when its content exceeds the available height.
-- Incident rows retain provider icon, provider name, update age, title, and complete vendor detail text.
-- Compact TV spacing is tuned separately in `src/styles/wallboard-tv.css` while React keeps ownership of the incident data and marquee state.
-- The page requires no pointer, keyboard, or touch interaction during normal operation.
+- Four fixed incident rows are visible together, with no scrolling descriptions or logo marquee.
+- Each row shows provider name/logo, attention label, latest vendor-update age, and a two-line vendor headline.
+- Generic headings such as “Investigation Degraded Performance” use the vendor detail text instead; no invented summaries are introduced.
+- Critical attention sorts first, then action, then watch; each tier sorts newest update first.
+- Overflow pages advance every eight seconds. The footer shows the visible range, page/total, payload age, browser-check age, and whether filters apply.
+- The total issue count, critical count, and affected-provider count remain visible on every page.
+- Empty, loading, stale, and error states do not claim all services are operational.
+- No header/KPI overlay can cover this compact view. The normal desktop wallboard and its full descriptions remain unchanged.
+- Paging pauses while the document is hidden; its timer is cleaned up on unmount or incident-set change.
+- `src/CompactIncidentBoard.tsx` and the final unlayered `src/styles/wallboard-glance.css` own this compact presentation, including Chromium 92 compatibility.
+
+The incident inclusion, provider selection, time window, and collection logic are unchanged. Complete vendor titles/details remain in the normal operator/desktop view and row tooltips.
 
 ## Header and KPI overlay
 
@@ -112,7 +113,7 @@ The full wallboard header and KPI strip are one overlay unit. User activity reve
 
 The selected mode is stored in local storage under `sst-wallboard-header-mode`.
 
-For unattended Yodeck use, minimize the overlay after configuration so it cannot cover the compact incident view.
+The office glance board suppresses this overlay entirely. These controls continue to apply to larger wallboards.
 
 ## Priority-signal rules
 
@@ -129,7 +130,7 @@ Rows are sorted by latest vendor update, newest first. Provider names and icons 
 
 ## Continuous loops
 
-The provider rail and incident list use separate React-owned loop tracks:
+Larger wallboards retain separate React-owned loop tracks (the office glance board uses fixed pages instead):
 
 - Horizontal provider speed: approximately 28 pixels per second.
 - Vertical incident speed: approximately 22 pixels per second.

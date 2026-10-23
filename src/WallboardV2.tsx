@@ -1,3 +1,4 @@
+import { CompactIncidentBoard } from './CompactIncidentBoard';
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { ProviderIcon } from './providerIcon';
 import { relativeAgeAt } from './liveTelemetry';
@@ -313,6 +314,25 @@ function useWallboardLayoutProbe(
     const evaluate = () => {
       attempts += 1;
       const reasons: string[] = [];
+      const board = shell.querySelector<HTMLElement>('.compact-incident-board');
+      if (board) {
+        const rect = board.getBoundingClientRect();
+        const rows = Array.from(board.querySelectorAll<HTMLElement>('.compact-issue'));
+        const expected = Math.min(4, signalCount);
+        if (rows.length !== expected) reasons.push(`compact-row-count:${rows.length}/${expected}`);
+        if (rect.width < window.innerWidth - 16 || rect.height < window.innerHeight - 16) reasons.push('compact-board-collapsed');
+        if (rect.left < 0 || rect.top < 0 || rect.right > window.innerWidth + 1 || rect.bottom > window.innerHeight + 1) reasons.push('compact-board-outside-viewport');
+        if (board.scrollHeight > board.clientHeight + 1 || board.scrollWidth > board.clientWidth + 1) reasons.push('compact-board-overflow');
+        for (const row of rows) {
+          const r = row.getBoundingClientRect();
+          if (r.top < rect.top || r.bottom > rect.bottom || r.height < 45) reasons.push('compact-row-clipped');
+        }
+        shell.dataset.layoutProbe = reasons.length ? 'fail' : 'pass';
+        shell.dataset.layoutProbeDetail = reasons.length ? reasons.join('|') : `compact:${rows.length}/${signalCount};pages:${board.dataset.pages}`;
+        window.clearInterval(timer);
+        return;
+      }
+
       const priority = shell.querySelector<HTMLElement>('.wallboard-priority-v2');
       const heading = priority?.querySelector<HTMLElement>(':scope > h2') || null;
       const telemetry = heading?.querySelector<HTMLElement>('.wallboard-mini-telemetry') || null;
@@ -462,6 +482,13 @@ export function WallboardV2({
   providerIds: readonly string[];
   onExit: () => void;
 }): JSX.Element {
+  const [compact, setCompact] = useState(() => window.matchMedia('(max-width: 520px) and (max-height: 360px)').matches);
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 520px) and (max-height: 360px)');
+    const update = () => setCompact(media.matches);
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
   const shellRef = useRef<HTMLElement>(null);
   const priorityViewportRef = useRef<HTMLDivElement>(null);
   const priorityTrackRef = useRef<HTMLDivElement>(null);
@@ -502,6 +529,7 @@ export function WallboardV2({
   const shellClassName = [
     'wallboard-shell',
     'wallboard-v2',
+    compact ? 'wallboard-glance-mode' : '',
     controlsVisible ? 'wallboard-controls-visible' : '',
     headerMode === 'open' ? 'wallboard-controls-pinned-open' : '',
     headerMode === 'closed' ? 'wallboard-controls-pinned-closed' : ''
@@ -552,9 +580,10 @@ export function WallboardV2({
 
       <main>
         <section
-          className="wallboard-priority wallboard-priority-v2"
+          className={compact ? 'wallboard-priority-v2 compact-priority-panel' : 'wallboard-priority wallboard-priority-v2'}
           data-alert-window-ms={alertWindowMs ?? undefined}
         >
+          {compact ? <CompactIncidentBoard signals={signals} now={now} generatedAt={model?.generatedAt} checkedAt={browserCheckedAt} lifecycle={lifecycle} filtered={alertWindowMs !== null || providerIds.length < (model?.diagnostics.length || 0)} /> : <>
           <h2>
             <span>Priority signals</span>
             <span className="wallboard-mini-telemetry" aria-label="Wallboard freshness telemetry">
@@ -584,6 +613,7 @@ export function WallboardV2({
               </div>
             ) : <div className="empty-state"><b>{alertWindowMs === null ? 'No active vendor incidents' : 'No vendor incidents in the selected alert window'}</b></div>}
           </div>
+          </>}
         </section>
 
         <section className="wallboard-providers">

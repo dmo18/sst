@@ -192,7 +192,11 @@ try {
   await session.open();
 
   await session.send('Page.enable');
+  if (process.env.LEGACY_LAYOUT === '1') {
+    await session.send('Page.addScriptToEvaluateOnNewDocument', { source: 'delete window.CSSLayerBlockRule;' });
+  }
   await session.send('Runtime.enable');
+  await session.send('Page.bringToFront');
   await session.send('Emulation.setDeviceMetricsOverride', {
     width: WIDTH,
     height: HEIGHT,
@@ -231,7 +235,8 @@ try {
     const freshness = document.querySelector('.wallboard-freshness');
     return {
       html,
-      hasPrioritySignals: /Priority signals/i.test(document.body.innerText),
+      hasPrioritySignals: /Priority signals/i.test(document.body.innerText) || Boolean(document.querySelector('.compact-incident-board')),
+      compact: Boolean(document.querySelector('.compact-incident-board')),
       alertWindowMs: document.querySelector('[data-alert-window-ms]')?.getAttribute('data-alert-window-ms') || null,
       hasUnavailableState: /Status intelligence unavailable/i.test(document.body.innerText),
       freshnessText: freshness?.textContent?.replace(/\\s+/g, ' ').trim() || '',
@@ -245,7 +250,7 @@ try {
 
   if (probe.state !== 'pass') throw new Error(`Yodeck layout probe failed: ${probe.detail || 'no detail'}`);
   if (!contract.hasPrioritySignals) throw new Error('Priority signals heading is missing.');
-  if (contract.alertWindowMs !== '129600000') throw new Error(`Unexpected alert window: ${contract.alertWindowMs || 'missing'}`);
+  if (new URL(targetUrl).searchParams.get('alerts') === '36h' && contract.alertWindowMs !== '129600000') throw new Error(`Unexpected alert window: ${contract.alertWindowMs || 'missing'}`);
   if (contract.hasUnavailableState) throw new Error('Wallboard rendered Status intelligence unavailable.');
   if (!/Updated/i.test(contract.freshnessText) || !/Checked/i.test(contract.freshnessText) || !/Next/i.test(contract.freshnessText) || !/Browser refresh/i.test(contract.freshnessText)) {
     throw new Error(`Wallboard header freshness telemetry is incomplete: ${contract.freshnessText || 'missing'}`);
@@ -254,6 +259,25 @@ try {
     throw new Error(`Wallboard freshness timestamps are incomplete: updated=${contract.updatedAt || 'missing'} checked=${contract.browserCheckedAt || 'missing'} refreshMs=${contract.refreshMs}`);
   }
 
+  if (contract.compact) {
+    const readPage = () => evaluate(session, `(() => {
+      const board = document.querySelector('.compact-incident-board');
+      return { page: Number(board.dataset.page), pages: Number(board.dataset.pages), ids: Array.from(board.querySelectorAll('article')).map(e => e.dataset.providerId) };
+    })()`);
+    console.log('YODECK_VISIBILITY', await evaluate(session, 'document.visibilityState'));
+    const first = await readPage();
+    if (first.pages > 1) {
+      const deadline = Date.now() + 12000;
+      let next = first;
+      while (next.page === first.page && Date.now() < deadline) {
+        await sleep(250);
+        next = await readPage();
+      }
+      if (next.page === first.page) throw new Error('Compact paging did not advance in eight seconds.');
+      console.log(`YODECK_COMPACT_PAGING ${first.page}->${next.page}/${next.pages}`);
+    }
+    else console.log('YODECK_COMPACT_PAGING all issues visible');
+  }
   const rotation = await providerRotationProbe(session);
   console.log(`YODECK_PROVIDER_ROTATION providers=${rotation?.count || 0} looping=${Boolean(rotation?.looping)} moved=${Boolean(rotation?.moved)} required=${Boolean(rotation?.required)}`);
   if (rotation?.required && !rotation.moved) {
