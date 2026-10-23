@@ -98,7 +98,7 @@ jobs:
           export BROWSER
           TARGET_URL="${PAGE_URL}?providerIdentityProbe=${GITHUB_RUN_ID}"
           set -o pipefail
-          node scripts/verify-provider-identity.mjs "$TARGET_URL" /tmp/operator-providers.png /tmp/operator-providers-mobile.png 2>&1 | tee /tmp/provider-identity-verifier.log
+          node --experimental-strip-types scripts/verify-provider-identity.mjs "$TARGET_URL" /tmp/operator-providers.png /tmp/operator-providers-mobile.png 2>&1 | tee /tmp/provider-identity-verifier.log
           rm -rf /tmp/provider-identity-* || true
           if find /tmp -maxdepth 1 -name 'provider-identity-*' -print -quit | grep -q .; then
             echo "Provider identity browser profile cleanup did not complete." >&2
