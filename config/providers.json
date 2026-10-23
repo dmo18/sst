@@ -40,7 +40,7 @@
     "name": "AWS",
     "category": "Cloud Services",
     "priority": 82,
-    "enabled": true,
+    "enabled": false,
     "sourceType": "rss",
     "url": "https://status.aws.amazon.com/rss/all.rss",
     "criticality": "high",
@@ -141,7 +141,7 @@
     "name": "DNSFilter",
     "category": "Security",
     "priority": 88,
-    "enabled": true,
+    "enabled": false,
     "sourceType": "statuspage",
     "url": "https://status.dnsfilter.com/api/v2/summary.json",
     "criticality": "high",
@@ -201,7 +201,7 @@
     "name": "Cisco Meraki",
     "category": "Networking",
     "priority": 84,
-    "enabled": true,
+    "enabled": false,
     "sourceType": "statuspage",
     "url": "https://status.meraki.net/api/v2/summary.json"
   },
@@ -219,7 +219,7 @@
     "name": "DigitalOcean",
     "category": "Cloud Services",
     "priority": 58,
-    "enabled": true,
+    "enabled": false,
     "sourceType": "statuspage",
     "url": "https://status.digitalocean.com/api/v2/summary.json"
   },
@@ -244,7 +244,7 @@
     "name": "Lumen",
     "category": "ISPs and Backbone",
     "priority": 52,
-    "enabled": true,
+    "enabled": false,
     "sourceType": "statuspage",
     "url": "https://lumen.statuspage.io/api/v2/summary.json"
   },
@@ -271,7 +271,7 @@
     "name": "Wasabi",
     "category": "Storage",
     "priority": 58,
-    "enabled": true,
+    "enabled": false,
     "sourceType": "statuspage",
     "url": "https://status.wasabi.com/api/v2/summary.json"
   },
@@ -307,7 +307,7 @@
     "name": "1Password",
     "category": "Identity / Access",
     "priority": 86,
-    "enabled": true,
+    "enabled": false,
     "sourceType": "statuspage",
     "url": "https://status.1password.com/api/v2/summary.json"
   },
@@ -325,7 +325,7 @@
     "name": "JumpCloud",
     "category": "Identity / Access",
     "priority": 78,
-    "enabled": true,
+    "enabled": false,
     "sourceType": "statuspage",
     "url": "https://status.jumpcloud.com/api/v2/summary.json"
   },
@@ -434,7 +434,7 @@
     "name": "SuperOps",
     "category": "MSP Platforms",
     "priority": 78,
-    "enabled": true,
+    "enabled": false,
     "sourceType": "statuspage",
     "url": "https://status.superops.com/api/v2/summary.json"
   },
@@ -480,7 +480,7 @@
     "name": "ESET",
     "category": "Security",
     "priority": 78,
-    "enabled": true,
+    "enabled": false,
     "sourceType": "statuspage",
     "url": "https://status.eset.com/api/v2/summary.json"
   },
@@ -489,7 +489,7 @@
     "name": "Fortinet",
     "category": "Security",
     "priority": 78,
-    "enabled": true,
+    "enabled": false,
     "sourceType": "statuspage",
     "url": "https://status.fortinet.com/api/v2/summary.json"
   },
@@ -525,7 +525,7 @@
     "name": "Barracuda",
     "category": "Security / Email",
     "priority": 78,
-    "enabled": true,
+    "enabled": false,
     "sourceType": "statuspage",
     "url": "https://status.barracuda.com/api/v2/summary.json"
   },
@@ -570,7 +570,7 @@
     "name": "UltraDNS",
     "category": "DNS",
     "priority": 60,
-    "enabled": true,
+    "enabled": false,
     "sourceType": "statuspage",
     "url": "https://status.ultradns.com/api/v2/summary.json"
   },
@@ -588,7 +588,7 @@
     "name": "Linode",
     "category": "Edge / Hosting",
     "priority": 60,
-    "enabled": true,
+    "enabled": false,
     "sourceType": "statuspage",
     "url": "https://status.linode.com/api/v2/summary.json"
   },
@@ -606,7 +606,7 @@
     "name": "Vercel",
     "category": "Edge / Hosting",
     "priority": 60,
-    "enabled": true,
+    "enabled": false,
     "sourceType": "statuspage",
     "url": "https://status.vercel.com/api/v2/summary.json"
   },
@@ -633,7 +633,7 @@
     "name": "Nextiva",
     "category": "VoIP",
     "priority": 60,
-    "enabled": true,
+    "enabled": false,
     "sourceType": "statuspage",
     "url": "https://status.nextiva.com/api/v2/summary.json"
   },
@@ -742,7 +742,7 @@
     "name": "Notion",
     "category": "Productivity",
     "priority": 60,
-    "enabled": true,
+    "enabled": false,
     "sourceType": "statuspage",
     "url": "https://status.notion.so/api/v2/summary.json"
   },
@@ -751,7 +751,7 @@
     "name": "Asana",
     "category": "Productivity",
     "priority": 60,
-    "enabled": true,
+    "enabled": false,
     "sourceType": "statuspage",
     "url": "https://status.asana.com/api/v2/summary.json"
   },
