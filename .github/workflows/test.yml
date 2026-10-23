@@ -23,3 +23,7 @@ jobs:
       - run: npm run build:app
       - name: Audit complete dependency graph
         run: npm audit --audit-level=high
+      - name: Inspect all 41 enabled vendors through live official collection
+        run: |
+          env -u GITHUB_TOKEN -u GH_TOKEN npm run update-status
+          node --experimental-strip-types scripts/audit-enabled-providers.mjs public/status.json
