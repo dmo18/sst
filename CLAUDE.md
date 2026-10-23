@@ -84,7 +84,7 @@ Emergency maintenance remains an incident only when it is in progress and explic
 
 A structurally valid fallback record is not live source coverage. `valid_status_percent` describes payload record validity only. `coverage_percent` and `live_source_coverage_percent` describe current successfully captured first-party observations.
 
-The `status-data/live-coverage` commit status must be successful only when every active provider has live current official source coverage, no provider is blind, and no limited fallback record was needed. A truthful degraded source status must not block publication of an otherwise valid fail-closed payload.
+Each Pages workflow run must report official-source live coverage in its run summary and annotate incomplete coverage as a warning. Report coverage as complete only when every active provider has live current official source coverage, no provider is blind, and no limited fallback record was needed. Do not post per-refresh commit statuses because scheduled runs reuse the same commit and exhaust GitHub's per-commit/context status limit. A truthful degraded source status must not block publication of an otherwise valid fail-closed payload.
 
 ### GitHub monitoring contract
 
