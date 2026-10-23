@@ -12,7 +12,8 @@ const excludedProviderIds = new Set(consolidation.excludedProviderIds);
 
 export const ACTIVE_PROVIDER_CATALOG: ProviderConfig[] = (providerCatalog as ProviderConfig[])
   .filter(provider => !excludedProviderIds.has(provider.id))
-  .map(provider => ({ ...provider, ...(consolidation.providerOverrides[provider.id] || {}) }));
+  .map(provider => ({ ...provider, ...(consolidation.providerOverrides[provider.id] || {}) }))
+  .filter(provider => provider.enabled !== false);
 
 export const ACTIVE_PROVIDER_IDS = ACTIVE_PROVIDER_CATALOG.map(provider => provider.id);
 

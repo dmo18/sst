@@ -9,6 +9,7 @@ import {
   loadPublicProvider,
   parseFeedEntries,
   parsePublicFeed,
+  parseSlackCurrentStatus,
   publicPageUrl,
   resolvePublicSource,
   scopeFeedEntries
@@ -30,6 +31,41 @@ import {
 const response = (body, status = 200, type = 'text/html') => new Response(body, {
   status,
   headers: { 'content-type': type }
+});
+
+test('Slack v2 current status API confirms healthy service without interpreting stale RSS', async () => {
+  const original = globalThis.fetch;
+  const provider = { id: 'slack', name: 'Slack', enabled: true, url: 'https://slack-status.com/api/v2.0.0/current' };
+  globalThis.fetch = async () => response(JSON.stringify({ status: 'ok', active_incidents: [], date_updated: new Date().toISOString() }), 200, 'application/json');
+  try {
+    const result = await parseSlackCurrentStatus(provider);
+    assert.equal(result.service_state, 'operational');
+    assert.equal(result.source_state, 'available');
+    assert.equal(result.source_type, 'slack-current-json');
+    assert.equal(result.source, 'https://slack-status.com/api/v2.0.0/current');
+  } finally { globalThis.fetch = original; }
+});
+
+test('Slack current outage carries vendor time, services and official incident link', async () => {
+  const original = globalThis.fetch;
+  const now = new Date().toISOString();
+  globalThis.fetch = async () => response(JSON.stringify({
+    status: 'active', active_incidents: [{
+      id: '1234', date_created: now, date_updated: now,
+      title: 'Slack messaging unavailable', type: 'outage', status: 'active',
+      url: 'https://slack-status.com/issues/1234', services: ['Messaging'],
+      notes: [{ date_created: now, body: 'Identified impact to messaging.' }]
+    }]
+  }), 200, 'application/json');
+  try {
+    const result = await parseSlackCurrentStatus({ id: 'slack', name: 'Slack', enabled: true });
+    assert.equal(result.service_state, 'major');
+    assert.equal(result.source_state, 'available');
+    assert.equal(result.incidents.length, 1);
+    assert.equal(result.incidents[0].id, 'slack:1234');
+    assert.equal(result.incidents[0].affected_service, 'Messaging');
+    assert.equal(result.incidents[0].latest_update, now);
+  } finally { globalThis.fetch = original; }
 });
 
 test('statuspage API URLs resolve to public pages and feeds', () => {
@@ -320,6 +356,23 @@ test('emergency or critical maintenance events remain incidents', () => {
     }
   ];
   assert.equal(activeFeedEntries(entries, 336, Date.parse('2026-07-31T13:00:00Z')).length, 2);
+});
+
+test('disabled catalog entries do not reach collection after consolidation overrides', async () => {
+  const active = canonicalizeProviderCatalog([
+    { id: 'on', enabled: true },
+    { id: 'off', enabled: false },
+    { id: 'replaced', enabled: false },
+    { id: 'changed-off', enabled: true }
+  ], {
+    excludedProviderIds: [],
+    providerOverrides: { replaced: { id: 'nuso', enabled: true }, 'changed-off': { enabled: false } }
+  });
+  assert.deepEqual(active.map(provider => provider.id), ['on', 'nuso']);
+  await assert.rejects(
+    loadPublicProvider({ id: 'off', enabled: false, url: 'https://disabled.invalid/', sourceType: 'statuspage' }),
+    /Disabled provider off must not be collected/
+  );
 });
 
 test('provider consolidation absorbs Datto and adds Autotask to Kaseya', () => {

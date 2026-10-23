@@ -17,7 +17,8 @@ async function canonicalCatalog() {
 test('NUSO replaces the non-canonical Datto raw slot and remains first-class in production collection', async () => {
   const catalog = await canonicalCatalog();
   const nuso = catalog.find(provider => provider.id === 'nuso');
-  assert.equal(catalog.length, 80);
+  assert.equal(catalog.length, 41);
+  assert.ok(catalog.every(provider => provider.enabled !== false));
   assert.equal(catalog.some(provider => provider.id === 'datto'), false);
   assert.ok(nuso, 'NUSO must be present in the canonical production catalog');
   assert.equal(nuso.name, 'NUSO');
@@ -99,13 +100,13 @@ test('deployed provider identity verification uses structural and computed-style
   assert.doesNotMatch(verifier, /\/Provider operations\/i\.test\(html\)/);
   assert.match(verifier, /remote-debugging-port/);
   assert.match(verifier, /provider-data-table\[aria-label=/);
-  assert.match(verifier, /brandMaskCount < 35/);
-  assert.match(verifier, /faviconCount !== 35/);
+  assert.match(verifier, /brandMaskCount < expectedExactCount/);
+  assert.match(verifier, /faviconCount !== expectedFaviconCount/);
   assert.match(verifier, /generatedCount !== 0/);
   assert.match(verifier, /embeddedSvgCount !== 0/);
   assert.match(verifier, /faviconAssetCount !== desktop\.faviconCount/);
-  assert.match(verifier, /exactLocalAssets < 45/);
-  assert.match(verifier, /localLogoAssets < 80/);
+  assert.match(verifier, /exactLocalAssets < expectedExactCount/);
+  assert.match(verifier, /localLogoAssets < expectedProviderCount/);
   assert.match(verifier, /provider-favicons/);
   assert.match(verifier, /unexpectedData/);
   assert.match(verifier, /networkRefs/);

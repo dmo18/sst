@@ -66,7 +66,12 @@ function isPlannedOnly(title, note, status = '') {
 }
 
 function colorFor(value, impact = '') {
-  return /\b(?:critical|major|major outage|complete outage|service down|unavailable|downtime)\b/i.test(`${impact} ${value}`) ? 'red' : 'amber';
+  // When the vendor publishes impact, its explicit severity takes precedence
+  // over words such as "unavailable" in a narrowly scoped incident title.
+  const published = String(impact || '').trim().toLowerCase();
+  if (published === 'critical' || published === 'major') return 'red';
+  if (published === 'minor' || published === 'none' || published === 'maintenance') return 'amber';
+  return /\b(?:critical|major|major outage|complete outage|service down|unavailable|downtime)\b/i.test(String(value || '')) ? 'red' : 'amber';
 }
 
 function uniqueNames(values, limit = 8) {
@@ -446,6 +451,14 @@ export function parseStatuspageSummary(value, provider = {}, source = {}) {
     const regionText = affectedComponents.map(component => componentName(component) + ' ' + componentScopeText(component)).join(' ');
     if (!title || isGenericTitle(title) || isEditorial(title, note) || isNonServiceAdvisory(title, note, status) || isPlannedOnly(title, note, status)) continue;
     if (!isUsRelevant(title, note + ' ' + regionText, source.regionScope)) continue;
+    // Statuspage can keep an incident in "monitoring" after reporting recovery.
+    // Do not turn an explicitly restored service with an all-green official
+    // status and no degraded components into a new outage or an unknown state.
+    const restoredMonitoring = /^monitoring$/i.test(status)
+      && /\b(?:successfully\s+resolved|issue\s+(?:has\s+been\s+)?resolved|service\s+(?:has\s+been\s+)?restored|services?\s+(?:are\s+)?back\s+to\s+normal|fully\s+recovered)\b/i.test(note)
+      && String(json.status?.indicator || '').toLowerCase() === 'none'
+      && !components.some(component => componentStatusIsProblem(component.status));
+    if (restoredMonitoring) continue;
     const firstDetected = incident.started_at || incident.created_at || updates.at(-1)?.at || '';
     const latestUpdate = incident.updated_at || latest.at || firstDetected;
     if (!incidentEvidenceIsCurrent({ title, note, status, firstDetected, latestUpdate }, Date.now(), INCIDENT_MAX_AGE_DAYS, { requireTimestamp: true })) {

@@ -76,12 +76,10 @@ const publicOverrides = {
     confirmHealthyFromFeed: true
   },
   slack: {
-    mode: 'feed',
-    url: 'https://slack-status.com/feed/rss',
+    mode: 'slack-current-json',
+    url: 'https://slack-status.com/api/v2.0.0/current',
     pageUrl: 'https://slack-status.com/',
-    sourceName: 'Slack public RSS',
-    maxAgeHours: 336,
-    confirmHealthyFromFeed: true
+    sourceName: 'Slack official current incident API'
   },
   halopsa: {
     mode: 'status-html',
@@ -118,7 +116,8 @@ export function canonicalizeProviderCatalog(catalog, consolidation = readJson(co
   const overrides = consolidation?.providerOverrides || {};
   return catalog
     .filter(provider => !excluded.has(provider.id))
-    .map(provider => ({ ...provider, ...(overrides[provider.id] || {}) }));
+    .map(provider => ({ ...provider, ...(overrides[provider.id] || {}) }))
+    .filter(provider => provider.enabled !== false);
 }
 
 export function decodeEntities(value) {
@@ -525,6 +524,43 @@ function feedAvailableWithoutHealthConclusion(provider, source, logs, maintenanc
   );
 }
 
+export async function parseSlackCurrentStatus(provider, source = resolvePublicSource(provider)) {
+  const requestProvider = { ...provider, url: source.url, sourceType: source.mode };
+  const result = await fetchSource(requestProvider, 'application/json, text/json, */*');
+  const logs = result.logs || [result.log];
+  if (!result.ok) return providerStatus(provider, source, `Slack current status unavailable: HTTP ${result.status || 'failed'}`, 'blue', false, result.log?.error || result.log?.message, logs, [], [], 'unavailable');
+  let body;
+  try { body = JSON.parse(result.body); } catch { body = null; }
+  const fingerprint = schemaFingerprint(result.body, source.mode);
+  if (!body || !['ok', 'active'].includes(body.status) || !Array.isArray(body.active_incidents)) {
+    return providerStatus(provider, source, 'Slack returned an unreadable current status', 'blue', false, 'The official Slack current API did not return its documented status and active_incidents fields.', logs, [], [], 'limited', { schemaFingerprint: fingerprint });
+  }
+  const live = body.active_incidents.filter(item => item && item.status === 'active');
+  const maintenance = body.active_incidents
+    .filter(item => item && item.status === 'scheduled')
+    .map(item => makeMaintenance(provider, source, {
+      id: item.id, title: item.title, note: item.notes?.[0]?.body || 'Slack scheduled maintenance',
+      status: 'scheduled', startsAt: item.date_created, announcedAt: item.date_created,
+      latestUpdate: item.date_updated, affectedService: (item.services || []).join(', '), url: item.url
+    }))
+    .filter(item => maintenanceIsRelevant(item));
+  const incidents = live
+    .filter(item => incidentEvidenceIsCurrent({ title: item.title, note: item.notes?.[0]?.body, status: item.status, latestUpdate: item.date_updated, firstDetected: item.date_created }, Date.now(), INCIDENT_MAX_AGE_DAYS, { requireTimestamp: true }))
+    .map(item => makeIncident(provider, source, {
+      id: item.id, title: item.title, note: item.notes?.[0]?.body || '',
+      status: item.status, color: item.type === 'outage' ? 'red' : 'amber',
+      firstDetected: item.date_created, latestUpdate: item.date_updated,
+      affectedService: (item.services || []).join(', '), url: item.url,
+      updates: (item.notes || []).slice(0, 8).map(note => ({ status: item.status, note: note.body, at: note.date_created }))
+    }));
+  if (incidents.length) {
+    const color = incidents.some(item => item.color === 'red') ? 'red' : 'amber';
+    return providerStatus(provider, source, `${incidents.length} current Slack incident${incidents.length === 1 ? '' : 's'}`, color, true, '', logs, incidents, maintenance, 'available', { schemaFingerprint: fingerprint });
+  }
+  if (body.status === 'ok' && live.length === 0) return providerStatus(provider, source, 'Slack reports all services operational', 'green', true, '', logs, [], maintenance, 'available', { schemaFingerprint: fingerprint });
+  return providerStatus(provider, source, 'Slack current status inconclusive', 'blue', false, 'The official current API reported an active condition without sufficiently recent timestamped incident evidence.', logs, [], maintenance, 'limited', { schemaFingerprint: fingerprint });
+}
+
 export async function parsePublicFeed(provider, source) {
   const requestProvider = { ...provider, url: source.url, sourceType: source.mode };
   const result = await fetchSource(requestProvider, 'application/rss+xml, application/atom+xml, application/xml, text/xml, text/plain, */*');
@@ -801,10 +837,12 @@ function limitedStatus(provider, source) {
 }
 
 export async function loadPublicProvider(provider) {
+  if (provider.enabled === false) throw new Error(`Disabled provider ${provider.id} must not be collected.`);
   const source = resolvePublicSource(provider);
   try {
     if (source.mode === 'limited') return limitedStatus(provider, source);
     if (source.mode === 'feed') return await parsePublicFeed(provider, source);
+    if (source.mode === 'slack-current-json') return await parseSlackCurrentStatus(provider, source);
     if (source.mode === 'azure-status-html') return await parseAzureEntraSource(provider, source);
     return await parsePublicHtml(provider, source);
   } catch (error) {
@@ -866,6 +904,7 @@ export async function generatePublicStatus() {
   const rawCatalog = readJson(catalogPath);
   if (!Array.isArray(rawCatalog)) throw new Error('Provider catalog must be an array.');
   const catalog = canonicalizeProviderCatalog(rawCatalog);
+  // Disabled entries cannot reach source retrieval or the published payload.
   const ids = new Set();
   for (const provider of catalog) {
     if (ids.has(provider.id)) throw new Error(`Duplicate provider id: ${provider.id}`);
@@ -878,6 +917,18 @@ export async function generatePublicStatus() {
     validatePayload(previous);
   } catch {
     previous = null;
+  }
+  // Historic payloads may include vendors since disabled. They must not be
+  // processed, compared, or carried forward after the enabled catalog changes.
+  if (previous) {
+    previous = {
+      ...previous,
+      providers: previous.providers.filter(provider => ids.has(provider.id)),
+      incidents: previous.incidents.filter(incident => ids.has(incident.providerId)),
+      maintenance: (previous.maintenance || []).filter(item => ids.has(item.providerId)),
+      changes: (previous.changes || []).filter(change => ids.has(change.provider_id)),
+      history: (previous.history || []).filter(change => ids.has(change.provider_id))
+    };
   }
 
   const collectionStartedAt = new Date().toISOString();
@@ -906,9 +957,13 @@ export async function generatePublicStatus() {
     maintenance
   };
   const changes = [...compareSnapshots(previous, base, generatedAt), ...sourceIntelligenceChanges(previous, base, generatedAt)]
+    .filter(change => ids.has(change.provider_id))
     .filter(change => !dateLikeIncidentTitle(change.title))
     .filter((change, index, all) => all.findIndex(candidate => candidate.id === change.id) === index);
-  const retainedHistory = (previous?.history || []).filter(change => !dateLikeIncidentTitle(change.title));
+  // Purge prior disabled-provider alerts instead of keeping them in history.
+  const retainedHistory = (previous?.history || [])
+    .filter(change => ids.has(change.provider_id))
+    .filter(change => !dateLikeIncidentTitle(change.title));
   const payload = { ...base, changes, history: [...changes, ...retainedHistory].slice(0, 200) };
   validatePayload(payload);
   writeJson(publicStatusPath, payload);

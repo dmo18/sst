@@ -1,5 +1,8 @@
 # Current system status
 
+> Current configuration, October 23, 2026: 80 raw catalog entries, 41 actively monitored after consolidation, and 39 fully disabled. Historic 80-provider and artwork performance metrics below describe the earlier release baseline.
+
+
 Status timestamp: 2026-08-19 18:33 Eastern Time
 
 ## Executive status

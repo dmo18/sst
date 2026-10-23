@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { canonicalizeProviderCatalog } from './update-public-status.mjs';
 import { spawn } from 'node:child_process';
 
 const WIDTH = 1440;
@@ -11,6 +12,14 @@ const DEBUG_PORT = 9228;
 const TIMEOUT_MS = 20_000;
 const STYLE_TIMEOUT_MS = 6_000;
 const NAVIGATION_ATTEMPTS = 3;
+const rawCatalog = JSON.parse(fs.readFileSync(new URL('../config/providers.json', import.meta.url), 'utf8'));
+const activeCatalog = canonicalizeProviderCatalog(rawCatalog);
+const expectedProviderCount = activeCatalog.length;
+const enabledIds = new Set(activeCatalog.map(provider => provider.id));
+const expectedProviderNames = activeCatalog.map(provider => provider.name).sort();
+const faviconSettings = JSON.parse(fs.readFileSync(new URL('../config/provider-favicon-sources.json', import.meta.url), 'utf8'));
+const expectedFaviconCount = faviconSettings.providers.filter(id => enabledIds.has(id)).length;
+const expectedExactCount = expectedProviderCount - expectedFaviconCount;
 
 const [targetUrl, desktopScreenshot = '/tmp/operator-providers.png', mobileScreenshot = '/tmp/operator-providers-mobile.png'] = process.argv.slice(2);
 const browser = process.env.BROWSER;
@@ -168,7 +177,7 @@ async function waitForProviderTable(session, timeoutMs = TIMEOUT_MS) {
       const table = document.querySelector('.provider-data-table[aria-label="Provider operations"]');
       const identities = table ? table.querySelectorAll('.provider-identity').length : 0;
       return {
-        ready: Boolean(table && identities >= 80),
+        ready: Boolean(table && identities >= ${expectedProviderCount}),
         identities,
         unavailable: /Status intelligence unavailable/i.test(document.body.innerText)
       };
@@ -290,6 +299,7 @@ async function identityContract(session) {
     const nuso = identities.find(identity => identity.querySelector('b')?.textContent?.trim() === 'NUSO');
     return {
       providerIdentityCount: identities.length,
+      providerNames: identities.map(identity => identity.querySelector('b')?.textContent?.trim()).filter(Boolean),
       brandMaskCount: logos.filter(element => element.classList.contains('provider-logo--brand-mask')).length,
       faviconCount: logos.filter(element => element.classList.contains('provider-logo--favicon')).length,
       generatedCount: logos.filter(element => element.classList.contains('provider-logo--generated')).length,
@@ -323,14 +333,15 @@ try {
 
   if (desktop.unavailable) throw new Error('Provider identity verification rendered the unavailable state.');
   if (!desktop.nusoPresent || !desktop.nusoHasLogo) throw new Error('NUSO is missing its deployed provider identity.');
-  if (desktop.providerIdentityCount < 80) throw new Error(`Expected at least 80 provider identities, found ${desktop.providerIdentityCount}.`);
-  if (desktop.brandMaskCount < 35) throw new Error(`Expected at least 35 exact masked brand marks, found ${desktop.brandMaskCount}.`);
-  if (desktop.faviconCount !== 35) throw new Error(`Expected 35 fetched provider artwork marks, found ${desktop.faviconCount}.`);
+  if (desktop.providerIdentityCount !== expectedProviderCount) throw new Error(`Expected ${expectedProviderCount} enabled provider identities, found ${desktop.providerIdentityCount}.`);
+  if (JSON.stringify(desktop.providerNames.sort()) !== JSON.stringify(expectedProviderNames)) throw new Error('Desktop provider identities do not match the enabled catalog.');
+  if (desktop.brandMaskCount < expectedExactCount) throw new Error(`Expected ${expectedExactCount} exact masked marks, found ${desktop.brandMaskCount}.`);
+  if (desktop.faviconCount !== expectedFaviconCount) throw new Error(`Expected ${expectedFaviconCount} enabled favicon marks, found ${desktop.faviconCount}.`);
   if (desktop.generatedCount !== 0) throw new Error(`Provider identities regressed to generated fallback tiles: ${desktop.generatedCount}.`);
   if (desktop.embeddedSvgCount !== 0) throw new Error(`Provider artwork regressed to JavaScript-embedded SVG data: ${desktop.embeddedSvgCount}.`);
   if (desktop.faviconAssetCount !== desktop.faviconCount) throw new Error(`Static favicon asset count ${desktop.faviconAssetCount} does not match rendered favicon count ${desktop.faviconCount}.`);
-  if (desktop.exactLocalAssets < 45) throw new Error(`Expected at least 45 exact local logo references, found ${desktop.exactLocalAssets}.`);
-  if (desktop.localLogoAssets < 80) throw new Error(`Expected all provider identities to resolve locally, found ${desktop.localLogoAssets}.`);
+  if (desktop.exactLocalAssets < expectedExactCount) throw new Error(`Expected ${expectedExactCount} enabled local brand assets, found ${desktop.exactLocalAssets}.`);
+  if (desktop.localLogoAssets < expectedProviderCount) throw new Error(`Expected all ${expectedProviderCount} enabled provider identities to resolve locally, found ${desktop.localLogoAssets}.`);
   if (desktop.unexpectedData.length) throw new Error(`Unexpected embedded provider asset type: ${desktop.unexpectedData[0]}`);
   if (desktop.externalLogoSrc.length) throw new Error(`Provider identity attempted external logo loading: ${desktop.externalLogoSrc[0]}`);
   if (desktop.failedAssets.length) throw new Error(`Bundled provider logo assets failed to load: ${desktop.failedAssets.join('; ')}`);
@@ -359,6 +370,7 @@ try {
       width: innerWidth,
       height: innerHeight,
       identities: identities.length,
+      providerNames: identities.map(identity => identity.querySelector('b')?.textContent?.trim()).filter(Boolean),
       nusoPresent: Boolean(nuso),
       nusoVisible: Boolean(rect && rect.bottom > 0 && rect.top < innerHeight),
       horizontalOverflow: document.documentElement.scrollWidth - innerWidth,
@@ -368,7 +380,8 @@ try {
   await sleep(150);
 
   if (mobile.width !== MOBILE_WIDTH || mobile.height !== MOBILE_HEIGHT) throw new Error(`Provider mobile viewport mismatch: ${mobile.width}x${mobile.height}`);
-  if (mobile.identities < 80) throw new Error(`Mobile provider workspace expected 80 identities, found ${mobile.identities}.`);
+  if (mobile.identities !== expectedProviderCount) throw new Error(`Mobile provider workspace expected ${expectedProviderCount} enabled identities, found ${mobile.identities}.`);
+  if (JSON.stringify(mobile.providerNames.sort()) !== JSON.stringify(expectedProviderNames)) throw new Error('Mobile provider identities do not match the enabled catalog.');
   if (!mobile.nusoPresent || !mobile.nusoVisible) throw new Error('NUSO is not visible in the mobile provider evidence frame.');
   if (mobile.horizontalOverflow > 1) throw new Error(`Provider mobile view has horizontal overflow: ${mobile.horizontalOverflow}px`);
   if (mobile.unavailable) throw new Error('Mobile provider identity verification rendered the unavailable state.');

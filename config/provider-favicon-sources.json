@@ -38,6 +38,9 @@
     "nuso"
   ],
   "assetOverrides": {
+    "crowdstrike": {
+      "url": "https://www.crowdstrike.com/etc.clientlibs/crowdstrike/clientlibs/crowdstrike-common/resources/favicon.ico"
+    },
     "jamf": {
       "url": "https://dka575ofm4ao0.cloudfront.net/pages-favicon_logos/original/4655/jamf_fav.png"
     },

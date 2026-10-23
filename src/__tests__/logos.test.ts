@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
-import { ACTIVE_PROVIDER_CATALOG } from '../providerCatalog.ts';
+import { ACTIVE_PROVIDER_CATALOG, ENABLED_PROVIDER_IDS } from '../providerCatalog.ts';
 import {
   curatedProviderIdentity,
   generatedProviderIcon,
@@ -65,7 +65,8 @@ test('curated niche provider marks are deterministic and provider-specific', () 
 test('every active provider has a curated recognition identity', () => {
   const missing = ACTIVE_PROVIDER_CATALOG.filter(provider => !curatedProviderIdentity(provider.id)).map(provider => provider.id);
   assert.deepEqual(missing, []);
-  assert.equal(ACTIVE_PROVIDER_CATALOG.length, 80);
+  assert.equal(ACTIVE_PROVIDER_CATALOG.length, ENABLED_PROVIDER_IDS.length);
+  assert.ok(ACTIVE_PROVIDER_CATALOG.every(provider => provider.enabled !== false));
 });
 
 test('true unknown-provider fallback remains local and deterministic', () => {
