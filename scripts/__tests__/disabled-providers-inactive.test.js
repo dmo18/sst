@@ -31,5 +31,6 @@ test('collector history and favicon builder explicitly exclude disabled work', (
   assert.match(normalizer, /activeIds\.has\(change\.provider_id\)/);
   assert.match(workflow, /name: Remove internal prior snapshot before publication/);
   assert.match(read('.github/workflows/test.yml'), /name: Inspect all 41 enabled vendors through live official collection/);
+  assert.match(workflow, /name: Audit every enabled provider in this collection/);
   assert.doesNotMatch(workflow, /cp public\/previous-status\.json dist\/previous-status\.json/);
 });

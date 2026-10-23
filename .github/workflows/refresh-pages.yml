@@ -48,6 +48,8 @@ jobs:
         run: curl --fail --silent --show-error --max-time 10 https://dmo18.github.io/sst/status.json -o public/previous-status.json || true
       - name: Collect and validate public status data without GitHub credentials
         run: env -u GITHUB_TOKEN -u GH_TOKEN npm run update-status
+      - name: Audit every enabled provider in this collection
+        run: node --experimental-strip-types scripts/audit-enabled-providers.mjs public/status.json
       - name: Verify browser payload compatibility before deployment
         run: npm run validate-browser-payload
       - name: Verify truthful coverage, collection intelligence, and freshness

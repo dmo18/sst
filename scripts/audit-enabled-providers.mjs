@@ -41,25 +41,24 @@ for (const [i, provider] of providers.entries()) {
   if (p.source_state !== 'available' || p.ok !== true || p.service_state === 'unknown') unresolved.push(p.id);
 }
 console.log('PROVIDER_AUDIT_SUMMARY ' + JSON.stringify({ total: providers.length, ...totals, unresolved, errors: problems, generated_at: payload.generated_at }));
+if (unresolved.length) console.warn('::warning title=Unverified vendor health::' + unresolved.join(', ') + ' have incomplete official service conclusions.');
+if (process.env.GITHUB_STEP_SUMMARY) {
+  const rows = [
+    '### Enabled-provider live evidence audit',
+    '',
+    `**Recorded:** ${payload.generated_at} | **Providers:** ${providers.length} | **Readable current sources:** ${totals.available}/${providers.length}`,
+    '',
+    '| Provider | Service | Official source |',
+    '| --- | --- | --- |',
+    ...providers.map(p => `| ${p.name.replaceAll('|', '/')} | ${p.service_state} | ${p.source_state} |`),
+    '',
+    unresolved.length ? `**Unverified:** ${unresolved.join(', ')}` : '**All enabled providers have current official health conclusions.**',
+    ''
+  ];
+  fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, rows.join('\\n') + '\\n');
+}
 if (problems.length) {
   console.error('Provider evidence correctness failures: ' + problems.join('; '));
   process.exitCode = 1;
 }
 
-// Probe the raw Zoom Statuspage summary only when its current health is inconclusive.
-// No source bodies or private tokens are logged.
-if (unresolved.includes('zoom')) {
-  try {
-    const response = await fetch('https://www.zoomstatus.com/api/v2/summary.json', { signal: AbortSignal.timeout(12000), headers: { accept: 'application/json' } });
-    const j = await response.json();
-    console.log('ZOOM_SOURCE_DIAGNOSTIC ' + JSON.stringify({
-      http: response.status, status: j.status, page: j.page?.url,
-      unresolved: (j.incidents || []).filter(x => !/^(resolved|completed|postmortem)$/i.test(x.status || '')).slice(0, 8).map(x => ({
-        id: x.id, name: x.name, status: x.status, impact: x.impact, created_at: x.created_at, updated_at: x.updated_at,
-        affected: (x.components || []).map(c => c.name), updates: (x.incident_updates || []).slice(0, 2).map(u => ({created_at:u.created_at,updated_at:u.updated_at,status:u.status}))
-      })),
-      problem_components: (j.components || []).filter(x => !x.group && x.status !== 'operational').slice(0, 15).map(x => ({name:x.name,status:x.status})),
-      total_incidents: j.incidents?.length
-    }));
-  } catch (err) { console.log('ZOOM_SOURCE_DIAGNOSTIC_FAILED ' + String(err)); }
-}
