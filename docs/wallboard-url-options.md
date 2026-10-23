@@ -94,11 +94,11 @@ At that size (up to 520px wide and 360px high), the wallboard now uses the **off
 - Each row shows provider name/logo, attention label, latest vendor-update age, a headline and up to four lines of vendor detail.
 - Descriptions use bounded verbatim vendor excerpts (up to 360 characters), never invented summaries.
 - Critical attention sorts first, then action, then watch; each tier sorts newest update first.
-- The single 18px footer cycles three messages every six seconds: data update time in ET and age; screen data-refresh countdown and approximate source-check cadence; global valid/invalid provider counts and filter indication. Status stays pinned at the right throughout. Transform-only slides hold each message for ~5s; a duplicate first row makes the reset seamless. No guessed “next collection due” deadline is shown, since scheduler/publication delays make it misleading. Valid means usable status evidence, not necessarily an operational service. Screen data refresh fetches the payload; it is not a full Yodeck page reload. Stale/error states remain explicit.
-- The total issue count, critical count, affected-provider count and 17.5px affected-provider icons (25% larger) remain visible above the moving feed (up to ten icons plus an overflow count).
+- A static single 20px footer keeps three plain labels visible: data age, time until the next screen-data refresh, and global valid/invalid provider-status counts. No rotating messages, confusing collection estimates, or “LIVE” badge. Stale/error labels stay explicit. Exact successful update time in ET remains in the data-age tooltip. Valid means usable status evidence, not necessarily an operational service.
+- The total issue count, critical count, affected-provider count and 26px affected-provider icons remain visible above the moving feed (up to eight icons plus an overflow count).
 - Empty, loading, stale, and error states do not claim all services are operational.
 - No header/KPI overlay can cover this compact view. The normal desktop wallboard and its full descriptions remain unchanged.
-- Motion runs only on overflow; resize observation and scheduled layout work are cleaned up on unmount.
+- Motion runs only on overflow, with two adjacent identical copies. A Web Animations timeline runs continuously at 18px/s under both normal and reduced-motion settings; global UI animation overrides cannot stop it. Pixel offset is preserved when list height changes. The animation and resize observation are cleaned up on unmount. Left provider icons are 30px.
 - `src/CompactIncidentBoard.tsx` and the final unlayered `src/styles/wallboard-glance.css` own this compact presentation, including Chromium 92 compatibility.
 
 The incident inclusion, provider selection, time window, and collection logic are unchanged. Complete vendor titles/details remain in the normal operator/desktop view and row tooltips.
@@ -194,3 +194,7 @@ https://dmo18.github.io/sst/?view=wallboard&alerts=36h&refresh=30s
 ```
 
 The automated production contract uses the 36-hour alert-window form together with `layoutProbe=yodeck` for exact 458 by 291 verification. The `layoutProbe` parameter is for automated verification and is not required for normal signage use.
+
+## Compact motion verification
+
+Run `scripts/verify-yodeck-wallboard.mjs` with `MOTION_AUDIT_DIR=/path/to/artifacts` to capture a full feed loop, PNG frames and `motion.json`. It samples rendered animation frames and checks for blank frames, discontinuities and an actual wrap back to the first item. Use `REDUCED_MOTION=1` to repeat under the system accessibility preference. Inspect the captures, not just the audit result. The normal verifier checks the fixed one-line footer, 26px heading icons, 30px row icons and four-line details.

@@ -3,7 +3,7 @@ import { spawn } from 'node:child_process';
 
 const WIDTH = 458;
 const HEIGHT = 291;
-const DEBUG_PORT = 9222;
+const DEBUG_PORT = Number(process.env.CDP_DEBUG_PORT || 9222);
 const DEFAULT_TIMEOUT_MS = 20_000;
 
 const [targetUrl, htmlPath = '/tmp/yodeck-wallboard.html', screenshotPath = '/tmp/yodeck-wallboard.png'] = process.argv.slice(2);
@@ -209,6 +209,7 @@ try {
     dontSetVisibleSize: false
   });
 
+  if (process.env.REDUCED_MOTION === '1') await session.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
   const loadEvent = session.waitForEvent('Page.loadEventFired');
   await session.send('Page.navigate', { url: targetUrl });
   await loadEvent;
@@ -265,28 +266,29 @@ try {
       const heading = document.querySelector('.compact-board-heading');
       return {
         text: footer.innerText,
-        footerFits: Array.from(footer.querySelectorAll('.compact-footer-message')).every(row => row.scrollWidth <= row.clientWidth + 1),
+        footerFits: footer.scrollWidth <= footer.clientWidth + 1,
         headingFits: heading.scrollWidth <= heading.clientWidth + 1,
         icons: heading.querySelectorAll('.provider-logo').length,
         providers: new Set(Array.from(document.querySelectorAll('.compact-scroll-group:first-child article')).map(row => row.dataset.providerId)).size
       };
     })()`);
-    if (!/Data updated/.test(telemetry.text) || !/Screen data refresh/.test(telemetry.text) || !/valid/.test(telemetry.text) || !/invalid/.test(telemetry.text)) throw new Error('Compact collection/refresh/coverage telemetry is missing.');
+    if (!/Data/.test(telemetry.text) || !/Refresh/.test(telemetry.text) || !/valid/.test(telemetry.text) || !/invalid/.test(telemetry.text)) throw new Error('Compact collection/refresh/coverage telemetry is missing.');
     if (!telemetry.footerFits || !telemetry.headingFits) throw new Error('Compact heading or footer overflows.');
-    if (telemetry.icons !== Math.min(10, telemetry.providers)) throw new Error('Compact affected-provider icons are incomplete.');
+    if (telemetry.icons !== Math.min(8, telemetry.providers)) throw new Error('Compact affected-provider icons are incomplete.');
     console.log(`YODECK_COMPACT_TELEMETRY fits=true icons=${telemetry.icons} providers=${telemetry.providers}`);
     const details = await evaluate(session, `(() => {
       const board = document.querySelector('.compact-incident-board');
       const footer = board.querySelector('.compact-board-footer');
       return {
         footerHeight: footer.getBoundingClientRect().height,
-        messageHeights: Array.from(footer.querySelectorAll('.compact-footer-message')).map(row => row.getBoundingClientRect().height),
+        leftIconWidths: Array.from(board.querySelectorAll('article > .provider-logo')).map(icon => icon.getBoundingClientRect().width),
         iconWidths: Array.from(board.querySelectorAll('.compact-affected-providers .provider-logo')).map(icon => icon.getBoundingClientRect().width),
         clamps: Array.from(board.querySelectorAll('article p')).map(p => getComputedStyle(p).webkitLineClamp)
       };
     })()`);
-    if (details.footerHeight !== 18 || details.messageHeights.some(height => height !== 18)) throw new Error('Footer is not a single 18px scrolling line.');
-    if (details.iconWidths.some(width => Math.abs(width - 17.5) > .1)) throw new Error('Header icons are not 25% larger.');
+    if (details.footerHeight !== 20) throw new Error('Footer is not a single 20px readable line.');
+    if (details.iconWidths.some(width => Math.abs(width - 26) > .1)) throw new Error('Header icons are not 26px.');
+    if (details.leftIconWidths.some(width => Math.abs(width - 30) > .1)) throw new Error('Left icons are not 30px.');
     if (details.clamps.some(clamp => clamp !== '4')) throw new Error('Alert detail is not clamped to four lines.');
     const readScroll = () => evaluate(session, `(() => {
       const board = document.querySelector('.compact-incident-board');
@@ -301,6 +303,27 @@ try {
     if (first.required && (!first.scrolling || first.transform === next.transform)) throw new Error('Compact incident feed did not scroll.');
     if (!first.required && first.scrolling) throw new Error('Compact feed scrolls without overflow.');
     console.log(`YODECK_COMPACT_SCROLL rows=${first.rows} descriptions=${first.descriptions} required=${first.required} moved=${first.transform !== next.transform}`);
+    if (first.required && process.env.CHECK_LOOP_REMEASURE === '1') {
+      const drift = await evaluate(session, `(async () => {
+        const track = document.querySelector('.compact-scroll-track');
+        const rows = Array.from(track.querySelectorAll('.compact-scroll-group > article:first-child'));
+        const y = () => new DOMMatrixReadOnly(getComputedStyle(track).transform).m42;
+        let maximum = 0;
+        for (const padding of ['17px', '4px']) {
+          const before = y(), start = performance.now();
+          rows.forEach(row => { row.style.paddingBottom = padding; });
+          await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+          const elapsed = performance.now() - start;
+          const distance = track.querySelector('.compact-scroll-group').offsetHeight;
+          let moved = before - y();
+          if (moved < -distance / 2) moved += distance;
+          maximum = Math.max(maximum, Math.abs(moved - elapsed * .018));
+        }
+        return maximum;
+      })()`);
+      if (drift > 3) throw new Error(`Loop restarted during list-height update: drift=${drift}`);
+      console.log(`YODECK_REMEASURE drift_px=${drift}`);
+    }
   }
   const rotation = await providerRotationProbe(session);
   console.log(`YODECK_PROVIDER_ROTATION providers=${rotation?.count || 0} looping=${Boolean(rotation?.looping)} moved=${Boolean(rotation?.moved)} required=${Boolean(rotation?.required)}`);
@@ -312,33 +335,30 @@ try {
     fs.mkdirSync(process.env.MOTION_AUDIT_DIR, { recursive: true });
     // Let browser live-truth observations settle before watching uninterrupted loops.
     await sleep(7000);
-    const duration = await evaluate(session, `Math.min(60000, Math.max(19500, parseFloat(getComputedStyle(document.querySelector('.compact-scroll-track')).animationDuration) * 1000 + 1500 || 0))`);
+    const duration = await evaluate(session, `Math.min(90000, Math.max(19500, Number(document.querySelector('.compact-scroll-track').dataset.durationMs) + 1500 || 0))`);
     const audit = evaluate(session, `new Promise(resolve => {
       const board = document.querySelector('.compact-incident-board');
       const track = board.querySelector('.compact-scroll-track');
-      const footer = board.querySelector('.compact-footer-track');
       const viewport = board.querySelector('.compact-board-rows');
       const distance = board.querySelector('.compact-scroll-group').offsetHeight;
-      const speed = board.dataset.scrolling === 'true' ? distance / parseFloat(getComputedStyle(track).animationDuration) : 0;
+      const speed = board.dataset.scrolling === 'true' ? distance / Number(track.dataset.durationMs) * 1000 : 0;
       const y = el => { const transform = getComputedStyle(el).transform; return transform === 'none' ? 0 : new DOMMatrixReadOnly(transform).m42; };
-      let previous = null, frames = 0, blankFrames = 0, maxFeedDrift = 0, maxFooterJump = 0;
+      let previous = null, frames = 0, blankFrames = 0, maxFeedDrift = 0, wraps = 0;
       const start = performance.now();
       const tick = time => {
-        const position = y(track), footerPosition = y(footer);
+        const position = y(track);
         if (previous) {
           const elapsed = time - previous.time;
           let moved = previous.position - position;
-          if (moved < -distance / 2) moved += distance;
+          if (moved < -distance / 2) { moved += distance; wraps++; }
           maxFeedDrift = Math.max(maxFeedDrift, Math.abs(moved - speed * elapsed / 1000));
-          let footerMoved = previous.footerPosition - footerPosition;
-          if (footerMoved < -27) footerMoved += 54;
-          maxFooterJump = Math.max(maxFooterJump, Math.abs(footerMoved) - elapsed * 18 / 1080);
+
         }
         const bounds = viewport.getBoundingClientRect();
         if (board.dataset.total !== '0' && !Array.from(track.querySelectorAll('article')).some(row => { const r = row.getBoundingClientRect(); return r.bottom > bounds.top && r.top < bounds.bottom; })) blankFrames++;
-        previous = {time, position, footerPosition}; frames++;
+        previous = {time, position}; frames++;
         if (time - start < ${duration}) requestAnimationFrame(tick);
-        else resolve({ frames, blankFrames, maxFeedDrift, maxFooterJump, duration: time - start });
+        else resolve({ frames, blankFrames, maxFeedDrift, wraps, scrolling: speed > 0, reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches, duration: time - start });
       };
       requestAnimationFrame(tick);
     })`);
@@ -352,7 +372,7 @@ try {
     const result = await audit;
     fs.writeFileSync(`${process.env.MOTION_AUDIT_DIR}/motion.json`, JSON.stringify(result, null, 2));
     console.log(`YODECK_MOTION_AUDIT ${JSON.stringify(result)}`);
-    if (result.blankFrames || result.maxFeedDrift > 3 || result.maxFooterJump > 3) throw new Error('Animation audit detected blank content or discontinuous motion.');
+    if (result.blankFrames || result.maxFeedDrift > 3 || (result.scrolling && result.wraps < 1)) throw new Error('Animation audit detected blank content or discontinuous motion.');
   }
 
   const screenshot = await session.send('Page.captureScreenshot', {

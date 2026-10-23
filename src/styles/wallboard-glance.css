@@ -22,7 +22,7 @@
     position: absolute;
     inset: 0;
     display: grid;
-    grid-template-rows: 24px minmax(0, 1fr) 18px;
+    grid-template-rows: 32px minmax(0, 1fr) 20px;
     overflow: hidden;
     background: #080f1b;
     color: #f4f7ff;
@@ -62,7 +62,6 @@
   .compact-board-rows { position: relative; min-height: 0; overflow: hidden; }
   .compact-incident-board[data-scrolling="true"] .compact-board-rows { -webkit-mask-image: linear-gradient(to bottom, transparent, #000 8px, #000 calc(100% - 8px), transparent); mask-image: linear-gradient(to bottom, transparent, #000 8px, #000 calc(100% - 8px), transparent); }
   .compact-scroll-track { will-change: transform; }
-  .compact-scroll-track.is-scrolling { animation: compact-incident-flow var(--compact-scroll-duration) linear infinite; }
   .compact-scroll-group { display: flex; flex-direction: column; }
   .compact-issue {
     display: flex;
@@ -82,7 +81,7 @@
 
   .compact-issue.attention-critical { border-left-color: #ff6375; }
   .compact-issue.attention-action { border-left-color: #ffbc64; }
-  .compact-issue > .provider-logo { flex: 0 0 19px; width: 19px; height: 19px; }
+  .compact-issue > .provider-logo { flex: 0 0 30px; width: 30px; height: 30px; border-radius: 7px; }
   .compact-issue-text { flex: 1; min-width: 0; }
   .compact-issue-meta { display: flex; align-items: center; gap: 4px; height: 12px; }
   .compact-issue-meta b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; line-height: 12px; color: #fff; }
@@ -107,33 +106,14 @@
   }
 
   .compact-issue p { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; max-height: 48px; overflow: hidden; margin: 2px 0 0; color: #b9cbe0; font-size: 9px; line-height: 12px; }
-  .compact-board-footer { gap: 10px; font-size: 9px; line-height: 18px; color: #bccce0; background: #142238; font-variant-numeric: tabular-nums; overflow: hidden; }
-  .compact-footer-viewport { flex: 1; min-width: 0; height: 18px; overflow: hidden; }
-  .compact-footer-track { animation: compact-footer-cycle 18s linear infinite; will-change: transform; }
-  .compact-footer-message { display: flex; align-items: center; justify-content: space-between; gap: 6px; height: 18px; }
-  .compact-footer-state { flex: 0 0 auto; }
+  .compact-board-footer { gap: 8px; font-size: 10px; line-height: 20px; color: #d1deef; background: #142238; font-variant-numeric: tabular-nums; overflow: hidden; }
+  .compact-board-footer > span { flex: 0 0 auto; }
   .compact-affected-providers { display: flex; align-items: center; gap: 4px; min-width: 0; margin-left: auto; overflow: hidden; }
-  .compact-affected-providers > span { display: flex; flex: 0 0 17.5px; }
-  .compact-affected-providers .provider-logo { width: 17.5px; height: 17.5px; }
+  .compact-affected-providers > span { display: flex; flex: 0 0 26px; }
+  .compact-affected-providers .provider-logo { width: 26px; height: 26px; border-radius: 6px; }
   .compact-affected-providers small { font-size: 9px; }
   .compact-data-warning { color: #ffcc85; font-weight: 700; }
   .compact-board-empty { grid-row: 1 / -1; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 9px; padding: 14px; text-align: center; }
   .compact-board-empty b { font-size: 17px; color: #e4edfa; }
   .compact-board-empty span { font-size: 12px; color: #b9c9df; }
-}
-
-@keyframes compact-incident-flow {
-  from { transform: translate3d(0, 0, 0); }
-  to { transform: translate3d(0, calc(-1 * var(--compact-scroll-distance)), 0); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .compact-scroll-track.is-scrolling { animation-duration: calc(var(--compact-scroll-duration) * 2); }
-}
-
-/* Hold each message for ~5s, then slide; the duplicate first row hides reset. */
-@keyframes compact-footer-cycle {
-  0%, 27% { transform: translate3d(0, 0, 0); }
-  33%, 60% { transform: translate3d(0, -18px, 0); }
-  66%, 93% { transform: translate3d(0, -36px, 0); }
-  100% { transform: translate3d(0, -54px, 0); }
 }

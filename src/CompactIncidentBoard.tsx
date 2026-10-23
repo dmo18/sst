@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ProviderIcon } from './providerIcon';
 import { compactCountdown, compactDescription, compactHeadline, compactSignals } from './compactWallboard';
 import type { ActionItem } from './statusViewModel';
@@ -24,6 +24,8 @@ export function CompactIncidentBoard({ signals, now, generatedAt, nextRefreshAt,
   const ordered = useMemo(() => compactSignals(signals), [signals]);
   const viewportRef = useRef<HTMLDivElement>(null);
   const groupRef = useRef<HTMLDivElement>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
+  const scrollOffset = useRef(0);
   const [loopHeight, setLoopHeight] = useState(0);
   useEffect(() => {
     const viewport = viewportRef.current;
@@ -43,26 +45,44 @@ export function CompactIncidentBoard({ signals, now, generatedAt, nextRefreshAt,
     measure();
     return () => { observer.disconnect(); cancelAnimationFrame(frame); };
   }, [ordered.length]);
+  useLayoutEffect(() => {
+    const track = trackRef.current;
+    if (!track || !loopHeight) { scrollOffset.current = 0; return; }
+    // A signage feed must keep looping even when global reduced-motion CSS
+    // disables ordinary UI animations. Preserve pixel position on remeasurement.
+    const duration = Math.max(12000, loopHeight / 18 * 1000);
+    const animation = track.animate([
+      { transform: 'translate3d(0, 0, 0)' },
+      { transform: `translate3d(0, -${loopHeight}px, 0)` }
+    ], { duration, iterations: Infinity, easing: 'linear' });
+    animation.currentTime = (scrollOffset.current % loopHeight) / loopHeight * duration;
+    track.dataset.durationMs = String(duration);
+    return () => {
+      const time = typeof animation.currentTime === 'number' ? animation.currentTime : 0;
+      scrollOffset.current = (time % duration) / duration * loopHeight;
+      animation.cancel();
+    };
+  }, [loopHeight]);
   const critical = ordered.filter(item => item.attention === 'critical').length;
   const affectedProviders = ordered.filter((item, index) => ordered.findIndex(other => other.providerId === item.providerId) === index);
   const providers = affectedProviders.length;
   const collectedAt = Date.parse(generatedAt || '');
-  const collectedTime = Number.isFinite(collectedAt) ? new Date(collectedAt).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit', second: '2-digit' }) + ' ET' : 'unknown';
+  const collectedTime = Number.isFinite(collectedAt) ? new Date(collectedAt).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', hour12: false }) + ' ET' : 'unknown';
   const ready = (lifecycle.phase === 'ready' || lifecycle.phase === 'refreshing');
   const refreshLabel = lifecycle.phase === 'refreshing' ? 'in progress' : nextRefreshAt === null ? 'pending' : nextRefreshAt <= now ? 'due / waiting' : `in ${compactCountdown(nextRefreshAt, now)}`;
 
   return (
     <section className="compact-incident-board" data-scrolling={loopHeight > 0} data-total={ordered.length} aria-label="Active service issues">
       <div className="compact-board-heading">
-        <h2><span className={ordered.length ? 'compact-alert-dot' : 'compact-quiet-dot'} />{ordered.length} {ready ? 'active' : 'reported'} {ordered.length === 1 ? 'issue' : 'issues'}</h2>
+        <h2><span className={ordered.length ? 'compact-alert-dot' : 'compact-quiet-dot'} />{ordered.length} {ready ? '' : 'reported '}{ordered.length === 1 ? 'issue' : 'issues'}</h2>
         <div className="compact-affected-providers" aria-label="Providers with active issues">
-          {affectedProviders.slice(0, 10).map(item => <span key={item.providerId} title={item.provider} aria-label={item.provider}><ProviderIcon id={item.providerId} name={item.provider} /></span>)}
-          {providers > 10 ? <small>+{providers - 10}</small> : null}
+          {affectedProviders.slice(0, 8).map(item => <span key={item.providerId} title={item.provider} aria-label={item.provider}><ProviderIcon id={item.providerId} name={item.provider} /></span>)}
+          {providers > 8 ? <small>+{providers - 8}</small> : null}
         </div>
         <span>{critical > 0 ? <b className="compact-critical-count">{critical} critical · </b> : null}{providers} providers</span>
       </div>
       <div className="compact-board-rows" ref={viewportRef}>
-        <div className={`compact-scroll-track${loopHeight ? ' is-scrolling' : ''}`} style={{ '--compact-scroll-distance': `${loopHeight}px`, '--compact-scroll-duration': `${Math.max(12, loopHeight / 18)}s` } as React.CSSProperties}>
+        <div className={`compact-scroll-track${loopHeight ? ' is-scrolling' : ''}`} ref={trackRef}>
           {[false, ...(loopHeight ? [true] : [])].map(copy => (
             <div className="compact-scroll-group" key={String(copy)} ref={copy ? undefined : groupRef} aria-hidden={copy || undefined}>
               {ordered.map(item => (
@@ -80,15 +100,10 @@ export function CompactIncidentBoard({ signals, now, generatedAt, nextRefreshAt,
         </div>
         {!ordered.length ? <div className="compact-board-empty"><b>{ready ? 'No active issues' : 'Status not confirmed'}</b><span>{filtered ? 'Within the selected providers / time window' : 'Monitored public vendor sources'}{!ready ? ` · ${lifecycle.phase}` : ''}</span></div> : null}
       </div>
-      <div className="compact-board-footer">
-        <div className="compact-footer-viewport">
-          <div className="compact-footer-track">
-            {[0, 1, 2, 3].map(slot => <div className="compact-footer-message" key={slot} aria-hidden={slot === 3 || undefined}>
-              {slot % 3 === 0 ? <><span>Data updated {collectedTime}</span><span>{age(generatedAt, now) === 'now' ? 'just now' : age(generatedAt, now) === '—' ? 'age unknown' : `${age(generatedAt, now)} ago`}</span></> : slot === 1 ? <><span>Screen data refresh {refreshLabel}</span><span>Sources checked ~every 5m</span></> : <><span>Provider status: <b>{validCount ?? '—'} valid</b> · <b className={invalidCount ? 'compact-data-warning' : ''}>{invalidCount ?? '—'} invalid</b></span><span>{filtered ? 'Issues filtered' : 'All providers'}</span></>}
-            </div>)}
-          </div>
-        </div>
-        <b className={ready ? 'compact-footer-state' : 'compact-footer-state compact-data-warning'}>{ready ? 'LIVE' : lifecycle.phase.toUpperCase()}</b>
+      <div className="compact-board-footer" aria-label="Data freshness and provider status">
+        <span className={ready ? '' : 'compact-data-warning'} title={`Last successful data update: ${collectedTime}`}>{!ready ? `${lifecycle.phase.toUpperCase()} · ` : ''}Data {age(generatedAt, now) === 'now' ? 'just updated' : age(generatedAt, now) === '—' ? 'age unknown' : `${age(generatedAt, now)} old`}</span>
+        <span>Refresh {refreshLabel}</span>
+        <span><b>{validCount ?? '—'} valid</b> / <b className={invalidCount ? 'compact-data-warning' : ''}>{invalidCount ?? '—'} invalid</b></span>
       </div>
     </section>
   );
