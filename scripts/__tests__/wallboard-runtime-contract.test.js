@@ -26,7 +26,10 @@ test('Pages deployment is serialized, fully validated, bounded, and schedule-opt
   assert.match(workflow, /status_state:\s*\$\{\{ steps\.verify-status\.outputs\.state \}\}/);
   assert.match(workflow, /run:\s*node --experimental-strip-types scripts\/verify-release-contract\.mjs public\/status\.json/);
   assert.match(releaseContract, /liveSourceCount === total && calculatedBlind === 0 && fallbackCount === 0 \? 'success' : 'failure'/);
-  assert.match(workflow, /state:\s*process\.env\.STATUS_STATE/);
+  assert.match(workflow, /name:\s*Report deployed official-source coverage/);
+  assert.match(workflow, /STATUS_STATE/);
+  assert.match(workflow, /GITHUB_STEP_SUMMARY/);
+  assert.doesNotMatch(workflow, /statuses:\s*write/);
   assert.match(workflow, /uses:\s*actions\/deploy-pages@[0-9a-f]{40}[^\n]*\n\s*with:\s*\n\s*timeout:\s*600000/);
   assert.match(workflow, /name:\s*Verify 458x291 Yodeck wallboard contract/);
   assert.match(workflow, /node scripts\/verify-yodeck-wallboard\.mjs/);
