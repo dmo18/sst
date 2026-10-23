@@ -55,7 +55,7 @@ if (process.env.GITHUB_STEP_SUMMARY) {
     unresolved.length ? `**Unverified:** ${unresolved.join(', ')}` : '**All enabled providers have current official health conclusions.**',
     ''
   ];
-  fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, rows.join('\\n') + '\\n');
+  fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, rows.join('\n') + '\n');
 }
 if (problems.length) {
   console.error('Provider evidence correctness failures: ' + problems.join('; '));
