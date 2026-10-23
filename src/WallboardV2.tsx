@@ -325,7 +325,7 @@ function useWallboardLayoutProbe(
         if (board.scrollHeight > board.clientHeight + 1 || board.scrollWidth > board.clientWidth + 1) reasons.push('compact-board-overflow');
         for (const row of rows) {
           const r = row.getBoundingClientRect();
-          if (r.width > rect.width || r.height < 70) reasons.push('compact-row-invalid');
+          if (r.width > rect.width || r.height < 58) reasons.push('compact-row-invalid');
         }
         shell.dataset.layoutProbe = reasons.length ? 'fail' : 'pass';
         shell.dataset.layoutProbeDetail = reasons.length ? reasons.join('|') : `compact:${rows.length}/${signalCount};scrolling:${board.dataset.scrolling}`;
@@ -468,6 +468,7 @@ export function WallboardV2({
   lifecycle,
   now,
   browserCheckedAt,
+  nextBrowserRefreshAt,
   browserRefreshMs,
   alertWindowMs,
   providerIds,
@@ -477,6 +478,7 @@ export function WallboardV2({
   lifecycle: DataLifecycle;
   now: number;
   browserCheckedAt: number | null;
+  nextBrowserRefreshAt: number | null;
   browserRefreshMs: number;
   alertWindowMs: number | null;
   providerIds: readonly string[];
@@ -534,7 +536,6 @@ export function WallboardV2({
     headerMode === 'open' ? 'wallboard-controls-pinned-open' : '',
     headerMode === 'closed' ? 'wallboard-controls-pinned-closed' : ''
   ].filter(Boolean).join(' ');
-  const nextBrowserRefreshAt = browserCheckedAt ? browserCheckedAt + browserRefreshMs : null;
 
   return (
     <section
@@ -583,7 +584,7 @@ export function WallboardV2({
           className={compact ? 'wallboard-priority-v2 compact-priority-panel' : 'wallboard-priority wallboard-priority-v2'}
           data-alert-window-ms={alertWindowMs ?? undefined}
         >
-          {compact ? <CompactIncidentBoard signals={signals} now={now} generatedAt={model?.generatedAt} checkedAt={browserCheckedAt} lifecycle={lifecycle} filtered={alertWindowMs !== null || providerIds.length < (model?.diagnostics.length || 0)} /> : <>
+          {compact ? <CompactIncidentBoard signals={signals} now={now} generatedAt={model?.generatedAt} nextRefreshAt={nextBrowserRefreshAt} validCount={model?.summary.valid_status_count} invalidCount={model?.summary.invalid_status_count} lifecycle={lifecycle} filtered={alertWindowMs !== null || providerIds.length < (model?.diagnostics.length || 0)} /> : <>
           <h2>
             <span>Priority signals</span>
             <span className="wallboard-mini-telemetry" aria-label="Wallboard freshness telemetry">

@@ -19,7 +19,7 @@ export function App(): JSX.Element {
   const [route, setRoute] = useState(() => readWallboardRoute(location.search, ENABLED_PROVIDER_IDS));
   const [now, setNow] = useState(() => Date.now());
   const browserRefreshMs = route.wallboardMode ? route.refreshIntervalMs : OPERATOR_BROWSER_REFRESH_MS;
-  const { state, lastBrowserCheckAt, refresh } = usePayloadPoller(browserRefreshMs);
+  const { state, lastBrowserCheckAt, nextBrowserRefreshAt, refresh } = usePayloadPoller(browserRefreshMs);
 
   useEffect(() => {
     const tick = window.setInterval(() => setNow(Date.now()), 1000);
@@ -78,7 +78,7 @@ export function App(): JSX.Element {
       data-live-truth-failed-providers={(liveTruth?.failed_provider_ids || []).join(',')}
     >
       {route.wallboardMode
-        ? <WallboardV2 model={model} lifecycle={state} now={now} browserCheckedAt={lastBrowserCheckAt} browserRefreshMs={browserRefreshMs} alertWindowMs={route.alertWindowMs} providerIds={wallboardProviderIds} onExit={exitWallboard} />
+        ? <WallboardV2 nextBrowserRefreshAt={nextBrowserRefreshAt} model={model} lifecycle={state} now={now} browserCheckedAt={lastBrowserCheckAt} browserRefreshMs={browserRefreshMs} alertWindowMs={route.alertWindowMs} providerIds={wallboardProviderIds} onExit={exitWallboard} />
         : <>
             <IssueConsole model={model} lifecycle={state} onRefresh={requestRefresh} browserCheckedAt={lastBrowserCheckAt} browserRefreshMs={browserRefreshMs} />
             <OperationsIntelligencePanel model={model} />

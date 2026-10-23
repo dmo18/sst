@@ -22,7 +22,7 @@
     position: absolute;
     inset: 0;
     display: grid;
-    grid-template-rows: 30px minmax(0, 1fr) 20px;
+    grid-template-rows: 24px minmax(0, 1fr) 42px;
     overflow: hidden;
     background: #080f1b;
     color: #f4f7ff;
@@ -35,8 +35,8 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 6px;
-    padding: 0 8px;
+    gap: 4px;
+    padding: 0 6px;
     white-space: nowrap;
     background: linear-gradient(110deg, #152c43, #111d31);
   }
@@ -44,20 +44,20 @@
   .compact-board-heading h2 {
     display: flex;
     align-items: center;
-    gap: 7px;
+    gap: 5px;
     margin: 0;
     padding: 0;
     border: 0;
-    font-size: 14px;
+    font-size: 11px;
     font-weight: 800;
     line-height: 1;
     letter-spacing: 0;
     text-transform: none;
   }
 
-  .compact-board-heading > span { font-size: 11px; color: #d1deef; }
+  .compact-board-heading > span { font-size: 9px; color: #d1deef; }
   .compact-critical-count { color: #ff929b; }
-  .compact-alert-dot, .compact-quiet-dot { width: 7px; height: 7px; border-radius: 50%; background: #ffbc64; }
+  .compact-alert-dot, .compact-quiet-dot { width: 5px; height: 5px; border-radius: 50%; background: #ffbc64; }
   .compact-quiet-dot { background: #a1b2c8; }
   .compact-board-rows { position: relative; min-height: 0; overflow: hidden; }
   .compact-incident-board[data-scrolling="true"] .compact-board-rows { -webkit-mask-image: linear-gradient(to bottom, transparent, #000 8px, #000 calc(100% - 8px), transparent); mask-image: linear-gradient(to bottom, transparent, #000 8px, #000 calc(100% - 8px), transparent); }
@@ -67,12 +67,12 @@
   .compact-issue {
     display: flex;
     align-items: center;
-    height: 80px;
-    min-height: 80px;
+    height: 60px;
+    min-height: 60px;
     box-sizing: border-box;
     flex-shrink: 0;
-    gap: 8px;
-    padding: 7px 9px 7px 7px;
+    gap: 6px;
+    padding: 4px 7px 4px 5px;
     margin: 0;
     overflow: hidden;
     border: 0;
@@ -83,35 +83,40 @@
 
   .compact-issue.attention-critical { border-left-color: #ff6375; }
   .compact-issue.attention-action { border-left-color: #ffbc64; }
-  .compact-issue > .provider-icon { flex: 0 0 25px; width: 25px; height: 25px; }
+  .compact-issue > .provider-logo { flex: 0 0 19px; width: 19px; height: 19px; }
   .compact-issue-text { flex: 1; min-width: 0; }
-  .compact-issue-meta { display: flex; align-items: center; gap: 6px; height: 16px; }
-  .compact-issue-meta b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; line-height: 16px; color: #fff; }
-  .compact-severity { flex: 0 0 auto; color: #8fc8ff; font-size: 9px; font-weight: 700; letter-spacing: .04em; }
+  .compact-issue-meta { display: flex; align-items: center; gap: 4px; height: 12px; }
+  .compact-issue-meta b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; line-height: 12px; color: #fff; }
+  .compact-severity { flex: 0 0 auto; color: #8fc8ff; font-size: 8px; font-weight: 700; letter-spacing: .04em; }
   .attention-critical .compact-severity { color: #ff929b; }
   .attention-action .compact-severity { color: #ffcc85; }
-  .compact-issue-meta time { flex: 0 0 47px; text-align: right; font-size: 10px; color: #c0cfe3; font-variant-numeric: tabular-nums; }
+  .compact-issue-meta time { flex: 0 0 38px; text-align: right; font-size: 8px; color: #c0cfe3; font-variant-numeric: tabular-nums; }
   .compact-issue h3 {
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 1;
     overflow: hidden;
-    max-height: 17px;
+    max-height: 13px;
     margin: 1px 0 0;
     padding: 0;
     color: #e0e9f6;
-    font-size: 14px;
+    font-size: 11px;
     font-weight: 600;
-    line-height: 17px;
+    line-height: 13px;
     letter-spacing: 0;
     overflow-wrap: break-word;
   }
 
-  .compact-issue p { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; max-height: 30px; overflow: hidden; margin: 2px 0 0; color: #b9cbe0; font-size: 12px; line-height: 15px; }
-  .compact-board-footer { font-size: 10px; color: #bccce0; background: #142238; }
+  .compact-issue p { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; max-height: 24px; overflow: hidden; margin: 2px 0 0; color: #b9cbe0; font-size: 9px; line-height: 12px; }
+  .compact-board-footer { display: flex; flex-direction: column; justify-content: center; align-items: stretch; gap: 0; font-size: 9px; line-height: 13px; color: #bccce0; background: #142238; font-variant-numeric: tabular-nums; }
+  .compact-board-footer > div { display: flex; justify-content: space-between; gap: 6px; }
+  .compact-affected-providers { display: flex; align-items: center; gap: 4px; min-width: 0; margin-left: auto; overflow: hidden; }
+  .compact-affected-providers > span { display: flex; flex: 0 0 14px; }
+  .compact-affected-providers .provider-logo { width: 14px; height: 14px; }
+  .compact-affected-providers small { font-size: 9px; }
   .compact-data-warning { color: #ffcc85; font-weight: 700; }
   .compact-board-empty { grid-row: 1 / -1; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 9px; padding: 14px; text-align: center; }
-  .compact-board-empty b { font-size: 22px; color: #e4edfa; }
+  .compact-board-empty b { font-size: 17px; color: #e4edfa; }
   .compact-board-empty span { font-size: 12px; color: #b9c9df; }
 }
 

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ProviderIcon } from './providerIcon';
-import { compactDescription, compactHeadline, compactSignals } from './compactWallboard';
+import { compactCountdown, compactDescription, compactHeadline, compactSignals, nextCollectionSlot } from './compactWallboard';
 import type { ActionItem } from './statusViewModel';
 import type { DataLifecycle } from './types';
 
@@ -11,11 +11,13 @@ function age(value: string | number | null | undefined, now: number): string {
   return minutes < 1 ? 'now' : minutes < 60 ? `${minutes}m` : minutes < 1440 ? `${Math.floor(minutes / 60)}h` : `${Math.floor(minutes / 1440)}d`;
 }
 
-export function CompactIncidentBoard({ signals, now, generatedAt, checkedAt, lifecycle, filtered }: {
+export function CompactIncidentBoard({ signals, now, generatedAt, nextRefreshAt, validCount, invalidCount, lifecycle, filtered }: {
   signals: ActionItem[];
   now: number;
   generatedAt?: string;
-  checkedAt: number | null;
+  nextRefreshAt: number | null;
+  validCount?: number;
+  invalidCount?: number;
   lifecycle: DataLifecycle;
   filtered: boolean;
 }): JSX.Element {
@@ -42,13 +44,20 @@ export function CompactIncidentBoard({ signals, now, generatedAt, checkedAt, lif
     return () => { observer.disconnect(); cancelAnimationFrame(frame); };
   }, [ordered.length]);
   const critical = ordered.filter(item => item.attention === 'critical').length;
-  const providers = new Set(ordered.map(item => item.providerId)).size;
+  const affectedProviders = ordered.filter((item, index) => ordered.findIndex(other => other.providerId === item.providerId) === index);
+  const providers = affectedProviders.length;
+  const collectedAt = Date.parse(generatedAt || '');
+  const collectedTime = Number.isFinite(collectedAt) ? new Date(collectedAt).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit', second: '2-digit' }) + ' ET' : 'unknown';
   const ready = (lifecycle.phase === 'ready' || lifecycle.phase === 'refreshing');
 
   return (
     <section className="compact-incident-board" data-scrolling={loopHeight > 0} data-total={ordered.length} aria-label="Active service issues">
       <div className="compact-board-heading">
         <h2><span className={ordered.length ? 'compact-alert-dot' : 'compact-quiet-dot'} />{ordered.length} {ready ? 'active' : 'reported'} {ordered.length === 1 ? 'issue' : 'issues'}</h2>
+        <div className="compact-affected-providers" aria-label="Providers with active issues">
+          {affectedProviders.slice(0, 10).map(item => <span key={item.providerId} title={item.provider} aria-label={item.provider}><ProviderIcon id={item.providerId} name={item.provider} /></span>)}
+          {providers > 10 ? <small>+{providers - 10}</small> : null}
+        </div>
         <span>{critical > 0 ? <b className="compact-critical-count">{critical} critical · </b> : null}{providers} providers</span>
       </div>
       <div className="compact-board-rows" ref={viewportRef}>
@@ -71,8 +80,9 @@ export function CompactIncidentBoard({ signals, now, generatedAt, checkedAt, lif
         {!ordered.length ? <div className="compact-board-empty"><b>{ready ? 'No active issues' : 'Status not confirmed'}</b><span>{filtered ? 'Within the selected providers / time window' : 'Monitored public vendor sources'}{!ready ? ` · ${lifecycle.phase}` : ''}</span></div> : null}
       </div>
       <div className="compact-board-footer">
-        <span className={ready ? '' : 'compact-data-warning'}>{ready ? 'Updated' : `Data ${lifecycle.phase} · updated`} {age(generatedAt, now) === 'now' ? 'just now' : `${age(generatedAt, now)} ago`}</span>
-        <span>Checked {age(checkedAt, now) === 'now' ? 'just now' : `${age(checkedAt, now)} ago`}{filtered ? ' · filtered view' : ''}</span>
+        <div><span className={ready ? '' : 'compact-data-warning'}>Data collected {collectedTime} · {age(generatedAt, now) === 'now' ? 'just now' : age(generatedAt, now) === '—' ? 'age unknown' : `${age(generatedAt, now)} ago`}</span><b className={ready ? '' : 'compact-data-warning'}>{ready ? 'LIVE' : lifecycle.phase.toUpperCase()}</b></div>
+        <div><span>Next collection ~{compactCountdown(nextCollectionSlot(generatedAt), now)}</span><span>Screen data refresh {lifecycle.phase === 'refreshing' ? 'in progress' : compactCountdown(nextRefreshAt, now)}</span></div>
+        <div><span>All providers: <b>{validCount ?? '—'} valid</b> · <b className={invalidCount ? 'compact-data-warning' : ''}>{invalidCount ?? '—'} invalid</b></span><span>{filtered ? 'Issues filtered · ' : ''}Collection every 5m</span></div>
       </div>
     </section>
   );

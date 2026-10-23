@@ -30,3 +30,15 @@ test('brief descriptions preserve vendor text, avoid duplicate headlines, and bo
   assert.ok(brief.endsWith('…'));
   assert.ok(detail.startsWith(brief.slice(0, -1)));
 });
+
+test('collection estimate follows five-minute schedule and admits delays or missing data', async () => {
+  const { nextCollectionSlot, compactCountdown } = await import('../compactWallboard.ts');
+  const now = Date.parse('2026-10-23T12:03:30Z');
+  assert.equal(nextCollectionSlot('2026-10-23T12:03:00Z'), Date.parse('2026-10-23T12:05:00Z'));
+  assert.equal(compactCountdown(nextCollectionSlot('2026-10-23T12:03:00Z'), now), '1m 30s');
+  assert.equal(compactCountdown(now, now), 'due / waiting');
+  assert.equal(compactCountdown(now - 1000, now), 'due / waiting');
+  assert.equal(compactCountdown(now + 500, now), '1s');
+  assert.equal(nextCollectionSlot('bad'), null);
+  assert.equal(compactCountdown(null, now), 'unknown');
+});

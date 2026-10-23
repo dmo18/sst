@@ -77,7 +77,7 @@ Rules:
 - Changing the URL option changes the in-app browser payload polling cadence, not GitHub Actions collection cadence.
 - Yodeck's own full-page Refresh Interval is separate and is not required for this option.
 
-The compact telemetry label `Browser` is the age since the most recent successful browser payload check. It is not the configured interval itself. For example, with `refresh=3m`, `Browser 25s` means the current browser successfully checked the payload 25 seconds ago and will make the next scheduled check on its three-minute cadence.
+The office tile labels its payload polling countdown “Screen data refresh”. This follows the actual interval timer, including after failed checks; refreshing retains cached data, and failures remain visibly stale. Larger wallboards retain browser-check age telemetry. Provider valid/invalid counts cover all monitored providers, even when the incident feed is filtered.
 
 ## Primary Yodeck viewport
 
@@ -90,12 +90,12 @@ Height: 291px
 
 At that size (up to 520px wide and 360px high), the wallboard now uses the **office glance board**:
 
-- A continuous vertical incident feed replaces page switching. Around three 80px rows fit within the tile; overflow loops seamlessly at 18px/second.
+- A continuous vertical incident feed replaces page switching. Around four 60px rows fit within the tile; overflow loops seamlessly at 18px/second.
 - Each row shows provider name/logo, attention label, latest vendor-update age, a headline and up to two lines of brief vendor detail.
 - Descriptions use bounded verbatim vendor excerpts (up to 180 characters), never invented summaries.
 - Critical attention sorts first, then action, then watch; each tier sorts newest update first.
-- The footer uses plain freshness labels: “Updated” and “Checked”; no page fractions, ranges or countdowns.
-- The total issue count, critical count, and affected-provider count remain visible above the moving feed.
+- The three-line footer shows data collection time in ET and age, the estimated next five-minute collection slot, the actual scheduled screen data-refresh countdown, and global valid/invalid provider-status counts. Valid means usable status evidence, not necessarily an operational service. An overdue collection says “due / waiting”; GitHub scheduling and publication may be delayed. Screen data refresh fetches the payload; it is not a full Yodeck page reload. Stale/error states remain explicit.
+- The total issue count, critical count, affected-provider count and small affected-provider icons remain visible above the moving feed (up to ten icons plus an overflow count).
 - Empty, loading, stale, and error states do not claim all services are operational.
 - No header/KPI overlay can cover this compact view. The normal desktop wallboard and its full descriptions remain unchanged.
 - Motion runs only on overflow; resize observation and scheduled layout work are cleaned up on unmount.

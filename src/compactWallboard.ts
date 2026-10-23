@@ -27,3 +27,16 @@ export function compactDescription(item: Pick<ActionItem, 'title' | 'detail'>): 
   const excerpt = detail.slice(0, 177);
   return `${excerpt.slice(0, excerpt.lastIndexOf(' ') > 120 ? excerpt.lastIndexOf(' ') : 177)}…`;
 }
+
+/** Five-minute GitHub collection slots are estimates, not promised publication times. */
+export function nextCollectionSlot(generatedAt?: string): number | null {
+  const generated = Date.parse(generatedAt || '');
+  return Number.isFinite(generated) ? (Math.floor(generated / 300000) + 1) * 300000 : null;
+}
+
+export function compactCountdown(target: number | null, now: number): string {
+  if (target === null || !Number.isFinite(target)) return 'unknown';
+  const seconds = Math.ceil((target - now) / 1000);
+  if (seconds <= 0) return 'due / waiting';
+  return seconds < 60 ? `${seconds}s` : `${Math.floor(seconds / 60)}m ${String(seconds % 60).padStart(2, '0')}s`;
+}

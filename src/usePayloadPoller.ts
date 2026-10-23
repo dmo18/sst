@@ -74,6 +74,7 @@ async function fetchStatus(signal: AbortSignal): Promise<StatusFetchResult> {
 export function usePayloadPoller(browserRefreshMs: number) {
   const [state, dispatch] = useReducer(dataLifecycleReducer, initialDataLifecycle);
   const [lastBrowserCheckAt, setLastBrowserCheckAt] = useState<number | null>(null);
+  const [nextBrowserRefreshAt, setNextBrowserRefreshAt] = useState<number | null>(null);
   const lastBrowserCheckAtRef = useRef<number | null>(null);
   const payloadOwnership = useRef(new RequestOwnership());
   const liveTruthOwnership = useRef(new RequestOwnership());
@@ -125,7 +126,9 @@ export function usePayloadPoller(browserRefreshMs: number) {
   useEffect(() => {
     mounted.current = true;
     void refresh();
+    setNextBrowserRefreshAt(Date.now() + browserRefreshMs);
     const id = window.setInterval(() => {
+      setNextBrowserRefreshAt(Date.now() + browserRefreshMs);
       if (!document.hidden) void refresh();
     }, browserRefreshMs);
     const refreshWhenVisible = () => {
@@ -143,5 +146,5 @@ export function usePayloadPoller(browserRefreshMs: number) {
     };
   }, [browserRefreshMs, refresh]);
 
-  return { state, lastBrowserCheckAt, refresh };
+  return { state, lastBrowserCheckAt, nextBrowserRefreshAt, refresh };
 }

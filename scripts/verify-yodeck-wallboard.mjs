@@ -260,6 +260,21 @@ try {
   }
 
   if (contract.compact) {
+    const telemetry = await evaluate(session, `(() => {
+      const footer = document.querySelector('.compact-board-footer');
+      const heading = document.querySelector('.compact-board-heading');
+      return {
+        text: footer.innerText,
+        footerFits: Array.from(footer.children).every(row => row.scrollWidth <= row.clientWidth + 1),
+        headingFits: heading.scrollWidth <= heading.clientWidth + 1,
+        icons: heading.querySelectorAll('.provider-logo').length,
+        providers: new Set(Array.from(document.querySelectorAll('.compact-scroll-group:first-child article')).map(row => row.dataset.providerId)).size
+      };
+    })()`);
+    if (!/Data collected/.test(telemetry.text) || !/Next collection/.test(telemetry.text) || !/Screen data refresh/.test(telemetry.text) || !/valid/.test(telemetry.text) || !/invalid/.test(telemetry.text)) throw new Error('Compact collection/refresh/coverage telemetry is missing.');
+    if (!telemetry.footerFits || !telemetry.headingFits) throw new Error('Compact heading or footer overflows.');
+    if (telemetry.icons !== Math.min(10, telemetry.providers)) throw new Error('Compact affected-provider icons are incomplete.');
+    console.log(`YODECK_COMPACT_TELEMETRY fits=true icons=${telemetry.icons} providers=${telemetry.providers}`);
     const readScroll = () => evaluate(session, `(() => {
       const board = document.querySelector('.compact-incident-board');
       const track = board.querySelector('.compact-scroll-track');
