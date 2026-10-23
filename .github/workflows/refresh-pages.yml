@@ -124,7 +124,6 @@ jobs:
       contents: read
       pages: write
       id-token: write
-      statuses: write
     environment:
       name: github-pages
       url: ${{ steps.page-url.outputs.url }}
@@ -248,30 +247,26 @@ jobs:
             /tmp/yodeck-wallboard.png
           if-no-files-found: warn
           retention-days: 7
-      - name: Publish deployed intelligence verification
+      - name: Report deployed official-source coverage
         env:
-          GH_TOKEN: ${{ github.token }}
           STATUS_DESCRIPTION: ${{ needs.build.outputs.status_description }}
           STATUS_STATE: ${{ needs.build.outputs.status_state }}
           PAGE_URL: ${{ steps.page-url.outputs.url }}
         run: |
-          node --input-type=module <<'NODE'
-          const endpoint = `https://api.github.com/repos/${process.env.GITHUB_REPOSITORY}/statuses/${process.env.GITHUB_SHA}`;
-          const response = await fetch(endpoint, {
-            method: 'POST',
-            headers: {
-              accept: 'application/vnd.github+json',
-              authorization: `Bearer ${process.env.GH_TOKEN}`,
-              'content-type': 'application/json',
-              'x-github-api-version': '2022-11-28'
-            },
-            body: JSON.stringify({
-              state: process.env.STATUS_STATE,
-              context: 'status-data/live-coverage',
-              description: process.env.STATUS_DESCRIPTION,
-              target_url: `${process.env.PAGE_URL.replace(/\/?$/, '/')}status.json`
-            })
-          });
-          if (!response.ok) throw new Error(`Status publication failed: HTTP ${response.status} ${await response.text()}`);
-          console.log(`Published status-data/live-coverage as ${process.env.STATUS_STATE}: ${process.env.STATUS_DESCRIPTION}`);
-          NODE
+          if [ -z "$STATUS_DESCRIPTION" ] || { [ "$STATUS_STATE" != success ] && [ "$STATUS_STATE" != failure ]; }; then
+            echo "Missing or invalid release contract coverage result." >&2
+            exit 1
+          fi
+          if [ "$STATUS_STATE" = success ]; then
+            coverage=Complete
+          else
+            coverage=Incomplete
+            echo "::warning title=Incomplete official-source coverage::${STATUS_DESCRIPTION}"
+          fi
+          {
+            printf '### Deployed official-source coverage\n\n'
+            printf '**Coverage:** %s\n\n' "$coverage"
+            printf '**Evidence:** %s\n\n' "$STATUS_DESCRIPTION"
+            printf '[Published status payload](%s/status.json)\n\n' "${PAGE_URL%/}"
+            printf 'Coverage is independent of Pages deployment success. Unknown or blind provider health stays unknown.\n'
+          } >> "$GITHUB_STEP_SUMMARY"
