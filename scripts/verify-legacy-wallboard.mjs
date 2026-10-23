@@ -161,6 +161,7 @@ function structuralWallboardReady(state) {
     && state?.priority
     && state?.telemetry
     && state?.providerRail
+    && state?.compactGeometry !== false
     && (state.signalCount > 0 || state.emptyState)
     && !state?.appError
   );
@@ -174,10 +175,17 @@ async function waitForWallboard(session) {
       const root = document.documentElement;
       const shell = document.querySelector('.wallboard-shell, .wallboard-v2');
       const priority = document.querySelector('.wallboard-priority-v2');
-      const telemetry = document.querySelector('.wallboard-mini-telemetry');
-      const providerRail = document.querySelector('.wallboard-alert-provider-rail');
-      const signalCount = document.querySelectorAll('.wallboard-priority-group:not(.wallboard-priority-copy) article').length;
-      const emptyState = Boolean(document.querySelector('.wallboard-priority-list > .empty-state'));
+      const telemetry = document.querySelector('.wallboard-mini-telemetry, .compact-board-footer');
+      const providerRail = document.querySelector('.wallboard-alert-provider-rail, .compact-board-heading');
+      const signalCount = document.querySelectorAll('.wallboard-priority-group:not(.wallboard-priority-copy) article, .compact-issue').length;
+      const emptyState = Boolean(document.querySelector('.wallboard-priority-list > .empty-state, .compact-board-empty'));
+      const board = document.querySelector('.compact-incident-board');
+      const boardRect = board?.getBoundingClientRect();
+      const rows = Array.from(board?.querySelectorAll('.compact-issue') || []);
+      const compactGeometry = !board || (rows.length === Math.min(4, Number(board.dataset.total))
+        && boardRect.width >= 440 && boardRect.height >= 275
+        && board.scrollHeight <= board.clientHeight + 1 && board.scrollWidth <= board.clientWidth + 1
+        && rows.every(row => { const r = row.getBoundingClientRect(); return r.height >= 45 && r.top >= boardRect.top && r.bottom <= boardRect.bottom; }));
       const bodyText = document.body?.innerText || '';
       return {
         className: root.className,
@@ -187,6 +195,7 @@ async function waitForWallboard(session) {
         telemetry: Boolean(telemetry),
         providerRail: Boolean(providerRail),
         signalCount,
+        compactGeometry,
         emptyState,
         layoutProbe: shell?.dataset?.layoutProbe || '',
         layoutProbeDetail: shell?.dataset?.layoutProbeDetail || '',
@@ -239,11 +248,18 @@ try {
     const wallboard = document.querySelector('.wallboard-v2, .wallboard-shell');
     const rect = wallboard?.getBoundingClientRect();
     const priority = document.querySelector('.wallboard-priority-v2');
-    const telemetry = document.querySelector('.wallboard-mini-telemetry');
-    const providerRail = document.querySelector('.wallboard-alert-provider-rail');
-    const signalCount = document.querySelectorAll('.wallboard-priority-group:not(.wallboard-priority-copy) article').length;
-    const emptyState = Boolean(document.querySelector('.wallboard-priority-list > .empty-state'));
-    const bodyText = document.body?.innerText || '';
+    const telemetry = document.querySelector('.wallboard-mini-telemetry, .compact-board-footer');
+    const providerRail = document.querySelector('.wallboard-alert-provider-rail, .compact-board-heading');
+    const signalCount = document.querySelectorAll('.wallboard-priority-group:not(.wallboard-priority-copy) article, .compact-issue').length;
+    const emptyState = Boolean(document.querySelector('.wallboard-priority-list > .empty-state, .compact-board-empty'));
+    const board = document.querySelector('.compact-incident-board');
+      const boardRect = board?.getBoundingClientRect();
+      const rows = Array.from(board?.querySelectorAll('.compact-issue') || []);
+      const compactGeometry = !board || (rows.length === Math.min(4, Number(board.dataset.total))
+        && boardRect.width >= 440 && boardRect.height >= 275
+        && board.scrollHeight <= board.clientHeight + 1 && board.scrollWidth <= board.clientWidth + 1
+        && rows.every(row => { const r = row.getBoundingClientRect(); return r.height >= 45 && r.top >= boardRect.top && r.bottom <= boardRect.bottom; }));
+      const bodyText = document.body?.innerText || '';
     return {
       html: root.outerHTML,
       marker: root.classList.contains('no-css-layers'),
@@ -252,6 +268,7 @@ try {
       telemetry: Boolean(telemetry),
       providerRail: Boolean(providerRail),
       signalCount,
+      compactGeometry,
       emptyState,
       layoutProbe: wallboard?.dataset?.layoutProbe || '',
       layoutProbeDetail: wallboard?.dataset?.layoutProbeDetail || '',
