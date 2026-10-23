@@ -66,7 +66,12 @@ function isPlannedOnly(title, note, status = '') {
 }
 
 function colorFor(value, impact = '') {
-  return /\b(?:critical|major|major outage|complete outage|service down|unavailable|downtime)\b/i.test(`${impact} ${value}`) ? 'red' : 'amber';
+  // When the vendor publishes impact, its explicit severity takes precedence
+  // over words such as "unavailable" in a narrowly scoped incident title.
+  const published = String(impact || '').trim().toLowerCase();
+  if (published === 'critical' || published === 'major') return 'red';
+  if (published === 'minor' || published === 'none' || published === 'maintenance') return 'amber';
+  return /\b(?:critical|major|major outage|complete outage|service down|unavailable|downtime)\b/i.test(String(value || '')) ? 'red' : 'amber';
 }
 
 function uniqueNames(values, limit = 8) {
