@@ -450,7 +450,7 @@ export function parseStatuspageSummary(value, provider = {}, source = {}) {
     // Do not turn an explicitly restored service with an all-green official
     // status and no degraded components into a new outage or an unknown state.
     const restoredMonitoring = /^monitoring$/i.test(status)
-      && /\\b(?:successfully\\s+resolved|issue\\s+(?:has\\s+been\\s+)?resolved|service\\s+(?:has\\s+been\\s+)?restored|services?\\s+(?:are\\s+)?back\\s+to\\s+normal|fully\\s+recovered)\\b/i.test(note)
+      && /\b(?:successfully\s+resolved|issue\s+(?:has\s+been\s+)?resolved|service\s+(?:has\s+been\s+)?restored|services?\s+(?:are\s+)?back\s+to\s+normal|fully\s+recovered)\b/i.test(note)
       && String(json.status?.indicator || '').toLowerCase() === 'none'
       && !components.some(component => componentStatusIsProblem(component.status));
     if (restoredMonitoring) continue;
