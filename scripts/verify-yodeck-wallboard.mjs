@@ -265,16 +265,29 @@ try {
       const heading = document.querySelector('.compact-board-heading');
       return {
         text: footer.innerText,
-        footerFits: Array.from(footer.children).every(row => row.scrollWidth <= row.clientWidth + 1),
+        footerFits: Array.from(footer.querySelectorAll('.compact-footer-message')).every(row => row.scrollWidth <= row.clientWidth + 1),
         headingFits: heading.scrollWidth <= heading.clientWidth + 1,
         icons: heading.querySelectorAll('.provider-logo').length,
         providers: new Set(Array.from(document.querySelectorAll('.compact-scroll-group:first-child article')).map(row => row.dataset.providerId)).size
       };
     })()`);
-    if (!/Data collected/.test(telemetry.text) || !/Next collection/.test(telemetry.text) || !/Screen data refresh/.test(telemetry.text) || !/valid/.test(telemetry.text) || !/invalid/.test(telemetry.text)) throw new Error('Compact collection/refresh/coverage telemetry is missing.');
+    if (!/Data updated/.test(telemetry.text) || !/Screen data refresh/.test(telemetry.text) || !/valid/.test(telemetry.text) || !/invalid/.test(telemetry.text)) throw new Error('Compact collection/refresh/coverage telemetry is missing.');
     if (!telemetry.footerFits || !telemetry.headingFits) throw new Error('Compact heading or footer overflows.');
     if (telemetry.icons !== Math.min(10, telemetry.providers)) throw new Error('Compact affected-provider icons are incomplete.');
     console.log(`YODECK_COMPACT_TELEMETRY fits=true icons=${telemetry.icons} providers=${telemetry.providers}`);
+    const details = await evaluate(session, `(() => {
+      const board = document.querySelector('.compact-incident-board');
+      const footer = board.querySelector('.compact-board-footer');
+      return {
+        footerHeight: footer.getBoundingClientRect().height,
+        messageHeights: Array.from(footer.querySelectorAll('.compact-footer-message')).map(row => row.getBoundingClientRect().height),
+        iconWidths: Array.from(board.querySelectorAll('.compact-affected-providers .provider-logo')).map(icon => icon.getBoundingClientRect().width),
+        clamps: Array.from(board.querySelectorAll('article p')).map(p => getComputedStyle(p).webkitLineClamp)
+      };
+    })()`);
+    if (details.footerHeight !== 18 || details.messageHeights.some(height => height !== 18)) throw new Error('Footer is not a single 18px scrolling line.');
+    if (details.iconWidths.some(width => Math.abs(width - 17.5) > .1)) throw new Error('Header icons are not 25% larger.');
+    if (details.clamps.some(clamp => clamp !== '4')) throw new Error('Alert detail is not clamped to four lines.');
     const readScroll = () => evaluate(session, `(() => {
       const board = document.querySelector('.compact-incident-board');
       const track = board.querySelector('.compact-scroll-track');
@@ -293,6 +306,53 @@ try {
   console.log(`YODECK_PROVIDER_ROTATION providers=${rotation?.count || 0} looping=${Boolean(rotation?.looping)} moved=${Boolean(rotation?.moved)} required=${Boolean(rotation?.required)}`);
   if (rotation?.required && !rotation.moved) {
     throw new Error(`Wallboard provider header rail did not move while ${rotation.count} alert providers were present.`);
+  }
+
+  if (process.env.MOTION_AUDIT_DIR && contract.compact) {
+    fs.mkdirSync(process.env.MOTION_AUDIT_DIR, { recursive: true });
+    // Let browser live-truth observations settle before watching uninterrupted loops.
+    await sleep(7000);
+    const duration = await evaluate(session, `Math.min(60000, Math.max(19500, parseFloat(getComputedStyle(document.querySelector('.compact-scroll-track')).animationDuration) * 1000 + 1500 || 0))`);
+    const audit = evaluate(session, `new Promise(resolve => {
+      const board = document.querySelector('.compact-incident-board');
+      const track = board.querySelector('.compact-scroll-track');
+      const footer = board.querySelector('.compact-footer-track');
+      const viewport = board.querySelector('.compact-board-rows');
+      const distance = board.querySelector('.compact-scroll-group').offsetHeight;
+      const speed = board.dataset.scrolling === 'true' ? distance / parseFloat(getComputedStyle(track).animationDuration) : 0;
+      const y = el => { const transform = getComputedStyle(el).transform; return transform === 'none' ? 0 : new DOMMatrixReadOnly(transform).m42; };
+      let previous = null, frames = 0, blankFrames = 0, maxFeedDrift = 0, maxFooterJump = 0;
+      const start = performance.now();
+      const tick = time => {
+        const position = y(track), footerPosition = y(footer);
+        if (previous) {
+          const elapsed = time - previous.time;
+          let moved = previous.position - position;
+          if (moved < -distance / 2) moved += distance;
+          maxFeedDrift = Math.max(maxFeedDrift, Math.abs(moved - speed * elapsed / 1000));
+          let footerMoved = previous.footerPosition - footerPosition;
+          if (footerMoved < -27) footerMoved += 54;
+          maxFooterJump = Math.max(maxFooterJump, Math.abs(footerMoved) - elapsed * 18 / 1080);
+        }
+        const bounds = viewport.getBoundingClientRect();
+        if (board.dataset.total !== '0' && !Array.from(track.querySelectorAll('article')).some(row => { const r = row.getBoundingClientRect(); return r.bottom > bounds.top && r.top < bounds.bottom; })) blankFrames++;
+        previous = {time, position, footerPosition}; frames++;
+        if (time - start < ${duration}) requestAnimationFrame(tick);
+        else resolve({ frames, blankFrames, maxFeedDrift, maxFooterJump, duration: time - start });
+      };
+      requestAnimationFrame(tick);
+    })`);
+    const started = Date.now();
+    let frame = 0;
+    while (Date.now() - started < duration) {
+      const capture = await session.send('Page.captureScreenshot', { format: 'png', fromSurface: true, captureBeyondViewport: false });
+      fs.writeFileSync(`${process.env.MOTION_AUDIT_DIR}/frame-${String(frame++).padStart(4, '0')}.png`, Buffer.from(capture.data, 'base64'));
+      await sleep(250);
+    }
+    const result = await audit;
+    fs.writeFileSync(`${process.env.MOTION_AUDIT_DIR}/motion.json`, JSON.stringify(result, null, 2));
+    console.log(`YODECK_MOTION_AUDIT ${JSON.stringify(result)}`);
+    if (result.blankFrames || result.maxFeedDrift > 3 || result.maxFooterJump > 3) throw new Error('Animation audit detected blank content or discontinuous motion.');
   }
 
   const screenshot = await session.send('Page.captureScreenshot', {

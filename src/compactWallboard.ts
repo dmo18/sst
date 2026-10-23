@@ -23,15 +23,9 @@ export function compactHeadline(item: Pick<ActionItem, 'title' | 'detail'>): str
 export function compactDescription(item: Pick<ActionItem, 'title' | 'detail'>): string {
   const detail = item.detail.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
   if (!detail || detail === item.title.replace(/\s+/g, ' ').trim()) return '';
-  if (detail.length <= 180) return detail;
-  const excerpt = detail.slice(0, 177);
-  return `${excerpt.slice(0, excerpt.lastIndexOf(' ') > 120 ? excerpt.lastIndexOf(' ') : 177)}…`;
-}
-
-/** Five-minute GitHub collection slots are estimates, not promised publication times. */
-export function nextCollectionSlot(generatedAt?: string): number | null {
-  const generated = Date.parse(generatedAt || '');
-  return Number.isFinite(generated) ? (Math.floor(generated / 300000) + 1) * 300000 : null;
+  if (detail.length <= 360) return detail;
+  const excerpt = detail.slice(0, 357);
+  return `${excerpt.slice(0, excerpt.lastIndexOf(' ') > 280 ? excerpt.lastIndexOf(' ') : 357)}…`;
 }
 
 export function compactCountdown(target: number | null, now: number): string {

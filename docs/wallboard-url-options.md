@@ -90,12 +90,12 @@ Height: 291px
 
 At that size (up to 520px wide and 360px high), the wallboard now uses the **office glance board**:
 
-- A continuous vertical incident feed replaces page switching. Around four 60px rows fit within the tile; overflow loops seamlessly at 18px/second.
-- Each row shows provider name/logo, attention label, latest vendor-update age, a headline and up to two lines of brief vendor detail.
-- Descriptions use bounded verbatim vendor excerpts (up to 180 characters), never invented summaries.
+- A continuous vertical incident feed replaces page switching. Rows grow from 60px to fit their details, up to about 86px; overflow loops seamlessly at 18px/second.
+- Each row shows provider name/logo, attention label, latest vendor-update age, a headline and up to four lines of vendor detail.
+- Descriptions use bounded verbatim vendor excerpts (up to 360 characters), never invented summaries.
 - Critical attention sorts first, then action, then watch; each tier sorts newest update first.
-- The three-line footer shows data collection time in ET and age, the estimated next five-minute collection slot, the actual scheduled screen data-refresh countdown, and global valid/invalid provider-status counts. Valid means usable status evidence, not necessarily an operational service. An overdue collection says “due / waiting”; GitHub scheduling and publication may be delayed. Screen data refresh fetches the payload; it is not a full Yodeck page reload. Stale/error states remain explicit.
-- The total issue count, critical count, affected-provider count and small affected-provider icons remain visible above the moving feed (up to ten icons plus an overflow count).
+- The single 18px footer cycles three messages every six seconds: data update time in ET and age; screen data-refresh countdown and approximate source-check cadence; global valid/invalid provider counts and filter indication. Status stays pinned at the right throughout. Transform-only slides hold each message for ~5s; a duplicate first row makes the reset seamless. No guessed “next collection due” deadline is shown, since scheduler/publication delays make it misleading. Valid means usable status evidence, not necessarily an operational service. Screen data refresh fetches the payload; it is not a full Yodeck page reload. Stale/error states remain explicit.
+- The total issue count, critical count, affected-provider count and 17.5px affected-provider icons (25% larger) remain visible above the moving feed (up to ten icons plus an overflow count).
 - Empty, loading, stale, and error states do not claim all services are operational.
 - No header/KPI overlay can cover this compact view. The normal desktop wallboard and its full descriptions remain unchanged.
 - Motion runs only on overflow; resize observation and scheduled layout work are cleaned up on unmount.

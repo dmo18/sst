@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ProviderIcon } from './providerIcon';
-import { compactCountdown, compactDescription, compactHeadline, compactSignals, nextCollectionSlot } from './compactWallboard';
+import { compactCountdown, compactDescription, compactHeadline, compactSignals } from './compactWallboard';
 import type { ActionItem } from './statusViewModel';
 import type { DataLifecycle } from './types';
 
@@ -49,6 +49,7 @@ export function CompactIncidentBoard({ signals, now, generatedAt, nextRefreshAt,
   const collectedAt = Date.parse(generatedAt || '');
   const collectedTime = Number.isFinite(collectedAt) ? new Date(collectedAt).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit', second: '2-digit' }) + ' ET' : 'unknown';
   const ready = (lifecycle.phase === 'ready' || lifecycle.phase === 'refreshing');
+  const refreshLabel = lifecycle.phase === 'refreshing' ? 'in progress' : nextRefreshAt === null ? 'pending' : nextRefreshAt <= now ? 'due / waiting' : `in ${compactCountdown(nextRefreshAt, now)}`;
 
   return (
     <section className="compact-incident-board" data-scrolling={loopHeight > 0} data-total={ordered.length} aria-label="Active service issues">
@@ -80,9 +81,14 @@ export function CompactIncidentBoard({ signals, now, generatedAt, nextRefreshAt,
         {!ordered.length ? <div className="compact-board-empty"><b>{ready ? 'No active issues' : 'Status not confirmed'}</b><span>{filtered ? 'Within the selected providers / time window' : 'Monitored public vendor sources'}{!ready ? ` · ${lifecycle.phase}` : ''}</span></div> : null}
       </div>
       <div className="compact-board-footer">
-        <div><span className={ready ? '' : 'compact-data-warning'}>Data collected {collectedTime} · {age(generatedAt, now) === 'now' ? 'just now' : age(generatedAt, now) === '—' ? 'age unknown' : `${age(generatedAt, now)} ago`}</span><b className={ready ? '' : 'compact-data-warning'}>{ready ? 'LIVE' : lifecycle.phase.toUpperCase()}</b></div>
-        <div><span>Next collection ~{compactCountdown(nextCollectionSlot(generatedAt), now)}</span><span>Screen data refresh {lifecycle.phase === 'refreshing' ? 'in progress' : compactCountdown(nextRefreshAt, now)}</span></div>
-        <div><span>All providers: <b>{validCount ?? '—'} valid</b> · <b className={invalidCount ? 'compact-data-warning' : ''}>{invalidCount ?? '—'} invalid</b></span><span>{filtered ? 'Issues filtered · ' : ''}Collection every 5m</span></div>
+        <div className="compact-footer-viewport">
+          <div className="compact-footer-track">
+            {[0, 1, 2, 3].map(slot => <div className="compact-footer-message" key={slot} aria-hidden={slot === 3 || undefined}>
+              {slot % 3 === 0 ? <><span>Data updated {collectedTime}</span><span>{age(generatedAt, now) === 'now' ? 'just now' : age(generatedAt, now) === '—' ? 'age unknown' : `${age(generatedAt, now)} ago`}</span></> : slot === 1 ? <><span>Screen data refresh {refreshLabel}</span><span>Sources checked ~every 5m</span></> : <><span>Provider status: <b>{validCount ?? '—'} valid</b> · <b className={invalidCount ? 'compact-data-warning' : ''}>{invalidCount ?? '—'} invalid</b></span><span>{filtered ? 'Issues filtered' : 'All providers'}</span></>}
+            </div>)}
+          </div>
+        </div>
+        <b className={ready ? 'compact-footer-state' : 'compact-footer-state compact-data-warning'}>{ready ? 'LIVE' : lifecycle.phase.toUpperCase()}</b>
       </div>
     </section>
   );

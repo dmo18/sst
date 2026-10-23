@@ -22,7 +22,7 @@
     position: absolute;
     inset: 0;
     display: grid;
-    grid-template-rows: 24px minmax(0, 1fr) 42px;
+    grid-template-rows: 24px minmax(0, 1fr) 18px;
     overflow: hidden;
     background: #080f1b;
     color: #f4f7ff;
@@ -67,7 +67,6 @@
   .compact-issue {
     display: flex;
     align-items: center;
-    height: 60px;
     min-height: 60px;
     box-sizing: border-box;
     flex-shrink: 0;
@@ -107,12 +106,15 @@
     overflow-wrap: break-word;
   }
 
-  .compact-issue p { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; max-height: 24px; overflow: hidden; margin: 2px 0 0; color: #b9cbe0; font-size: 9px; line-height: 12px; }
-  .compact-board-footer { display: flex; flex-direction: column; justify-content: center; align-items: stretch; gap: 0; font-size: 9px; line-height: 13px; color: #bccce0; background: #142238; font-variant-numeric: tabular-nums; }
-  .compact-board-footer > div { display: flex; justify-content: space-between; gap: 6px; }
+  .compact-issue p { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; max-height: 48px; overflow: hidden; margin: 2px 0 0; color: #b9cbe0; font-size: 9px; line-height: 12px; }
+  .compact-board-footer { gap: 10px; font-size: 9px; line-height: 18px; color: #bccce0; background: #142238; font-variant-numeric: tabular-nums; overflow: hidden; }
+  .compact-footer-viewport { flex: 1; min-width: 0; height: 18px; overflow: hidden; }
+  .compact-footer-track { animation: compact-footer-cycle 18s linear infinite; will-change: transform; }
+  .compact-footer-message { display: flex; align-items: center; justify-content: space-between; gap: 6px; height: 18px; }
+  .compact-footer-state { flex: 0 0 auto; }
   .compact-affected-providers { display: flex; align-items: center; gap: 4px; min-width: 0; margin-left: auto; overflow: hidden; }
-  .compact-affected-providers > span { display: flex; flex: 0 0 14px; }
-  .compact-affected-providers .provider-logo { width: 14px; height: 14px; }
+  .compact-affected-providers > span { display: flex; flex: 0 0 17.5px; }
+  .compact-affected-providers .provider-logo { width: 17.5px; height: 17.5px; }
   .compact-affected-providers small { font-size: 9px; }
   .compact-data-warning { color: #ffcc85; font-weight: 700; }
   .compact-board-empty { grid-row: 1 / -1; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 9px; padding: 14px; text-align: center; }
@@ -126,4 +128,12 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .compact-scroll-track.is-scrolling { animation-duration: calc(var(--compact-scroll-duration) * 2); }
+}
+
+/* Hold each message for ~5s, then slide; the duplicate first row hides reset. */
+@keyframes compact-footer-cycle {
+  0%, 27% { transform: translate3d(0, 0, 0); }
+  33%, 60% { transform: translate3d(0, -18px, 0); }
+  66%, 93% { transform: translate3d(0, -36px, 0); }
+  100% { transform: translate3d(0, -54px, 0); }
 }

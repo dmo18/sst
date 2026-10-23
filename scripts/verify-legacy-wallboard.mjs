@@ -162,6 +162,7 @@ function structuralWallboardReady(state) {
     && state?.telemetry
     && state?.providerRail
     && state?.compactGeometry !== false
+    && state?.browserCheckedAt > 0
     && (state.signalCount > 0 || state.emptyState)
     && !state?.appError
   );
@@ -181,11 +182,11 @@ async function waitForWallboard(session) {
       const emptyState = Boolean(document.querySelector('.wallboard-priority-list > .empty-state, .compact-board-empty'));
       const board = document.querySelector('.compact-incident-board');
       const boardRect = board?.getBoundingClientRect();
-      const rows = Array.from(board?.querySelectorAll('.compact-issue') || []);
-      const compactGeometry = !board || (rows.length === Math.min(4, Number(board.dataset.total))
+      const rows = Array.from(board?.querySelectorAll('.compact-scroll-group:first-child .compact-issue') || []);
+      const compactGeometry = !board || (rows.length === Number(board.dataset.total)
         && boardRect.width >= 440 && boardRect.height >= 275
         && board.scrollHeight <= board.clientHeight + 1 && board.scrollWidth <= board.clientWidth + 1
-        && rows.every(row => { const r = row.getBoundingClientRect(); return r.height >= 45 && r.top >= boardRect.top && r.bottom <= boardRect.bottom; }));
+        && rows.every(row => { const r = row.getBoundingClientRect(); return r.height >= 58 && r.width <= boardRect.width; }));
       const bodyText = document.body?.innerText || '';
       return {
         className: root.className,
@@ -197,6 +198,7 @@ async function waitForWallboard(session) {
         signalCount,
         compactGeometry,
         emptyState,
+        browserCheckedAt: Number(shell?.dataset?.wallboardBrowserCheckedAt || 0),
         layoutProbe: shell?.dataset?.layoutProbe || '',
         layoutProbeDetail: shell?.dataset?.layoutProbeDetail || '',
         bodyText,
@@ -254,11 +256,11 @@ try {
     const emptyState = Boolean(document.querySelector('.wallboard-priority-list > .empty-state, .compact-board-empty'));
     const board = document.querySelector('.compact-incident-board');
       const boardRect = board?.getBoundingClientRect();
-      const rows = Array.from(board?.querySelectorAll('.compact-issue') || []);
-      const compactGeometry = !board || (rows.length === Math.min(4, Number(board.dataset.total))
+      const rows = Array.from(board?.querySelectorAll('.compact-scroll-group:first-child .compact-issue') || []);
+      const compactGeometry = !board || (rows.length === Number(board.dataset.total)
         && boardRect.width >= 440 && boardRect.height >= 275
         && board.scrollHeight <= board.clientHeight + 1 && board.scrollWidth <= board.clientWidth + 1
-        && rows.every(row => { const r = row.getBoundingClientRect(); return r.height >= 45 && r.top >= boardRect.top && r.bottom <= boardRect.bottom; }));
+        && rows.every(row => { const r = row.getBoundingClientRect(); return r.height >= 58 && r.width <= boardRect.width; }));
       const bodyText = document.body?.innerText || '';
     return {
       html: root.outerHTML,
@@ -270,6 +272,7 @@ try {
       signalCount,
       compactGeometry,
       emptyState,
+      browserCheckedAt: Number(wallboard?.dataset?.wallboardBrowserCheckedAt || 0),
       layoutProbe: wallboard?.dataset?.layoutProbe || '',
       layoutProbeDetail: wallboard?.dataset?.layoutProbeDetail || '',
       width: innerWidth,
