@@ -53,6 +53,8 @@ jobs:
       - name: Verify truthful coverage, collection intelligence, and freshness
         id: verify-status
         run: node --experimental-strip-types scripts/verify-release-contract.mjs public/status.json
+      - name: Remove internal prior snapshot before publication
+        run: rm -f public/previous-status.json
       - name: Build verified application shell
         if: github.event_name != 'schedule' && github.event_name != 'repository_dispatch'
         run: |
@@ -104,7 +106,6 @@ jobs:
           node scripts/write-deploy-version.mjs
           cp public/status.json public/deploy-version.txt dist/
           node scripts/prepare-versioned-status.mjs dist
-          test ! -f public/previous-status.json || cp public/previous-status.json dist/previous-status.json
       - name: Fail-safe application build when reusable shell is unavailable
         if: (github.event_name == 'schedule' || github.event_name == 'repository_dispatch') && steps.shell.outputs.found != 'true'
         run: |

@@ -882,6 +882,18 @@ export async function generatePublicStatus() {
   } catch {
     previous = null;
   }
+  // Historic payloads may include vendors since disabled. They must not be
+  // processed, compared, or carried forward after the enabled catalog changes.
+  if (previous) {
+    previous = {
+      ...previous,
+      providers: previous.providers.filter(provider => ids.has(provider.id)),
+      incidents: previous.incidents.filter(incident => ids.has(incident.providerId)),
+      maintenance: (previous.maintenance || []).filter(item => ids.has(item.providerId)),
+      changes: (previous.changes || []).filter(change => ids.has(change.provider_id)),
+      history: (previous.history || []).filter(change => ids.has(change.provider_id))
+    };
+  }
 
   const collectionStartedAt = new Date().toISOString();
   const collectedResults = await collectWithBudgets(catalog, resolvePublicSource, loadPublicProvider, collectionLimits);

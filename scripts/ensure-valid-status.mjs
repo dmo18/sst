@@ -194,12 +194,14 @@ export function normalizeStatusPayload(payload, previous = null, now = payload?.
       fallback_source_count: fallbackCount
     }
   };
+  const activeIds = new Set(normalizedProviders.map(provider => provider.id));
   const changes = [...compareSnapshots(validPrevious, base, now), ...sourceIntelligenceChanges(validPrevious, base, now)]
+    .filter(change => activeIds.has(change.provider_id))
     .filter((change, index, all) => all.findIndex(candidate => candidate.id === change.id) === index);
   const normalized = {
     ...base,
     changes,
-    history: [...changes, ...(validPrevious?.history || payload.history || [])].slice(0, 200),
+    history: [...changes, ...(validPrevious?.history || payload.history || []).filter(change => activeIds.has(change.provider_id))].slice(0, 200),
     status_data_policy: {
       requirement: 'Every provider must publish an explicit status record, but only successfully captured current official sources count as coverage.',
       valid_source_states: [...validSourceStates],

@@ -22,8 +22,13 @@ test('only the 41 enabled consolidated providers participate in SST operations',
 test('collector history and favicon builder explicitly exclude disabled work', () => {
   const collector = read('scripts/update-public-status.mjs');
   const favicon = read('scripts/sync-provider-favicons.mjs');
+  const normalizer = read('scripts/ensure-valid-status.mjs');
+  const workflow = read('.github/workflows/refresh-pages.yml');
   assert.match(collector, /\.filter\(provider => provider\.enabled !== false\)/);
   assert.match(collector, /collectWithBudgets\(catalog, resolvePublicSource, loadPublicProvider, collectionLimits\)/);
   assert.match(collector, /ids\.has\(change\.provider_id\)/);
   assert.match(favicon, /settings\.providers\.filter\(id => byId\.has\(id\)\)/);
+  assert.match(normalizer, /activeIds\.has\(change\.provider_id\)/);
+  assert.match(workflow, /name: Remove internal prior snapshot before publication/);
+  assert.doesNotMatch(workflow, /cp public\/previous-status\.json dist\/previous-status\.json/);
 });
