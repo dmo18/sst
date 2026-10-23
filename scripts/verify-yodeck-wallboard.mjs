@@ -202,8 +202,8 @@ try {
     height: HEIGHT,
     deviceScaleFactor: 1,
     mobile: false,
-    screenWidth: WIDTH,
-    screenHeight: HEIGHT,
+    screenWidth: 1920,
+    screenHeight: 1080,
     positionX: 0,
     positionY: 0,
     dontSetVisibleSize: false

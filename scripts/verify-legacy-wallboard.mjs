@@ -231,8 +231,8 @@ try {
     height: 291,
     deviceScaleFactor: 1,
     mobile: false,
-    screenWidth: 458,
-    screenHeight: 291,
+    screenWidth: 1920,
+    screenHeight: 1080,
     positionX: 0,
     positionY: 0,
     dontSetVisibleSize: false

@@ -1,5 +1,8 @@
-/* Final, unlayered compact-only presentation: also works on Chromium 92. */
-@media (max-width: 520px) and (max-height: 360px) {
+/* Final, unlayered compact-only presentation: also works on Chromium 92.
+ * Height-first is intentional: this is a 458px Yodeck browser region on a
+ * 1920px physical display, not a small device. Do not add max-device-width.
+ */
+@media (max-height: 360px) and (max-width: 520px) {
   .wallboard-glance-mode > header,
   .wallboard-glance-mode > .wallboard-kpis,
   .wallboard-glance-mode > .wallboard-overlay-restore {
