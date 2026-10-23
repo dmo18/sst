@@ -9,6 +9,7 @@ import {
   loadPublicProvider,
   parseFeedEntries,
   parsePublicFeed,
+  parseSlackCurrentStatus,
   publicPageUrl,
   resolvePublicSource,
   scopeFeedEntries
@@ -30,6 +31,41 @@ import {
 const response = (body, status = 200, type = 'text/html') => new Response(body, {
   status,
   headers: { 'content-type': type }
+});
+
+test('Slack v2 current status API confirms healthy service without interpreting stale RSS', async () => {
+  const original = globalThis.fetch;
+  const provider = { id: 'slack', name: 'Slack', enabled: true, url: 'https://slack-status.com/api/v2.0.0/current' };
+  globalThis.fetch = async () => response(JSON.stringify({ status: 'ok', active_incidents: [], date_updated: new Date().toISOString() }), 200, 'application/json');
+  try {
+    const result = await parseSlackCurrentStatus(provider);
+    assert.equal(result.service_state, 'operational');
+    assert.equal(result.source_state, 'available');
+    assert.equal(result.source_type, 'slack-current-json');
+    assert.equal(result.source, 'https://slack-status.com/api/v2.0.0/current');
+  } finally { globalThis.fetch = original; }
+});
+
+test('Slack current outage carries vendor time, services and official incident link', async () => {
+  const original = globalThis.fetch;
+  const now = new Date().toISOString();
+  globalThis.fetch = async () => response(JSON.stringify({
+    status: 'active', active_incidents: [{
+      id: '1234', date_created: now, date_updated: now,
+      title: 'Slack messaging unavailable', type: 'outage', status: 'active',
+      url: 'https://slack-status.com/issues/1234', services: ['Messaging'],
+      notes: [{ date_created: now, body: 'Identified impact to messaging.' }]
+    }]
+  }), 200, 'application/json');
+  try {
+    const result = await parseSlackCurrentStatus({ id: 'slack', name: 'Slack', enabled: true });
+    assert.equal(result.service_state, 'major');
+    assert.equal(result.source_state, 'available');
+    assert.equal(result.incidents.length, 1);
+    assert.equal(result.incidents[0].id, 'slack:1234');
+    assert.equal(result.incidents[0].affected_service, 'Messaging');
+    assert.equal(result.incidents[0].latest_update, now);
+  } finally { globalThis.fetch = original; }
 });
 
 test('statuspage API URLs resolve to public pages and feeds', () => {
