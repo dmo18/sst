@@ -322,6 +322,23 @@ test('emergency or critical maintenance events remain incidents', () => {
   assert.equal(activeFeedEntries(entries, 336, Date.parse('2026-07-31T13:00:00Z')).length, 2);
 });
 
+test('disabled catalog entries do not reach collection after consolidation overrides', async () => {
+  const active = canonicalizeProviderCatalog([
+    { id: 'on', enabled: true },
+    { id: 'off', enabled: false },
+    { id: 'replaced', enabled: false },
+    { id: 'changed-off', enabled: true }
+  ], {
+    excludedProviderIds: [],
+    providerOverrides: { replaced: { id: 'nuso', enabled: true }, 'changed-off': { enabled: false } }
+  });
+  assert.deepEqual(active.map(provider => provider.id), ['on', 'nuso']);
+  await assert.rejects(
+    loadPublicProvider({ id: 'off', enabled: false, url: 'https://disabled.invalid/', sourceType: 'statuspage' }),
+    /Disabled provider off must not be collected/
+  );
+});
+
 test('provider consolidation absorbs Datto and adds Autotask to Kaseya', () => {
   const catalog = canonicalizeProviderCatalog([
     { id: 'kaseya', name: 'Kaseya', services: [] },

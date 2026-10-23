@@ -118,7 +118,8 @@ export function canonicalizeProviderCatalog(catalog, consolidation = readJson(co
   const overrides = consolidation?.providerOverrides || {};
   return catalog
     .filter(provider => !excluded.has(provider.id))
-    .map(provider => ({ ...provider, ...(overrides[provider.id] || {}) }));
+    .map(provider => ({ ...provider, ...(overrides[provider.id] || {}) }))
+    .filter(provider => provider.enabled !== false);
 }
 
 export function decodeEntities(value) {
@@ -801,6 +802,7 @@ function limitedStatus(provider, source) {
 }
 
 export async function loadPublicProvider(provider) {
+  if (provider.enabled === false) throw new Error(`Disabled provider ${provider.id} must not be collected.`);
   const source = resolvePublicSource(provider);
   try {
     if (source.mode === 'limited') return limitedStatus(provider, source);
@@ -866,6 +868,7 @@ export async function generatePublicStatus() {
   const rawCatalog = readJson(catalogPath);
   if (!Array.isArray(rawCatalog)) throw new Error('Provider catalog must be an array.');
   const catalog = canonicalizeProviderCatalog(rawCatalog);
+  // Disabled entries cannot reach source retrieval or the published payload.
   const ids = new Set();
   for (const provider of catalog) {
     if (ids.has(provider.id)) throw new Error(`Duplicate provider id: ${provider.id}`);
@@ -906,9 +909,13 @@ export async function generatePublicStatus() {
     maintenance
   };
   const changes = [...compareSnapshots(previous, base, generatedAt), ...sourceIntelligenceChanges(previous, base, generatedAt)]
+    .filter(change => ids.has(change.provider_id))
     .filter(change => !dateLikeIncidentTitle(change.title))
     .filter((change, index, all) => all.findIndex(candidate => candidate.id === change.id) === index);
-  const retainedHistory = (previous?.history || []).filter(change => !dateLikeIncidentTitle(change.title));
+  // Purge prior disabled-provider alerts instead of keeping them in history.
+  const retainedHistory = (previous?.history || [])
+    .filter(change => ids.has(change.provider_id))
+    .filter(change => !dateLikeIncidentTitle(change.title));
   const payload = { ...base, changes, history: [...changes, ...retainedHistory].slice(0, 200) };
   validatePayload(payload);
   writeJson(publicStatusPath, payload);

@@ -22,7 +22,7 @@ A source failure, parser quarantine, or source SLO breach never becomes a vendor
 
 ```text
 config/providers.json + provider consolidation
-  -> 80-provider canonical active catalog + deterministic catalog hash
+  -> enabled-only canonical catalog + deterministic catalog hash
   -> bounded first-party retrieval
   -> structured adapters + registry-backed current-page adapter SDK
   -> incident, maintenance, source, reliability, canary, and collection intelligence
@@ -35,7 +35,7 @@ config/providers.json + provider consolidation
   -> GitHub Pages
 ```
 
-At this revision the catalog contains 80 raw entries and 80 active canonical providers across 31 categories. Those counts are descriptive, not hardcoded validation constants; canonical validation derives membership from the catalog and consolidation rules. Shared official sources are reused where appropriate.
+The catalog retains 80 raw entries, but only 41 are enabled after consolidation, including NUSO in the former Datto slot. The other 39 are fully disabled: they produce no source requests, favicon fetches, status records, health intelligence, browser checks, or active/historical alerts. Disabled entries remain on disk solely for future re-enablement. The active catalog hash and deployed Status Contract include only enabled providers.
 
 The public payload uses Status Contract v3 with `schema_version: 3`, `contract_version: 3`, and a deterministic hash of the canonical active provider catalog. Browser validation, the release contract, and production smoke all require the same catalog identity.
 
@@ -93,10 +93,10 @@ Every active provider has a curated local recognition identity so operators can 
 
 The production contract currently has:
 
-- 80/80 active providers with curated identities;
-- 45 local exact/brand-geometry provider references across 43 unique bundled exact assets;
-- 35 exact masked marks in the deployed provider table;
-- 35 provider-specific embedded SVG recognition aids for vendors without a stable exact mark in the pinned source set;
+- 41/41 enabled providers with curated identities;
+- bundled local brand geometry for enabled providers;
+- fetched and bundled vendor favicon artwork only for enabled providers;
+- enabled-catalog-derived identity checks in the deployed provider table;
 - deterministic initials only as the fallback for an unknown provider outside the canonical catalog;
 - zero runtime logo CDN, favicon, or external-logo requests.
 

@@ -163,7 +163,8 @@ test('product-depth closure record is backed by final production and product evi
   assert.match(system, /Run #34 \(`31539671901`\)/);
   assert.match(system, /35 exact masks/);
   assert.match(report, /no external logo origins/i);
-  assert.match(readme, /80 raw entries and 80 active canonical providers/);
+  assert.match(readme, /80 raw entries/);
+  assert.match(readme, /41 are enabled after consolidation/);
   assert.match(readme, /product-experience\.yml/);
 
   for (const document of [tracker, system, report, readme]) {

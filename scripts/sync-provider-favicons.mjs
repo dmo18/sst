@@ -185,11 +185,17 @@ const rawProviders = await readJson(providersUrl);
 const consolidation = await readJson(consolidationUrl);
 const canonical = canonicalizeProviderCatalog(rawProviders, consolidation);
 const byId = new Map(canonical.map(provider => [provider.id, provider]));
+const allCanonicalIds = new Set(rawProviders
+  .filter(provider => !(consolidation.excludedProviderIds || []).includes(provider.id))
+  .map(provider => (consolidation.providerOverrides?.[provider.id] || {}).id || provider.id));
 const websiteOverrides = settings.websiteOverrides || {};
 const assetOverrides = settings.assetOverrides || {};
-const selected = settings.providers.map(id => {
+for (const id of settings.providers) {
+  if (!allCanonicalIds.has(id)) throw new Error(`Configured favicon provider is not canonical: ${id}`);
+}
+// Skip all favicon requests for disabled providers.
+const selected = settings.providers.filter(id => byId.has(id)).map(id => {
   const provider = byId.get(id);
-  if (!provider) throw new Error(`Configured favicon provider is not canonical: ${id}`);
   if (!provider.url) throw new Error(`Configured favicon provider has no official source URL: ${id}`);
   const websiteOverride = websiteOverrides[id] || '';
   const assetOverride = assetOverrides[id] || null;
@@ -213,7 +219,7 @@ await mapConcurrent(selected, async ({ provider, websiteOverride, assetOverride 
   }
 }, CONCURRENCY);
 
-const minimumResolved = Number(settings.minimumResolved || 0);
+const minimumResolved = Math.min(selected.length, Number(settings.minimumResolved || 0));
 if (resolved.length < minimumResolved) {
   throw new Error(`Provider favicon coverage ${resolved.length}/${selected.length} is below required minimum ${minimumResolved}.`);
 }

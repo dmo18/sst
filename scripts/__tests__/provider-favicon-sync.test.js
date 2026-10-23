@@ -15,6 +15,8 @@ test('provider favicon source list covers every generated recognition brand', as
   ];
   assert.equal(settings.minimumResolved, 35);
   assert.deepEqual([...settings.providers].sort(), [...expected].sort());
+  const sync = await read('scripts/sync-provider-favicons.mjs');
+  assert.match(sync, /settings\.providers\.filter\(id => byId\.has\(id\)\)/);
   for (const id of ['sophos', 'halopsa', 'kaseya', 'superops', 'proofpoint', 'mimecast', 'cove-data-protection', 'ultradns', 'salesforce', 'docusign']) {
     assert.match(settings.websiteOverrides[id], /^https:\/\//);
   }
