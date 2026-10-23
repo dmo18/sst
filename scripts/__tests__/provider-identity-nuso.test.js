@@ -100,7 +100,8 @@ test('deployed provider identity verification uses structural and computed-style
   assert.doesNotMatch(verifier, /\/Provider operations\/i\.test\(html\)/);
   assert.match(verifier, /remote-debugging-port/);
   assert.match(verifier, /provider-data-table\[aria-label=/);
-  assert.match(verifier, /brandMaskCount < expectedExactCount/);
+  assert.match(verifier, /brandMaskCount !== expectedBrandMaskCount/);
+  assert.match(verifier, /providerIconPresentation\(provider\.id\)\.monochrome/);
   assert.match(verifier, /faviconCount !== expectedFaviconCount/);
   assert.match(verifier, /generatedCount !== 0/);
   assert.match(verifier, /embeddedSvgCount !== 0/);

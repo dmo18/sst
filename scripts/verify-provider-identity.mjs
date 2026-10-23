@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import { canonicalizeProviderCatalog } from './update-public-status.mjs';
+import { providerIconPresentation } from '../src/logos.ts';
 import { spawn } from 'node:child_process';
 
 const WIDTH = 1440;
@@ -20,6 +21,7 @@ const expectedProviderNames = activeCatalog.map(provider => provider.name).sort(
 const faviconSettings = JSON.parse(fs.readFileSync(new URL('../config/provider-favicon-sources.json', import.meta.url), 'utf8'));
 const expectedFaviconCount = faviconSettings.providers.filter(id => enabledIds.has(id)).length;
 const expectedExactCount = expectedProviderCount - expectedFaviconCount;
+const expectedBrandMaskCount = activeCatalog.filter(provider => providerIconPresentation(provider.id).monochrome).length;
 
 const [targetUrl, desktopScreenshot = '/tmp/operator-providers.png', mobileScreenshot = '/tmp/operator-providers-mobile.png'] = process.argv.slice(2);
 const browser = process.env.BROWSER;
@@ -335,7 +337,7 @@ try {
   if (!desktop.nusoPresent || !desktop.nusoHasLogo) throw new Error('NUSO is missing its deployed provider identity.');
   if (desktop.providerIdentityCount !== expectedProviderCount) throw new Error(`Expected ${expectedProviderCount} enabled provider identities, found ${desktop.providerIdentityCount}.`);
   if (JSON.stringify(desktop.providerNames.sort()) !== JSON.stringify(expectedProviderNames)) throw new Error('Desktop provider identities do not match the enabled catalog.');
-  if (desktop.brandMaskCount < expectedExactCount) throw new Error(`Expected ${expectedExactCount} exact masked marks, found ${desktop.brandMaskCount}.`);
+  if (desktop.brandMaskCount !== expectedBrandMaskCount) throw new Error(`Expected ${expectedBrandMaskCount} enabled monochrome brand masks, found ${desktop.brandMaskCount}.`);
   if (desktop.faviconCount !== expectedFaviconCount) throw new Error(`Expected ${expectedFaviconCount} enabled favicon marks, found ${desktop.faviconCount}.`);
   if (desktop.generatedCount !== 0) throw new Error(`Provider identities regressed to generated fallback tiles: ${desktop.generatedCount}.`);
   if (desktop.embeddedSvgCount !== 0) throw new Error(`Provider artwork regressed to JavaScript-embedded SVG data: ${desktop.embeddedSvgCount}.`);
