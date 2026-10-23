@@ -22,11 +22,11 @@
     position: absolute;
     inset: 0;
     display: grid;
-    grid-template-rows: 29px minmax(0, 1fr) 21px;
+    grid-template-rows: 30px minmax(0, 1fr) 20px;
     overflow: hidden;
     background: #080f1b;
     color: #f4f7ff;
-    font-family: Arial, sans-serif;
+    font-family: Inter, system-ui, -apple-system, sans-serif;
     text-align: left;
   }
 
@@ -38,7 +38,7 @@
     gap: 6px;
     padding: 0 8px;
     white-space: nowrap;
-    background: #142238;
+    background: linear-gradient(110deg, #152c43, #111d31);
   }
 
   .compact-board-heading h2 {
@@ -59,13 +59,20 @@
   .compact-critical-count { color: #ff929b; }
   .compact-alert-dot, .compact-quiet-dot { width: 7px; height: 7px; border-radius: 50%; background: #ffbc64; }
   .compact-quiet-dot { background: #a1b2c8; }
-  .compact-board-rows { display: grid; grid-template-rows: repeat(4, minmax(0, 1fr)); min-height: 0; overflow: hidden; }
+  .compact-board-rows { position: relative; min-height: 0; overflow: hidden; }
+  .compact-incident-board[data-scrolling="true"] .compact-board-rows { -webkit-mask-image: linear-gradient(to bottom, transparent, #000 8px, #000 calc(100% - 8px), transparent); mask-image: linear-gradient(to bottom, transparent, #000 8px, #000 calc(100% - 8px), transparent); }
+  .compact-scroll-track { will-change: transform; }
+  .compact-scroll-track.is-scrolling { animation: compact-incident-flow var(--compact-scroll-duration) linear infinite; }
+  .compact-scroll-group { display: flex; flex-direction: column; }
   .compact-issue {
     display: flex;
     align-items: center;
-    min-height: 0;
+    height: 80px;
+    min-height: 80px;
+    box-sizing: border-box;
+    flex-shrink: 0;
     gap: 8px;
-    padding: 4px 8px 4px 6px;
+    padding: 7px 9px 7px 7px;
     margin: 0;
     overflow: hidden;
     border: 0;
@@ -74,7 +81,6 @@
     background: #0c1625;
   }
 
-  .compact-issue:nth-child(even) { background: #111e30; }
   .compact-issue.attention-critical { border-left-color: #ff6375; }
   .compact-issue.attention-action { border-left-color: #ffbc64; }
   .compact-issue > .provider-icon { flex: 0 0 25px; width: 25px; height: 25px; }
@@ -84,26 +90,35 @@
   .compact-severity { flex: 0 0 auto; color: #8fc8ff; font-size: 9px; font-weight: 700; letter-spacing: .04em; }
   .attention-critical .compact-severity { color: #ff929b; }
   .attention-action .compact-severity { color: #ffcc85; }
-  .compact-issue-meta time { flex: 0 0 26px; text-align: right; font-size: 10px; color: #c0cfe3; font-variant-numeric: tabular-nums; }
+  .compact-issue-meta time { flex: 0 0 47px; text-align: right; font-size: 10px; color: #c0cfe3; font-variant-numeric: tabular-nums; }
   .compact-issue h3 {
     display: -webkit-box;
     -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
+    -webkit-line-clamp: 1;
     overflow: hidden;
-    max-height: 29px;
+    max-height: 17px;
     margin: 1px 0 0;
     padding: 0;
     color: #e0e9f6;
-    font-size: 12.5px;
-    font-weight: 500;
-    line-height: 14.5px;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 17px;
     letter-spacing: 0;
     overflow-wrap: break-word;
   }
 
-  .compact-board-footer { font-size: 9px; color: #bccce0; background: #142238; }
+  .compact-issue p { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; max-height: 30px; overflow: hidden; margin: 2px 0 0; color: #b9cbe0; font-size: 12px; line-height: 15px; }
+  .compact-board-footer { font-size: 10px; color: #bccce0; background: #142238; }
   .compact-data-warning { color: #ffcc85; font-weight: 700; }
   .compact-board-empty { grid-row: 1 / -1; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 9px; padding: 14px; text-align: center; }
   .compact-board-empty b { font-size: 22px; color: #e4edfa; }
   .compact-board-empty span { font-size: 12px; color: #b9c9df; }
+}
+
+@keyframes compact-incident-flow {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(0, calc(-1 * var(--compact-scroll-distance)), 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .compact-scroll-track.is-scrolling { animation-duration: calc(var(--compact-scroll-duration) * 2); }
 }

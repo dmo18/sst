@@ -90,15 +90,15 @@ Height: 291px
 
 At that size (up to 520px wide and 360px high), the wallboard now uses the **office glance board**:
 
-- Four fixed incident rows are visible together, with no scrolling descriptions or logo marquee.
-- Each row shows provider name/logo, attention label, latest vendor-update age, and a two-line vendor headline.
-- Generic headings such as “Investigation Degraded Performance” use the vendor detail text instead; no invented summaries are introduced.
+- A continuous vertical incident feed replaces page switching. Around three 80px rows fit within the tile; overflow loops seamlessly at 18px/second.
+- Each row shows provider name/logo, attention label, latest vendor-update age, a headline and up to two lines of brief vendor detail.
+- Descriptions use bounded verbatim vendor excerpts (up to 180 characters), never invented summaries.
 - Critical attention sorts first, then action, then watch; each tier sorts newest update first.
-- Overflow pages advance every eight seconds. The footer shows the visible range, page/total, payload age, browser-check age, and whether filters apply.
-- The total issue count, critical count, and affected-provider count remain visible on every page.
+- The footer uses plain freshness labels: “Updated” and “Checked”; no page fractions, ranges or countdowns.
+- The total issue count, critical count, and affected-provider count remain visible above the moving feed.
 - Empty, loading, stale, and error states do not claim all services are operational.
 - No header/KPI overlay can cover this compact view. The normal desktop wallboard and its full descriptions remain unchanged.
-- Paging pauses while the document is hidden; its timer is cleaned up on unmount or incident-set change.
+- Motion runs only on overflow; resize observation and scheduled layout work are cleaned up on unmount.
 - `src/CompactIncidentBoard.tsx` and the final unlayered `src/styles/wallboard-glance.css` own this compact presentation, including Chromium 92 compatibility.
 
 The incident inclusion, provider selection, time window, and collection logic are unchanged. Complete vendor titles/details remain in the normal operator/desktop view and row tooltips.
@@ -130,7 +130,7 @@ Rows are sorted by latest vendor update, newest first. Provider names and icons 
 
 ## Continuous loops
 
-Larger wallboards retain separate React-owned loop tracks (the office glance board uses fixed pages instead):
+Larger wallboards retain separate React-owned loop tracks (the office glance board uses its own compact vertical feed):
 
 - Horizontal provider speed: approximately 28 pixels per second.
 - Vertical incident speed: approximately 22 pixels per second.

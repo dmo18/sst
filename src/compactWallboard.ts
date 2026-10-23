@@ -1,8 +1,5 @@
 import type { ActionItem } from './statusViewModel';
 
-export const COMPACT_PAGE_SIZE = 4;
-export const COMPACT_PAGE_MS = 8000;
-
 /** Presentation-only ordering. Never changes incident inclusion or vendor truth. */
 export function compactSignals(signals: readonly ActionItem[]): ActionItem[] {
   const rank: Record<string, number> = { critical: 0, action: 1, watch: 2, informational: 3 };
@@ -20,4 +17,13 @@ export function compactHeadline(item: Pick<ActionItem, 'title' | 'detail'>): str
     return item.detail.replace(/\s+/g, ' ').trim();
   }
   return title || item.detail.replace(/\s+/g, ' ').trim();
+}
+
+/** Brief verbatim vendor excerpt; never invent missing incident details. */
+export function compactDescription(item: Pick<ActionItem, 'title' | 'detail'>): string {
+  const detail = item.detail.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  if (!detail || detail === item.title.replace(/\s+/g, ' ').trim()) return '';
+  if (detail.length <= 180) return detail;
+  const excerpt = detail.slice(0, 177);
+  return `${excerpt.slice(0, excerpt.lastIndexOf(' ') > 120 ? excerpt.lastIndexOf(' ') : 177)}…`;
 }

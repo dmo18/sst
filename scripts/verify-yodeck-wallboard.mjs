@@ -260,23 +260,19 @@ try {
   }
 
   if (contract.compact) {
-    const readPage = () => evaluate(session, `(() => {
+    const readScroll = () => evaluate(session, `(() => {
       const board = document.querySelector('.compact-incident-board');
-      return { page: Number(board.dataset.page), pages: Number(board.dataset.pages), ids: Array.from(board.querySelectorAll('article')).map(e => e.dataset.providerId) };
+      const track = board.querySelector('.compact-scroll-track');
+      const group = board.querySelector('.compact-scroll-group');
+      return { scrolling: board.dataset.scrolling === 'true', required: group.offsetHeight > board.querySelector('.compact-board-rows').clientHeight + 2, transform: getComputedStyle(track).transform, total: Number(board.dataset.total), rows: group.querySelectorAll('article').length, descriptions: group.querySelectorAll('article p').length };
     })()`);
-    console.log('YODECK_VISIBILITY', await evaluate(session, 'document.visibilityState'));
-    const first = await readPage();
-    if (first.pages > 1) {
-      const deadline = Date.now() + 12000;
-      let next = first;
-      while (next.page === first.page && Date.now() < deadline) {
-        await sleep(250);
-        next = await readPage();
-      }
-      if (next.page === first.page) throw new Error('Compact paging did not advance in eight seconds.');
-      console.log(`YODECK_COMPACT_PAGING ${first.page}->${next.page}/${next.pages}`);
-    }
-    else console.log('YODECK_COMPACT_PAGING all issues visible');
+    const first = await readScroll();
+    await sleep(900);
+    const next = await readScroll();
+    if (first.rows !== first.total) throw new Error('Compact scroll omitted incidents.');
+    if (first.required && (!first.scrolling || first.transform === next.transform)) throw new Error('Compact incident feed did not scroll.');
+    if (!first.required && first.scrolling) throw new Error('Compact feed scrolls without overflow.');
+    console.log(`YODECK_COMPACT_SCROLL rows=${first.rows} descriptions=${first.descriptions} required=${first.required} moved=${first.transform !== next.transform}`);
   }
   const rotation = await providerRotationProbe(session);
   console.log(`YODECK_PROVIDER_ROTATION providers=${rotation?.count || 0} looping=${Boolean(rotation?.looping)} moved=${Boolean(rotation?.moved)} required=${Boolean(rotation?.required)}`);

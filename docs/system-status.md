@@ -1,5 +1,9 @@
 # Current system status
 
+## Compact office feed revision
+
+The 458×290 office tile now uses a seamless vertical incident feed instead of eight-second pages. Rows include a brief verbatim vendor description; the fixed footer shows plainly labeled data freshness. Full-size views and collection semantics are unchanged.
+
 > Current configuration, October 23, 2026: 80 raw catalog entries, 41 actively monitored after consolidation, and 39 fully disabled. Historic 80-provider and artwork performance metrics below describe the earlier release baseline.
 
 

@@ -317,18 +317,18 @@ function useWallboardLayoutProbe(
       const board = shell.querySelector<HTMLElement>('.compact-incident-board');
       if (board) {
         const rect = board.getBoundingClientRect();
-        const rows = Array.from(board.querySelectorAll<HTMLElement>('.compact-issue'));
-        const expected = Math.min(4, signalCount);
+        const rows = Array.from(board.querySelectorAll<HTMLElement>('.compact-scroll-group:first-child .compact-issue'));
+        const expected = signalCount;
         if (rows.length !== expected) reasons.push(`compact-row-count:${rows.length}/${expected}`);
         if (rect.width < window.innerWidth - 16 || rect.height < window.innerHeight - 16) reasons.push('compact-board-collapsed');
         if (rect.left < 0 || rect.top < 0 || rect.right > window.innerWidth + 1 || rect.bottom > window.innerHeight + 1) reasons.push('compact-board-outside-viewport');
         if (board.scrollHeight > board.clientHeight + 1 || board.scrollWidth > board.clientWidth + 1) reasons.push('compact-board-overflow');
         for (const row of rows) {
           const r = row.getBoundingClientRect();
-          if (r.top < rect.top || r.bottom > rect.bottom || r.height < 45) reasons.push('compact-row-clipped');
+          if (r.width > rect.width || r.height < 70) reasons.push('compact-row-invalid');
         }
         shell.dataset.layoutProbe = reasons.length ? 'fail' : 'pass';
-        shell.dataset.layoutProbeDetail = reasons.length ? reasons.join('|') : `compact:${rows.length}/${signalCount};pages:${board.dataset.pages}`;
+        shell.dataset.layoutProbeDetail = reasons.length ? reasons.join('|') : `compact:${rows.length}/${signalCount};scrolling:${board.dataset.scrolling}`;
         window.clearInterval(timer);
         return;
       }

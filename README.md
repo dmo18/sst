@@ -1,5 +1,9 @@
 # MSP Operations Command Center
 
+## Compact office feed revision
+
+The 458×290 office tile now uses a seamless vertical incident feed instead of eight-second pages. Rows include a brief verbatim vendor description; the fixed footer shows plainly labeled data freshness. Full-size views and collection semantics are unchanged.
+
 A static, first-party-only service-status intelligence workspace for MSP operations. The application is hosted on GitHub Pages at `https://dmo18.github.io/sst/` and requires no backend, database, credentials, paid API, browser-side vendor calls, runtime logo CDN, or unofficial outage data.
 
 Current package version: `3.3.8`.

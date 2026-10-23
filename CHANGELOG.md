@@ -1,5 +1,9 @@
 # Changelog
 
+## Compact office feed revision
+
+The 458×290 office tile now uses a seamless vertical incident feed instead of eight-second pages. Rows include a brief verbatim vendor description; the fixed footer shows plainly labeled data freshness. Full-size views and collection semantics are unchanged.
+
 All notable changes to the Service Heads-Up Console are recorded here.
 
 The project uses semantic versioning. Dates are shown in ISO format. The newest released version must match `package.json`.
