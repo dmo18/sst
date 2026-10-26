@@ -261,9 +261,9 @@ jobs:
             exit 1
           fi
           if [ "$STATUS_STATE" = success ]; then
-            coverage=Complete
+            coverage="Source retrieval complete (vendor health may remain unknown)"
           else
-            coverage=Incomplete
+            coverage="Source retrieval incomplete"
             echo "::warning title=Incomplete official-source coverage::${STATUS_DESCRIPTION}"
           fi
           {
@@ -271,5 +271,5 @@ jobs:
             printf '**Coverage:** %s\n\n' "$coverage"
             printf '**Evidence:** %s\n\n' "$STATUS_DESCRIPTION"
             printf '[Published status payload](%s/status.json)\n\n' "${PAGE_URL%/}"
-            printf 'Coverage is independent of Pages deployment success. Unknown or blind provider health stays unknown.\n'
+            printf 'Official source retrieval is not equivalent to verified vendor service health. Review the evidence line for unknown providers.\n'
           } >> "$GITHUB_STEP_SUMMARY"
