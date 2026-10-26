@@ -45,7 +45,12 @@ jobs:
           const repository = process.env.GITHUB_REPOSITORY;
           const token = process.env.GH_TOKEN;
           const sourceRunId = String(process.env.SOURCE_RUN_ID || '');
-          const sourceRunCreatedAt = Date.parse(process.env.SOURCE_RUN_CREATED_AT || '');
+          const sourceTimestamp = Date.parse(process.env.SOURCE_RUN_CREATED_AT || '');
+          // workflow_dispatch and schedule do not provide workflow_run.created_at.
+          // github.run_started_at is not guaranteed in the runner context.
+          // Compare later scheduled releases against this keeper's actual start,
+          // never against NaN (which would match any historic successful cron).
+          const sourceRunCreatedAt = Number.isFinite(sourceTimestamp) ? sourceTimestamp : Date.now();
           const testMode = process.env.MANUAL_TEST === 'true';
           // 58 x 330 seconds = 319 minutes; a finite keeper with 31 minutes
           // of margin before the 350-minute runner budget.
