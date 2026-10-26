@@ -66,6 +66,7 @@ test('push/schedule plus independent hourly seed keep renewable bounded freshnes
   assert.match(continuity, /cron: "23 \* \* \* \*"/);
   assert.match(continuity, /timeout-minutes: 350/);
   assert.match(continuity, /const maxAttempts = testMode \? 1 : 58;/);
+  assert.match(continuity, /Number\.isFinite\(sourceTimestamp\) \? sourceTimestamp : Date\.now\(\)/);
   assert.match(continuity, /const delaySeconds = testMode \? 0 : 330;/);
   assert.match(continuity, /group:\s*bounded-refresh-continuity\s*\n\s*cancel-in-progress:\s*true/);
   assert.match(continuity, /runs\?event=schedule&per_page=20/);
