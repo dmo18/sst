@@ -10,6 +10,11 @@ The project uses semantic versioning. Dates are shown in ISO format. The newest 
 
 ## Unreleased
 
+### Fixed
+
+- Replaced the three-dispatch freshness bridge that expired after about 17 minutes with a renewable GitHub-native heartbeat. Each finite keeper sends recovery dispatches every 330 seconds for up to 319 minutes, then explicitly hands off through `workflow_dispatch`. A successful push/schedule or an offset hourly seed restarts it if necessary.
+- Preserved the single Pages release concurrency group, fail-closed official source interpretation, the independent freshness watcher and the visible 20-minute browser stale warning. GitHub-only freshness is best-effort and not a hard uptime guarantee.
+
 ## [3.3.8] - 2026-08-20
 
 ### Fixed

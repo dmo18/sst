@@ -4,9 +4,17 @@
 
 The 458×290 office tile now uses a seamless vertical incident feed instead of eight-second pages. Rows include a brief verbatim vendor description; the fixed footer shows plainly labeled data freshness. Full-size views and collection semantics are unchanged.
 
-Last reviewed: 2026-08-07
+Last reviewed: 2026-10-26
 
 This file is the temporary authoritative backlog until repository Issues is enabled and any remaining administrative work is migrated into issue records.
+
+## Freshness reliability follow-up (October 26, 2026)
+
+- [x] Identified the several-hour payload delay: GitHub cron events were missed or delayed despite a nominal five-minute schedule.
+- [x] Implemented renewable GitHub-native 330-second continuity with finite runner generations and an independent hourly restart seed.
+- [ ] Verify multiple consecutive successful recovery deployments after merge and that their published payload age stays within 20 minutes.
+- [ ] Verify a five-hour heartbeat handoff from one keeper generation to the next.
+- [ ] Consider independent production scheduling and freshness alerting to establish a hard maximum age, which GitHub Actions alone cannot guarantee.
 
 ## Completed stabilization work
 
