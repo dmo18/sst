@@ -18,6 +18,9 @@ export function verifyReleaseContract(payload, now = Date.now(), expectedCatalog
   const generatedAgeMs = now - generatedAt;
   const calculatedLiveCount = providers.filter(provider => provider.source_state === 'available' && provider.ok === true).length;
   const calculatedCoverage = total > 0 ? Math.round(calculatedLiveCount / total * 100) : 0;
+  // Successfully fetching an official page does not necessarily establish vendor service health.
+  const knownServiceConclusions = providers.filter(provider => ['operational', 'degraded', 'major'].includes(provider.service_state));
+  const unknownServiceIds = providers.filter(provider => !['operational', 'degraded', 'major'].includes(provider.service_state)).map(provider => provider.id);
   const calculatedHealthy = providers.filter(provider => provider.source_health === 'healthy').length;
   const calculatedWatch = providers.filter(provider => provider.source_health === 'watch').length;
   const calculatedBlind = providers.filter(provider => provider.source_health === 'blind').length;
@@ -57,7 +60,8 @@ export function verifyReleaseContract(payload, now = Date.now(), expectedCatalog
   if (!Number.isFinite(collection.origin_count) || collection.origin_count <= 0) throw new Error('collection origin_count is invalid');
   if (!Number.isFinite(collection.duration_ms) || collection.duration_ms < 0) throw new Error('collection duration_ms is invalid');
 
-  const description = `${liveSourceCount}/${total} live (${coverage}%); quality ${collection.quality_score}; ${collection.blind_spot_count} blind`;
+  const description = `${liveSourceCount}/${total} live sources (${coverage}%); ${knownServiceConclusions.length}/${total} confirmed service health; ${unknownServiceIds.length} unknown${unknownServiceIds.length ? ` (${unknownServiceIds.join(', ')})` : ''}; quality ${collection.quality_score}; ${collection.blind_spot_count} blind`;
+  // Collection success is a deployment gate, not a claim that every vendor's service health is known.
   const state = liveSourceCount === total && calculatedBlind === 0 && fallbackCount === 0 ? 'success' : 'failure';
-  return { description, state, calculatedLiveCount, calculatedCoverage, calculatedQuality };
+  return { description, state, calculatedLiveCount, calculatedCoverage, calculatedQuality, knownServiceCount: knownServiceConclusions.length, unknownServiceIds };
 }
