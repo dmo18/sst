@@ -5,6 +5,9 @@ on:
     workflows: ["Deploy ServiceOps Enterprise Workspace"]
     types: [completed]
     branches: [main]
+  # Independent restart seed at minute 23, away from the top-of-hour traffic.
+  schedule:
+    - cron: "23 * * * *"
   workflow_dispatch:
     inputs:
       test_mode:
@@ -20,15 +23,16 @@ permissions:
   actions: write
 
 concurrency:
-  # A newer successful scheduled release replaces its predecessor's bridge.
+  # Exactly one heartbeat runs at a time; new push, schedule, or handoff replaces it.
   group: bounded-refresh-continuity
   cancel-in-progress: true
 
 jobs:
   renew:
-    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'schedule')
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' || (github.event.workflow_run.conclusion == 'success' && (github.event.workflow_run.event == 'schedule' || github.event.workflow_run.event == 'push'))
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # Each keeper stays below GitHub's six-hour job limit and renews before expiry.
+    timeout-minutes: 350
     env:
       GH_TOKEN: ${{ github.token }}
       SOURCE_RUN_ID: ${{ github.event.workflow_run.id || github.run_id }}
@@ -43,11 +47,14 @@ jobs:
           const sourceRunId = String(process.env.SOURCE_RUN_ID || '');
           const sourceRunCreatedAt = Date.parse(process.env.SOURCE_RUN_CREATED_AT || '');
           const testMode = process.env.MANUAL_TEST === 'true';
-          const maxAttempts = testMode ? 1 : 3;
+          // 58 x 330 seconds = 319 minutes; a finite keeper with 31 minutes
+          // of margin before the 350-minute runner budget.
+          const maxAttempts = testMode ? 1 : 58;
           const delaySeconds = testMode ? 0 : 330;
           const activeStates = new Set(['queued', 'in_progress', 'waiting', 'requested', 'pending']);
           const takeoverAfterMinutes = 12;
-          let terminalApiFailure = false;
+          let failedApiOperations = 0;
+          let successfulDispatches = 0;
 
           const headers = {
             accept: 'application/vnd.github+json',
@@ -80,7 +87,7 @@ jobs:
               allRuns = (await request('/actions/workflows/refresh-pages.yml/runs?per_page=20')).workflow_runs || [];
             }
             catch (error) {
-              terminalApiFailure = true;
+              failedApiOperations += 1;
               console.error(`Continuity attempt ${attempt}: GitHub API inspection interrupted; no blind dispatch: ${error.message}`);
               continue;
             }
@@ -101,7 +108,7 @@ jobs:
                 await request(`/actions/runs/${run.id}/cancel`, { method: 'POST' });
               }
               catch (error) {
-                terminalApiFailure = true;
+                failedApiOperations += 1;
                 console.error(`Could not cancel wedged release #${run.run_number}: ${error.message}`);
               }
             }
@@ -126,16 +133,33 @@ jobs:
                   }
                 })
               });
-              console.log(`Continuity attempt ${attempt}: dispatched bounded GitHub-native recovery refresh.`);
+              successfulDispatches += 1;
+              console.log(`Continuity attempt ${attempt}: dispatched GitHub-native recovery refresh.`);
             }
             catch (error) {
-              terminalApiFailure = true;
+              failedApiOperations += 1;
               console.error(`Continuity attempt ${attempt}: recovery dispatch failed: ${error.message}`);
             }
           }
 
-          if (terminalApiFailure) {
-            throw new Error('Bounded continuity bridge exhausted with an interrupted GitHub API operation; GitHub-only recovery cannot self-heal this condition.');
+          if (failedApiOperations) {
+            console.warn(`::warning title=Refresh continuity API retries::${failedApiOperations} API operation(s) failed; ${successfulDispatches} recovery refreshes were dispatched.`);
           }
-          console.log('Bounded continuity bridge completed without an infinite renewal loop.');
+          if (testMode) {
+            console.log('Manual test completed after one immediate recovery dispatch, without renewal.');
+            process.exit(0);
+          }
+
+          // GITHUB_TOKEN suppresses ordinary workflow_run cascades; its
+          // workflow_dispatch exception permits a finite keeper to hand off.
+          // The concurrency group ensures only one generation runs at a time.
+          try {
+            await request('/actions/workflows/refresh-continuity.yml/dispatches', {
+              method: 'POST',
+              body: JSON.stringify({ ref: 'main', inputs: { test_mode: 'false' } })
+            });
+            console.log(`Continuity keeper handed off after ${maxAttempts} checks; ${successfulDispatches} recovery refreshes sent.`);
+          } catch (error) {
+            throw new Error(`Continuity handoff failed; GitHub cron and the independent freshness watcher must restart the keeper: ${error.message}`);
+          }
           NODE

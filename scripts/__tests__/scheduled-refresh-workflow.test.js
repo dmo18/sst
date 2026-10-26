@@ -59,16 +59,23 @@ test('recovery is GitHub-native and does not require a VM watchdog', () => {
   assert.doesNotMatch(watcher, /agent[- ]?deck|watchdog|vm-/i);
 });
 
-test('a successful scheduled release creates a bounded native continuity bridge', () => {
+test('push/schedule plus independent hourly seed keep renewable bounded freshness continuity', () => {
   assert.match(continuity, /workflow_run:\s*\n\s+workflows: \["Deploy ServiceOps Enterprise Workspace"\]/);
   assert.match(continuity, /github\.event\.workflow_run\.event == 'schedule'/);
-  assert.match(continuity, /const maxAttempts = testMode \? 1 : 3;/);
+  assert.match(continuity, /github\.event\.workflow_run\.event == 'push'/);
+  assert.match(continuity, /cron: "23 \* \* \* \*"/);
+  assert.match(continuity, /timeout-minutes: 350/);
+  assert.match(continuity, /const maxAttempts = testMode \? 1 : 58;/);
   assert.match(continuity, /const delaySeconds = testMode \? 0 : 330;/);
   assert.match(continuity, /group:\s*bounded-refresh-continuity\s*\n\s*cancel-in-progress:\s*true/);
   assert.match(continuity, /runs\?event=schedule&per_page=20/);
   assert.match(continuity, /takeoverAfterMinutes = 12/);
   assert.match(continuity, /event_type: 'freshness-recovery'/);
   assert.match(continuity, /no blind dispatch/);
-  assert.match(continuity, /cannot self-heal this condition/);
+  assert.match(continuity, /if \(testMode\)/);
+  assert.match(continuity, /process\.exit\(0\)/);
+  assert.match(continuity, /actions\/workflows\/refresh-continuity\.yml\/dispatches/);
+  assert.match(continuity, /ref: 'main', inputs: \{ test_mode: 'false' \}/);
+  assert.match(continuity, /Continuity handoff failed/);
   assert.doesNotMatch(continuity, /agent[- ]?deck|watchdog|vm-/i);
 });
