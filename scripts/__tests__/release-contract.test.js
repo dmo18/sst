@@ -9,6 +9,7 @@ function payload(overrides = {}) {
     id: 'alpha',
     name: 'Alpha',
     source_state: 'available',
+    service_state: 'operational',
     source_health: 'healthy',
     ok: true,
     status_data_valid: true,
@@ -55,7 +56,9 @@ function payload(overrides = {}) {
 test('release contract returns deployment description and success state', () => {
   const result = verifyReleaseContract(payload(), Date.parse('2026-08-10T21:01:00.000Z'), catalogHash);
   assert.equal(result.state, 'success');
-  assert.equal(result.description, '1/1 live (100%); quality 90; 0 blind');
+  assert.equal(result.description, '1/1 live sources (100%); 1/1 confirmed service health; 0 unknown; quality 90; 0 blind');
+  assert.equal(result.knownServiceCount, 1);
+  assert.deepEqual(result.unknownServiceIds, []);
 });
 
 test('release contract rejects catalog identity mismatch', () => {
@@ -72,4 +75,15 @@ test('release contract rejects inconsistent request reconciliation', () => {
     () => verifyReleaseContract(value, Date.parse('2026-08-10T21:01:00.000Z'), catalogHash),
     /collection request counts do not reconcile/
   );
+});
+
+test('a readable official incident feed cannot count as confirmed service health', () => {
+  const value = payload();
+  value.providers[0].service_state = 'unknown';
+  const result = verifyReleaseContract(value, Date.parse('2026-08-10T21:01:00.000Z'), catalogHash);
+  assert.equal(result.state, 'success', 'publishing truthful unknown status must not stop refresh');
+  assert.equal(result.calculatedLiveCount, 1);
+  assert.equal(result.knownServiceCount, 0);
+  assert.deepEqual(result.unknownServiceIds, ['alpha']);
+  assert.match(result.description, /0\/1 confirmed service health; 1 unknown \(alpha\)/);
 });
