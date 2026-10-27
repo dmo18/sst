@@ -274,8 +274,18 @@ function nableAmericasComponentConclusion(provider, html) {
   if (provider.id === 'cove-data-protection') {
     if (/^operational$/i.test(coveStatus))
       return { kind: 'healthy', status: 'N-able reports Cove Data Protection (Americas) operational' };
-    if (coveStatus)
-      return { kind: 'limited', message: 'Cove Data Protection (Americas) component reports ' + coveStatus + ' without a specific active incident record.' };
+    if (coveStatus) {
+      if (/maintenance/i.test(coveStatus))
+        return { kind: 'limited', message: 'Cove Data Protection (Americas) reports maintenance without a confirmed current incident.' };
+      const major = /Major Outage/i.test(coveStatus);
+      return {
+        kind: 'component-state',
+        status: 'Cove Data Protection (Americas) reports ' + coveStatus,
+        message: 'Official Americas service component status: ' + coveStatus,
+        color: major ? 'red' : 'amber',
+        components: [{ name: 'Cove Data Protection (Americas)', status: major ? 'major_outage' : 'degraded_performance' }]
+      };
+    }
     return null;
   }
   const otherServiceIssue = new RegExp('\\(Americas\\)\\s*(?:Degraded Performance|Partial Outage|Major Outage|Service Disruption|Under Maintenance)\\b', 'i').test(region.replace(/Cove Data Protection\\s*\\(Americas\\)\\s*(?:Operational|Degraded Performance|Partial Outage|Major Outage|Service Disruption|Under Maintenance|Maintenance)/ig, ''));
