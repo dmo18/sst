@@ -288,7 +288,7 @@ function nableAmericasComponentConclusion(provider, html) {
     }
     return null;
   }
-  const otherServiceIssue = new RegExp('\\(Americas\\)\\s*(?:Degraded Performance|Partial Outage|Major Outage|Service Disruption|Under Maintenance)\\b', 'i').test(region.replace(/Cove Data Protection\\s*\\(Americas\\)\\s*(?:Operational|Degraded Performance|Partial Outage|Major Outage|Service Disruption|Under Maintenance|Maintenance)/ig, ''));
+  const otherServiceIssue = new RegExp('\\(Americas\\)\\s*(?:Degraded Performance|Partial Outage|Major Outage|Service Disruption|Under Maintenance)\\b', 'i').test(region.replace(/Cove Data Protection\s*\(Americas\)\s*(?:Operational|Degraded Performance|Partial Outage|Major Outage|Service Disruption|Under Maintenance|Maintenance)/ig, ''));
   if (/^operational$/i.test(match[1]) && !otherServiceIssue)
     return { kind: 'healthy', status: 'N-able Americas service components report operational' };
   return null;
