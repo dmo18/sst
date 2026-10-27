@@ -256,9 +256,39 @@ export function parseNableIncidentRecords(html) {
   return records;
 }
 
+// The dashboard can show a non-US incident or scheduled maintenance while its
+// Americas component matrix remains explicitly operational. Check that current
+// first-party component evidence before falling back to generic issue wording.
+function nableAmericasComponentConclusion(provider, html) {
+  const text = textLines(html).join(' ');
+  const match = /\bAmericas\s+(Operational|Degraded Performance|Partial Outage|Major Outage|Service Disruption|Under Maintenance|Maintenance)\b/i.exec(text);
+  if (!match) return null;
+  const remaining = text.slice(match.index);
+  const nextRegion = /\b(?:APAC|Europe|EMEA|Global)\s+(?:Operational|Degraded Performance|Partial Outage|Major Outage|Service Disruption|Under Maintenance|Maintenance)\b/i.exec(remaining.slice(match[0].length));
+  const region = nextRegion
+    ? remaining.slice(0, match[0].length + nextRegion.index)
+    : remaining.slice(0, 12000);
+  const statuses = 'Operational|Degraded Performance|Partial Outage|Major Outage|Service Disruption|Under Maintenance|Maintenance';
+  const cove = new RegExp('\\bCove Data Protection\\s*\\(Americas\\)\\s*(' + statuses + ')\\b', 'i').exec(region);
+  const coveStatus = cove?.[1] || '';
+  if (provider.id === 'cove-data-protection') {
+    if (/^operational$/i.test(coveStatus))
+      return { kind: 'healthy', status: 'N-able reports Cove Data Protection (Americas) operational' };
+    if (coveStatus)
+      return { kind: 'limited', message: 'Cove Data Protection (Americas) component reports ' + coveStatus + ' without a specific active incident record.' };
+    return null;
+  }
+  const otherServiceIssue = new RegExp('\\(Americas\\)\\s*(?:Degraded Performance|Partial Outage|Major Outage|Service Disruption|Under Maintenance)\\b', 'i').test(region.replace(/Cove Data Protection\\s*\\(Americas\\)\\s*(?:Operational|Degraded Performance|Partial Outage|Major Outage|Service Disruption|Under Maintenance|Maintenance)/ig, ''));
+  if (/^operational$/i.test(match[1]) && !otherServiceIssue)
+    return { kind: 'healthy', status: 'N-able Americas service components report operational' };
+  return null;
+}
+
 function nableConclusion(provider, html) {
   const allRecords = parseNableIncidentRecords(html);
   if (!allRecords.length) {
+    const currentAmericas = nableAmericasComponentConclusion(provider, html);
+    if (currentAmericas) return currentAmericas;
     const text = clean(html);
     if (/\b(?:no active incidents?|all services operational|all systems operational)\b/i.test(text)) {
       return { kind: 'healthy', status: `${provider.name} reports no active US-relevant incidents` };
