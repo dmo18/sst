@@ -24,8 +24,9 @@ test('explicit Americas green matrix remains trustworthy during a non-US issue o
 
 test('Cove Americas degradation is never misreported operational', () => {
   const result = providerIncidentConclusion(provider('cove-data-protection'), dashboard('Degraded Performance', 'Degraded Performance'));
-  assert.equal(result?.kind, 'limited');
-  assert.match(result?.message || '', /Cove Data Protection.*Degraded Performance/);
+  assert.equal(result?.kind, 'component-state');
+  assert.match(result?.status || '', /Cove Data Protection.*Degraded Performance/);
+  assert.equal(result?.components?.[0]?.status, 'degraded_performance');
 });
 
 test('an explicit non-Cove Americas degradation blocks an all-clear N-able conclusion', () => {
