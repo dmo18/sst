@@ -71,7 +71,7 @@ jobs:
           rm -f /tmp/verified-app-shell/status.json /tmp/verified-app-shell/status-*.json /tmp/verified-app-shell/previous-status.json /tmp/verified-app-shell/deploy-version.txt
       - name: Publish verified application shell
         if: github.event_name != 'schedule' && github.event_name != 'repository_dispatch'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: verified-app-shell-${{ github.sha }}
           path: /tmp/verified-app-shell
@@ -242,7 +242,7 @@ jobs:
           node scripts/verify-yodeck-wallboard.mjs "$WALLBOARD_URL" /tmp/yodeck-wallboard.html /tmp/yodeck-wallboard.png
       - name: Upload Yodeck verification artifacts
         if: github.event_name != 'schedule' && github.event_name != 'repository_dispatch' && always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: yodeck-wallboard-${{ github.run_id }}
           path: |
