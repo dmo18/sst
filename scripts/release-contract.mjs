@@ -2,7 +2,13 @@ function average(values) {
   return values.length ? Math.round(values.reduce((sum, value) => sum + value, 0) / values.length) : 0;
 }
 
-export function verifyReleaseContract(payload, now = Date.now(), expectedCatalogHash = '') {
+// maxAgeMs is how old generated_at may be. The pre-publication gate uses the
+// default five minutes. The post-deployment check passes a longer allowance,
+// because Pages deployment and its retries take place after generation.
+export const RELEASE_MAX_AGE_MS = 5 * 60 * 1000;
+export const DEPLOYED_MAX_AGE_MS = 20 * 60 * 1000;
+
+export function verifyReleaseContract(payload, now = Date.now(), expectedCatalogHash = '', { maxAgeMs = RELEASE_MAX_AGE_MS } = {}) {
   const summary = payload?.summary || {};
   const collection = payload?.collection || {};
   const providers = Array.isArray(payload?.providers) ? payload.providers : [];
@@ -40,7 +46,7 @@ export function verifyReleaseContract(payload, now = Date.now(), expectedCatalog
   if (payload?.schema_version !== 3 || payload?.contract_version !== 3) throw new Error(`unexpected Status Contract envelope schema=${payload?.schema_version || 'missing'} contract=${payload?.contract_version || 'missing'}`);
   if (expectedCatalogHash && payload?.catalog_hash !== expectedCatalogHash) throw new Error(`provider catalog hash mismatch: ${payload?.catalog_hash || 'missing'}`);
   if (!Number.isFinite(generatedAt)) throw new Error('generated_at is invalid');
-  if (generatedAgeMs < -300000 || generatedAgeMs > 300000) throw new Error(`generated_at is not fresh: age ${Math.round(generatedAgeMs / 1000)} seconds`);
+  if (generatedAgeMs < -300000 || generatedAgeMs > maxAgeMs) throw new Error(`generated_at is not fresh: age ${Math.round(generatedAgeMs / 1000)} seconds`);
   if (!Number.isFinite(total) || total <= 0) throw new Error('provider_total is invalid');
   if (valid !== total) throw new Error(`valid_status_count ${valid} does not equal provider_total ${total}`);
   if (invalid !== 0) throw new Error(`invalid_status_count must be zero, received ${invalid}`);

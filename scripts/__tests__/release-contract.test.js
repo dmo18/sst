@@ -87,3 +87,12 @@ test('a readable official incident feed cannot count as confirmed service health
   assert.deepEqual(result.unknownServiceIds, ['alpha']);
   assert.match(result.description, /0\/1 confirmed service health; 1 unknown \(alpha\)/);
 });
+
+test('the post-deployment check allows for deployment time but not a stale payload', async () => {
+  const { DEPLOYED_MAX_AGE_MS, RELEASE_MAX_AGE_MS } = await import('../release-contract.mjs');
+  assert.equal(RELEASE_MAX_AGE_MS, 5 * 60 * 1000);
+  assert.equal(DEPLOYED_MAX_AGE_MS, 20 * 60 * 1000);
+  const smoke = await (await import('node:fs/promises')).readFile(new URL('../production-smoke.mjs', import.meta.url), 'utf8');
+  assert.match(smoke, /maxAgeMs: DEPLOYED_MAX_AGE_MS/);
+  assert.match(smoke, /deployMetadata\.run_id !== process\.env\.GITHUB_RUN_ID/);
+});

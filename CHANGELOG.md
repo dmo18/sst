@@ -10,6 +10,33 @@ The project uses semantic versioning. Dates are shown in ISO format. The newest 
 
 ## Unreleased
 
+### Source truth review (November 10, 2026)
+
+A top-to-bottom review compared every enabled provider against what the vendor publishes. Before it, one collection reported 6 providers unknown and 4 blind, and hid five live vendor incidents. After it, the same collection reports 41 of 41 sources read, 40 of 41 with a confirmed service state, no blind sources, and no provider needs a headless browser render.
+
+#### Fixed
+
+- A live incident was treated as over, or as planned work, when words such as "planned", "completed", "closed" or "fixed" appeared anywhere in the vendor's prose. A current Datto RMM incident on the Kaseya page was dropped for this reason. Lifecycle is now read from the vendor's status field and an explicit title prefix only.
+- Statuspage components were de-duplicated by bare name and cut to 36 before problem detection, so a degraded child could be hidden behind a healthy component of the same name in another group. Identity is now group plus name and problem components are always retained.
+- A vendor-declared incident with no usable title no longer lets the provider read as healthy.
+- The Statuspage `maintenance` indicator is published as planned work with an operational state, not as an unknown state. Statuspage-compatible hosts may omit an empty incident list.
+- Keyword rules written for rendered pages ran over JSON documents that an adapter had not recognized, and could report a provider healthy from field values. Such a document now fails closed.
+- Schema fingerprints describe the document envelope. An incident opening is no longer scored as schema drift, which had lowered a correct source's quality score at the moment it mattered.
+- The browser re-read of Statuspage vendors used its own parser with no region scope, advisory filter or evidence-age limit, and replaced the collector's result on screen. It now uses the collector's parser.
+- A stalled `status.json` request held the only request slot forever. Requests are aborted after 20 seconds and the stale warning stays visible while a retry is in flight.
+- One incident crossing the 72 hour evidence limit between publication and fetch invalidated the whole payload in the browser. Evidence age is judged at generation time.
+- The wallboard showed zero incidents and "No active vendor incidents" when no payload had loaded.
+- The post-deployment smoke check required a payload under five minutes old, which no deployment that needed a retry could satisfy. It now allows the documented 20 minute threshold; the run identity check is unchanged.
+- The previous-snapshot download is retried, so one transient failure no longer erases history, reliability windows and failure streaks.
+
+#### Changed
+
+- Microsoft 365 is read from the JSON documents behind Microsoft's public status page (`status.cloud.microsoft/api/posts/mac`, `ppac`, `m365Consumer`): the Microsoft 365 admin center, the Power Platform admin center and each consumer workload. No tenant, token or sign-in is involved. The provider is operational only when Microsoft publishes every one of those services as healthy, and remains unknown on a missing document, an unrecognized state or a changed shape.
+- ConnectWise and HaloPSA are read from the Status.io public API, including its numeric lifecycle codes, affected components and locations.
+- N-able and Cove Data Protection are read from the public dashboard data document, scoped to Americas and global services.
+- RingCentral is read from `status.json`, Salesforce from the Trust incidents API, Google Workspace and Google Cloud from `incidents.json`, and Sophos from its StatusCast summary.
+- Keeper, Xero, NUSO and Bitdefender GravityZone are read from their Statuspage JSON summaries.
+
 ### Fixed
 
 - Replaced the three-dispatch freshness bridge that expired after about 17 minutes with a renewable GitHub-native heartbeat. Each finite keeper sends recovery dispatches every 330 seconds for up to 319 minutes, then explicitly hands off through `workflow_dispatch`. A successful push/schedule or an offset hourly seed restarts it if necessary.

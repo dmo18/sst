@@ -28,17 +28,23 @@ All ten facets are tenant-authoritative for current tenant health. Microsoft Ent
 
 ## Evidence classes
 
-### Microsoft 365 public incident fallback
+### Microsoft 365 public status
 
-The token-free public pipeline reads Microsoft's unauthenticated public incident feed. That source is useful for incidents Microsoft chooses to publish publicly and for fallback communications when tenant portals are unavailable.
+Since the November 10, 2026 source review, the token-free public pipeline reads the JSON documents that Microsoft's own public status page (`https://status.cloud.microsoft/`) renders:
 
-It is not a workload health API.
+- `api/posts/mac`: the Microsoft 365 admin center. This is where Microsoft announces a broad incident when tenant administrators cannot reach Service health.
+- `api/posts/ppac`: the Power Platform admin center (optional; its absence does not block a conclusion).
+- `api/posts/m365Consumer`: each consumer workload (Outlook.com, OneDrive, Microsoft Teams Free, Microsoft 365 consumer, Copilot and others) with its own status.
 
-A clear public incident feed means only that ServiceOps did not find a currently published public incident. It does not certify current health for Exchange Online, Teams, SharePoint Online, OneDrive for Business, Intune, Microsoft 365 Apps, Defender for Microsoft 365, Power Platform, or any tenant.
+Microsoft publishes four states: `Available`, `Operational`, `Service degradation` and `Service restored`. The provider is `operational` only when the admin center and every consumer workload are published as healthy. A `Service degradation` post becomes an incident carrying Microsoft's own title and message. A missing required document, an unrecognized state or a changed document shape leaves the provider `unknown`.
+
+No tenant, token or sign-in is involved, and the documents are fetched by the collector, never by the browser.
+
+It is not a tenant workload health API. An operational public status means Microsoft's public page reports no issue. It does not certify current health for Exchange Online, Teams, SharePoint Online, OneDrive for Business, Intune, Microsoft 365 Apps, Defender for Microsoft 365, Power Platform, or any tenant, and the workload facets continue to say so.
 
 The canonical `microsoft365` public source is named `Microsoft 365 public status` and exposes only `Microsoft 365 public incident status` as its configured service. It does not alias individual workload names in the provider catalog or universal search.
 
-The collector also sets `confirmHealthyFromFeed=false` for this source. When the public incident feed is readable but contains no active incident, the provider remains `service_state=unknown`, `source_state=available`, and `truth_basis=observed-no-conclusion`. It does not become operational merely because the public feed is clear.
+Before that review the collector read only the public incident RSS feed and, because an empty feed proves nothing, left the provider `service_state=unknown`. The feed is no longer used: the JSON documents state each service's status explicitly, so an operational conclusion now rests on a positive statement from Microsoft rather than on the absence of an incident.
 
 ### Scoped public incidents
 
