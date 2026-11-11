@@ -9,17 +9,20 @@ import { isNonServiceAdvisory } from './incident-classification.mjs';
 import { regionScopeRelevant } from './region-scope.mjs';
 import { componentStatusIsProblem } from './source-intelligence.mjs';
 
+// Reduces vendor text to plain text for a JSON payload. The result is data,
+// never markup: the application renders it as text. Entities are decoded once,
+// with "&amp;" last, so "&amp;lt;" becomes the literal "&lt;" and not "<".
 function clean(value) {
   return String(value ?? '')
-    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
-    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
-    .replace(/<[^>]+>/g, ' ')
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script\b[^>]*>/gi, ' ')
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style\b[^>]*>/gi, ' ')
+    .replace(/<[^>]*>/g, ' ')
     .replace(/&nbsp;|&#160;/gi, ' ')
-    .replace(/&amp;/gi, '&')
     .replace(/&quot;|&#34;/gi, '"')
     .replace(/&#39;|&apos;/gi, "'")
     .replace(/&lt;/gi, '<')
     .replace(/&gt;/gi, '>')
+    .replace(/&amp;/gi, '&')
     .replace(/\*{1,3}|`+|(?:^|\s)#{1,6}(?=\s)/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();

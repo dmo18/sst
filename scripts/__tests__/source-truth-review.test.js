@@ -220,3 +220,11 @@ test('Statuspage-compatible documents may omit an empty incident list but not th
   assert.equal(parseStatuspageSummary(JSON.stringify({ status: { indicator: 'none' } }), { name: 'X' }, {}), null);
   assert.equal(parseStatuspageSummary(JSON.stringify({ status: { indicator: 'none' }, components: [], incidents: 'none' }), { name: 'X' }, {}), null);
 });
+
+test('vendor text is reduced to plain text with entities decoded exactly once', () => {
+  const rows = [{ id: 1, externalId: '901', status: 'Active', type: 'Degradation', createdAt: hoursAgo(3), updatedAt: hoursAgo(1), instanceKeys: ['NA1'], serviceKeys: [],
+    IncidentImpacts: [{ startTime: hoursAgo(3), endTime: null, severity: 'minor' }],
+    IncidentEvents: [{ type: 'update', message: '<p>Errors &amp;lt;5% &amp; falling</p><script >alert(1)</script foo>', createdAt: hoursAgo(1) }] }];
+  const note = parseSalesforceActiveIncidents(JSON.stringify(rows), { name: 'Salesforce' }, { regionScope: 'us' }).incidents[0].note;
+  assert.equal(note, 'Errors &lt;5% & falling');
+});
