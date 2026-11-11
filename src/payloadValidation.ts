@@ -90,6 +90,8 @@ export function payloadValidationErrors(value: unknown, expectedProviderIds: rea
     if (provider.data_quality_score !== undefined && !percentage(provider.data_quality_score)) errors.push(`invalid data_quality_score ${String(provider.id)}`);
     if (provider.collection_attempt_count !== undefined && provider.collection_success_count !== undefined && provider.collection_failure_count !== undefined && Number(provider.collection_attempt_count) !== Number(provider.collection_success_count) + Number(provider.collection_failure_count)) errors.push(`collection counts do not reconcile ${String(provider.id)}`);
     if (provider.component_status !== undefined && !Array.isArray(provider.component_status)) errors.push(`invalid component status ${String(provider.id)}`);
+    // The view model iterates these; a non-array would throw during render.
+    for (const key of ['tags', 'services']) if (provider[key] !== undefined && !Array.isArray(provider[key])) errors.push(`invalid ${key} ${String(provider.id)}`);
     for (const metadataError of sourceIntelligenceMetadataErrors(provider)) errors.push(`${metadataError} ${String(provider.id)}`);
   }
 
@@ -101,6 +103,8 @@ export function payloadValidationErrors(value: unknown, expectedProviderIds: rea
   }
 
   const incidents = Array.isArray(payload.incidents) ? payload.incidents as Record<string, unknown>[] : [];
+  const generatedAtMs = Date.parse(String(payload.generated_at || ''));
+  const evidenceReferenceTime = Number.isFinite(generatedAtMs) ? generatedAtMs : Date.now();
   const incidentIds = new Set<string>();
   for (const incident of incidents) {
     if (!ids.has(String(incident.providerId))) errors.push(`unknown incident provider ${String(incident.providerId)}`);
@@ -111,13 +115,19 @@ export function payloadValidationErrors(value: unknown, expectedProviderIds: rea
     if (!attention.has(String(incident.attention))) errors.push(`invalid incident attention ${String(incident.id)}`);
     if (incident.evidence_basis !== undefined && incident.evidence_basis !== CURRENT_PAGE_EVIDENCE_BASIS) errors.push(`invalid incident evidence_basis ${String(incident.id)}`);
     if (incident.observed_at !== undefined && !validDate(incident.observed_at)) errors.push(`invalid incident observed_at ${String(incident.id)}`);
+    for (const field of ['id', 'title', 'note', 'provider'] as const)
+      if (typeof incident[field] !== 'string' || !incident[field]) errors.push(`invalid incident ${field} ${String(incident.id)}`);
+    if (!Number.isFinite(incident.priority)) errors.push(`invalid incident priority ${String(incident.id)}`);
+    // Evidence age is judged at the moment the payload was generated. Judging it
+    // at fetch time would reject an entire valid payload because one incident
+    // crossed the age limit in the minutes between publication and this fetch.
     const temporal = incidentTemporalEvidence({
       latest_update: typeof incident.latest_update === 'string' ? incident.latest_update : undefined,
       rawTime: typeof incident.rawTime === 'string' ? incident.rawTime : undefined,
       first_detected: typeof incident.first_detected === 'string' ? incident.first_detected : undefined,
       observed_at: typeof incident.observed_at === 'string' ? incident.observed_at : undefined,
       evidence_basis: typeof incident.evidence_basis === 'string' ? incident.evidence_basis : undefined
-    });
+    }, evidenceReferenceTime);
     if (!temporal.valid) errors.push(`invalid incident temporal evidence ${String(incident.id)}`);
     if (incident.updates !== undefined && !Array.isArray(incident.updates)) errors.push(`invalid incident updates ${String(incident.id)}`);
   }

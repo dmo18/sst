@@ -572,11 +572,11 @@ export function WallboardV2({
       </header>
 
       <section className="wallboard-kpis">
-        <article className="metric-tile"><header><span>Active incidents</span><em>Live</em></header><strong>{model?.incidentCount || 0}</strong></article>
-        <article className="metric-tile"><header><span>Affected providers</span><em>Live</em></header><strong>{model?.affectedCount || 0}</strong></article>
-        <article className="metric-tile"><header><span>Coverage</span><em>Live</em></header><strong>{model?.summary.coverage_percent || 0}%</strong></article>
-        <article className="metric-tile"><header><span>Quality</span><em>Live</em></header><strong>{model?.qualityScore || 0}</strong></article>
-        <article className="metric-tile"><header><span>Blind spots</span><em>Live</em></header><strong>{model?.blindSpotCount || 0}</strong></article>
+        <article className="metric-tile"><header><span>Active incidents</span><em>{model ? 'Live' : 'No data'}</em></header><strong>{model ? model.incidentCount : '--'}</strong></article>
+        <article className="metric-tile"><header><span>Affected providers</span><em>{model ? 'Live' : 'No data'}</em></header><strong>{model ? model.affectedCount : '--'}</strong></article>
+        <article className="metric-tile"><header><span>Coverage</span><em>{model ? 'Live' : 'No data'}</em></header><strong>{model ? `${model.summary.coverage_percent}%` : '--'}</strong></article>
+        <article className="metric-tile"><header><span>Quality</span><em>{model ? 'Live' : 'No data'}</em></header><strong>{model ? model.qualityScore : '--'}</strong></article>
+        <article className="metric-tile"><header><span>Blind spots</span><em>{model ? 'Live' : 'No data'}</em></header><strong>{model ? model.blindSpotCount : '--'}</strong></article>
       </section>
 
       <main>
@@ -612,7 +612,7 @@ export function WallboardV2({
                 <div ref={priorityGroupRef}><SignalRows signals={signals} now={now} /></div>
                 <SignalRows signals={signals} now={now} copy />
               </div>
-            ) : <div className="empty-state"><b>{alertWindowMs === null ? 'No active vendor incidents' : 'No vendor incidents in the selected alert window'}</b></div>}
+            ) : <div className="empty-state"><b>{!model ? (lifecycle.phase === 'error' ? 'Status not confirmed: the status payload could not be loaded' : 'Loading status') : alertWindowMs === null ? 'No active vendor incidents' : 'No vendor incidents in the selected alert window'}</b></div>}
           </div>
           </>}
         </section>

@@ -80,3 +80,28 @@ test('affected provider without incident or component detail accepts collector t
   x.summary.confirmed_operational_percent = 0;
   assert.deepEqual(payloadValidationErrors(x), []);
 });
+
+function withIncident(latestUpdate: string, overrides: Record<string, unknown> = {}) {
+  const x = structuredClone(p);
+  x.incidents = [{ id: `${x.providers[0].id}:i1`, providerId: x.providers[0].id, provider: x.providers[0].name, title: 'API errors', note: 'Investigating.', url: 'https://status.example/i1', service_state: 'degraded', attention: 'action', priority: 50, latest_update: latestUpdate, ...overrides }];
+  return x;
+}
+
+test('incident evidence age is judged at generation time, not at fetch time', () => {
+  // The fixture was generated long before this test runs. An incident 71 hours
+  // old at generation is valid however late the payload is fetched.
+  const fresh = payloadValidationErrors(withIncident('2025-12-29T01:00:00Z'));
+  assert.ok(!fresh.some(error => error.includes('invalid incident temporal evidence')), fresh.join('; '));
+  const stale = payloadValidationErrors(withIncident('2025-12-28T15:00:00Z'));
+  assert.ok(stale.some(error => error.includes('invalid incident temporal evidence')));
+});
+
+test('incident and provider fields the view renders must have the expected types', () => {
+  const missingNote = payloadValidationErrors(withIncident('2025-12-31T23:00:00Z', { note: undefined }));
+  assert.ok(missingNote.some(error => error.includes('invalid incident note')));
+  const missingTitle = payloadValidationErrors(withIncident('2025-12-31T23:00:00Z', { title: 42 }));
+  assert.ok(missingTitle.some(error => error.includes('invalid incident title')));
+  const badTags = structuredClone(p);
+  badTags.providers[0].tags = 'cloud';
+  assert.ok(payloadValidationErrors(badTags).some(error => error.includes('invalid tags')));
+});

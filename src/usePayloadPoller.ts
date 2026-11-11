@@ -14,6 +14,27 @@ type StatusFetchResult = {
 const MAX_PAYLOAD_AGE_MS = 20 * 60 * 1000;
 const MAX_FUTURE_SKEW_MS = 5 * 60 * 1000;
 const MAX_BROWSER_PAYLOAD_BYTES = 5 * 1024 * 1024;
+// A stalled connection must not hold the single request slot forever: an
+// unattended wallboard would keep showing its last data with no warning.
+export const STATUS_FETCH_TIMEOUT_MS = 20 * 1000;
+const CATALOG_RELOAD_KEY = 'serviceops:catalog-reload-at';
+const CATALOG_RELOAD_MIN_INTERVAL_MS = 10 * 60 * 1000;
+
+// A catalog-hash mismatch means a newer release changed the provider catalog
+// while this tab still runs the previous bundle. Reload once, at most every ten
+// minutes, so an unattended display picks up the release instead of rejecting
+// every payload indefinitely.
+function reloadForNewCatalog(message: string): void {
+  if (!/provider catalog hash mismatch/i.test(message)) return;
+  try {
+    const last = Number(window.sessionStorage.getItem(CATALOG_RELOAD_KEY) || 0);
+    if (Date.now() - last < CATALOG_RELOAD_MIN_INTERVAL_MS) return;
+    window.sessionStorage.setItem(CATALOG_RELOAD_KEY, String(Date.now()));
+  } catch {
+    return;
+  }
+  window.location.reload();
+}
 const EMERGENCY_MAINTENANCE = /\b(?:emergency|unplanned|critical|urgent)\b/i;
 const PRODUCTION_IMPACT = /\b(?:production|outage|service interruption|service disruption|customer impact|customers? (?:are|may be) affected|degraded service)\b/i;
 
@@ -103,6 +124,11 @@ export function usePayloadPoller(browserRefreshMs: number) {
     if (!slot) return;
     const { controller: request, sequence } = slot;
     dispatch({ type: 'request' });
+    let timedOut = false;
+    const timeout = window.setTimeout(() => {
+      timedOut = true;
+      request.abort();
+    }, STATUS_FETCH_TIMEOUT_MS);
     try {
       const result = await fetchStatus(request.signal);
       if (mounted.current && payloadOwnership.current.owns(request, sequence)) {
@@ -116,9 +142,15 @@ export function usePayloadPoller(browserRefreshMs: number) {
         overlayLiveTruth(result.data);
       }
     } catch (error) {
-      if (mounted.current && payloadOwnership.current.owns(request, sequence))
-        dispatch({ type: 'failure', message: error instanceof Error ? error.message : String(error) });
+      if (mounted.current && payloadOwnership.current.owns(request, sequence)) {
+        const message = timedOut
+          ? `status.json did not respond within ${STATUS_FETCH_TIMEOUT_MS / 1000} seconds`
+          : error instanceof Error ? error.message : String(error);
+        dispatch({ type: 'failure', message });
+        reloadForNewCatalog(message);
+      }
     } finally {
+      window.clearTimeout(timeout);
       payloadOwnership.current.finish(request);
     }
   }, [overlayLiveTruth]);

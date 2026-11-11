@@ -16,8 +16,13 @@ export type DataAction = {
 export const initialDataLifecycle: DataLifecycle = { phase: 'loading', data: null, failure: null };
 
 export function dataLifecycleReducer(state: DataLifecycle, action: DataAction): DataLifecycle {
-  if (action.type === 'request')
-    return state.data ? { phase: 'refreshing', data: state.data, failure: null } : initialDataLifecycle;
+  if (action.type === 'request') {
+    if (!state.data) return initialDataLifecycle;
+    // A retry does not make stale data current. Keep the warning until a
+    // payload is actually accepted.
+    if (state.phase === 'stale') return state;
+    return { phase: 'refreshing', data: state.data, failure: null };
+  }
   if (action.type === 'success')
     return { phase: 'ready', data: action.data, failure: null };
   if (action.type === 'overlay') {

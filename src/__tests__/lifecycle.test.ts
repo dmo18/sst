@@ -75,3 +75,12 @@ test('live truth overlay cannot create data before the audited payload exists', 
 test('first failure has no false data', () => {
   assert.equal(dataLifecycleReducer(initialDataLifecycle, { type: 'failure', message: 'offline' }).phase, 'error');
 });
+
+test('a retry keeps the stale warning until a payload is accepted', () => {
+  const ready = dataLifecycleReducer(initialDataLifecycle, { type: 'success', data });
+  const stale = dataLifecycleReducer(ready, { type: 'failure', message: 'status.json is stale' });
+  const retrying = dataLifecycleReducer(stale, { type: 'request' });
+  assert.equal(retrying.phase, 'stale');
+  assert.equal(retrying.failure, 'status.json is stale');
+  assert.equal(dataLifecycleReducer(retrying, { type: 'success', data }).phase, 'ready');
+});

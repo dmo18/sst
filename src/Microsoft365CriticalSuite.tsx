@@ -46,7 +46,7 @@ export function Microsoft365CriticalSuite({ model }: { model: IssueConsoleModel 
     ? 'critical'
     : microsoftTone === 'warning' || entraTone === 'warning'
       ? 'warning'
-      : snapshot.publicSignalsPresent > 0
+      : microsoftTone === 'informational' && entraTone === 'informational'
         ? 'informational'
         : 'unknown';
 
@@ -70,7 +70,7 @@ export function Microsoft365CriticalSuite({ model }: { model: IssueConsoleModel 
           <b>Microsoft workload truth</b>
           <small>{activeMicrosoftIncidents.length} public incidents · {snapshot.serviceFacetCount} workload facets · tenant health private</small>
         </span>
-        <em>{overallTone === 'informational' ? 'public clear' : overallTone}</em>
+        <em>{overallTone === 'informational' ? 'public clear' : overallTone === 'unknown' ? 'not confirmed' : overallTone}</em>
       </button>
 
       {open ? (
