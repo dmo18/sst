@@ -331,6 +331,10 @@ export function providerIncidentConclusion(provider, html) {
 
   const structured = structuredSourceConclusion(provider, html, incidentDetailOverrides[provider.id]);
   if (structured) return structured;
+  // A JSON document its adapter did not recognize has changed shape. It is never
+  // re-read with page-text rules, where field values such as "operational"
+  // would be mistaken for a health statement.
+  if (/^\s*[\[{]/.test(String(html || ''))) return null;
 
   if (provider.id === 'n-able' || provider.id === 'cove-data-protection') return nableConclusion(provider, html);
   if (!['cloudflare', 'docker', 'cisco-umbrella'].includes(provider.id)) return null;

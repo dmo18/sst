@@ -45,7 +45,9 @@ jobs:
         if: github.event_name != 'schedule' && github.event_name != 'repository_dispatch'
         run: npm audit --audit-level=high
       - name: Retrieve prior snapshot (optional)
-        run: curl --fail --silent --show-error --max-time 10 https://dmo18.github.io/sst/status.json -o public/previous-status.json || true
+        # History, reliability windows and failure streaks are carried from this
+        # snapshot. One transient failure must not erase them, so retry first.
+        run: curl --fail --silent --show-error --max-time 10 --retry 3 --retry-delay 2 --retry-all-errors https://dmo18.github.io/sst/status.json -o public/previous-status.json || true
       - name: Collect and validate public status data without GitHub credentials
         run: env -u GITHUB_TOKEN -u GH_TOKEN npm run update-status
       - name: Audit every enabled provider in this collection

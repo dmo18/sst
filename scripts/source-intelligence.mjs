@@ -21,14 +21,28 @@ function hashString(value) {
   return (hash >>> 0).toString(16).padStart(8, '0');
 }
 
+// A schema fingerprint must change when the vendor changes the document's
+// structure and must not change when the content does. Arrays are therefore
+// reduced to "array" whether empty or populated (an incident opening is content,
+// not schema), and scalars to "value" (a null id is content, not schema). Object
+// keys are followed two levels deep, which covers the envelope of every
+// structured source in use.
 function jsonShape(value, depth = 0) {
-  if (depth > 5) return typeof value;
-  if (Array.isArray(value)) {
-    const shapes = [...new Set(value.slice(0, 12).map(item => jsonShape(item, depth + 1)))].sort();
-    return `[${shapes.join('|')}]`;
-  }
-  if (!value || typeof value !== 'object') return value === null ? 'null' : typeof value;
+  if (Array.isArray(value)) return 'array';
+  if (!value || typeof value !== 'object') return 'value';
+  if (depth >= 2) return 'object';
   return `{${Object.keys(value).sort().map(key => `${key}:${jsonShape(value[key], depth + 1)}`).join(',')}}`;
+}
+
+function jsonDocumentShape(value) {
+  if (!Array.isArray(value)) return jsonShape(value);
+  // A top-level array of records is identified by the keys its records share.
+  const keys = [...new Set(value.slice(0, 12).flatMap(item => item && typeof item === 'object' && !Array.isArray(item) ? Object.keys(item) : []))].sort();
+  return `array<${keys.join(',')}>`;
+}
+
+function fingerprintFamily(value) {
+  return String(value || '').split('-')[0];
 }
 
 export function schemaFingerprint(value, mode = '') {
@@ -38,14 +52,14 @@ export function schemaFingerprint(value, mode = '') {
     const match = /<script[^>]+id=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i.exec(text);
     if (!match?.[1]) return '';
     try {
-      return 'json-' + hashString(jsonShape(JSON.parse(match[1])));
+      return 'jsonv2-' + hashString(jsonDocumentShape(JSON.parse(match[1])));
     } catch {
       return '';
     }
   }
   if (structuredModes.has(mode) || /json/i.test(mode)) {
     try {
-      return `json-${hashString(jsonShape(JSON.parse(text)))}`;
+      return `jsonv2-${hashString(jsonDocumentShape(JSON.parse(text)))}`;
     } catch {
       return '';
     }
@@ -126,6 +140,10 @@ export function enrichProviderHistory(results, previous, currentIncidents, gener
       && old?.schema_fingerprint
       && result.schema_fingerprint
       && old.schema_fingerprint !== result.schema_fingerprint
+      // Fingerprints from different algorithms are not comparable. A change of
+      // algorithm or source type is not vendor schema drift.
+      && fingerprintFamily(old.schema_fingerprint) === fingerprintFamily(result.schema_fingerprint)
+      && (old.source_type || '') === (result.source_type || '')
     );
     const currentForProvider = currentIncidents.filter(item => item.providerId === result.id);
     const oldForProvider = oldIncidents.filter(item => item.providerId === result.id);

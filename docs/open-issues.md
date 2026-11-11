@@ -8,6 +8,21 @@ Last reviewed: 2026-10-26
 
 This file is the temporary authoritative backlog until repository Issues is enabled and any remaining administrative work is migrated into issue records.
 
+## Source truth review follow-up (November 10, 2026)
+
+Fixed in the review: incident lifecycle read from prose, component de-duplication and truncation, page-text rules run over JSON, schema fingerprint false positives, the browser's separate Statuspage parser, stalled browser fetches, the post-deployment freshness check. Structured first-party JSON replaced rendered pages and feeds for Microsoft 365, ConnectWise, HaloPSA, N-able, Cove Data Protection, RingCentral, Salesforce, Google Workspace, Google Cloud, Sophos, Keeper, Xero, NUSO and Bitdefender GravityZone.
+
+Open, needing an owner decision:
+
+- [ ] Deployment volume. Three triggers (the five minute cron, the freshness watcher and the continuity keeper) attempt roughly 11 Pages deployments an hour. From October 31 to November 10 Pages accepted same-commit deployments without publishing them. A single ten minute schedule with one watcher that does not cancel releases would stay inside the 20 minute threshold with about half the deployments. Both watchers also cancel release runs, which `CLAUDE.md` forbids.
+- [ ] Browser vendor requests. `CLAUDE.md` forbids browser-side vendor feed calls, while `src/liveStatusTruth.ts` re-reads Statuspage vendors from the browser and a release gate verifies that it does. The re-read now uses the collector's parser, so it is correct, but the rule and the feature still contradict each other. One of them should change.
+- [ ] Compact board order. `CLAUDE.md` requires newest first. `src/compactWallboard.ts` sorts by severity first and a test asserts that order.
+- [ ] CrowdStrike publishes service status only behind its authenticated support portal. It remains `unknown` by design.
+- [ ] Bitwarden and Syncro (Hund.io) and Entra (Azure status page) are still read from rendered page text. No structured public document was found for them.
+- [ ] The 72 hour evidence limit drops an incident the vendor still lists as open when the vendor has not updated it for three days. The provider then shows component degradation without the incident text.
+- [ ] `config/providers.json` still lists superseded source addresses for providers whose source is overridden in the adapters (for example Cove Data Protection, whose listed host no longer resolves).
+- [ ] 39 catalog entries remain disabled. Re-enabling any of them is a catalog decision; each would need its source verified the same way.
+
 ## Freshness reliability follow-up (October 26, 2026)
 
 - [x] Identified the several-hour payload delay: GitHub cron events were missed or delayed despite a nominal five-minute schedule.

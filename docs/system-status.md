@@ -7,6 +7,8 @@ The 458×290 office tile now uses a seamless vertical incident feed instead of e
 > Current configuration, October 23, 2026: 80 raw catalog entries, 41 actively monitored after consolidation, and 39 fully disabled. Historic 80-provider and artwork performance metrics below describe the earlier release baseline.
 
 
+> Source truth review, November 10, 2026: every enabled provider was compared with what its vendor publishes. A live collection after the review read 41 of 41 sources, confirmed a service state for 40 of 41 (CrowdStrike publishes no public status), reported no blind source, and published seven current incidents, five of which the previous logic had hidden. Microsoft 365 is now read from Microsoft's public status JSON. See `CHANGELOG.md` and `docs/open-issues.md`. The sections below predate this review.
+
 Status timestamp: 2026-08-19 18:33 Eastern Time
 
 ## Executive status

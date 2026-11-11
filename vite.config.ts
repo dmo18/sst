@@ -25,15 +25,28 @@ function compactDeviceMediaContract(): Plugin {
   };
 }
 
+// Official Statuspage hosts whose address differs from the catalog entry. They
+// mirror the collector's structured source overrides.
+const STATUSPAGE_ORIGIN_OVERRIDES: Record<string, string> = {
+  keeper: 'https://statuspage.keeper.io',
+  'bitdefender-gravityzone': 'https://status.gravityzone.bitdefender.com'
+};
+
 function officialStatuspageConnectPolicy(): Plugin {
-  const rawProviders = JSON.parse(readFileSync(new URL('./config/providers.json', import.meta.url), 'utf8')) as Array<{
-    enabled?: boolean;
-    sourceType?: string;
-    url?: string;
-  }>;
-  const origins = [...new Set(rawProviders
-    .filter(provider => provider.enabled !== false && provider.sourceType === 'statuspage' && provider.url)
-    .map(provider => new URL(provider.url as string).origin))]
+  type CatalogEntry = { id: string; enabled?: boolean; sourceType?: string; url?: string };
+  const rawProviders = JSON.parse(readFileSync(new URL('./config/providers.json', import.meta.url), 'utf8')) as CatalogEntry[];
+  const consolidation = JSON.parse(readFileSync(new URL('./config/provider-consolidation.json', import.meta.url), 'utf8')) as {
+    excludedProviderIds?: string[];
+    providerOverrides?: Record<string, Partial<CatalogEntry>>;
+  };
+  const excluded = new Set(consolidation.excludedProviderIds || []);
+  // The same canonical catalog the collector and the browser bundle use, so a
+  // consolidated provider is allowed under its real status host.
+  const active = rawProviders
+    .filter(provider => !excluded.has(provider.id))
+    .map(provider => ({ ...provider, ...(consolidation.providerOverrides?.[provider.id] || {}) }))
+    .filter(provider => provider.enabled !== false && provider.sourceType === 'statuspage' && provider.url);
+  const origins = [...new Set(active.map(provider => STATUSPAGE_ORIGIN_OVERRIDES[provider.id] || new URL(provider.url as string).origin))]
     .sort();
 
   return {

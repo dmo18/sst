@@ -91,6 +91,12 @@ It provides:
 
 Local workflow state is explicitly non-authoritative and cannot modify `service_state`, `source_state`, `source_health`, evidence, parser state, or release validation.
 
+### Source adapters and the shared parser
+
+`scripts/official-json-adapters.mjs` holds the adapters for first-party JSON that is not Statuspage: Microsoft public status, the N-able dashboard, RingCentral, Salesforce Trust and Google incidents. `scripts/structured-source-adapters.mjs` holds the Statuspage, Status.io, Better Stack and Vultr adapters and the override table that selects a source per provider. Every adapter returns `null` for a document it does not recognize, and page-text rules never run over a JSON document, so a vendor schema change yields `unknown` rather than a health conclusion.
+
+`src/liveStatusTruth.ts` imports `parseStatuspageSummary` from the collector. The browser's re-read and the audited payload therefore apply one set of rules for region scope, advisories, planned work, evidence age and components.
+
 ### Microsoft 365 critical suite
 
 Microsoft 365 is represented as ten explicit critical service facets rather than one generic provider row. The operating surface covers major Microsoft cloud workloads and dependencies, including Exchange Online, Teams, SharePoint Online, OneDrive, Entra ID, and Microsoft 365 administration/service-health context.

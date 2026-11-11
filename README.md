@@ -79,7 +79,7 @@ Microsoft 365 is treated as a critical operating suite rather than a generic pro
 
 The evidence boundary is explicit:
 
-- broad public Microsoft status is public evidence;
+- broad public Microsoft status is public evidence, read without credentials from the JSON behind `status.cloud.microsoft` (Microsoft 365 admin center, Power Platform admin center and each consumer workload);
 - Entra receives dedicated public-source evidence where available;
 - tenant-complete Microsoft 365 service health requires authenticated Microsoft Graph service communications with `ServiceHealth.Read.All`.
 

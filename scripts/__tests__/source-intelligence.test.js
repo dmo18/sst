@@ -8,12 +8,16 @@ import {
   sourceIntelligenceChanges
 } from '../source-intelligence.mjs';
 
-test('schema fingerprints track shape rather than JSON key order or values', () => {
+test('schema fingerprints track the document envelope rather than key order, values, or record counts', () => {
   const first = schemaFingerprint(JSON.stringify({ status: { indicator: 'none' }, incidents: [{ id: 'a', name: 'One' }] }), 'statuspage-json');
   const reordered = schemaFingerprint(JSON.stringify({ incidents: [{ name: 'Two', id: 'b' }], status: { indicator: 'major' } }), 'statuspage-json');
-  const changed = schemaFingerprint(JSON.stringify({ status: { indicator: 'none' }, incidents: [{ id: 'a', name: 'One', impact: 'minor' }] }), 'statuspage-json');
+  const quiet = schemaFingerprint(JSON.stringify({ status: { indicator: 'none' }, incidents: [] }), 'statuspage-json');
+  const changed = schemaFingerprint(JSON.stringify({ status: { level: 'none' }, incidents: [] }), 'statuspage-json');
+  const renamed = schemaFingerprint(JSON.stringify({ status: { indicator: 'none' }, events: [] }), 'statuspage-json');
   assert.equal(first, reordered);
+  assert.equal(first, quiet);
   assert.notEqual(first, changed);
+  assert.notEqual(first, renamed);
 });
 
 test('source evidence separates transport quality from service health', () => {

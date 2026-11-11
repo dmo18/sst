@@ -198,7 +198,8 @@ export function microsoft365CoverageSnapshot(model: IssueConsoleModel | null): M
     entra,
     microsoft365Incidents,
     entraIncidents,
-    publicSignalsPresent: Number(Boolean(microsoft365)) + Number(Boolean(entra)),
+    // A signal is present only when its official source was actually read.
+    publicSignalsPresent: Number(microsoft365?.sourceState === 'available') + Number(entra?.sourceState === 'available'),
     publicSignalsExpected: 2,
     serviceFacetCount: MICROSOFT_365_CRITICAL_SERVICES.length,
     tenantGranularFacetCount: MICROSOFT_365_CRITICAL_SERVICES.length

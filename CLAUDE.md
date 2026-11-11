@@ -42,7 +42,8 @@ config/providers.json                    raw provider catalog
 config/provider-consolidation.json       active exclusions and overrides
 scripts/update-status.mjs                collection orchestration
 scripts/update-public-status.mjs         official-source collection
-scripts/structured-source-adapters.mjs   structured adapters
+scripts/structured-source-adapters.mjs   structured adapters and per-provider source overrides
+scripts/official-json-adapters.mjs       Microsoft, N-able, RingCentral, Salesforce and Google JSON adapters
 scripts/ensure-valid-status.mjs          server payload validation
 scripts/production-smoke.mjs             deployed production and commit-identity checks
 scripts/verify-yodeck-wallboard.mjs      exact 458 by 291 CDP wallboard verification
@@ -99,6 +100,14 @@ GitHub monitoring must remain first-party and unauthenticated.
 - Preserve incident titles, lifecycle, first detection, latest update, official links, affected components, and component states.
 - A GitHub source failure is an observation gap, not proof that GitHub is down.
 - Do not use repository API failures, workflow failures, synthetic probes, or this repository's deployment state as GitHub incident evidence.
+
+### Incident lifecycle and structured sources
+
+- Decide whether an incident is active from the vendor's lifecycle status and an explicit title prefix. Never from words in the update text.
+- Never run page-text keyword rules over a JSON document. An adapter that does not recognize a document returns no conclusion.
+- Never truncate or de-duplicate a component list before problem components have been identified.
+- The browser and the collector share one Statuspage parser (`parseStatuspageSummary`). Do not add a second one.
+- Microsoft 365 is read from `https://status.cloud.microsoft/api/posts/{mac,ppac,m365Consumer}` with no credentials. It describes Microsoft's public status, not tenant health.
 
 ## Wallboard contract
 

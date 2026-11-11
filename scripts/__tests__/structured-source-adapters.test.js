@@ -255,17 +255,18 @@ test('Status.io page parser hides non-US-only incidents and ignores scheduled ma
   assert.match(conclusion.status, /no active US-relevant incidents/i);
 });
 
-test('structured overrides prefer official first-party JSON and rendered Status.io pages', () => {
+test('structured overrides prefer official first-party JSON, including the Status.io public API', () => {
   assert.equal(structuredSourceOverrides.cloudflare.mode, 'statuspage-json');
   assert.equal(structuredSourceOverrides.cloudflare.url, 'https://www.cloudflarestatus.com/api/v2/summary.json');
   assert.equal(structuredSourceOverrides.github.mode, 'statuspage-json');
   assert.equal(structuredSourceOverrides.github.url, 'https://www.githubstatus.com/api/v2/summary.json');
   assert.equal(structuredSourceOverrides.superops.mode, 'betterstack-json');
   assert.equal(structuredSourceOverrides.superops.url, 'https://status.superops.com/index.json');
-  assert.equal(structuredSourceOverrides.connectwise.mode, 'statusio-html');
-  assert.equal(structuredSourceOverrides.connectwise.render, true);
-  assert.equal(structuredSourceOverrides.halopsa.mode, 'statusio-html');
-  assert.equal(structuredSourceOverrides.halopsa.render, true);
+  assert.equal(structuredSourceOverrides.connectwise.mode, 'statusio-json');
+  assert.equal(structuredSourceOverrides.connectwise.url, 'https://api.status.io/1.0/status/619cf82551fec9053d612f09');
+  assert.equal(structuredSourceOverrides.connectwise.render, undefined);
+  assert.equal(structuredSourceOverrides.halopsa.mode, 'statusio-json');
+  assert.equal(structuredSourceOverrides.halopsa.url, 'https://api.status.io/1.0/status/63ef45da7ee94905308a1a4a');
 });
 
 test('loadPublicProvider publishes structured Statuspage incident details', async () => {

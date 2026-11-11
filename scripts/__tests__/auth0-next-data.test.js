@@ -64,7 +64,7 @@ test('Auth0 structured snapshot fails closed when a US region lacks a current re
 
 test('Auth0 embedded JSON is high-confidence structured evidence with a schema fingerprint', () => {
   const html = page([row('US-1', operational('2026-08-09T01:29:53Z'))]);
-  assert.match(schemaFingerprint(html, 'auth0-next-data'), /^json-/);
+  assert.match(schemaFingerprint(html, 'auth0-next-data'), /^jsonv2-/);
   const evidence = sourceEvidence('auth0-next-data', 'available', true);
   assert.equal(evidence.evidence_tier, 'structured');
   assert.equal(evidence.source_confidence, 'high');

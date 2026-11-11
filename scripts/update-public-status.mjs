@@ -30,6 +30,7 @@ import {
 } from './source-intelligence.mjs';
 import { buildCollectionIntelligence, collectWithBudgets } from './collection-intelligence.mjs';
 import { parseAzureEntraStatus } from './entra-status-adapter.mjs';
+import { MICROSOFT_PUBLIC_STATUS_ENDPOINTS, parseMicrosoftPublicStatus } from './official-json-adapters.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const catalogPath = path.join(root, 'config', 'providers.json');
@@ -40,15 +41,6 @@ const collectionLimits = Object.freeze({ globalLimit: 10, perOriginLimit: 2 });
 const severityRank = { red: 4, amber: 3, blue: 2, green: 1 };
 
 const publicOverrides = {
-  microsoft365: {
-    mode: 'feed',
-    url: 'https://status.cloud.microsoft/api/feed/mac',
-    pageUrl: 'https://status.cloud.microsoft/',
-    sourceName: 'Microsoft 365 public RSS',
-    maxAgeHours: 336,
-    allowEmpty: true,
-    confirmHealthyFromFeed: true
-  },
   entra: {
     mode: 'azure-status-html',
     url: 'https://azure.status.microsoft/en-us/status',
@@ -59,42 +51,11 @@ const publicOverrides = {
     maxResponseBytes: 10 * 1024 * 1024,
     discoverFeeds: false
   },
-  'google-workspace': {
-    mode: 'feed',
-    url: 'https://www.google.com/appsstatus/dashboard/en/feed.atom',
-    pageUrl: 'https://www.google.com/appsstatus/dashboard/',
-    sourceName: 'Google Workspace public Atom feed',
-    maxAgeHours: 336,
-    confirmHealthyFromFeed: true
-  },
-  'google-cloud': {
-    mode: 'feed',
-    url: 'https://status.cloud.google.com/en/feed.atom',
-    pageUrl: 'https://status.cloud.google.com/',
-    sourceName: 'Google Cloud public Atom feed',
-    maxAgeHours: 336,
-    confirmHealthyFromFeed: true
-  },
   slack: {
     mode: 'slack-current-json',
     url: 'https://slack-status.com/api/v2.0.0/current',
     pageUrl: 'https://slack-status.com/',
     sourceName: 'Slack official current incident API'
-  },
-  halopsa: {
-    mode: 'status-html',
-    url: 'https://status.haloservicesolutions.com/',
-    sourceName: 'HaloPSA public status page'
-  },
-  connectwise: {
-    mode: 'status-html',
-    url: 'https://status.connectwise.com/',
-    sourceName: 'ConnectWise public status page'
-  },
-  salesforce: {
-    mode: 'status-html',
-    url: 'https://status.salesforce.com/current',
-    sourceName: 'Salesforce Trust public status page'
   }
 };
 
@@ -631,6 +592,10 @@ export function discoverFeedUrls(html, pageUrl) {
 export function htmlIssueConclusion(provider, source, html) {
   const specific = providerSpecificConclusion(provider, html);
   if (specific) return specific;
+  // A JSON source that its adapter did not recognize has changed shape. Keyword
+  // rules written for rendered pages must never run over raw JSON, where words
+  // such as "operational" appear as field values regardless of health.
+  if (/-json$/i.test(source?.mode || '') || /^\s*[\[{]/.test(String(html || ''))) return { kind: 'limited', message: 'The official structured source did not match its expected document shape, so no service-health conclusion was made.' };
   const current = currentHtmlSection(html);
   const lower = current.toLowerCase();
   if (/cloudflare|attention required|verify you are human|captcha|access denied|enable javascript to run this app/.test(lower) && current.length < 4000) return { kind: 'limited', message: 'The official page returned a bot challenge or JavaScript shell without readable service status.' };
@@ -735,6 +700,38 @@ async function parseAzureEntraSource(provider, source) {
   } finally {
     clearTimeout(timeout);
   }
+}
+
+// Microsoft publishes its public status as three small JSON documents. The admin
+// center and consumer documents are both required for a conclusion; a failure of
+// either leaves the provider unknown rather than healthy.
+async function parseMicrosoftPublicSource(provider, source) {
+  const logs = [];
+  const documents = {};
+  for (const [key, endpoint] of Object.entries(MICROSOFT_PUBLIC_STATUS_ENDPOINTS)) {
+    const result = await fetchSource({ ...provider, url: endpoint.url, sourceType: source.mode }, 'application/json, text/json, */*');
+    logs.push(...(result.logs || [result.log]));
+    if (result.ok) documents[key] = result.body;
+    else if (endpoint.required) {
+      return providerStatus(provider, source, `Source unavailable: HTTP ${result.status || 'failed'}`, 'blue', false, `${endpoint.name}: ${result.log?.error || result.log?.message || 'request failed'}`, logs, [], [], 'unavailable');
+    }
+  }
+  const conclusion = parseMicrosoftPublicStatus(documents, provider);
+  const fingerprint = schemaFingerprint(documents.consumer, source.mode);
+  if (!conclusion) {
+    return providerStatus(provider, source, 'Limited official source', 'blue', false, 'Microsoft public status returned documents that do not match the expected shape, so no service-health conclusion was made.', logs, [], [], 'limited', { schemaFingerprint: fingerprint });
+  }
+  const extras = { components: conclusion.components || [], schemaFingerprint: fingerprint };
+  if (conclusion.kind === 'issues') {
+    const incidents = structuredIncidents(provider, source, conclusion);
+    if (incidents.length) {
+      const worst = incidents.reduce((current, item) => severityRank[item.color] > severityRank[current] ? item.color : current, 'amber');
+      return providerStatus(provider, source, `${incidents.length} active Microsoft public incident${incidents.length === 1 ? '' : 's'}`, worst, true, '', logs, incidents, [], 'available', extras);
+    }
+    return providerStatus(provider, source, 'Microsoft reports current service degradation', 'amber', true, 'Microsoft public status reports a degraded service state.', logs, [], [], 'available', extras);
+  }
+  if (conclusion.kind === 'healthy') return providerStatus(provider, source, conclusion.status, 'green', true, '', logs, [], [], 'available', extras);
+  return providerStatus(provider, source, 'Limited official source', 'blue', false, conclusion.message, logs, [], [], 'limited', extras);
 }
 
 export async function tryFeedCandidates(provider, source, html, pageLogs) {
@@ -844,6 +841,7 @@ export async function loadPublicProvider(provider) {
     if (source.mode === 'feed') return await parsePublicFeed(provider, source);
     if (source.mode === 'slack-current-json') return await parseSlackCurrentStatus(provider, source);
     if (source.mode === 'azure-status-html') return await parseAzureEntraSource(provider, source);
+    if (source.mode === 'microsoft-public-json') return await parseMicrosoftPublicSource(provider, source);
     return await parsePublicHtml(provider, source);
   } catch (error) {
     const message = error?.message || String(error);

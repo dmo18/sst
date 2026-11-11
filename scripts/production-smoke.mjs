@@ -1,6 +1,6 @@
 import { ACTIVE_PROVIDER_CATALOG_HASH, ACTIVE_PROVIDER_IDS } from '../src/providerCatalog.ts';
 import { wirePayloadValidationErrors } from '../src/wirePayloadValidation.ts';
-import { verifyReleaseContract } from './release-contract.mjs';
+import { DEPLOYED_MAX_AGE_MS, verifyReleaseContract } from './release-contract.mjs';
 import { resolveDeployedStatus } from './deployed-status.mjs';
 
 const requestedBase = process.argv[2] || 'https://dmo18.github.io/sst/';
@@ -65,5 +65,9 @@ console.log(`COLLECTION_HEALTH healthy=${collection?.healthy_source_count ?? 'mi
 console.log(`VALIDATION_ERRORS ${errors.length}`);
 for (const error of errors) console.log(`VALIDATION_ERROR ${error}`);
 if (errors.length) throw new Error(`deployed payload rejected by browser validator: ${errors.join('; ')}`);
-const release = verifyReleaseContract(payload, Date.now(), ACTIVE_PROVIDER_CATALOG_HASH);
+// A deployment that needed a retry publishes a payload generated several
+// minutes earlier. That is a valid release as long as it is inside the
+// documented freshness threshold, and the run identity check above already
+// proves it is this run's payload.
+const release = verifyReleaseContract(payload, Date.now(), ACTIVE_PROVIDER_CATALOG_HASH, { maxAgeMs: DEPLOYED_MAX_AGE_MS });
 console.log(`RELEASE_CONTRACT ${release.state} ${release.description}`);
