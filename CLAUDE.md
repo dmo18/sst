@@ -23,10 +23,10 @@ Build and maintain a free, static, first-party-only MSP service-intelligence app
 
 ## Current repository facts
 
-- Package version: `3.3.0`.
+- Package version: `3.3.8`.
 - Collection pipeline: `3.0.0`.
 - Raw catalog entries: 80.
-- Active providers after consolidation: 79.
+- Active providers after consolidation: 41 (the other 39 raw entries are disabled).
 - Active wallboard: `src/WallboardV2.tsx`.
 - Primary compact wallboard target: 458 by 291 pixels.
 - Normal browser refresh interval: 180 seconds while visible.
@@ -56,6 +56,8 @@ src/payloadValidation.ts                 browser payload validation
 src/styles/wallboard-v2.css              dedicated wallboard overlay, compact layout, and marquees
 .github/workflows/refresh-pages.yml       Pages build and deployment
 .github/workflows/status-freshness-watch.yml deployed freshness recovery
+.github/workflows/refresh-continuity.yml  bounded refresh continuity heartbeat
+.github/workflows/product-experience.yml  deployed product experience verification
 ```
 
 The legacy `src/Wallboard.tsx`, `src/wallboard.ts`, `src/wallboardDomEnhancements.ts`, and `src/styles/wallboard-focus.css` have been removed. Do not recreate a second wallboard implementation or imperative wallboard controller.
