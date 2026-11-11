@@ -33,7 +33,7 @@ test('458x291 signage keeps Priority signals inline with freshness telemetry', a
   assert.match(css, /wallboard-alert-provider-rail\s*\{[\s\S]*height:\s*32px\s*!important[\s\S]*margin:\s*0\s*!important/);
 });
 
-test('freshness recovery detects stale payloads quickly and can replace wedged releases', async () => {
+test('freshness recovery detects a missed release, spaces dispatches, and replaces only wedged releases', async () => {
   const watcher = await read('.github/workflows/status-freshness-watch.yml');
   const truthWatch = await read('scripts/status-truth-watch.mjs');
 
@@ -43,5 +43,8 @@ test('freshness recovery detects stale payloads quickly and can replace wedged r
   assert.match(watcher, /name:\s*Cancel wedged Pages releases/);
   assert.match(watcher, /actions\/runs\/\$\{id\}\/cancel/);
   assert.match(watcher, /steps\.release\.outputs\.stale_active == 'true'/);
-  assert.match(truthWatch, /const STALE_AFTER_MINUTES = 10/);
+  assert.match(watcher, /takeoverAfterMinutes = 45/);
+  assert.match(watcher, /minReleaseSpacingMinutes = 9/);
+  assert.match(watcher, /steps\.release\.outputs\.recent != 'true'/);
+  assert.match(truthWatch, /const STALE_AFTER_MINUTES = 14/);
 });

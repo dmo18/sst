@@ -14,7 +14,7 @@ Build and maintain a free, static, first-party-only MSP service-intelligence app
 - No paid API.
 - No credentials or secrets in the repository or browser.
 - No authenticated tenant data.
-- No browser-side vendor feed calls.
+- No browser-side vendor feed calls, with one exception: after loading the audited payload the browser may re-read official Statuspage summaries (`src/liveStatusTruth.ts`) using the collector's parser. The audited payload stays the baseline, a failed re-read changes nothing, and no other vendor source is called from the browser.
 - No synthetic monitoring used as vendor-health evidence.
 - No third-party outage scraping.
 - No crowdsourced outage data as operational truth.
@@ -113,7 +113,7 @@ GitHub monitoring must remain first-party and unauthenticated.
 
 The active wallboard must preserve these rules:
 
-- Sort incidents by latest update, newest first.
+- Sort incidents by latest update, newest first. The 458 by 291 compact tile is the one exception: it lists critical incidents first, then by latest update, so the most urgent item leads on a screen that shows two or three rows.
 - Show provider icons rather than numeric indexes.
 - Exclude maintenance and collection-health failures from Priority signals.
 - Apply the `alerts` URL window to both incident rows and provider chips.
@@ -149,7 +149,8 @@ GitHub Pages deployment is a separate failure domain from build and test.
 - Do not generate repeated commits to retry a stuck Pages deployment.
 - `actions/deploy-pages` has a maximum internal wait of 600000 milliseconds. Larger values are capped.
 - If Pages is stuck, inspect the Pages environment and deployment object before changing code.
-- Scheduled freshness recovery must not interrupt an active release.
+- Scheduled freshness recovery must not interrupt an active release. A release is taken over only after 45 minutes, beyond its two 20 minute job budgets.
+- Keep Pages deployments to about six an hour. The release cron runs every ten minutes, and the watcher and the continuity keeper never dispatch within nine minutes of the previous release start, whatever its outcome. From October 31 to November 10, 2026, at about eleven an hour, Pages accepted same-commit deployments without publishing them.
 - A successful build does not mean the commit is live.
 - A release is complete only after Pages publication, production smoke checks, headless rendering, and the exact Yodeck check succeed.
 - `public/deploy-version.txt` is generated during the build and must not be committed.

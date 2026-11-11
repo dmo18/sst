@@ -57,7 +57,13 @@ jobs:
           const maxAttempts = testMode ? 1 : 58;
           const delaySeconds = testMode ? 0 : 330;
           const activeStates = new Set(['queued', 'in_progress', 'waiting', 'requested', 'pending']);
-          const takeoverAfterMinutes = 12;
+          // A release may legitimately run for its two 20 minute job budgets. Only
+          // a run older than that is wedged and may be taken over.
+          const takeoverAfterMinutes = 45;
+          // Never start a release sooner than this after the previous one began,
+          // whatever its outcome. This bounds Pages deployments to about six an
+          // hour, including while releases are failing.
+          const minReleaseSpacingMinutes = 9;
           let failedApiOperations = 0;
           let successfulDispatches = 0;
 
@@ -121,6 +127,15 @@ jobs:
             const healthyAgeActive = activeRuns.filter(run => !wedgedRuns.some(wedged => wedged.id === run.id));
             if (healthyAgeActive.length) {
               console.log(`Continuity attempt ${attempt}: ${healthyAgeActive.length} healthy-age release(s) already active; deferring.`);
+              continue;
+            }
+
+            const newestReleaseStart = Math.max(0, ...allRuns
+              .map(run => Date.parse(run.run_started_at || run.created_at || ''))
+              .filter(Number.isFinite));
+            const minutesSinceRelease = newestReleaseStart ? (Date.now() - newestReleaseStart) / 60_000 : Number.POSITIVE_INFINITY;
+            if (!testMode && minutesSinceRelease < minReleaseSpacingMinutes) {
+              console.log(`Continuity attempt ${attempt}: last release started ${minutesSinceRelease.toFixed(1)}m ago; inside the ${minReleaseSpacingMinutes}m spacing, not dispatching.`);
               continue;
             }
 

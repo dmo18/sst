@@ -6,11 +6,12 @@ const workflow = fs.readFileSync(new URL('../../.github/workflows/refresh-pages.
 const watcher = fs.readFileSync(new URL('../../.github/workflows/status-freshness-watch.yml', import.meta.url), 'utf8');
 const continuity = fs.readFileSync(new URL('../../.github/workflows/refresh-continuity.yml', import.meta.url), 'utf8');
 
-test('scheduled status refresh runs every five minutes', () => {
-  assert.match(workflow, /cron:\s*["']\*\/5 \* \* \* \*["']/);
+test('scheduled status refresh runs every ten minutes, offset from the hour', () => {
+  assert.match(workflow, /cron:\s*["']3-59\/10 \* \* \* \*["']/);
+  assert.doesNotMatch(workflow, /cron:\s*["']\*\/5 /);
 });
 
-test('freshness recovery is data-only and preserves the five-minute schedule', () => {
+test('freshness recovery is data-only and shares the scheduled release path', () => {
   assert.match(workflow, /repository_dispatch:\s*\n\s+types: \[freshness-recovery\]/);
   assert.match(workflow, /github\.event_name != 'schedule' && github\.event_name != 'repository_dispatch'/);
   assert.match(workflow, /github\.event_name == 'schedule' \|\| github\.event_name == 'repository_dispatch'/);
@@ -70,7 +71,11 @@ test('push/schedule plus independent hourly seed keep renewable bounded freshnes
   assert.match(continuity, /const delaySeconds = testMode \? 0 : 330;/);
   assert.match(continuity, /group:\s*bounded-refresh-continuity\s*\n\s*cancel-in-progress:\s*true/);
   assert.match(continuity, /runs\?event=schedule&per_page=20/);
-  assert.match(continuity, /takeoverAfterMinutes = 12/);
+  // A release that can still finish is never interrupted, and releases are
+  // spaced so that Pages receives about six deployments an hour.
+  assert.match(continuity, /takeoverAfterMinutes = 45/);
+  assert.match(continuity, /minReleaseSpacingMinutes = 9/);
+  assert.match(continuity, /minutesSinceRelease < minReleaseSpacingMinutes/);
   assert.match(continuity, /event_type: 'freshness-recovery'/);
   assert.match(continuity, /no blind dispatch/);
   assert.match(continuity, /if \(testMode\)/);

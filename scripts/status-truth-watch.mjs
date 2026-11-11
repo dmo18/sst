@@ -6,7 +6,10 @@ import { resolveDeployedStatus } from './deployed-status.mjs';
 
 const DEFAULT_STATUS_URL = 'https://dmo18.github.io/sst/status.json';
 const REQUEST_TIMEOUT_MS = 8_000;
-const STALE_AFTER_MINUTES = 10;
+// Releases are spaced about ten minutes apart, so a payload is routinely up to
+// ten minutes old. Recovery starts when one scheduled release has clearly been
+// missed, still ahead of the 20 minute freshness warning.
+const STALE_AFTER_MINUTES = 14;
 const MAX_CONCURRENCY = 8;
 
 function cacheBust(url, token) {

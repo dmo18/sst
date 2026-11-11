@@ -31,6 +31,8 @@ A top-to-bottom review compared every enabled provider against what the vendor p
 
 #### Changed
 
+- Pages deployments are spaced to about six an hour instead of eleven. The release cron runs every ten minutes, and the freshness watcher and the continuity keeper never dispatch within nine minutes of the previous release start, whatever its outcome. The watcher treats the payload as stale at 14 minutes, and recovery takes over a release only after 45 minutes instead of 12, so it no longer cancels a release that can still finish.
+- `CLAUDE.md` now records two deliberate exceptions it previously contradicted: the browser re-read of official Statuspage summaries, and severity-first ordering on the compact tile.
 - Microsoft 365 is read from the JSON documents behind Microsoft's public status page (`status.cloud.microsoft/api/posts/mac`, `ppac`, `m365Consumer`): the Microsoft 365 admin center, the Power Platform admin center and each consumer workload. No tenant, token or sign-in is involved. The provider is operational only when Microsoft publishes every one of those services as healthy, and remains unknown on a missing document, an unrecognized state or a changed shape.
 - ConnectWise and HaloPSA are read from the Status.io public API, including its numeric lifecycle codes, affected components and locations.
 - N-able and Cove Data Protection are read from the public dashboard data document, scoped to Americas and global services.

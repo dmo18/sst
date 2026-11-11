@@ -14,9 +14,10 @@ Fixed in the review: incident lifecycle read from prose, component de-duplicatio
 
 Open, needing an owner decision:
 
-- [ ] Deployment volume. Three triggers (the five minute cron, the freshness watcher and the continuity keeper) attempt roughly 11 Pages deployments an hour. From October 31 to November 10 Pages accepted same-commit deployments without publishing them. A single ten minute schedule with one watcher that does not cancel releases would stay inside the 20 minute threshold with about half the deployments. Both watchers also cancel release runs, which `CLAUDE.md` forbids.
-- [ ] Browser vendor requests. `CLAUDE.md` forbids browser-side vendor feed calls, while `src/liveStatusTruth.ts` re-reads Statuspage vendors from the browser and a release gate verifies that it does. The re-read now uses the collector's parser, so it is correct, but the rule and the feature still contradict each other. One of them should change.
-- [ ] Compact board order. `CLAUDE.md` requires newest first. `src/compactWallboard.ts` sorts by severity first and a test asserts that order.
+- [x] Deployment volume. The release cron now runs every ten minutes, and the watcher and the continuity keeper never dispatch within nine minutes of the previous release start, whatever its outcome: about six Pages deployments an hour instead of eleven. The watcher treats the payload as stale at 14 minutes. A release is taken over only after 45 minutes, so recovery no longer cancels a release that can still finish.
+- [ ] Watch the first days at the new cadence: confirm the published payload age stays under 20 minutes and that Pages keeps publishing same-commit deployments.
+- [x] Browser vendor requests. The re-read of official Statuspage summaries is kept, because it shows a new incident within one browser refresh instead of one release interval, and it now uses the collector's parser. `CLAUDE.md` records it as the single permitted exception.
+- [x] Compact board order. Severity first is kept for the 458 by 291 tile, where two or three rows are visible and the most urgent incident should lead. `CLAUDE.md` records it as the exception to newest first.
 - [ ] CrowdStrike publishes service status only behind its authenticated support portal. It remains `unknown` by design.
 - [ ] Bitwarden and Syncro (Hund.io) and Entra (Azure status page) are still read from rendered page text. No structured public document was found for them.
 - [ ] The 72 hour evidence limit drops an incident the vendor still lists as open when the vendor has not updated it for three days. The provider then shows component degradation without the incident text.
