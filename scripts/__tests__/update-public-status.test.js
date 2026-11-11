@@ -6,6 +6,7 @@ import {
   dedupeIncidentEntries,
   discoverFeedUrls,
   entraConclusion,
+  htmlIssueConclusion,
   loadPublicProvider,
   parseFeedEntries,
   parsePublicFeed,
@@ -85,34 +86,121 @@ test('statuspage API URLs resolve to public pages and feeds', () => {
   ]);
 });
 
-test('Microsoft 365 uses the official public RSS only as an incident signal', () => {
+test('Microsoft 365 uses the official public status JSON, without credentials', () => {
   const source = resolvePublicSource({ id: 'microsoft365', url: 'https://invalid.example', sourceType: 'limited-microsoft' });
-  assert.equal(source.mode, 'feed');
-  assert.equal(source.url, 'https://status.cloud.microsoft/api/feed/mac');
-  assert.equal(source.allowEmpty, true);
-  assert.equal(source.confirmHealthyFromFeed, false);
-  assert.equal(source.sourceName, 'Microsoft 365 public incident RSS');
+  assert.equal(source.mode, 'microsoft-public-json');
+  assert.equal(source.url, 'https://status.cloud.microsoft/api/posts/mac');
+  assert.equal(source.pageUrl, 'https://status.cloud.microsoft/');
+  assert.equal(source.sourceName, 'Microsoft official public service status');
 });
 
-test('clear Microsoft public feed remains available without asserting Microsoft 365 workload health', async () => {
+test('a readable feed without health confirmation stays unknown rather than operational', async () => {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async () => response('<?xml version="1.0"?><rss><channel></channel></rss>', 200, 'application/rss+xml');
   try {
-    const provider = {
-      id: 'microsoft365',
-      name: 'Microsoft 365 public status',
-      category: 'Cloud',
-      priority: 100,
-      sourceType: 'limited-microsoft',
-      url: 'https://status.cloud.microsoft/api/'
-    };
-    const result = await parsePublicFeed(provider, resolvePublicSource(provider));
+    const provider = { id: 'example-feed', name: 'Example', category: 'Cloud', priority: 50, sourceType: 'rss', url: 'https://status.example/feed.rss' };
+    const source = { mode: 'feed', url: provider.url, sourceName: 'Example incident RSS', allowEmpty: true, confirmHealthyFromFeed: false };
+    const result = await parsePublicFeed(provider, source);
     assert.equal(result.source_state, 'available');
     assert.equal(result.service_state, 'unknown');
     assert.equal(result.color, 'blue');
     assert.equal(result.ok, true);
     assert.match(result.status, /incident feed is readable; no active incident was found/i);
     assert.match(result.message, /does not confirm current component health/i);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+const microsoftProvider = { id: 'microsoft365', name: 'Microsoft 365 public status', category: 'Cloud', priority: 100, sourceType: 'limited-microsoft', url: 'https://status.cloud.microsoft/api/' };
+const microsoftPost = (overrides = {}) => ({ Id: 'post-1', AuthoredDateTime: '2026-10-13T22:33:33+00:00', LastUpdatedTime: new Date().toISOString(), Title: '', Message: '<div>This site is updated when service issues occur.</div>', Status: 'Available', ...overrides });
+const microsoftWorkload = (name, overrides = {}) => ({ ServiceDisplayName: name, ServiceWorkloadName: name.replace(/\W+/g, ''), Id: null, AuthoredDateTime: '0001-01-01T00:00:00+00:00', LastUpdatedTime: new Date().toISOString(), Title: '', Message: '', Status: 'Operational', ...overrides });
+
+function microsoftFetch(documents) {
+  const requested = [];
+  const fetchImpl = async url => {
+    const key = String(url).split('/').at(-1);
+    requested.push(key);
+    const document = documents[key];
+    if (document === undefined) return response('Not found', 404, 'text/plain');
+    return response(typeof document === 'string' ? document : JSON.stringify(document), 200, 'application/json; charset=utf-8');
+  };
+  return { fetchImpl, requested };
+}
+
+test('Microsoft 365 is operational only when Microsoft publishes every public service as healthy', async () => {
+  const originalFetch = globalThis.fetch;
+  const { fetchImpl, requested } = microsoftFetch({
+    mac: microsoftPost(),
+    ppac: microsoftPost({ Id: 'post-2' }),
+    m365Consumer: [microsoftWorkload('Outlook.com'), microsoftWorkload('OneDrive'), microsoftWorkload('Microsoft Teams Free')]
+  });
+  globalThis.fetch = fetchImpl;
+  try {
+    const result = await loadPublicProvider(microsoftProvider);
+    assert.deepEqual(requested.sort(), ['m365Consumer', 'mac', 'ppac']);
+    assert.equal(result.service_state, 'operational');
+    assert.equal(result.source_state, 'available');
+    assert.equal(result.source_type, 'microsoft-public-json');
+    assert.equal(result.incidents.length, 0);
+    assert.deepEqual(result.component_status.map(item => item.name), ['Microsoft 365 admin center', 'Power Platform admin center', 'Outlook.com', 'OneDrive', 'Microsoft Teams Free']);
+    assert.ok(result.component_status.every(item => item.status === 'operational'));
+    assert.match(result.status, /admin center available and 3 consumer services operational/i);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('Microsoft 365 publishes a broad admin-center post and a degraded workload as incidents', async () => {
+  const originalFetch = globalThis.fetch;
+  const { fetchImpl } = microsoftFetch({
+    mac: microsoftPost({ Id: 'MO1234567', Title: 'Users may be unable to access Exchange Online', Message: '<p>We are investigating reports that users are unable to access mailboxes.</p>', Status: 'Service degradation' }),
+    ppac: microsoftPost({ Id: 'post-2' }),
+    m365Consumer: [microsoftWorkload('Outlook.com', { Status: 'Service degradation', Message: 'Some users may be unable to send email.' }), microsoftWorkload('OneDrive')]
+  });
+  globalThis.fetch = fetchImpl;
+  try {
+    const result = await loadPublicProvider(microsoftProvider);
+    assert.equal(result.service_state, 'major');
+    assert.equal(result.incidents.length, 2);
+    const broad = result.incidents.find(item => item.id === 'microsoft365:MO1234567');
+    assert.equal(broad.title, 'Users may be unable to access Exchange Online');
+    assert.equal(broad.color, 'red');
+    assert.equal(broad.url, 'https://status.cloud.microsoft/');
+    assert.doesNotMatch(broad.note, /<p>/);
+    const workload = result.incidents.find(item => /Outlook\.com/.test(item.title));
+    assert.equal(workload.affected_service, 'Outlook.com');
+    assert.equal(result.component_status.find(item => item.name === 'Outlook.com').status, 'service_degradation');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('Microsoft 365 fails closed on a missing document, an unknown state, or a changed shape', async () => {
+  const originalFetch = globalThis.fetch;
+  try {
+    globalThis.fetch = microsoftFetch({ mac: microsoftPost(), ppac: microsoftPost() }).fetchImpl;
+    const missing = await loadPublicProvider(microsoftProvider);
+    assert.equal(missing.service_state, 'unknown');
+    assert.equal(missing.source_state, 'unavailable');
+    assert.equal(missing.ok, false);
+
+    globalThis.fetch = microsoftFetch({ mac: microsoftPost(), m365Consumer: [microsoftWorkload('Outlook.com', { Status: 'Investigating' })] }).fetchImpl;
+    const unknown = await loadPublicProvider(microsoftProvider);
+    assert.equal(unknown.service_state, 'unknown');
+    assert.equal(unknown.source_state, 'limited');
+    assert.match(unknown.message, /unrecognized state/i);
+
+    globalThis.fetch = microsoftFetch({ mac: { posts: [] }, m365Consumer: [microsoftWorkload('Outlook.com')] }).fetchImpl;
+    const drifted = await loadPublicProvider(microsoftProvider);
+    assert.equal(drifted.service_state, 'unknown');
+    assert.equal(drifted.source_state, 'limited');
+    assert.match(drifted.message, /do not match the expected shape/i);
+
+    // The optional Power Platform document may be absent without blocking a conclusion.
+    globalThis.fetch = microsoftFetch({ mac: microsoftPost(), m365Consumer: [microsoftWorkload('Outlook.com')] }).fetchImpl;
+    const withoutOptional = await loadPublicProvider(microsoftProvider);
+    assert.equal(withoutOptional.service_state, 'operational');
   } finally {
     globalThis.fetch = originalFetch;
   }
@@ -214,21 +302,21 @@ test('legacy Entra RSS parsing remains scoped when exercised explicitly', async 
 
 test('verified public source overrides use current first-party sources', () => {
   const expectedModes = {
-    microsoft365: 'feed',
-    ringcentral: 'status-html',
-    sophos: 'status-html',
-    'bitdefender-gravityzone': 'status-html',
+    microsoft365: 'microsoft-public-json',
+    ringcentral: 'ringcentral-json',
+    sophos: 'statuscast-json',
+    'bitdefender-gravityzone': 'statuspage-json',
     bitwarden: 'status-html',
-    'cove-data-protection': 'status-html',
+    'cove-data-protection': 'statusdashboard-json',
     crashplan: 'status-html',
     fortinet: 'status-html',
-    keeper: 'status-html',
+    keeper: 'statuspage-json',
     malwarebytes: 'status-html',
     superops: 'betterstack-json',
     syncro: 'status-html',
     kaseya: 'statuspage-json',
     okta: 'status-html',
-    salesforce: 'status-html',
+    salesforce: 'salesforce-json',
     zendesk: 'status-html',
     backblaze: 'firehydrant-json',
     proofpoint: 'status-html',
@@ -243,7 +331,7 @@ test('verified public source overrides use current first-party sources', () => {
     assert.equal(source.mode, expectedMode);
     assert.match(source.url, /^https:\/\//);
   }
-  assert.equal(additionalPublicOverrides.microsoft365.confirmHealthyFromFeed, false);
+  assert.equal(additionalPublicOverrides.microsoft365.url, 'https://status.cloud.microsoft/api/posts/mac');
   assert.equal(additionalPublicOverrides.kaseya.regionScope, 'us');
   assert.equal(additionalPublicOverrides.okta.regionScope, 'us');
   assert.equal(additionalPublicOverrides.crowdstrike.healthAccess, 'authenticated');
@@ -590,7 +678,10 @@ test('N-able parser produces bounded records with service and timestamps', () =>
 });
 
 test('repaired provider sources use official operational dashboards', () => {
-  assert.equal(resolvePublicSource({ id: 'n-able', url: 'https://status.n-able.com/api/v2/summary.json', sourceType: 'statuspage' }).url, 'https://uptime.n-able.com/');
+  const nableSource = resolvePublicSource({ id: 'n-able', url: 'https://status.n-able.com/api/v2/summary.json', sourceType: 'statuspage' });
+  assert.equal(nableSource.mode, 'statusdashboard-json');
+  assert.equal(nableSource.url, 'https://uptime.n-able.com/api/v1/private/dashboard/data/');
+  assert.equal(nableSource.pageUrl, 'https://uptime.n-able.com/');
   assert.equal(resolvePublicSource({ id: 'cisco-umbrella', url: 'https://status.umbrella.com/api/v2/summary.json', sourceType: 'statuspage' }).url, 'https://status.sse.cisco.com/');
   const dockerSource = resolvePublicSource({ id: 'docker', url: 'https://status.docker.com/api/v2/summary.json', sourceType: 'statuspage' });
   assert.equal(dockerSource.url, 'https://www.dockerstatus.com/');
@@ -598,31 +689,65 @@ test('repaired provider sources use official operational dashboards', () => {
 });
 
 
-test('N-able and Cove share one public uptime page request without mixing incidents', async () => {
-  const fixture = `<main>Active Incidents
-    Active Incident ID: 301 Start: Jul 31, 2026 15:00:00 UTC End: N/A Severity: Minor Outage Status: Investigating
-    N-able N-central (All Regions) Customers may see delayed policy updates.
-    Services Impacted N-central (All Regions) Timeline Update Jul 31, 2026 16:00:00 UTC Mitigation is in progress.
-    Active Incident ID: 302 Start: Jul 31, 2026 15:30:00 UTC End: N/A Severity: Minor Outage Status: Identified
-    N-able Cove Data Protection Americas Customers may see delayed backup jobs.
-    Services Impacted Cove Data Protection (Americas) Timeline Update Jul 31, 2026 16:10:00 UTC Mitigation is in progress.
-    Resolved Incidents</main>`;
+function nableBoard({ incidents = [], maintenance = [], statuses = {} } = {}) {
+  const names = ['N-central (hosted version) (Americas)', 'N-central (hosted version) (Europe)', 'Cove Data Protection (Americas)', 'Cove Data Protection (Europe)', 'N-sight RMM (Americas)', 'N-able Login (MSP SSO)'];
+  const groupOf = name => /\((Americas|Europe|APAC)\)/.exec(name)?.[1] || 'Global';
+  return JSON.stringify({ objects: [{
+    global_status: incidents.length ? 2 : 0,
+    services: names.map((name, index) => ({ id: String(index), name, group: groupOf(name), status: statuses[name] ?? 0, timeline: [] })),
+    events: { incident: incidents, maintenance_planned: maintenance }
+  }] });
+}
+const recentUtc = hoursAgo => new Date(Date.now() - hoursAgo * 3600000).toISOString().slice(0, 19);
+
+test('N-able and Cove share one dashboard request without mixing incidents or regions', async () => {
+  const fixture = nableBoard({
+    statuses: { 'N-central (hosted version) (Americas)': 2, 'Cove Data Protection (Europe)': 2 },
+    incidents: [
+      { id: 301, type: 'incident', status: 'Monitoring', start: recentUtc(30), end: null, severity: { sev_value: 'Major Outage' },
+        description: '**N-able N-central**\r\n\r\n**Hosted servers unreachable**\r\nCustomers cannot sign in.',
+        services: ['N-central (hosted version) (Americas)', 'N-central (hosted version) (Europe)'],
+        updates: [{ date: recentUtc(2), status: 'Update', update: 'A fix is planned and the rollout will be completed tonight.' }] },
+      { id: 302, type: 'incident', status: 'Investigating', start: recentUtc(5), end: null, severity: { sev_value: 'Minor Performance Issue' },
+        description: '**Cove Data Protection**\r\n\r\n**Delayed backup jobs**', services: ['Cove Data Protection (Europe)'], updates: [] }
+    ],
+    maintenance: [{ id: 401, type: 'maintenance', status: 'Planning', start: recentUtc(-24), end: recentUtc(-30), severity: { sev_value: 'Minor Performance Issue' },
+      description: 'Cove storage maintenance', services: ['Cove Data Protection (Americas)'], updates: [] }]
+  });
+  const originalFetch = globalThis.fetch;
   let fetches = 0;
   globalThis.fetch = async () => {
     fetches += 1;
-    return response(fixture);
+    return response(fixture, 200, 'application/json');
   };
-  const [nable, cove] = await Promise.all([
-    loadPublicProvider({ id: 'n-able', name: 'N-able', category: 'MSP Platforms', priority: 86, sourceType: 'statuspage', url: 'https://status.n-able.com/api/v2/summary.json' }),
-    loadPublicProvider({ id: 'cove-data-protection', name: 'Cove Data Protection', category: 'Backup', priority: 78, sourceType: 'statuspage', url: 'https://status.covedataprotection.com/api/v2/summary.json' })
-  ]);
-  assert.equal(fetches, 1);
-  assert.equal(nable.incidents.length, 1);
-  assert.match(nable.incidents[0].title, /N-central/i);
-  assert.doesNotMatch(nable.incidents[0].note, /Cove Data Protection/i);
-  assert.equal(cove.incidents.length, 1);
-  assert.match(cove.incidents[0].title, /Cove Data Protection Americas/i);
-  assert.doesNotMatch(cove.incidents[0].note, /N-central/i);
+  try {
+    const [nable, cove] = await Promise.all([
+      loadPublicProvider({ id: 'n-able', name: 'N-able', category: 'MSP Platforms', priority: 86, sourceType: 'statuspage', url: 'https://status.n-able.com/api/v2/summary.json' }),
+      loadPublicProvider({ id: 'cove-data-protection', name: 'Cove Data Protection', category: 'Backup', priority: 78, sourceType: 'statuspage', url: 'https://status.covedataprotection.com/api/v2/summary.json' })
+    ]);
+    assert.equal(fetches, 1);
+    assert.equal(nable.service_state, 'major');
+    assert.equal(nable.incidents.length, 1);
+    assert.match(nable.incidents[0].title, /N-central: Hosted servers unreachable/);
+    assert.equal(nable.incidents[0].affected_service, 'N-central (hosted version) (Americas)');
+    assert.equal(nable.component_status.find(item => item.name === 'N-central (hosted version) (Americas)').status, 'major_outage');
+    assert.ok(!nable.component_status.some(item => /Cove|Europe/.test(item.name)));
+    // A Europe-only Cove incident must not degrade the Americas view.
+    assert.equal(cove.service_state, 'operational');
+    assert.equal(cove.incidents.length, 0);
+    assert.deepEqual(cove.component_status.map(item => item.name), ['Cove Data Protection (Americas)']);
+    assert.equal(cove.maintenance.length, 1);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('a JSON source that no longer matches its adapter fails closed instead of being keyword-scanned', () => {
+  const drifted = JSON.stringify({ objects: [{ status: 'Operational Operational Operational', note: 'all systems operational' }] });
+  const provider = { id: 'cove-data-protection', name: 'Cove Data Protection' };
+  const conclusion = htmlIssueConclusion(provider, resolvePublicSource({ ...provider, sourceType: 'statuspage', url: 'https://status.covedataprotection.com/api/v2/summary.json' }), drifted);
+  assert.equal(conclusion.kind, 'limited');
+  assert.match(conclusion.message, /did not match its expected document shape/i);
 });
 
 

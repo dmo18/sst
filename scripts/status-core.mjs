@@ -12,9 +12,12 @@ export const maxRetryDelayMs = 1500;
 
 export function colorFromText(value) {
   const text = String(value || '').toLowerCase();
-  if (/critical|major|outage|unavailable|down|severe/.test(text)) return 'red';
-  if (/minor|degrad|partial|warning|investigat|monitor|issue|disruption|error|elevated|latency|delayed|intermittent/.test(text)) return 'amber';
-  if (/none|operational|ok|good|normal|resolved|available|all systems operational/.test(text)) return 'green';
+  // Negated health phrases are problems, not health: "not operational",
+  // "not available", "abnormal". Check them before any healthy keyword.
+  if (/\b(?:not|non|no longer|isn't|aren't)[\s-]+(?:fully\s+)?(?:operational|available|working|functional|responding|reachable)\b|\b(?:abnormal|inoperative|unresponsive|broken)\b/.test(text)) return 'red';
+  if (/\b(?:critical|major|outage|unavailable|down|downtime|severe)\b/.test(text)) return 'red';
+  if (/\b(?:minor|degrad\w*|partial\w*|warning|investigat\w*|monitor\w*|issues?|disruption|disrupted|errors?|elevated|latency|delay\w*|intermittent)\b/.test(text)) return 'amber';
+  if (/\b(?:none|operational|ok|good|normal|resolved|available|all systems operational)\b/.test(text)) return 'green';
   return 'blue';
 }
 
@@ -133,11 +136,29 @@ export async function fetchSource(provider, accept = '*/*', fetchImpl = fetch, s
   throw new Error('unreachable');
 }
 
+const CLOSED_LIFECYCLE = /^(?:resolved|completed|complete|postmortem|post-mortem|closed|cancelled|canceled|fixed|restored|recovered)$/;
+const PLANNED_LIFECYCLE = /^(?:scheduled|planned|upcoming|planning|not[_ -]?started|in[_ -]?progress[_ -]?maintenance|maintenance|under[_ -]?maintenance|verifying)$/;
+const CLOSED_TITLE = /^\s*(?:\[\s*)?(?:resolved|completed|closed|cancelled|canceled|postmortem|post-mortem|rca)\b\s*[\]:\-–—]/i;
+const PLANNED_TITLE = /\b(?:scheduled maintenance|planned maintenance|maintenance window|maintenance notification|scheduled event|planned (?:upgrade|update|release|work|change)|deprecation notice|end of (?:life|support)|announcement|informational)\b/i;
+const IMPACT_TITLE = /\b(?:outage|degrad\w*|disrupt\w*|errors?|latency|incident|unavailable|failure|failing|down|delays?|delayed|unable|emergency|unplanned)\b/i;
+
+function lifecycleToken(value) {
+  return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+// An incident is active when the vendor's own lifecycle says so. The note is
+// free prose written while the incident is open ("a fix is planned", "once the
+// rollout is completed", "tickets cannot be closed"), so it must never decide
+// whether the incident is over. Only the lifecycle status and an explicit title
+// prefix may close an incident, and only the title and status may classify it
+// as planned work.
 export function activeIncident(item, now = Date.now(), maxAgeDays = INCIDENT_MAX_AGE_DAYS) {
   if (!incidentEvidenceIsCurrent(item, now, maxAgeDays)) return false;
-  const text = `${item.title} ${item.note} ${item.status}`.toLowerCase();
-  if (/resolved|completed|postmortem|closed|fixed/.test(text)) return false;
-  if (/scheduled|maintenance|planned|announcement|informational|deprecation/.test(text) && !/outage|degrad|disruption|error|latency|incident/.test(text)) return false;
+  const status = lifecycleToken(item.status);
+  const title = String(item.title || '');
+  if (CLOSED_LIFECYCLE.test(status) || CLOSED_TITLE.test(title)) return false;
+  const planned = PLANNED_LIFECYCLE.test(status) || PLANNED_TITLE.test(title);
+  if (planned && !IMPACT_TITLE.test(title)) return false;
   return item.color !== 'green';
 }
 

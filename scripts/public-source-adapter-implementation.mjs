@@ -337,6 +337,10 @@ export function providerSpecificConclusion(provider, html) {
   }
   const detailed = providerIncidentConclusion(provider, html);
   if (detailed) return normalizeCurrentPageConclusion(provider, detailed);
+  // The text rules below were written for rendered pages. A JSON document that
+  // no adapter recognized has changed shape: conclude nothing rather than match
+  // words inside field values.
+  if (/^\s*[\[{]/.test(String(html || ''))) return null;
 
   switch (provider.id) {
     case 'shopify':

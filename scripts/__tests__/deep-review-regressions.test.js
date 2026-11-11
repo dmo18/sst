@@ -39,7 +39,8 @@ test('Statuspage component slicing happens after region filtering and excludes f
   }), { id: 'cloudflare', name: 'Cloudflare' }, { regionScope: 'us', url: 'https://status.example/api/v2/summary.json' });
   assert.equal(result.kind, 'component-state');
   assert.equal(result.color, 'amber');
-  assert.deepEqual(result.components.map(item => item.name), ['Ashburn, VA, United States - (IAD)', 'Atlanta, GA, United States - (ATL)']);
+  // Problem components are listed first so a bounded list can never cut them.
+  assert.deepEqual(result.components.map(item => item.name), ['Atlanta, GA, United States - (ATL)', 'Ashburn, VA, United States - (IAD)']);
 });
 
 test('non-service product advisories cannot become outages even when the historical impact field is major', () => {

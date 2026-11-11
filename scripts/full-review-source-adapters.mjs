@@ -26,6 +26,14 @@ export const fullReviewOverrides = {
     sourceName: '8x8 official StatusCast JSON',
     regionScope: 'us'
   },
+  sophos: {
+    mode: 'statuscast-json',
+    url: 'https://sophoscentral.status.page/summary.json',
+    pageUrl: 'https://sophoscentral.status.page/',
+    sourceName: 'Sophos Central official StatusCast JSON',
+    discoverFeeds: false,
+    regionScope: 'us'
+  },
   proofpoint: {
     mode: 'status-html',
     url: 'https://proofpoint.my.site.com/community/s/proofpoint-current-incidents',
@@ -148,6 +156,7 @@ export function parseStatusCastSummary(value, provider = {}, source = {}) {
   const json = safeJson(value);
   if (!json || typeof json !== 'object' || !('Status' in json) || !Array.isArray(json.UnresolvedIncidents)) return null;
 
+  const vendor = provider.name || '8x8';
   const incidents = [];
   let explicitNonUsCount = 0;
   let ignoredInformationalCount = 0;
@@ -176,11 +185,11 @@ export function parseStatusCastSummary(value, provider = {}, source = {}) {
     incidents.push({
       id: String(incident?.Id || incident?.ExternalId || ''),
       title,
-      note: note || '8x8 reports an active service-impacting incident.',
+      note: note || `${vendor} reports an active service-impacting incident.`,
       status: status || 'active',
       firstDetected,
       latestUpdate,
-      affectedService: /\bamericas\b/i.test(combined) ? 'Americas' : '8x8 services',
+      affectedService: /\bamericas\b/i.test(combined) ? 'Americas' : `${vendor} services`,
       color: statusCastColor(combined),
       url: incident?.ShortUrl || source.pageUrl || source.url,
       updates
@@ -198,14 +207,14 @@ export function parseStatusCastSummary(value, provider = {}, source = {}) {
         : '';
     return {
       kind: 'healthy',
-      status: `8x8 reports ${clean(json.StatusText || json.Status || 'normal service').toLowerCase()}${suffix}`,
+      status: `${vendor} reports ${clean(json.StatusText || json.Status || 'normal service').toLowerCase()}${suffix}`,
       maintenance: [],
       components: []
     };
   }
 
   if (explicitNonUsCount === json.UnresolvedIncidents.length && explicitNonUsCount > 0) {
-    return { kind: 'healthy', status: '8x8 reports no active US-relevant service incidents', maintenance: [], components: [] };
+    return { kind: 'healthy', status: `${vendor} reports no active US-relevant service incidents`, maintenance: [], components: [] };
   }
 
   if (/\b(?:degraded|performance|outage|unavailable|disruption|issue)\b/i.test(overall)) {
@@ -213,9 +222,9 @@ export function parseStatusCastSummary(value, provider = {}, source = {}) {
       kind: 'component-state',
       status: clean(json.StatusText || json.Status),
       color: statusCastColor(overall),
-      message: '8x8 StatusCast reports a current service-impacting state without a specific US incident record in the summary.',
+      message: `${vendor} StatusCast reports a current service-impacting state without a specific US incident record in the summary.`,
       maintenance: [],
-      components: [{ name: '8x8 service status', status: clean(json.Status || json.StatusText) }]
+      components: [{ name: `${vendor} service status`, status: clean(json.Status || json.StatusText) }]
     };
   }
 
@@ -450,7 +459,7 @@ export function fullReviewConclusion(provider, value) {
   if (!source) return null;
   if (provider.id === 'kaseya' || provider.id === 'lastpass' || provider.id === 'stripe') return parseStatuspageSummary(value, provider, source);
   if (provider.id === 'paypal') return parsePayPalProductionStatus(value);
-  if (provider.id === '8x8') return parseStatusCastSummary(value, provider, source);
+  if (provider.id === '8x8' || provider.id === 'sophos') return parseStatusCastSummary(value, provider, source);
   if (provider.id === 'proofpoint') return parseProofpointCurrentIncidents(value, provider);
   if (provider.id === 'backblaze') return parseFireHydrantPayload(value, provider, source);
   if (provider.id === 'crowdstrike' || provider.id === 'intermedia') return parseAuthenticatedStatusReference(value, provider);

@@ -5,18 +5,17 @@ import {
 } from './public-source-adapter-implementation.mjs';
 import { SourceAdapterRegistry } from './source-adapter-sdk.mjs';
 
-// Microsoft's unauthenticated public incident feed is an incident/fallback signal, not
-// authoritative health for Exchange, Teams, SharePoint, OneDrive, Intune, Apps,
-// Defender, Power Platform, or a tenant. Keep active incident parsing, but do not
-// convert an empty/readable feed into an operational Microsoft 365 conclusion.
+// Microsoft 365 is read from the JSON documents behind Microsoft's own public
+// status page (admin center, Power Platform admin center, consumer workloads).
+// They need no tenant or credential. They describe Microsoft's public status,
+// not the health of an individual tenant, and the provider is labelled that way.
 implementationAdditionalPublicOverrides.microsoft365 = {
-  mode: 'feed',
-  url: 'https://status.cloud.microsoft/api/feed/mac',
+  mode: 'microsoft-public-json',
+  url: 'https://status.cloud.microsoft/api/posts/mac',
   pageUrl: 'https://status.cloud.microsoft/',
-  sourceName: 'Microsoft 365 public incident RSS',
-  maxAgeHours: 336,
-  allowEmpty: true,
-  confirmHealthyFromFeed: false
+  sourceName: 'Microsoft official public service status',
+  discoverFeeds: false,
+  regionScope: 'global'
 };
 
 const registry = new SourceAdapterRegistry().register({

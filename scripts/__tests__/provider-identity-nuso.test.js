@@ -35,15 +35,16 @@ test('NUSO replaces the non-canonical Datto raw slot and remains first-class in 
   assert.ok(nuso.services.includes('CPaaS API'));
 });
 
-test('NUSO uses the normal first-party Statuspage adapter and history feeds', () => {
+test('NUSO uses the first-party Statuspage JSON adapter and history feeds', () => {
   const source = resolvePublicSource({
     id: 'nuso',
     name: 'NUSO',
     sourceType: 'statuspage',
     url: 'https://status.nuso.cloud/api/v2/summary.json'
   });
-  assert.equal(source.mode, 'status-html');
-  assert.equal(source.url, 'https://status.nuso.cloud/');
+  assert.equal(source.mode, 'statuspage-json');
+  assert.equal(source.url, 'https://status.nuso.cloud/api/v2/summary.json');
+  assert.equal(source.pageUrl, 'https://status.nuso.cloud/');
   assert.deepEqual(source.feedCandidates, [
     'https://status.nuso.cloud/history.rss',
     'https://status.nuso.cloud/history.atom'
