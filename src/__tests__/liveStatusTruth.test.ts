@@ -29,7 +29,7 @@ function provider(overrides: Partial<ProviderStatus> = {}): ProviderStatus {
 function payload(providerStatus: ProviderStatus, incidents: StatusPayload['incidents'] = []): StatusPayload {
   return {
     schema_version: 3,
-    generated_at: '2026-08-12T13:49:53.565Z',
+    generated_at: '2026-08-02T13:29:53.565Z',
     providers: [providerStatus],
     incidents,
     maintenance: [],
@@ -74,14 +74,14 @@ const liveClaudeIncident = {
     name: 'Degraded performance for multiple models',
     status: 'investigating',
     impact: 'minor',
-    created_at: '2026-08-12T13:50:28.458Z',
-    started_at: '2026-08-12T13:50:28.458Z',
-    updated_at: '2026-08-12T14:00:00.000Z',
+    created_at: '2026-08-02T13:30:28.458Z',
+    started_at: '2026-08-02T13:30:28.458Z',
+    updated_at: '2026-08-02T13:40:00.000Z',
     shortlink: 'https://stspg.io/example',
     incident_updates: [{
       status: 'investigating',
       body: 'We are investigating elevated errors on requests to multiple models.',
-      created_at: '2026-08-12T13:50:28.458Z',
+      created_at: '2026-08-02T13:30:28.458Z',
       affected_components: [
         { name: 'claude.ai', new_status: 'degraded_performance' },
         { name: 'Claude API (api.anthropic.com)', new_status: 'degraded_performance' },
@@ -93,8 +93,8 @@ const liveClaudeIncident = {
 
 test('browser live truth promotes a fresh static clear state when Claude opens an incident seconds later', () => {
   const staticPayload = payload(provider());
-  const observation = parseBrowserStatuspage(staticPayload.providers[0], liveClaudeIncident, '2026-08-12T14:01:00.000Z');
-  const merged = mergeBrowserLiveTruth(staticPayload, [observation], [], '2026-08-12T14:01:00.000Z');
+  const observation = parseBrowserStatuspage(staticPayload.providers[0], liveClaudeIncident, '2026-08-02T13:41:00.000Z');
+  const merged = mergeBrowserLiveTruth(staticPayload, [observation], [], '2026-08-02T13:41:00.000Z');
 
   assert.equal(merged.incidents.length, 1);
   assert.equal(merged.incidents[0].id, 'anthropic:rk6gkg2gwfny');
@@ -130,7 +130,7 @@ test('browser live truth removes a stale resolved incident only after a successf
     note: 'Old incident',
     source: staleProvider.source,
     url: 'https://status.claude.com/',
-    time: '2026-08-12T13:00:00.000Z',
+    time: '2026-08-02T12:00:00.000Z',
     color: 'amber',
     service_state: 'degraded',
     attention: 'action',
@@ -141,8 +141,8 @@ test('browser live truth removes a stale resolved incident only after a successf
     components: [{ id: '1', name: 'claude.ai', status: 'operational', group: false }],
     incidents: []
   };
-  const observation = parseBrowserStatuspage(staleProvider, clearSummary, '2026-08-12T15:00:00.000Z');
-  const merged = mergeBrowserLiveTruth(staticPayload, [observation], [], '2026-08-12T15:00:00.000Z');
+  const observation = parseBrowserStatuspage(staleProvider, clearSummary, '2026-08-02T13:43:00.000Z');
+  const merged = mergeBrowserLiveTruth(staticPayload, [observation], [], '2026-08-02T13:43:00.000Z');
 
   assert.equal(merged.incidents.length, 0);
   assert.equal(merged.providers[0].service_state, 'operational');
@@ -164,15 +164,44 @@ test('failed browser live truth leaves the audited static provider and incidents
     note: 'Static audited incident',
     source: staticProvider.source,
     url: 'https://status.claude.com/',
-    time: '2026-08-12T13:00:00.000Z',
+    time: '2026-08-02T12:00:00.000Z',
     color: 'amber',
     service_state: 'degraded',
     attention: 'action',
     priority: 62
   }]);
-  const merged = mergeBrowserLiveTruth(staticPayload, [], ['anthropic'], '2026-08-12T14:01:00.000Z');
+  const merged = mergeBrowserLiveTruth(staticPayload, [], ['anthropic'], '2026-08-02T13:41:00.000Z');
   assert.equal(merged.providers[0].service_state, 'degraded');
   assert.equal(merged.incidents[0].id, 'anthropic:static');
   assert.equal(merged.live_truth?.failure_provider_count, 1);
   assert.deepEqual(merged.live_truth?.failed_provider_ids, ['anthropic']);
+});
+
+test('the browser applies the collector scope rules instead of a looser reading', () => {
+  const kaseya = provider({ id: 'kaseya', name: 'Kaseya', source: 'https://status.kaseya.com/api/v2/summary.json' });
+  const at = '2026-08-02T13:40:00.000Z';
+  const observation = parseBrowserStatuspage(kaseya, {
+    page: { url: 'https://status.kaseya.com' },
+    status: { indicator: 'minor', description: 'Partially Degraded Service' },
+    components: [{ id: 'c1', name: 'Zinfandel (US West)', status: 'degraded_performance' }, { id: 'c2', name: 'Pinotage (EU1)', status: 'degraded_performance' }],
+    incidents: [
+      { id: 'cve', name: 'Library vulnerability (CVE-2026-0001)', status: 'identified', impact: 'none', created_at: at, updated_at: at, incident_updates: [{ status: 'identified', body: 'We are aware of a security vulnerability. No impact to service.', created_at: at }] },
+      { id: 'eu', name: 'EMEA portal errors', status: 'investigating', impact: 'minor', created_at: at, updated_at: at, incident_updates: [{ status: 'investigating', body: 'Customers in Europe may see errors.', created_at: at }] },
+      { id: 'old', name: 'Backup investigation', status: 'monitoring', impact: 'none', created_at: '2026-07-01T00:00:00Z', updated_at: '2026-07-01T00:00:00Z', incident_updates: [] },
+      { id: 'rmm', name: 'Datto RMM device sync delays', status: 'monitoring', impact: 'major', created_at: at, updated_at: at, incident_updates: [{ status: 'monitoring', body: 'A fix is planned for deployment tonight.', created_at: at }], components: [{ name: 'Zinfandel (US West)' }] }
+    ]
+  }, at);
+  assert.deepEqual(observation.incidents.map(item => item.id), ['kaseya:rmm']);
+  assert.equal(observation.serviceState, 'major');
+  assert.equal(observation.incidents[0].evidence_basis, undefined);
+  assert.deepEqual(observation.components.map(item => item.name), ['Zinfandel (US West)']);
+});
+
+test('a document the collector parser cannot conclude from leaves the audited record in place', () => {
+  assert.throws(() => parseBrowserStatuspage(provider(), { status: { indicator: 'none' } }));
+  assert.throws(() => parseBrowserStatuspage(provider(), {
+    status: { indicator: 'major', description: 'Major Service Outage' },
+    components: [{ id: 'a', name: 'API', status: 'operational' }],
+    incidents: [{ id: 'x', name: 'Incident', status: 'investigating', created_at: '2026-08-02T13:40:00Z', updated_at: '2026-08-02T13:40:00Z', incident_updates: [] }]
+  }), /no usable title/);
 });

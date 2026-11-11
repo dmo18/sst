@@ -1,11 +1,11 @@
+import { parseStatuspageSummary } from '../scripts/structured-source-adapters.mjs';
+import { fullReviewOverrides } from '../scripts/full-review-source-adapters.mjs';
+import { componentStatusIsProblem } from './componentStatus.ts';
 import type { AttentionLevel, ComponentStatus, Incident, ProviderStatus, ServiceState, StatusPayload, StatusSummary } from './types';
 
 const LIVE_TIMEOUT_MS = 6_000;
 const LIVE_CONCURRENCY = 8;
 const STATUSPAGE_SOURCE = /\/api\/v2\/summary\.json(?:$|\?)/i;
-const CLOSED_INCIDENT = new Set(['resolved', 'completed', 'postmortem']);
-const MAJOR_COMPONENT = new Set(['major_outage']);
-const DEGRADED_COMPONENT = new Set(['degraded_performance', 'partial_outage']);
 
 interface StatuspageIncidentUpdate {
   status?: string;
@@ -47,68 +47,38 @@ function text(value: unknown): string {
   return typeof value === 'string' ? value.replace(/\s+/g, ' ').trim() : '';
 }
 
-function incidentServiceState(incident: StatuspageIncident): Exclude<ServiceState, 'operational' | 'unknown'> {
-  const impact = text(incident.impact).toLowerCase();
-  if (impact === 'critical' || impact === 'major') return 'major';
-  return 'degraded';
+interface CollectorIncident {
+  id?: string;
+  title: string;
+  note?: string;
+  status?: string;
+  firstDetected?: string;
+  latestUpdate?: string;
+  affectedService?: string;
+  color?: string;
+  url?: string;
+  updates?: Array<{ status?: string; note?: string; at?: string }>;
 }
 
-function statuspageOverallState(summary: StatuspageSummary, incidents: Incident[], components: ComponentStatus[]): ServiceState {
-  const indicator = text(summary.status?.indicator).toLowerCase();
-  const componentMajor = components.some(component => MAJOR_COMPONENT.has(component.status));
-  const componentDegraded = components.some(component => DEGRADED_COMPONENT.has(component.status));
-  const incidentMajor = incidents.some(incident => incident.service_state === 'major');
-  if (indicator === 'critical' || indicator === 'major' || componentMajor || incidentMajor) return 'major';
-  if (indicator === 'minor' || componentDegraded || incidents.length) return 'degraded';
-  if (indicator === 'none') return 'operational';
-  return 'unknown';
-}
-
-function incidentUpdates(incident: StatuspageIncident) {
-  return (incident.incident_updates || [])
-    .map(update => ({
-      status: text(update.status) || undefined,
-      note: text(update.body),
-      at: text(update.updated_at || update.created_at) || undefined
-    }))
-    .filter(update => update.note);
-}
-
-function latestIncidentUpdate(incident: StatuspageIncident): StatuspageIncidentUpdate | null {
-  return [...(incident.incident_updates || [])]
-    .sort((a, b) => Date.parse(text(b.updated_at || b.created_at)) - Date.parse(text(a.updated_at || a.created_at)))[0] || null;
-}
-
-function affectedComponents(incident: StatuspageIncident): string[] {
-  const latest = latestIncidentUpdate(incident);
-  const fromUpdate = (latest?.affected_components || []).map(item => text(item.name)).filter(Boolean);
-  const fromIncident = (incident.components || []).map(item => text(item.name)).filter(Boolean);
-  return [...new Set([...fromUpdate, ...fromIncident])];
-}
-
-function liveIncident(provider: ProviderStatus, incident: StatuspageIncident, checkedAt: string): Incident | null {
+function liveIncident(provider: ProviderStatus, incident: CollectorIncident, checkedAt: string, pageUrl: string): Incident | null {
   const id = text(incident.id);
-  const title = text(incident.name);
-  const status = text(incident.status).toLowerCase();
-  if (!id || !title || CLOSED_INCIDENT.has(status)) return null;
-  const latest = latestIncidentUpdate(incident);
-  const serviceState = incidentServiceState(incident);
-  const updatedAt = text(incident.updated_at || latest?.updated_at || latest?.created_at || incident.created_at || incident.started_at) || checkedAt;
-  const startedAt = text(incident.started_at || incident.created_at) || updatedAt;
-  const pageUrl = provider.source.replace(/\/api\/v2\/summary\.json(?:\?.*)?$/i, '/');
-  const components = affectedComponents(incident);
+  const title = text(incident.title);
+  if (!id || !title) return null;
+  const serviceState = incident.color === 'red' ? 'major' : 'degraded';
+  const updatedAt = text(incident.latestUpdate) || text(incident.firstDetected) || checkedAt;
+  const startedAt = text(incident.firstDetected) || updatedAt;
   return {
     id: `${provider.id}:${id}`,
     providerId: provider.id,
     provider: provider.name,
     category: provider.category,
     title,
-    note: text(latest?.body) || `Official ${provider.name} status page reports an active incident.`,
+    note: text(incident.note) || `Official ${provider.name} status page reports an active incident.`,
     source: provider.source,
-    url: text(incident.shortlink) || pageUrl,
+    url: text(incident.url) || pageUrl,
     time: startedAt,
-    rawTime: startedAt,
-    status: status || 'active',
+    rawTime: updatedAt,
+    status: text(incident.status).toLowerCase() || 'active',
     color: serviceState === 'major' ? 'red' : 'amber',
     service_state: serviceState,
     attention: serviceState === 'major' ? 'critical' : 'action',
@@ -116,33 +86,46 @@ function liveIncident(provider: ProviderStatus, incident: StatuspageIncident, ch
     first_detected: startedAt,
     latest_update: updatedAt,
     observed_at: checkedAt,
-    evidence_basis: 'current-page',
     client_impact: provider.client_impact,
     technician_action: provider.technician_action,
-    affected_service: components.join(', ') || undefined,
-    updates: incidentUpdates(incident)
+    affected_service: text(incident.affectedService) || undefined,
+    updates: (incident.updates || [])
+      .map(update => ({ status: text(update.status) || undefined, note: text(update.note), at: text(update.at) || undefined }))
+      .filter(update => update.note)
   };
 }
 
+// The browser reads a vendor's Statuspage document with the collector's own
+// parser. There is one definition of an active, in-scope incident: the same
+// region scope, advisory and planned-work rules, evidence-age limit and
+// component handling apply here as in the audited payload. A document the
+// parser cannot conclude from is an error, which leaves the audited provider
+// record untouched.
 export function parseBrowserStatuspage(provider: ProviderStatus, body: unknown, checkedAt = new Date().toISOString()): LiveProviderObservation {
   if (!body || typeof body !== 'object') throw new Error('official Statuspage summary is not an object');
   const summary = body as StatuspageSummary;
-  if (!summary.status || !Array.isArray(summary.components) || !Array.isArray(summary.incidents))
-    throw new Error('official Statuspage summary is missing status, components, or incidents');
+  if (!summary.status || !Array.isArray(summary.components))
+    throw new Error('official Statuspage summary is missing status or components');
 
-  const components: ComponentStatus[] = summary.components
-    .filter(component => !component.group)
-    .map(component => ({ name: text(component.name) || 'Unnamed component', status: text(component.status).toLowerCase() || 'unknown' }));
-  const incidents = summary.incidents.map(item => liveIncident(provider, item, checkedAt)).filter((item): item is Incident => Boolean(item));
-  const problemComponentCount = components.filter(component => MAJOR_COMPONENT.has(component.status) || DEGRADED_COMPONENT.has(component.status)).length;
-  return {
-    providerId: provider.id,
-    checkedAt,
-    serviceState: statuspageOverallState(summary, incidents, components),
-    incidents,
-    components,
-    problemComponentCount
-  };
+  const pageUrl = provider.source.replace(/\/api\/v2\/summary\.json(?:\?.*)?$/i, '/');
+  const regionScope = (fullReviewOverrides as Record<string, { regionScope?: string } | undefined>)[provider.id]?.regionScope || 'us';
+  const conclusion = parseStatuspageSummary(body, { id: provider.id, name: provider.name }, { regionScope, pageUrl, url: provider.source });
+  if (!conclusion || conclusion.kind === 'limited')
+    throw new Error(conclusion?.message || 'official Statuspage summary did not yield a current conclusion');
+
+  const components: ComponentStatus[] = (conclusion.components || []).map(component => ({ name: component.name, status: component.status }));
+  const problemComponentCount = components.filter(component => componentStatusIsProblem(component.status)).length;
+  const incidents = conclusion.kind === 'issues'
+    ? (conclusion.incidents || []).map(item => liveIncident(provider, item, checkedAt, pageUrl)).filter((item): item is Incident => Boolean(item))
+    : [];
+  let serviceState: ServiceState;
+  if (conclusion.kind === 'issues') {
+    if (!incidents.length) throw new Error('official Statuspage summary listed incidents without usable identity');
+    serviceState = incidents.some(incident => incident.service_state === 'major') ? 'major' : 'degraded';
+  }
+  else if (conclusion.kind === 'component-state') serviceState = conclusion.color === 'red' ? 'major' : 'degraded';
+  else serviceState = 'operational';
+  return { providerId: provider.id, checkedAt, serviceState, incidents, components, problemComponentCount };
 }
 
 function liveAttention(provider: ProviderStatus, state: ServiceState): AttentionLevel {

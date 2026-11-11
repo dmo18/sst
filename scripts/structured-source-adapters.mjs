@@ -105,6 +105,8 @@ function componentStateColor(values, fallback = '') {
 }
 
 function safeJson(value) {
+  // Callers that already hold a parsed document (the browser) pass it as is.
+  if (value && typeof value === 'object') return value;
   try {
     return JSON.parse(String(value || ''));
   } catch {
