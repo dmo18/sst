@@ -52,7 +52,11 @@ jobs:
           const activeStates = new Set(['queued', 'in_progress', 'waiting', 'requested', 'pending']);
           const activeRuns = (payload.workflow_runs || []).filter(run => activeStates.has(run.status));
           const now = Date.now();
-          const takeoverAfterMinutes = 12;
+          // A release may legitimately run for its two 20 minute job budgets. Only
+          // a run older than that is wedged and may be taken over.
+          const takeoverAfterMinutes = 45;
+          // Never start a release sooner than this after the previous one began.
+          const minReleaseSpacingMinutes = 9;
           const runAgeMinutes = run => {
             const started = Date.parse(run.run_started_at || run.created_at || '');
             return Number.isFinite(started) ? Math.max(0, Math.floor((now - started) / 60_000)) : Number.POSITIVE_INFINITY;
@@ -60,6 +64,14 @@ jobs:
           const staleRuns = activeRuns.filter(run => runAgeMinutes(run) >= takeoverAfterMinutes);
           const oldestAge = activeRuns.length ? Math.max(...activeRuns.map(runAgeMinutes)) : 0;
           const active = activeRuns.length > 0;
+
+          const newestReleaseStart = Math.max(0, ...(payload.workflow_runs || [])
+            .map(run => Date.parse(run.run_started_at || run.created_at || ''))
+            .filter(Number.isFinite));
+          const minutesSinceRelease = newestReleaseStart ? (now - newestReleaseStart) / 60_000 : Number.POSITIVE_INFINITY;
+          const recent = minutesSinceRelease < minReleaseSpacingMinutes;
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `recent=${recent}\n`);
+          if (recent) console.log(`Last release started ${minutesSinceRelease.toFixed(1)}m ago; inside the ${minReleaseSpacingMinutes}m spacing.`);
 
           fs.appendFileSync(process.env.GITHUB_OUTPUT, `active=${active}\n`);
           fs.appendFileSync(process.env.GITHUB_OUTPUT, `active_count=${activeRuns.length}\n`);
@@ -107,7 +119,7 @@ jobs:
           done
 
       - name: Dispatch one recovery refresh
-        if: (steps.truth.outputs.stale == 'true' || steps.truth.outputs.drift == 'true') && (steps.release.outputs.active != 'true' || steps.release.outputs.stale_active == 'true')
+        if: (steps.truth.outputs.stale == 'true' || steps.truth.outputs.drift == 'true') && steps.release.outputs.recent != 'true' && (steps.release.outputs.active != 'true' || steps.release.outputs.stale_active == 'true')
         env:
           GH_TOKEN: ${{ github.token }}
           AGE_MINUTES: ${{ steps.truth.outputs.age_minutes }}

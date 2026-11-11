@@ -1,5 +1,8 @@
 # Production scheduler and recovery
 
+> Cadence since November 10, 2026: the release cron runs every ten minutes (`3-59/10`), and the freshness watcher and the continuity keeper never dispatch a release within nine minutes of the previous release start, whatever its outcome. That is about six Pages deployments an hour instead of eleven. The watcher treats the payload as stale at 14 minutes, and a release is taken over only after 45 minutes. The reason: from October 31 to November 10, at the earlier volume, Pages accepted same-commit deployments without publishing them. References to a five minute interval below describe the earlier design.
+
+
 ## Decision
 
 SST production runs entirely on GitHub-hosted infrastructure:

@@ -25,5 +25,5 @@ test('browser collection feasibility record preserves the static canonical bound
   assert.match(collector, /enrichProviderHistory/);
   assert.match(collector, /buildCollectionIntelligence/);
   assert.match(vite, /provider\.sourceType === 'statuspage'/);
-  assert.match(scheduler, /cron: "\*\/5 \* \* \* \*"/);
+  assert.match(scheduler, /cron: "3-59\/10 \* \* \* \*"/);
 });
