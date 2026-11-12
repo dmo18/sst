@@ -22,6 +22,7 @@ const brandedLogoFiles: Record<string, BrandedLogo> = {
   anthropic: { file: 'anthropic.svg' },
   slack: { file: 'slack.svg' },
   zoom: { file: 'zoom.svg' },
+  yardi: { file: 'yardi.png' },
 
   github: { file: 'github.svg', accent: '#24292f', monochrome: true },
   digitalocean: { file: 'digitalocean.svg', accent: '#0080ff', monochrome: true },
@@ -95,8 +96,7 @@ const generatedBrands: Record<string, GeneratedBrand> = {
   salesforce: { label: 'SF', accent: '#00a1e0', secondary: '#005473', motif: 'wave' },
   'monday-com': { label: 'm', accent: '#6161ff', secondary: '#2f2f8c', motif: 'bars' },
   docusign: { label: 'DS', accent: '#ffcc22', secondary: '#4b3a00', motif: 'diamond' },
-  nuso: { label: 'NUSO', accent: '#2464eb', secondary: '#0d2d72', motif: 'wave' },
-  yardi: { label: 'Y', accent: '#0a5aa8', secondary: '#04305c', motif: 'bars' }
+  nuso: { label: 'NUSO', accent: '#2464eb', secondary: '#0d2d72', motif: 'wave' }
 };
 
 function initials(name: string): string {

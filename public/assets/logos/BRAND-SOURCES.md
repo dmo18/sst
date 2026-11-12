@@ -21,3 +21,5 @@ The build-time source order is:
 This process is build-time only. The deployed browser never contacts provider sites, Google favicon services, or a logo CDN for provider artwork. Each release also writes `public/assets/logos/provider-favicon-sources.json` with source kind, source page, resolved asset URL, media type, byte count, and SHA-256 digest for production traceability.
 
 If any of the 35 required provider identities cannot be resolved during a verified application build, the build fails rather than silently shipping the ordinary letter-tile presentation again. The runtime letter tile remains only as a defensive last resort if an already embedded image cannot be decoded in a particular browser.
+
+Yardi's mark (`yardi.png`) is the symbol cropped from the logo Yardi publishes on its own status page, `https://status.yardi.com`. Yardi's status page serves only the generic Statuspage icon and its corporate favicon is a 16 pixel two-color file, so neither could be used.
