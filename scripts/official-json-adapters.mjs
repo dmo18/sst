@@ -261,9 +261,19 @@ export function parseNableDashboard(value, provider = {}, source = {}) {
     });
   }
 
+  // Maintenance the vendor has started is planned work: it is published as
+  // maintenance and leaves the service state alone. A service is counted as
+  // under maintenance only when a current maintenance event names it.
+  const underMaintenance = new Set();
+  for (const event of Array.isArray(board.events.maintenance) ? board.events.maintenance : []) {
+    if (!event || NABLE_CLOSED.test(clean(event.status))) continue;
+    for (const name of Array.isArray(event.services) ? event.services : []) if (scopedNames.has(name)) underMaintenance.add(name);
+  }
+
   const components = problemFirst(scopedServices.map(service => ({
     name: service.name,
-    status: severityByService.get(service.name) || (Number(service.status) === 0 ? 'operational' : 'unknown'),
+    status: severityByService.get(service.name)
+      || (Number(service.status) === 0 ? 'operational' : underMaintenance.has(service.name) ? 'under_maintenance' : 'unknown'),
     group: clean(service.group)
   })));
 
@@ -305,6 +315,14 @@ export function parseNableDashboard(value, provider = {}, source = {}) {
     return {
       kind: 'limited',
       message: `${provider.name || 'N-able'} lists ${unknown.length} service${unknown.length === 1 ? '' : 's'} in a state that is neither operational nor tied to a current incident. No operational conclusion was made.`,
+      ...extras
+    };
+  }
+  const maintained = components.filter(component => component.status === 'under_maintenance');
+  if (maintained.length) {
+    return {
+      kind: 'healthy',
+      status: `${provider.name || 'N-able'} reports no incident; planned maintenance is in progress (${uniqueNames(maintained.map(component => component.name), 3)})`,
       ...extras
     };
   }

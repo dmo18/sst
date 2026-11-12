@@ -149,7 +149,7 @@ GitHub Pages deployment is a separate failure domain from build and test.
 - Do not generate repeated commits to retry a stuck Pages deployment.
 - `actions/deploy-pages` has a maximum internal wait of 600000 milliseconds. Larger values are capped.
 - If Pages is stuck, inspect the Pages environment and deployment object before changing code.
-- Scheduled freshness recovery must not interrupt an active release. A release is taken over only after 45 minutes, beyond its two 20 minute job budgets.
+- Scheduled freshness recovery must not interrupt an active release. A running release is taken over only after 45 minutes, beyond its two 20 minute job budgets. A run that never started is replaced after 12 minutes.
 - Keep Pages deployments to about six an hour. The release cron runs every ten minutes, and the watcher and the continuity keeper never dispatch within nine minutes of the previous release start, whatever its outcome. From October 31 to November 10, 2026, at about eleven an hour, Pages accepted same-commit deployments without publishing them.
 - A successful build does not mean the commit is live.
 - A release is complete only after Pages publication, production smoke checks, headless rendering, and the exact Yodeck check succeed.

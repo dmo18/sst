@@ -60,6 +60,10 @@ jobs:
           // A release may legitimately run for its two 20 minute job budgets. Only
           // a run older than that is wedged and may be taken over.
           const takeoverAfterMinutes = 45;
+          // A run that has not started within this time is stuck in the queue. It
+          // has nothing to interrupt, so it is replaced much sooner.
+          const queuedTakeoverAfterMinutes = 12;
+          const takeoverThreshold = run => run.status === 'in_progress' ? takeoverAfterMinutes : queuedTakeoverAfterMinutes;
           // Never start a release sooner than this after the previous one began,
           // whatever its outcome. This bounds Pages deployments to about six an
           // hour, including while releases are failing.
@@ -112,7 +116,7 @@ jobs:
             }
 
             const activeRuns = allRuns.filter(run => activeStates.has(run.status));
-            const wedgedRuns = activeRuns.filter(run => ageMinutes(run) >= takeoverAfterMinutes);
+            const wedgedRuns = activeRuns.filter(run => ageMinutes(run) >= takeoverThreshold(run));
             for (const run of wedgedRuns) {
               try {
                 console.warn(`Cancelling wedged Pages release #${run.run_number} after ${ageMinutes(run)}m.`);

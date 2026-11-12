@@ -228,3 +228,20 @@ test('vendor text is reduced to plain text with entities decoded exactly once', 
   const note = parseSalesforceActiveIncidents(JSON.stringify(rows), { name: 'Salesforce' }, { regionScope: 'us' }).incidents[0].note;
   assert.equal(note, 'Errors &lt;5% & falling');
 });
+
+test('N-able maintenance in progress is planned work, not an unknown state', async () => {
+  const { parseNableDashboard } = await import('../official-json-adapters.mjs');
+  const board = status => JSON.stringify({ objects: [{
+    services: [{ name: 'Cove Data Protection (Americas)', group: 'Americas', status }, { name: 'Cove DRaaS (Americas)', group: 'Americas', status: 0 }],
+    events: { incident: [], maintenance_planned: [], maintenance: status === 1 ? [{ id: 9, status: 'In Progress', start: hoursAgo(5).slice(0, 19), end: null, description: 'Cove storage maintenance', services: ['Cove Data Protection (Americas)'], updates: [] }] : [] }
+  }] });
+  const cove = { id: 'cove-data-protection', name: 'Cove Data Protection' };
+  const maintained = parseNableDashboard(board(1), cove, { regionScope: 'us' });
+  assert.equal(maintained.kind, 'healthy');
+  assert.match(maintained.status, /no incident; planned maintenance is in progress \(Cove Data Protection \(Americas\)\)/);
+  assert.equal(maintained.components.find(item => item.name === 'Cove Data Protection (Americas)').status, 'under_maintenance');
+  assert.equal(maintained.maintenance.length, 1);
+  assert.equal(maintained.maintenance[0].status, 'in_progress');
+  // A non-operational status that no current event explains is still unknown.
+  assert.equal(parseNableDashboard(board(3), cove, { regionScope: 'us' }).kind, 'limited');
+});
