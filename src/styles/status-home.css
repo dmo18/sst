@@ -356,6 +356,7 @@
   flex-direction: column;
   font-size: 18px;
   overflow-wrap: anywhere;
+  white-space: pre-line;
 }
 
 /* Simple lines: name on the left, sentence on the right */

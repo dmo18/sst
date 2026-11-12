@@ -71,6 +71,11 @@ export function verdict(summary: IssueConsoleModel['summary'], total: number): {
   return { tone: 'operational', headline: `All ${total} services are working`, detail: 'No vendor is reporting a problem.' };
 }
 
+/** Vendors often publish one long paragraph. Start a new paragraph at each of the vendor's own section labels. */
+export function paragraphs(note: string): string {
+  return note.replace(/\s+(More info:|Current status:|Scope of impact:|Next update by:|Start time:|Root cause:|Next steps:)/g, '\n\n$1');
+}
+
 function StateIcon({ state }: { state: ServiceState }): JSX.Element {
   const common = { width: 24, height: 24, viewBox: '0 0 24 24', 'aria-hidden': true } as const;
   if (state === 'operational') return <svg {...common}><circle cx="12" cy="12" r="11" fill="currentColor" /><path d="M6.5 12.5l3.6 3.6 7.4-7.6" fill="none" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" /></svg>;
@@ -88,11 +93,11 @@ function IncidentText({ item, now, full }: { item: IssueBrief; now: number; full
   return (
     <div className="sh-incident">
       <h3>{item.title}</h3>
-      {item.note && item.note !== item.title && <p>{item.note}</p>}
+      {item.note && item.note !== item.title && <p>{paragraphs(item.note)}</p>}
       <p className="sh-when">Last update {agoWords(effectiveIncidentTime(item), now)} ({dayAndClock(effectiveIncidentTime(item), now)}){item.affected_service ? `. Affects ${item.affected_service}.` : '.'}</p>
       {updates.length > 0 && (
         <ol className="sh-updates" aria-label="Earlier updates from the vendor">
-          {updates.map((update, index) => <li key={`${update.at || ''}-${index}`}><b>{dayAndClock(update.at, now)}</b><span>{update.note}</span></li>)}
+          {updates.map((update, index) => <li key={`${update.at || ''}-${index}`}><b>{dayAndClock(update.at, now)}</b><span>{paragraphs(update.note)}</span></li>)}
         </ol>
       )}
     </div>
