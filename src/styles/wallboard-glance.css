@@ -22,6 +22,9 @@
     position: absolute;
     inset: 0;
     display: grid;
+    /* One column that may shrink. Without this the column grows to the widest
+     * heading or footer line and every row is cut off at the right edge. */
+    grid-template-columns: minmax(0, 1fr);
     grid-template-rows: 32px minmax(0, 1fr) 20px;
     overflow: hidden;
     background: #080f1b;

@@ -49,7 +49,7 @@ jobs:
           BROWSER="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
           test -n "$BROWSER"
           export BROWSER
-          TARGET_URL="${PAGE_URL}?experienceProbe=${GITHUB_RUN_ID}"
+          TARGET_URL="${PAGE_URL}?console=full&experienceProbe=${GITHUB_RUN_ID}"
           set -o pipefail
           node scripts/verify-operator-experience.mjs "$TARGET_URL" /tmp/operator-experience.html /tmp/operator-experience.png /tmp/operator-command.png /tmp/operator-mobile.png 2>&1 | tee /tmp/operator-experience-verifier.log
           rm -rf /tmp/operator-experience-cdp-* || true
@@ -65,7 +65,7 @@ jobs:
           BROWSER="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
           test -n "$BROWSER"
           export BROWSER
-          TARGET_URL="${PAGE_URL}?productDepthProbe=${GITHUB_RUN_ID}"
+          TARGET_URL="${PAGE_URL}?console=full&productDepthProbe=${GITHUB_RUN_ID}"
           set -o pipefail
           node scripts/verify-product-depth-experience.mjs "$TARGET_URL" /tmp/operator-universe.png /tmp/operator-search.png /tmp/operator-incident.png /tmp/operator-universe-mobile.png 2>&1 | tee /tmp/product-depth-verifier.log
           rm -rf /tmp/product-depth-cdp-* || true
@@ -81,7 +81,7 @@ jobs:
           BROWSER="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
           test -n "$BROWSER"
           export BROWSER
-          TARGET_URL="${PAGE_URL}?m365Probe=${GITHUB_RUN_ID}"
+          TARGET_URL="${PAGE_URL}?console=full&m365Probe=${GITHUB_RUN_ID}"
           set -o pipefail
           node scripts/verify-microsoft365-experience.mjs "$TARGET_URL" /tmp/operator-m365.png /tmp/operator-m365-mobile.png 2>&1 | tee /tmp/microsoft365-verifier.log
           rm -rf /tmp/m365-experience-* || true
@@ -96,7 +96,7 @@ jobs:
           BROWSER="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
           test -n "$BROWSER"
           export BROWSER
-          TARGET_URL="${PAGE_URL}?providerIdentityProbe=${GITHUB_RUN_ID}"
+          TARGET_URL="${PAGE_URL}?console=full&providerIdentityProbe=${GITHUB_RUN_ID}"
           set -o pipefail
           node --experimental-strip-types scripts/verify-provider-identity.mjs "$TARGET_URL" /tmp/operator-providers.png /tmp/operator-providers-mobile.png 2>&1 | tee /tmp/provider-identity-verifier.log
           rm -rf /tmp/provider-identity-* || true

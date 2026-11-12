@@ -19,6 +19,7 @@ import './styles/product-depth-final-polish.css';
 import './styles/product-quality-cleanup.css';
 import './styles/provider-identity.css';
 import './styles/readable.css';
+import './styles/status-home.css';
 import './styles/wallboard-v2.css';
 import './styles/wallboard-compat.css';
 import './styles/wallboard-tv.css';

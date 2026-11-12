@@ -29,7 +29,10 @@ concurrency:
 
 jobs:
   renew:
-    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' || (github.event.workflow_run.conclusion == 'success' && (github.event.workflow_run.event == 'schedule' || github.event.workflow_run.event == 'push'))
+    # A failed scheduled or push release still renews the keeper. On November 12,
+    # 2026 a push release failed a post-deploy check, the keeper was not renewed,
+    # and nothing refreshed the data for 40 minutes.
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' || ((github.event.workflow_run.conclusion == 'success' || github.event.workflow_run.conclusion == 'failure') && (github.event.workflow_run.event == 'schedule' || github.event.workflow_run.event == 'push'))
     runs-on: ubuntu-latest
     # Each keeper stays below GitHub's six-hour job limit and renews before expiry.
     timeout-minutes: 350

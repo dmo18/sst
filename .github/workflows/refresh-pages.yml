@@ -201,7 +201,7 @@ jobs:
           BROWSER="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
           test -n "$BROWSER"
           for attempt in $(seq 1 4); do
-            "$BROWSER" --headless=new --disable-gpu --disable-dev-shm-usage --user-data-dir="/tmp/live-chrome-$attempt" --virtual-time-budget=20000 --dump-dom "${PAGE_URL}?smoke=${GITHUB_RUN_ID}-$attempt" > /tmp/live-dom.html
+            "$BROWSER" --headless=new --disable-gpu --disable-dev-shm-usage --user-data-dir="/tmp/live-chrome-$attempt" --virtual-time-budget=20000 --dump-dom "${PAGE_URL}?console=full&smoke=${GITHUB_RUN_ID}-$attempt" > /tmp/live-dom.html
             if grep -q 'Live dependency table' /tmp/live-dom.html; then break; fi
             sleep 6
           done

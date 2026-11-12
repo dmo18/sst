@@ -10,6 +10,13 @@ The project uses semantic versioning. Dates are shown in ISO format. The newest 
 
 ## Unreleased
 
+### Plain status screen, wallboard clipping, refresh stall (November 12, 2026)
+
+- The default screen is now a plain, light status screen modeled on the vendors' own status pages: one verdict sentence, major outages, degraded and unconfirmed services as single rows, then every service on one line. Selecting a service shows the vendor's text and updates. Body text is 20 pixels and nothing is below 18. The previous console remains at `?console=full`.
+- Fixed: at 458 by 291 the compact wallboard column grew to the width of its heading or footer line when many providers were affected, so every incident row was cut off on the right and the age was hidden. The column may now shrink.
+- Fixed: a release that failed a post-deploy check did not renew the refresh keeper, so the data stopped refreshing (40 minutes on November 12). A failed scheduled or push release now renews it.
+- Release and product checks open the technical console with `?console=full`.
+
 ### Readable operator interface (November 12, 2026)
 
 The operator application was redesigned for legibility. The wallboard is unchanged.
