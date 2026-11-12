@@ -91,6 +91,10 @@ It provides:
 
 Local workflow state is explicitly non-authoritative and cannot modify `service_state`, `source_state`, `source_health`, evidence, parser state, or release validation.
 
+### Readability layer
+
+`src/styles/readable.css` is loaded after the other operator stylesheets and before the wallboard stylesheets. It sets an 18 pixel base, a 15 pixel floor, plain high-contrast panels and sentence-case labels for the operator application, and styles the problems-first overview in `OverviewView`. `App.tsx` marks the root with `data-surface="operator"` or `data-surface="wallboard"`, and every rule in the file is scoped to the operator value, so it cannot affect the wallboard. `scripts/__tests__/readable-operator-ui.test.js` enforces the scope and the size floor.
+
 ### Source adapters and the shared parser
 
 `scripts/official-json-adapters.mjs` holds the adapters for first-party JSON that is not Statuspage: Microsoft public status, the N-able dashboard, RingCentral, Salesforce Trust and Google incidents. `scripts/structured-source-adapters.mjs` holds the Statuspage, Status.io, Better Stack and Vultr adapters and the override table that selects a source per provider. Every adapter returns `null` for a document it does not recognize, and page-text rules never run over a JSON document, so a vendor schema change yields `unknown` rather than a health conclusion.

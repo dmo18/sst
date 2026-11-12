@@ -347,37 +347,128 @@ function ProviderDrawer({ source, incidents, maintenance, now, onClose }: { sour
   );
 }
 
+const STATE_WORD: Record<DiagnosticSource['serviceState'], string> = {
+  major: 'Major outage',
+  degraded: 'Degraded',
+  unknown: 'Not confirmed',
+  operational: 'Working'
+};
+
+function plural(count: number, one: string, many = `${one}s`): string {
+  return `${count} ${count === 1 ? one : many}`;
+}
+
+/** One problem, written to be read at a glance: state word, who, what, when. */
+function ProblemCard({ item, now, onProvider }: { item: IssueBrief; now: number; onProvider: (id: string) => void }): JSX.Element {
+  const major = item.service_state === 'major';
+  return (
+    <article className={`readable-problem ${major ? 'is-major' : 'is-degraded'}`}>
+      <div className="readable-problem-state"><span>{major ? 'Major outage' : 'Degraded'}</span></div>
+      <div className="readable-problem-body">
+        <div className="readable-problem-who"><ProviderIcon id={item.providerId} name={item.provider} /><b>{item.provider}</b></div>
+        <h3>{item.title}</h3>
+        <p>{item.note}</p>
+        <div className="readable-problem-meta">
+          <span>Updated <b>{relativeAgeAt(effectiveIncidentTime(item), now)}</b></span>
+          {item.affectedServiceLabel && <span>Affects <b>{item.affectedServiceLabel}</b></span>}
+        </div>
+      </div>
+      <div className="readable-problem-actions">
+        <button className="readable-button" type="button" onClick={() => onProvider(item.providerId)}>Details</button>
+        <a className="readable-button is-quiet" href={item.url} target="_blank" rel="noopener noreferrer">Vendor page</a>
+      </div>
+    </article>
+  );
+}
+
+function ServiceGroup({ title, tone, items, onProvider }: { title: string; tone: DiagnosticSource['serviceState']; items: DiagnosticSource[]; onProvider: (id: string) => void }): JSX.Element | null {
+  if (!items.length) return null;
+  return (
+    <div className={`readable-service-group is-${tone}`}>
+      <h3>{title} <span>{items.length}</span></h3>
+      <div className="readable-service-grid">
+        {items.map(source => (
+          <button type="button" className={`readable-service is-${source.serviceState}`} key={source.id} onClick={() => onProvider(source.id)} title={source.status}>
+            <ProviderIcon id={source.id} name={source.provider} />
+            <span className="readable-service-name">{source.provider}</span>
+            <span className="readable-service-state">{STATE_WORD[source.serviceState]}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function OverviewView({ model, now, onProvider, onNavigate }: { model: IssueConsoleModel; now: number; onProvider: (id: string) => void; onNavigate: (view: ConsoleView, filter?: string) => void }): JSX.Element {
   const affected = model.summary.major_count + model.summary.degraded_count;
-  const headline = model.summary.major_count
-    ? `${model.summary.major_count} major provider issue${model.summary.major_count === 1 ? '' : 's'} ${model.summary.major_count === 1 ? 'requires' : 'require'} validation`
-    : model.summary.degraded_count
-      ? `${model.summary.degraded_count} provider degradation${model.summary.degraded_count === 1 ? '' : 's'} ${model.summary.degraded_count === 1 ? 'is' : 'are'} active`
-      : model.blindSpotCount
-        ? `No active incident is confirmed; ${model.blindSpotCount} source blind spot${model.blindSpotCount === 1 ? '' : 's'} ${model.blindSpotCount === 1 ? 'remains' : 'remain'}`
-        : 'No active vendor incident is supported by readable official sources';
+  const { major_count: major, degraded_count: degraded, unknown_count: unknown, confirmed_operational_count: working } = model.summary;
+  const headline = major
+    ? `${plural(major, 'service has', 'services have')} a major outage`
+    : degraded
+      ? `${plural(degraded, 'service is', 'services are')} degraded`
+      : unknown
+        ? `No outage reported. ${plural(unknown, 'service is', 'services are')} not confirmed`
+        : 'Everything is working normally';
+  const problems = [...model.briefs].sort((a, b) =>
+    Number(b.service_state === 'major') - Number(a.service_state === 'major')
+    || parseTime(effectiveIncidentTime(b)) - parseTime(effectiveIncidentTime(a)));
+  const byName = (a: DiagnosticSource, b: DiagnosticSource) => a.provider.localeCompare(b.provider);
+  const troubled = model.diagnostics.filter(source => source.serviceState === 'major' || source.serviceState === 'degraded')
+    .sort((a, b) => Number(b.serviceState === 'major') - Number(a.serviceState === 'major') || byName(a, b));
+  const unconfirmed = model.diagnostics.filter(source => source.serviceState === 'unknown').sort(byName);
+  const healthy = model.diagnostics.filter(source => source.serviceState === 'operational').sort(byName);
+  const tone = major ? 'major' : degraded ? 'degraded' : unknown ? 'unknown' : 'operational';
   return (
-    <div className="workspace-stack">
-      <section className="posture-panel">
-        <div><span className="section-eyebrow">Current posture</span><h2>{headline}</h2><p>Service conclusions and collector reliability remain separate. Unknown data is never converted into healthy status.</p></div>
-        <div className="posture-actions"><button className="ui-button ui-button-primary" type="button" onClick={() => onNavigate('incidents')}>Open incident operations</button><button className="ui-button ui-button-secondary" type="button" onClick={() => onNavigate('sources', 'blind-source')}>Review blind spots</button></div>
+    <div className="workspace-stack readable-overview">
+      <section className={`posture-panel readable-hero is-${tone}`}>
+        <div>
+          <span className="section-eyebrow">Right now</span>
+          <h2>{headline}</h2>
+          <ul className="readable-tally" aria-label="Service totals">
+            <li className="is-major"><b>{major}</b> major</li>
+            <li className="is-degraded"><b>{degraded}</b> degraded</li>
+            <li className="is-unknown"><b>{unknown}</b> not confirmed</li>
+            <li className="is-operational"><b>{working}</b> working</li>
+          </ul>
+        </div>
+        <div className="posture-actions"><button className="ui-button ui-button-primary" type="button" onClick={() => onNavigate('incidents')}>Open incident operations</button><button className="ui-button ui-button-secondary" type="button" onClick={() => onNavigate('providers')}>See every service</button></div>
       </section>
-      <section className="metric-strip">
-        <MetricTile label="Active incidents" value={model.incidentCount} detail={`${model.affectedCount} providers affected`} tone={model.incidentCount ? 'critical' : 'positive'} live />
-        <MetricTile label="Affected providers" value={affected} detail={`${model.summary.major_count} major · ${model.summary.degraded_count} degraded`} tone={affected ? 'warning' : 'positive'} live />
-        <MetricTile label="Confirmed operational" value={model.summary.confirmed_operational_count} detail={`${model.summary.confirmed_operational_percent}% of catalog`} tone="positive" live />
-        <MetricTile label="Live source coverage" value={`${model.summary.coverage_percent}%`} detail={`${model.healthySourceCount} healthy sources`} live />
-        <MetricTile label="Collection quality" value={model.qualityScore} detail="weighted evidence score" tone={model.qualityScore < 75 ? 'warning' : 'positive'} live />
-        <MetricTile label="Blind spots" value={model.blindSpotCount} detail={`${model.watchSourceCount} sources on watch`} tone={model.blindSpotCount ? 'critical' : 'positive'} live />
-        <MetricTile label="Request success" value={`${model.collection?.request_success_percent ?? model.summary.request_success_percent ?? 0}%`} detail={`${model.collection?.failed_request_count ?? model.summary.failed_request_count ?? 0} failed attempts`} live />
-        <MetricTile label="Collection p95" value={durationLabel(model.collection?.p95_request_ms ?? model.summary.p95_request_ms)} detail={model.collection?.run_id || 'legacy run'} live />
+
+      <section className="readable-section" aria-labelledby="readable-problems-title">
+        <h2 id="readable-problems-title">Problems right now <span>{problems.length}</span></h2>
+        {problems.length
+          ? <div className="readable-problem-list">{problems.map(item => <ProblemCard key={item.id} item={item} now={now} onProvider={onProvider} />)}</div>
+          : <div className="readable-all-clear"><b>No vendor is reporting a problem.</b><p>{affected ? 'Some services are affected without a published incident. See the list below.' : 'This is based on what each vendor publishes on its own status page.'}</p></div>}
       </section>
-      <section className="workspace-panel"><SectionHeader eyebrow="Operator queue" title="What deserves attention now" detail="Ranked by service impact, provider criticality, evidence quality, and source reliability." action={<button className="link-button" type="button" onClick={() => onNavigate('incidents')}>View incident operations</button>} /><AttentionTable items={model.actionQueue} now={now} onProvider={onProvider} /></section>
-      <section className="workspace-panel"><SectionHeader eyebrow="Provider operations" title="Live dependency table" detail="Dynamic age, latency, quality, service, and source fields update without hiding uncertainty." action={<button className="link-button" type="button" onClick={() => onNavigate('providers')}>Open all providers</button>} /><ProviderTable items={model.diagnostics} now={now} onProvider={onProvider} compact /></section>
-      <div className="workspace-split">
-        <section className="workspace-panel"><SectionHeader eyebrow="Dependency landscape" title="Risk by service domain" detail="Confirmed operational coverage and unresolved exposure by category." /><CategoryTable items={model.categoryPulse} onCategory={category => onNavigate('providers', category)} /></section>
-        <section className="workspace-panel"><SectionHeader eyebrow="Change window" title="Maintenance horizon" detail={`${model.ongoingMaintenanceCount} in progress · ${model.maintenanceCount} current`} />{model.maintenance.length ? <div className="maintenance-list">{model.maintenance.slice(0, 5).map(item => <MaintenanceSummary key={item.id} item={item} now={now} />)}</div> : <div className="empty-state"><b>No relevant maintenance windows</b><p>No current or upcoming maintenance was captured from supported official sources.</p></div>}</section>
-      </div>
+
+      <section className="readable-section" aria-labelledby="readable-services-title">
+        <h2 id="readable-services-title">All services <span>{model.diagnostics.length}</span></h2>
+        <ServiceGroup title="Having problems" tone="major" items={troubled} onProvider={onProvider} />
+        <ServiceGroup title="Not confirmed" tone="unknown" items={unconfirmed} onProvider={onProvider} />
+        <ServiceGroup title="Working normally" tone="operational" items={healthy} onProvider={onProvider} />
+      </section>
+
+      <details className="readable-more">
+        <summary>Technical detail: collection health, tables and maintenance</summary>
+        <div className="workspace-stack">
+          <section className="metric-strip">
+            <MetricTile label="Active incidents" value={model.incidentCount} detail={`${model.affectedCount} providers affected`} tone={model.incidentCount ? 'critical' : 'positive'} live />
+            <MetricTile label="Affected providers" value={affected} detail={`${model.summary.major_count} major · ${model.summary.degraded_count} degraded`} tone={affected ? 'warning' : 'positive'} live />
+            <MetricTile label="Confirmed operational" value={model.summary.confirmed_operational_count} detail={`${model.summary.confirmed_operational_percent}% of catalog`} tone="positive" live />
+            <MetricTile label="Live source coverage" value={`${model.summary.coverage_percent}%`} detail={`${model.healthySourceCount} healthy sources`} live />
+            <MetricTile label="Collection quality" value={model.qualityScore} detail="weighted evidence score" tone={model.qualityScore < 75 ? 'warning' : 'positive'} live />
+            <MetricTile label="Blind spots" value={model.blindSpotCount} detail={`${model.watchSourceCount} sources on watch`} tone={model.blindSpotCount ? 'critical' : 'positive'} live />
+            <MetricTile label="Request success" value={`${model.collection?.request_success_percent ?? model.summary.request_success_percent ?? 0}%`} detail={`${model.collection?.failed_request_count ?? model.summary.failed_request_count ?? 0} failed attempts`} live />
+            <MetricTile label="Collection p95" value={durationLabel(model.collection?.p95_request_ms ?? model.summary.p95_request_ms)} detail={model.collection?.run_id || 'legacy run'} live />
+          </section>
+          <section className="workspace-panel"><SectionHeader eyebrow="Operator queue" title="What deserves attention now" detail="Ranked by service impact, provider criticality, evidence quality, and source reliability." action={<button className="link-button" type="button" onClick={() => onNavigate('incidents')}>View incident operations</button>} /><AttentionTable items={model.actionQueue} now={now} onProvider={onProvider} /></section>
+          <section className="workspace-panel"><SectionHeader eyebrow="Provider operations" title="Live dependency table" detail="Dynamic age, latency, quality, service, and source fields update without hiding uncertainty." action={<button className="link-button" type="button" onClick={() => onNavigate('providers')}>Open all providers</button>} /><ProviderTable items={model.diagnostics} now={now} onProvider={onProvider} compact /></section>
+          <div className="workspace-split">
+            <section className="workspace-panel"><SectionHeader eyebrow="Dependency landscape" title="Risk by service domain" detail="Confirmed operational coverage and unresolved exposure by category." /><CategoryTable items={model.categoryPulse} onCategory={category => onNavigate('providers', category)} /></section>
+            <section className="workspace-panel"><SectionHeader eyebrow="Change window" title="Maintenance horizon" detail={`${model.ongoingMaintenanceCount} in progress · ${model.maintenanceCount} current`} />{model.maintenance.length ? <div className="maintenance-list">{model.maintenance.slice(0, 5).map(item => <MaintenanceSummary key={item.id} item={item} now={now} />)}</div> : <div className="empty-state"><b>No relevant maintenance windows</b><p>No current or upcoming maintenance was captured from supported official sources.</p></div>}</section>
+          </div>
+        </div>
+      </details>
     </div>
   );
 }

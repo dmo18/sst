@@ -4,12 +4,13 @@ import { readFile } from 'node:fs/promises';
 
 const read = path => readFile(new URL(`../../${path}`, import.meta.url), 'utf8');
 
-test('operational posture copy agrees in singular and plural states', async () => {
+test('overview headline is plain language and agrees in singular and plural states', async () => {
   const source = await read('src/IssueConsole.tsx');
-  assert.match(source, /major_count === 1 \? 'requires' : 'require'/);
-  assert.match(source, /degraded_count === 1 \? 'is' : 'are'/);
-  assert.match(source, /blindSpotCount === 1 \? 'remains' : 'remain'/);
-  assert.doesNotMatch(source, /issue\$\{model\.summary\.major_count === 1 \? '' : 's'\} require validation/);
+  assert.match(source, /plural\(major, 'service has', 'services have'\)\} a major outage/);
+  assert.match(source, /plural\(degraded, 'service is', 'services are'\)\} degraded/);
+  assert.match(source, /plural\(unknown, 'service is', 'services are'\)\} not confirmed/);
+  assert.match(source, /Everything is working normally/);
+  assert.doesNotMatch(source, /require validation/);
 });
 
 test('persistent operator controls live in application chrome rather than over workspace content', async () => {

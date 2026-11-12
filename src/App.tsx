@@ -69,6 +69,7 @@ export function App(): JSX.Element {
   return (
     <main
       className="app-frame"
+      data-surface={route.wallboardMode ? 'wallboard' : 'operator'}
       data-live-truth-checked-at={liveTruth?.checked_at || ''}
       data-live-truth-attempted={liveTruth?.attempted_provider_count ?? 0}
       data-live-truth-successes={liveTruth?.success_provider_count ?? 0}

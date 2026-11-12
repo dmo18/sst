@@ -55,6 +55,7 @@ src/wallboardRoute.ts                    view and alert-window parsing
 src/statusViewModel.ts                   action queue and UI models
 src/payloadValidation.ts                 browser payload validation
 src/styles/wallboard-v2.css              dedicated wallboard overlay, compact layout, and marquees
+src/styles/readable.css                  operator readability layer (18px base, 15px floor), never the wallboard
 .github/workflows/refresh-pages.yml       Pages build and deployment
 .github/workflows/status-freshness-watch.yml deployed freshness recovery
 .github/workflows/refresh-continuity.yml  bounded refresh continuity heartbeat
@@ -108,6 +109,17 @@ GitHub monitoring must remain first-party and unauthenticated.
 - Never truncate or de-duplicate a component list before problem components have been identified.
 - The browser and the collector share one Statuspage parser (`parseStatuspageSummary`). Do not add a second one.
 - Microsoft 365 is read from `https://status.cloud.microsoft/api/posts/{mac,ppac,m365Consumer}` with no credentials. A document the primary host fails to return is read from Microsoft's second host, `https://msit.status.cloud.microsoft`. It describes Microsoft's public status, not tenant health. A degradation in any one readable document is always published, even when another document fails; only the operational conclusion requires both `mac` and `m365Consumer`.
+
+## Operator readability contract
+
+The operator application must stay easy to read for someone who has difficulty focusing on small or low-contrast text.
+
+- No operator text below 15 pixels; body text is 18 pixels.
+- Plain, high-contrast panels behind text. No gradients, glow or blur behind text.
+- Labels in sentence case, not small capitals.
+- A state is always written as a word (Major outage, Degraded, Not confirmed, Working), never shown by color alone.
+- The overview leads with what is wrong, in plain language, before any metric.
+- Every rule in `src/styles/readable.css` is scoped to `.app-frame[data-surface="operator"]`. It must never style the wallboard.
 
 ## Wallboard contract
 

@@ -10,6 +10,14 @@ The project uses semantic versioning. Dates are shown in ISO format. The newest 
 
 ## Unreleased
 
+### Readable operator interface (November 12, 2026)
+
+The operator application was redesigned for legibility. The wallboard is unchanged.
+
+- The overview now leads with one plain sentence ("5 services have a major outage") and four totals, then "Problems right now" as large cards (state, vendor, title, vendor text, last update), then every service grouped as having problems, not confirmed or working normally. Collection metrics and tables are folded under "Technical detail".
+- A new stylesheet, `src/styles/readable.css`, raises text to an 18 pixel base with nothing below 15 pixels, uses plain high-contrast panels with no gradients or blur behind text, writes labels in sentence case, and always names a state in words as well as color.
+- Every rule in that stylesheet is scoped to `.app-frame[data-surface="operator"]`; a test enforces the scope and the minimum text size.
+
 ### Source truth review (November 10, 2026)
 
 A top-to-bottom review compared every enabled provider against what the vendor publishes. Before it, one collection reported 6 providers unknown and 4 blind, and hid five live vendor incidents. After it, the same collection reports 41 of 41 sources read, 40 of 41 with a confirmed service state, no blind sources, and no provider needs a headless browser render.
