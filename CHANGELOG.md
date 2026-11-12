@@ -10,6 +10,11 @@ The project uses semantic versioning. Dates are shown in ISO format. The newest 
 
 ## Unreleased
 
+### Technical console restyled (November 12, 2026)
+
+- The technical console and the panels that open over it (Microsoft 365 coverage, Dependency Universe, command palette, provider drawer, operations intelligence) now use the same light look as the status screen: light surfaces, dark text, one accent, 15 pixel body text with nothing below 14. Every view and feature is kept.
+- Yardi has its own mark, cropped from the logo on its status page, so no provider uses a generated letter tile.
+
 ## [3.4.0] - 2026-11-12
 
 ### Application layout and Eastern time (November 12, 2026)
