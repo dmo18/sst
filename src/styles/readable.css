@@ -1,0 +1,561 @@
+/*
+ * Readability layer for the operator application.
+ *
+ * Purpose: every piece of text can be read without effort. Large type, strong
+ * contrast, plain backgrounds behind text, and a state that is always written
+ * as a word as well as shown as a color.
+ *
+ * Scope: only the operator surface. Every rule is under
+ * .app-frame[data-surface="operator"], so the wallboard is never affected.
+ */
+
+.app-frame[data-surface="operator"] {
+  --rd-bg: #0b0f17;
+  --rd-panel: #141b28;
+  --rd-panel-raised: #1b2434;
+  --rd-line: #34415a;
+  --rd-text: #ffffff;
+  --rd-text-2: #d7deea;
+  --rd-major: #ff6b6b;
+  --rd-major-bg: #3a1216;
+  --rd-degraded: #ffc145;
+  --rd-degraded-bg: #382a08;
+  --rd-unknown: #b9c4d6;
+  --rd-unknown-bg: #232c3c;
+  --rd-ok: #4ade80;
+  --rd-ok-bg: #0f2b1b;
+  --rd-link: #8fc2ff;
+  /* The existing styles read these. Muted text was too dim to read comfortably. */
+  --px-muted: #c5cedc;
+  --px-text-soft: #e6ecf5;
+  /* Room for navigation labels at a readable size. */
+  --px-sidebar: 320px;
+  font-size: 18px;
+  line-height: 1.5;
+}
+
+/* ---------- Overview: hero ---------- */
+
+.app-frame[data-surface="operator"] .readable-overview { gap: 28px; }
+
+.app-frame[data-surface="operator"] .readable-hero {
+  min-height: 190px;
+  padding: 32px 36px;
+  background: var(--rd-panel);
+  background-image: none;
+  border: 2px solid var(--rd-line);
+  border-left-width: 12px;
+  border-radius: 16px;
+  box-shadow: none;
+}
+.app-frame[data-surface="operator"] .readable-hero::before,
+.app-frame[data-surface="operator"] .readable-hero::after { display: none; }
+.app-frame[data-surface="operator"] .readable-hero.is-major { border-left-color: var(--rd-major); }
+.app-frame[data-surface="operator"] .readable-hero.is-degraded { border-left-color: var(--rd-degraded); }
+.app-frame[data-surface="operator"] .readable-hero.is-unknown { border-left-color: var(--rd-unknown); }
+.app-frame[data-surface="operator"] .readable-hero.is-operational { border-left-color: var(--rd-ok); }
+
+.app-frame[data-surface="operator"] .readable-hero .section-eyebrow {
+  color: var(--rd-text-2);
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.app-frame[data-surface="operator"] .readable-hero h2 {
+  margin: 6px 0 18px;
+  color: var(--rd-text);
+  font-size: clamp(36px, 3vw, 50px);
+  font-weight: 750;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+
+.app-frame[data-surface="operator"] .readable-tally {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.app-frame[data-surface="operator"] .readable-tally li {
+  padding: 8px 16px;
+  border: 2px solid currentColor;
+  border-radius: 999px;
+  font-size: 19px;
+  font-weight: 650;
+  line-height: 1.2;
+}
+.app-frame[data-surface="operator"] .readable-tally b { font-size: 23px; margin-right: 4px; }
+.app-frame[data-surface="operator"] .readable-tally .is-major { color: var(--rd-major); background: var(--rd-major-bg); }
+.app-frame[data-surface="operator"] .readable-tally .is-degraded { color: var(--rd-degraded); background: var(--rd-degraded-bg); }
+.app-frame[data-surface="operator"] .readable-tally .is-unknown { color: var(--rd-unknown); background: var(--rd-unknown-bg); }
+.app-frame[data-surface="operator"] .readable-tally .is-operational { color: var(--rd-ok); background: var(--rd-ok-bg); }
+
+/* ---------- Overview: sections ---------- */
+
+.app-frame[data-surface="operator"] .readable-section > h2 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 16px;
+  color: var(--rd-text);
+  font-size: 31px;
+  font-weight: 750;
+  line-height: 1.2;
+}
+.app-frame[data-surface="operator"] .readable-section > h2 span,
+.app-frame[data-surface="operator"] .readable-service-group h3 span {
+  min-width: 2em;
+  padding: 2px 12px;
+  border-radius: 999px;
+  background: var(--rd-panel-raised);
+  border: 1px solid var(--rd-line);
+  color: var(--rd-text);
+  font-size: 0.65em;
+  font-weight: 700;
+  text-align: center;
+}
+
+/* ---------- Problem cards ---------- */
+
+.app-frame[data-surface="operator"] .readable-problem-list { display: grid; gap: 14px; }
+
+.app-frame[data-surface="operator"] .readable-problem {
+  display: grid;
+  grid-template-columns: 190px minmax(0, 1fr) auto;
+  gap: 24px;
+  align-items: start;
+  padding: 22px 24px;
+  background: var(--rd-panel);
+  border: 2px solid var(--rd-line);
+  border-radius: 14px;
+}
+.app-frame[data-surface="operator"] .readable-problem.is-major { border-color: var(--rd-major); }
+.app-frame[data-surface="operator"] .readable-problem.is-degraded { border-color: var(--rd-degraded); }
+
+.app-frame[data-surface="operator"] .readable-problem-state span {
+  display: block;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 19px;
+  font-weight: 800;
+  line-height: 1.2;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+.app-frame[data-surface="operator"] .readable-problem.is-major .readable-problem-state span { background: var(--rd-major); color: #1a0406; }
+.app-frame[data-surface="operator"] .readable-problem.is-degraded .readable-problem-state span { background: var(--rd-degraded); color: #1f1600; }
+
+.app-frame[data-surface="operator"] .readable-problem-who {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--rd-text);
+  font-size: 22px;
+}
+.app-frame[data-surface="operator"] .readable-problem-who b { font-weight: 750; }
+.app-frame[data-surface="operator"] .readable-problem-who > :first-child { flex: 0 0 auto; width: 32px; height: 32px; }
+
+.app-frame[data-surface="operator"] .readable-problem h3 {
+  margin: 8px 0 8px;
+  color: var(--rd-text);
+  font-size: 23px;
+  font-weight: 650;
+  line-height: 1.3;
+}
+.app-frame[data-surface="operator"] .readable-problem-body > p {
+  margin: 0 0 12px;
+  max-width: 78ch;
+  color: var(--rd-text-2);
+  font-size: 19px;
+  line-height: 1.55;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.app-frame[data-surface="operator"] .readable-problem-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 28px;
+  color: var(--rd-text-2);
+  font-size: 18px;
+}
+.app-frame[data-surface="operator"] .readable-problem-meta b { color: var(--rd-text); font-weight: 700; }
+
+.app-frame[data-surface="operator"] .readable-problem-actions { display: grid; gap: 10px; min-width: 150px; }
+
+.app-frame[data-surface="operator"] .readable-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 10px 18px;
+  border: 2px solid var(--rd-text);
+  border-radius: 10px;
+  background: var(--rd-text);
+  color: #0b0f17;
+  font: inherit;
+  font-size: 18px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+.app-frame[data-surface="operator"] .readable-button.is-quiet { background: transparent; color: var(--rd-text); border-color: var(--rd-line); }
+.app-frame[data-surface="operator"] .readable-button:hover { filter: brightness(1.12); }
+
+.app-frame[data-surface="operator"] .readable-all-clear {
+  padding: 26px 28px;
+  background: var(--rd-ok-bg);
+  border: 2px solid var(--rd-ok);
+  border-radius: 14px;
+}
+.app-frame[data-surface="operator"] .readable-all-clear b { display: block; color: var(--rd-ok); font-size: 27px; font-weight: 750; }
+.app-frame[data-surface="operator"] .readable-all-clear p { margin: 6px 0 0; color: var(--rd-text-2); font-size: 19px; }
+
+/* ---------- All services ---------- */
+
+.app-frame[data-surface="operator"] .readable-service-group + .readable-service-group { margin-top: 24px; }
+.app-frame[data-surface="operator"] .readable-service-group h3 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 12px;
+  font-size: 22px;
+  font-weight: 700;
+}
+.app-frame[data-surface="operator"] .readable-service-group.is-major h3 { color: var(--rd-major); }
+.app-frame[data-surface="operator"] .readable-service-group.is-unknown h3 { color: var(--rd-unknown); }
+.app-frame[data-surface="operator"] .readable-service-group.is-operational h3 { color: var(--rd-ok); }
+
+.app-frame[data-surface="operator"] .readable-service-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 10px;
+}
+.app-frame[data-surface="operator"] .readable-service {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 60px;
+  padding: 10px 14px;
+  background: var(--rd-panel);
+  border: 2px solid var(--rd-line);
+  border-left-width: 8px;
+  border-radius: 10px;
+  color: var(--rd-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.app-frame[data-surface="operator"] .readable-service > :first-child { width: 30px; height: 30px; }
+.app-frame[data-surface="operator"] .readable-service:hover,
+.app-frame[data-surface="operator"] .readable-service:focus-visible { background: var(--rd-panel-raised); border-color: var(--rd-text); outline: none; }
+.app-frame[data-surface="operator"] .readable-service-name {
+  font-size: 20px;
+  font-weight: 650;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+.app-frame[data-surface="operator"] .readable-service-state {
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+.app-frame[data-surface="operator"] .readable-service.is-major { border-left-color: var(--rd-major); }
+.app-frame[data-surface="operator"] .readable-service.is-major .readable-service-state { background: var(--rd-major); color: #1a0406; }
+.app-frame[data-surface="operator"] .readable-service.is-degraded { border-left-color: var(--rd-degraded); }
+.app-frame[data-surface="operator"] .readable-service.is-degraded .readable-service-state { background: var(--rd-degraded); color: #1f1600; }
+.app-frame[data-surface="operator"] .readable-service.is-unknown { border-left-color: var(--rd-unknown); }
+.app-frame[data-surface="operator"] .readable-service.is-unknown .readable-service-state { background: var(--rd-unknown-bg); color: var(--rd-unknown); border: 1px solid var(--rd-unknown); }
+.app-frame[data-surface="operator"] .readable-service.is-operational { border-left-color: var(--rd-ok); }
+.app-frame[data-surface="operator"] .readable-service.is-operational .readable-service-state { color: var(--rd-ok); }
+
+/* ---------- Technical detail, collapsed by default ---------- */
+
+.app-frame[data-surface="operator"] .readable-more {
+  border: 2px solid var(--rd-line);
+  border-radius: 14px;
+  background: var(--rd-panel);
+}
+.app-frame[data-surface="operator"] .readable-more > summary {
+  padding: 18px 24px;
+  color: var(--rd-text);
+  font-size: 21px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.app-frame[data-surface="operator"] .readable-more > .workspace-stack { padding: 8px 20px 24px; }
+
+/* ---------- Shared chrome: bigger, plainer, higher contrast ---------- */
+
+.app-frame[data-surface="operator"] .enterprise-shell,
+.app-frame[data-surface="operator"] .app-workspace,
+.app-frame[data-surface="operator"] .workspace-main { background: var(--rd-bg); background-image: none; }
+
+/* Top bar */
+.app-frame[data-surface="operator"] .workspace-topbar { background: var(--rd-bg); background-image: none; border-bottom: 2px solid var(--rd-line); backdrop-filter: none; }
+.app-frame[data-surface="operator"] .topbar-title > span { color: var(--rd-text-2); font-size: 16px; font-weight: 600; letter-spacing: 0.02em; }
+.app-frame[data-surface="operator"] .topbar-title h1 { font-size: 34px; font-weight: 750; }
+.app-frame[data-surface="operator"] .topbar-title p { color: var(--rd-text-2); font-size: 18px; }
+.app-frame[data-surface="operator"] .topbar-live > div { background: var(--rd-panel); background-image: none; border: 1px solid var(--rd-line); }
+.app-frame[data-surface="operator"] .topbar-live span { color: var(--rd-text-2); font-size: 15px; font-weight: 700; letter-spacing: 0.02em; }
+.app-frame[data-surface="operator"] .topbar-live b { color: var(--rd-text); font-size: 20px; }
+.app-frame[data-surface="operator"] .topbar-live small { color: var(--rd-text-2); font-size: 16px; }
+
+/* Buttons */
+.app-frame[data-surface="operator"] .ui-button { font-size: 18px; font-weight: 700; }
+@media (min-width: 901px) {
+  .app-frame[data-surface="operator"] .ui-button { min-height: 48px; padding-inline: 20px; }
+}
+.app-frame[data-surface="operator"] .ui-button-secondary { color: var(--rd-text); border: 2px solid var(--rd-line); background: var(--rd-panel); }
+.app-frame[data-surface="operator"] .ui-button-small { min-height: 40px; font-size: 17px; }
+.app-frame[data-surface="operator"] .link-button { color: var(--rd-link); font-size: 18px; font-weight: 700; text-decoration: underline; }
+
+/* Connection strip and footer */
+.app-frame[data-surface="operator"] .lifecycle-strip { color: var(--rd-text-2); font-size: 18px; }
+.app-frame[data-surface="operator"] .lifecycle-strip b { color: var(--rd-text); font-size: 18px; }
+.app-frame[data-surface="operator"] .lifecycle-strip small,
+.app-frame[data-surface="operator"] .lifecycle-strip span { font-size: 17px; color: var(--rd-text-2); }
+.app-frame[data-surface="operator"] .workspace-footer { color: var(--rd-text-2); font-size: 17px; }
+
+/* Panels and section headers */
+.app-frame[data-surface="operator"] .workspace-panel,
+.app-frame[data-surface="operator"] .page-summary,
+.app-frame[data-surface="operator"] .metric-tile,
+.app-frame[data-surface="operator"] .filter-bar {
+  background: var(--rd-panel);
+  background-image: none;
+  border: 2px solid var(--rd-line);
+  box-shadow: none;
+  backdrop-filter: none;
+}
+.app-frame[data-surface="operator"] .workspace-panel::before,
+.app-frame[data-surface="operator"] .workspace-panel::after,
+.app-frame[data-surface="operator"] .page-summary::before,
+.app-frame[data-surface="operator"] .page-summary::after,
+.app-frame[data-surface="operator"] .metric-tile::before,
+.app-frame[data-surface="operator"] .metric-tile::after { display: none; }
+
+.app-frame[data-surface="operator"] .section-eyebrow,
+.app-frame[data-surface="operator"] .section-header > div > span {
+  color: var(--rd-text-2);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.app-frame[data-surface="operator"] .section-header h2,
+.app-frame[data-surface="operator"] .page-summary h2 { color: var(--rd-text); font-size: 29px; font-weight: 750; line-height: 1.2; }
+.app-frame[data-surface="operator"] .section-header p,
+.app-frame[data-surface="operator"] .page-summary p { color: var(--rd-text-2); font-size: 18px; line-height: 1.5; }
+
+/* Metric tiles */
+.app-frame[data-surface="operator"] .metric-tile header span { color: var(--rd-text-2); font-size: 16px; font-weight: 700; letter-spacing: 0.02em; }
+.app-frame[data-surface="operator"] .metric-tile header em { font-size: 15px; }
+.app-frame[data-surface="operator"] .metric-tile strong { color: var(--rd-text); font-size: 40px; }
+.app-frame[data-surface="operator"] .metric-tile small { color: var(--rd-text-2); font-size: 17px; }
+
+/* Tables */
+.app-frame[data-surface="operator"] .data-table-head,
+.app-frame[data-surface="operator"] .attention-head,
+.app-frame[data-surface="operator"] .category-head {
+  color: var(--rd-text-2);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.app-frame[data-surface="operator"] .table-sort { color: var(--rd-text-2); font-size: 16px; font-weight: 700; }
+.app-frame[data-surface="operator"] .data-table-row,
+.app-frame[data-surface="operator"] .category-row,
+.app-frame[data-surface="operator"] .attention-row { min-height: 64px; color: var(--rd-text); font-size: 18px; border-color: var(--rd-line); }
+.app-frame[data-surface="operator"] .data-table-row strong,
+.app-frame[data-surface="operator"] .category-row strong,
+.app-frame[data-surface="operator"] .category-row b { color: var(--rd-text); font-size: 18px; }
+.app-frame[data-surface="operator"] .data-table-row small,
+.app-frame[data-surface="operator"] .category-row small { color: var(--rd-text-2); font-size: 16px; }
+.app-frame[data-surface="operator"] .attention-row h3 { color: var(--rd-text); font-size: 21px; font-weight: 650; line-height: 1.3; }
+.app-frame[data-surface="operator"] .attention-row p { color: var(--rd-text-2); font-size: 18px; line-height: 1.5; }
+.app-frame[data-surface="operator"] .attention-row time { color: var(--rd-text); font-size: 18px; }
+.app-frame[data-surface="operator"] .row-meta b { color: var(--rd-text); font-size: 19px; }
+.app-frame[data-surface="operator"] .row-meta em { color: var(--rd-text-2); font-size: 16px; }
+
+/* Provider identity and badges */
+.app-frame[data-surface="operator"] .provider-identity b { color: var(--rd-text); font-size: 19px; font-weight: 700; }
+.app-frame[data-surface="operator"] .provider-identity small { color: var(--rd-text-2); font-size: 16px; }
+.app-frame[data-surface="operator"] .state-badge { padding: 5px 12px; font-size: 16px; font-weight: 750; letter-spacing: 0.01em; }
+
+/* Incident and maintenance records */
+.app-frame[data-surface="operator"] .incident-record,
+.app-frame[data-surface="operator"] .maintenance-record { background: var(--rd-panel-raised); background-image: none; border: 2px solid var(--rd-line); box-shadow: none; }
+.app-frame[data-surface="operator"] .incident-record.incident-major { border-color: var(--rd-major); }
+.app-frame[data-surface="operator"] .incident-record.incident-degraded { border-color: var(--rd-degraded); }
+.app-frame[data-surface="operator"] .incident-title > span { color: var(--rd-text-2); font-size: 16px; font-weight: 700; letter-spacing: 0.02em; }
+.app-frame[data-surface="operator"] .incident-title h3,
+.app-frame[data-surface="operator"] .maintenance-record h3 { color: var(--rd-text); font-size: 23px; font-weight: 650; line-height: 1.3; }
+.app-frame[data-surface="operator"] .incident-title p,
+.app-frame[data-surface="operator"] .maintenance-record p { color: var(--rd-text-2); font-size: 19px; line-height: 1.55; }
+.app-frame[data-surface="operator"] .record-facts dt { color: var(--rd-text-2); font-size: 16px; font-weight: 700; letter-spacing: 0.02em; }
+.app-frame[data-surface="operator"] .record-facts dd { color: var(--rd-text); font-size: 18px; font-weight: 600; }
+.app-frame[data-surface="operator"] .incident-guidance span { color: var(--rd-text-2); font-size: 16px; font-weight: 700; letter-spacing: 0.02em; }
+.app-frame[data-surface="operator"] .incident-guidance p { color: var(--rd-text); font-size: 18px; line-height: 1.55; }
+.app-frame[data-surface="operator"] .timeline-disclosure summary,
+.app-frame[data-surface="operator"] .client-update summary { color: var(--rd-link); font-size: 18px; font-weight: 700; }
+.app-frame[data-surface="operator"] .timeline-disclosure,
+.app-frame[data-surface="operator"] .client-update { color: var(--rd-text-2); font-size: 18px; line-height: 1.55; }
+
+/* Filters and empty states */
+.app-frame[data-surface="operator"] .filter-bar label span { color: var(--rd-text-2); font-size: 16px; font-weight: 700; letter-spacing: 0.02em; }
+.app-frame[data-surface="operator"] .filter-bar input,
+.app-frame[data-surface="operator"] .filter-bar select { min-height: 48px; color: var(--rd-text); font-size: 19px; background: var(--rd-bg); border: 2px solid var(--rd-line); }
+.app-frame[data-surface="operator"] .empty-state b { color: var(--rd-text); font-size: 22px; }
+.app-frame[data-surface="operator"] .empty-state p { color: var(--rd-text-2); font-size: 18px; }
+
+/* Provider detail drawer */
+.app-frame[data-surface="operator"] .provider-drawer { background: var(--rd-panel); background-image: none; border-left: 2px solid var(--rd-line); backdrop-filter: none; }
+.app-frame[data-surface="operator"] .provider-drawer h3 { color: var(--rd-text); font-size: 22px; font-weight: 750; }
+.app-frame[data-surface="operator"] .drawer-summary span,
+.app-frame[data-surface="operator"] .drawer-facts dt { color: var(--rd-text-2); font-size: 16px; font-weight: 700; letter-spacing: 0.02em; }
+.app-frame[data-surface="operator"] .drawer-summary strong,
+.app-frame[data-surface="operator"] .drawer-facts dd { color: var(--rd-text); font-size: 19px; }
+.app-frame[data-surface="operator"] .drawer-alert { color: var(--rd-text); font-size: 19px; line-height: 1.5; }
+.app-frame[data-surface="operator"] .component-list li,
+.app-frame[data-surface="operator"] .trace-list article { color: var(--rd-text-2); font-size: 18px; }
+
+/* Desktop only: the phone layout keeps its compact bottom navigation and tool buttons. */
+@media (min-width: 901px) {
+  /* Sidebar */
+  .app-frame[data-surface="operator"] .app-sidebar { background: #0f1520; background-image: none; border-right: 2px solid var(--rd-line); }
+  .app-frame[data-surface="operator"] .app-sidebar nav button {
+    min-height: 52px;
+    color: var(--rd-text-2);
+    font-size: 19px;
+    font-weight: 650;
+  }
+  .app-frame[data-surface="operator"] .app-sidebar nav button[aria-current="page"] { color: var(--rd-text); background: var(--rd-panel-raised); background-image: none; border: 2px solid var(--rd-text); }
+  .app-frame[data-surface="operator"] .app-sidebar nav button em,
+  .app-frame[data-surface="operator"] .app-sidebar nav button small { color: var(--rd-text); font-size: 17px; font-weight: 700; }
+  .app-frame[data-surface="operator"] .nav-section-label,
+  .app-frame[data-surface="operator"] .sidebar-workspace span {
+    color: var(--rd-text-2);
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+  .app-frame[data-surface="operator"] .sidebar-brand b { font-size: 22px; }
+  .app-frame[data-surface="operator"] .sidebar-brand small,
+  .app-frame[data-surface="operator"] .sidebar-workspace small { color: var(--rd-text-2); font-size: 16px; letter-spacing: 0; text-transform: none; }
+  .app-frame[data-surface="operator"] .sidebar-workspace b { font-size: 20px; }
+
+  /* Sidebar tools: readable labels, and stacked so they do not cover each other */
+  .app-frame[data-surface="operator"] .app-sidebar { overflow-y: auto; }
+  .app-frame[data-surface="operator"] .app-sidebar nav button { white-space: nowrap; }
+  .app-frame[data-surface="operator"] .app-sidebar footer span { color: var(--rd-text-2); font-size: 15px; font-weight: 700; letter-spacing: 0.02em; }
+  .app-frame[data-surface="operator"] .app-sidebar footer b { color: var(--rd-text); font-size: 16px; }
+  .app-frame[data-surface="operator"] .app-sidebar footer small { color: var(--rd-text-2); font-size: 15px; line-height: 1.4; }
+
+  .app-frame[data-surface="operator"] .m365-launcher,
+  .app-frame[data-surface="operator"] .depth-launcher,
+  .app-frame[data-surface="operator"] .ops-intel-trigger,
+  .app-frame[data-surface="operator"] .experience-pulse {
+    min-height: 60px;
+    background: var(--rd-panel-raised);
+    background-image: none;
+    border: 2px solid var(--rd-line);
+    box-shadow: none;
+    backdrop-filter: none;
+    color: var(--rd-text);
+  }
+  .app-frame[data-surface="operator"] .m365-launcher b,
+  .app-frame[data-surface="operator"] .depth-launcher b,
+  .app-frame[data-surface="operator"] .experience-pulse b,
+  .app-frame[data-surface="operator"] .ops-intel-trigger { color: var(--rd-text); font-size: 16px; font-weight: 700; letter-spacing: 0; }
+  .app-frame[data-surface="operator"] .m365-launcher small,
+  .app-frame[data-surface="operator"] .depth-launcher small { color: var(--rd-text-2); font-size: 15px; letter-spacing: 0; }
+  .app-frame[data-surface="operator"] .m365-launcher em,
+  .app-frame[data-surface="operator"] .depth-launcher kbd,
+  .app-frame[data-surface="operator"] .experience-pulse kbd,
+  .app-frame[data-surface="operator"] .ops-intel-trigger span { font-size: 15px; font-weight: 750; letter-spacing: 0; color: var(--rd-text); }
+
+  .app-frame[data-surface="operator"] .app-sidebar footer span,
+  .app-frame[data-surface="operator"] .app-sidebar footer small,
+  .app-frame[data-surface="operator"] .m365-launcher small,
+  .app-frame[data-surface="operator"] .depth-launcher small,
+  .app-frame[data-surface="operator"] .m365-launcher em,
+  .app-frame[data-surface="operator"] .depth-launcher kbd,
+  .app-frame[data-surface="operator"] .experience-pulse kbd,
+  .app-frame[data-surface="operator"] .ops-intel-trigger span { font-size: 15px; }
+
+  /* Two static cards (workspace label, policy note) are removed on desktop so
+     navigation and the four tools fit without covering each other. */
+  .app-frame[data-surface="operator"] .sidebar-workspace,
+  .app-frame[data-surface="operator"] .app-sidebar footer { display: none; }
+  .app-frame[data-surface="operator"] .enterprise-shell { grid-template-columns: var(--px-sidebar) minmax(0, 1fr); }
+  .app-frame[data-surface="operator"] .app-sidebar nav { padding-bottom: 310px; }
+  .app-frame[data-surface="operator"] .experience-pulse { bottom: 18px; }
+  .app-frame[data-surface="operator"] .ops-intel-trigger { bottom: 90px; }
+  .app-frame[data-surface="operator"] .depth-launcher { bottom: 162px; }
+  .app-frame[data-surface="operator"] .m365-launcher { bottom: 234px; }
+}
+
+/* Narrow screens */
+@media (max-width: 900px) {
+  .app-frame[data-surface="operator"] { font-size: 17px; }
+  .app-frame[data-surface="operator"] .readable-hero { padding: 22px 20px; }
+  .app-frame[data-surface="operator"] .readable-hero h2 { font-size: 34px; }
+  .app-frame[data-surface="operator"] .readable-problem { grid-template-columns: 1fr; gap: 14px; padding: 18px; }
+  .app-frame[data-surface="operator"] .readable-problem-state span { display: inline-block; }
+  .app-frame[data-surface="operator"] .readable-problem-actions { grid-auto-flow: column; justify-content: start; }
+  .app-frame[data-surface="operator"] .readable-service-grid { grid-template-columns: 1fr; }
+}
+
+/* Remaining small labels */
+.app-frame[data-surface="operator"] .status-chip { padding: 4px 10px; font-size: 15px; font-weight: 750; letter-spacing: 0; text-transform: none; }
+.app-frame[data-surface="operator"] .priority-index { min-width: 40px; min-height: 40px; font-size: 16px; font-weight: 750; color: var(--rd-text); }
+.app-frame[data-surface="operator"] .table-sort span { font-size: 15px; }
+.app-frame[data-surface="operator"] .metric-tile header em { font-size: 15px; letter-spacing: 0; }
+
+
+/* Labels are written in sentence case. Small capitals are harder to read. */
+.app-frame[data-surface="operator"] .nav-section-label,
+.app-frame[data-surface="operator"] .topbar-live span,
+.app-frame[data-surface="operator"] .section-eyebrow,
+.app-frame[data-surface="operator"] .section-header > div > span,
+.app-frame[data-surface="operator"] .metric-tile header span,
+.app-frame[data-surface="operator"] .metric-tile header em,
+.app-frame[data-surface="operator"] .data-table-head,
+.app-frame[data-surface="operator"] .attention-head,
+.app-frame[data-surface="operator"] .category-head,
+.app-frame[data-surface="operator"] .table-sort,
+.app-frame[data-surface="operator"] .record-facts dt,
+.app-frame[data-surface="operator"] .incident-title > span,
+.app-frame[data-surface="operator"] .incident-guidance span,
+.app-frame[data-surface="operator"] .filter-bar label span,
+.app-frame[data-surface="operator"] .drawer-summary span,
+.app-frame[data-surface="operator"] .drawer-facts dt,
+.app-frame[data-surface="operator"] .state-badge,
+.app-frame[data-surface="operator"] .m365-launcher em,
+.app-frame[data-surface="operator"] .row-meta em { text-transform: none; letter-spacing: 0; }
+
+/* Top bar: one clear title, compact status boxes */
+.app-frame[data-surface="operator"] .topbar-title > span,
+.app-frame[data-surface="operator"] .topbar-title p { display: none; }
+.app-frame[data-surface="operator"] .topbar-live > div { min-width: 0; padding: 8px 14px; }
+.app-frame[data-surface="operator"] .topbar-live span,
+.app-frame[data-surface="operator"] .topbar-live small { white-space: nowrap; }
+
+/* Hero: totals on one line, actions underneath */
+.app-frame[data-surface="operator"] .readable-hero { display: flex; flex-direction: column; align-items: flex-start; gap: 22px; }
+.app-frame[data-surface="operator"] .readable-hero .posture-actions { display: flex; flex-wrap: wrap; gap: 12px; margin: 0; }
+.app-frame[data-surface="operator"] .topbar-live b { white-space: nowrap; }
+.app-frame[data-surface="operator"] .readable-service-name { overflow-wrap: break-word; }
+.app-frame[data-surface="operator"] .topbar-title h1 { font-size: 30px; white-space: nowrap; }
+.app-frame[data-surface="operator"] .provider-drawer h3 { text-transform: none; letter-spacing: 0; }
+.app-frame[data-surface="operator"] .summary-stat span,
+.app-frame[data-surface="operator"] .summary-stat small { color: var(--rd-text-2); font-size: 15px; font-weight: 700; letter-spacing: 0; text-transform: none; }
+.app-frame[data-surface="operator"] .summary-stat strong { color: var(--rd-text); }

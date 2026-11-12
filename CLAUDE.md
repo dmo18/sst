@@ -49,12 +49,15 @@ scripts/production-smoke.mjs             deployed production and commit-identity
 scripts/verify-yodeck-wallboard.mjs      exact 458 by 291 CDP wallboard verification
 scripts/write-deploy-version.mjs         generated release identity
 src/App.tsx                              lifecycle, refresh, route, and browser-check state
-src/IssueConsole.tsx                     operator application
+src/StatusHome.tsx                       default plain status screen
+src/IssueConsole.tsx                     technical console (?console=full)
 src/WallboardV2.tsx                      sole wallboard, overlay, telemetry, and marquee owner
 src/wallboardRoute.ts                    view and alert-window parsing
 src/statusViewModel.ts                   action queue and UI models
 src/payloadValidation.ts                 browser payload validation
 src/styles/wallboard-v2.css              dedicated wallboard overlay, compact layout, and marquees
+src/styles/status-home.css               default status screen (20px base, 18px floor), never the wallboard
+src/styles/readable.css                  technical console readability layer (18px base, 15px floor), never the wallboard
 .github/workflows/refresh-pages.yml       Pages build and deployment
 .github/workflows/status-freshness-watch.yml deployed freshness recovery
 .github/workflows/refresh-continuity.yml  bounded refresh continuity heartbeat
@@ -108,6 +111,26 @@ GitHub monitoring must remain first-party and unauthenticated.
 - Never truncate or de-duplicate a component list before problem components have been identified.
 - The browser and the collector share one Statuspage parser (`parseStatuspageSummary`). Do not add a second one.
 - Microsoft 365 is read from `https://status.cloud.microsoft/api/posts/{mac,ppac,m365Consumer}` with no credentials. A document the primary host fails to return is read from Microsoft's second host, `https://msit.status.cloud.microsoft`. It describes Microsoft's public status, not tenant health. A degradation in any one readable document is always published, even when another document fails; only the operational conclusion requires both `mac` and `m365Consumer`.
+
+## Operator readability contract
+
+The operator application must stay easy to read for someone who has difficulty focusing on small or low-contrast text.
+
+- No operator text below 15 pixels; body text is 18 pixels.
+- Plain, high-contrast panels behind text. No gradients, glow or blur behind text.
+- Labels in sentence case, not small capitals.
+- A state is always written as a word (Major outage, Degraded, Not confirmed, Working), never shown by color alone.
+- The overview leads with what is wrong, in plain language, before any metric.
+- Every rule in `src/styles/readable.css` is scoped to `.app-frame[data-surface="operator"]`. It must never style the wallboard.
+
+The default screen is the plain status screen, `src/StatusHome.tsx` with `src/styles/status-home.css` (`data-surface="home"`). The technical console opens at `?console=full` or from any link that names one of its views.
+
+- Light, flat, one centered column. One verdict sentence, then major outages, degraded services and unconfirmed services as single rows, then every service on one line. A row opens that service with the vendor's own text.
+- No text below 18 pixels; body text is 20 pixels. Sizes are in pixels.
+- No collection detail on this screen. One collapsed "How we know this" block on a service is the limit.
+- It fails closed: with no validated payload no service is shown as working, and a payload older than 20 minutes shows a warning.
+- Every rule in `status-home.css` is scoped to `.app-frame[data-surface="home"]`.
+- Release and product checks that inspect the technical console must open it with `?console=full`.
 
 ## Wallboard contract
 

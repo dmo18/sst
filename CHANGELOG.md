@@ -10,6 +10,21 @@ The project uses semantic versioning. Dates are shown in ISO format. The newest 
 
 ## Unreleased
 
+### Plain status screen, wallboard clipping, refresh stall (November 12, 2026)
+
+- The default screen is now a plain, light status screen modeled on the vendors' own status pages: one verdict sentence, major outages, degraded and unconfirmed services as single rows, then every service on one line. Selecting a service shows the vendor's text and updates. Body text is 20 pixels and nothing is below 18. The previous console remains at `?console=full`.
+- Fixed: at 458 by 291 the compact wallboard column grew to the width of its heading or footer line when many providers were affected, so every incident row was cut off on the right and the age was hidden. The column may now shrink.
+- Fixed: a release that failed a post-deploy check did not renew the refresh keeper, so the data stopped refreshing (40 minutes on November 12). A failed scheduled or push release now renews it.
+- Release and product checks open the technical console with `?console=full`.
+
+### Readable operator interface (November 12, 2026)
+
+The operator application was redesigned for legibility. The wallboard is unchanged.
+
+- The overview now leads with one plain sentence ("5 services have a major outage") and four totals, then "Problems right now" as large cards (state, vendor, title, vendor text, last update), then every service grouped as having problems, not confirmed or working normally. Collection metrics and tables are folded under "Technical detail".
+- A new stylesheet, `src/styles/readable.css`, raises text to an 18 pixel base with nothing below 15 pixels, uses plain high-contrast panels with no gradients or blur behind text, writes labels in sentence case, and always names a state in words as well as color.
+- Every rule in that stylesheet is scoped to `.app-frame[data-surface="operator"]`; a test enforces the scope and the minimum text size.
+
 ### Source truth review (November 10, 2026)
 
 A top-to-bottom review compared every enabled provider against what the vendor publishes. Before it, one collection reported 6 providers unknown and 4 blind, and hid five live vendor incidents. After it, the same collection reports 41 of 41 sources read, 40 of 41 with a confirmed service state, no blind sources, and no provider needs a headless browser render.

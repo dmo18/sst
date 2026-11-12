@@ -18,6 +18,7 @@ The collector reads free public sources owned by monitored vendors, normalizes t
 - Source health: healthy, watch, or blind.
 - Source observation reliability: rolling seven-day and thirty-day SLO windows.
 - Parser trust: stable, changed, observing, or quarantined schema state.
+- Plain status screen by default: one verdict sentence, the services with problems, then every service on one line, in large high-contrast type. The technical console is at `?console=full`.
 - Browser-local operator workflow: acknowledgement, follow, snooze, handled state, notes, assignee, pins, and lenses that never rewrite vendor truth.
 
 A source failure, parser quarantine, or source SLO breach never becomes a vendor outage or a green service conclusion. Routine maintenance, resolved history, marketing material, release notes, collector failures, and unreadable-source records are not promoted into the wallboard incident list. Temporal correlations remain non-causal.

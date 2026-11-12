@@ -8,6 +8,7 @@ import { ProductDepthLauncher } from './ProductDepthLauncher';
 import { ProductDepthLayer } from './ProductDepthLayer';
 import { ProductTruthBoundary } from './ProductTruthBoundary';
 import { ACTIVE_PROVIDER_CATALOG, ENABLED_PROVIDER_IDS } from './providerCatalog';
+import { StatusHome } from './StatusHome';
 import { buildIssueConsoleModel } from './statusViewModel';
 import { usePayloadPoller } from './usePayloadPoller';
 import { WallboardV2 } from './WallboardV2';
@@ -53,7 +54,12 @@ export function App(): JSX.Element {
     [state.data]
   );
 
-  const productFocus = new URLSearchParams(location.search).get('focus') || '';
+  const searchParams = new URLSearchParams(location.search);
+  const productFocus = searchParams.get('focus') || '';
+  // The plain status screen is the default. The technical console opens on
+  // request, or when a link names one of its views.
+  const consoleMode = searchParams.get('console') === 'full' || searchParams.has('focus') || searchParams.has('m365') || searchParams.has('view');
+  const surface = route.wallboardMode ? 'wallboard' : consoleMode ? 'operator' : 'home';
   const replayBoundaryVisible = productFocus === 'universe' || productFocus.startsWith('category:') || productFocus.startsWith('correlation:');
   const liveTruth = state.data?.live_truth;
   const wallboardProviderIds = route.providerIds || ENABLED_PROVIDER_IDS;
@@ -69,6 +75,7 @@ export function App(): JSX.Element {
   return (
     <main
       className="app-frame"
+      data-surface={surface}
       data-live-truth-checked-at={liveTruth?.checked_at || ''}
       data-live-truth-attempted={liveTruth?.attempted_provider_count ?? 0}
       data-live-truth-successes={liveTruth?.success_provider_count ?? 0}
@@ -79,7 +86,9 @@ export function App(): JSX.Element {
     >
       {route.wallboardMode
         ? <WallboardV2 nextBrowserRefreshAt={nextBrowserRefreshAt} model={model} lifecycle={state} now={now} browserCheckedAt={lastBrowserCheckAt} browserRefreshMs={browserRefreshMs} alertWindowMs={route.alertWindowMs} providerIds={wallboardProviderIds} onExit={exitWallboard} />
-        : <>
+        : surface === 'home'
+          ? <StatusHome model={model} lifecycle={state} now={now} onRefresh={requestRefresh} />
+          : <>
             <IssueConsole model={model} lifecycle={state} onRefresh={requestRefresh} browserCheckedAt={lastBrowserCheckAt} browserRefreshMs={browserRefreshMs} />
             <OperationsIntelligencePanel model={model} />
             <ExperienceLayer model={model} lifecyclePhase={state.phase} onRefresh={requestRefresh} />

@@ -1,0 +1,588 @@
+/*
+ * The default operator screen (StatusHome). Light, flat, one column, large
+ * type. Every rule is scoped to .app-frame[data-surface="home"], so nothing
+ * here can reach the technical console or the other display surface.
+ * Sizes are in pixels on purpose: the root font size belongs to other layers.
+ */
+
+.app-frame[data-surface="home"] {
+  --sh-bg: #f4f5f7;
+  --sh-card: #ffffff;
+  --sh-ink: #111418;
+  --sh-ink-soft: #3d444d;
+  --sh-line: #c9ced6;
+  --sh-link: #0b4fb3;
+  --sh-major: #b42318;
+  --sh-major-bg: #fdecea;
+  --sh-degraded: #8a4b00;
+  --sh-degraded-bg: #fff3d6;
+  --sh-unknown: #4a4f57;
+  --sh-unknown-bg: #eceef1;
+  --sh-ok: #1b6e3c;
+  --sh-ok-bg: #e6f4ea;
+  display: block;
+  min-height: 100vh;
+  background: var(--sh-bg);
+  color: var(--sh-ink);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  font-size: 20px;
+  line-height: 1.5;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.app-frame[data-surface="home"] .sh-page {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 24px 24px 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.app-frame[data-surface="home"] h1,
+.app-frame[data-surface="home"] h2,
+.app-frame[data-surface="home"] h3,
+.app-frame[data-surface="home"] p,
+.app-frame[data-surface="home"] ul,
+.app-frame[data-surface="home"] ol,
+.app-frame[data-surface="home"] dl,
+.app-frame[data-surface="home"] dd {
+  margin: 0;
+  padding: 0;
+}
+
+.app-frame[data-surface="home"] ul,
+.app-frame[data-surface="home"] ol {
+  list-style: none;
+}
+
+.app-frame[data-surface="home"] a {
+  color: var(--sh-link);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.app-frame[data-surface="home"] :focus-visible {
+  outline: 4px solid #0b4fb3;
+  outline-offset: 2px;
+}
+
+.app-frame[data-surface="home"] p,
+.app-frame[data-surface="home"] li,
+.app-frame[data-surface="home"] dd {
+  color: inherit;
+}
+
+/* Top line */
+.app-frame[data-surface="home"] .sh-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 24px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid var(--sh-line);
+}
+
+.app-frame[data-surface="home"] .sh-brand {
+  color: var(--sh-ink);
+  font-size: 26px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.app-frame[data-surface="home"] .sh-top-right {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+  color: var(--sh-ink-soft);
+  font-size: 18px;
+}
+
+/* Buttons */
+.app-frame[data-surface="home"] .sh-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: 48px;
+  padding: 8px 20px;
+  border: 2px solid var(--sh-ink);
+  border-radius: 8px;
+  background: var(--sh-ink);
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.app-frame[data-surface="home"] .sh-button.is-quiet {
+  background: var(--sh-card);
+  color: var(--sh-ink);
+}
+
+.app-frame[data-surface="home"] .sh-button:hover {
+  background: #2c333b;
+  color: #ffffff;
+}
+
+.app-frame[data-surface="home"] .sh-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+/* Out of date warning */
+.app-frame[data-surface="home"] .sh-warning {
+  padding: 16px 20px;
+  border: 2px solid var(--sh-degraded);
+  border-radius: 10px;
+  background: var(--sh-degraded-bg);
+  color: #3d2100;
+  font-size: 20px;
+}
+
+/* Verdict */
+.app-frame[data-surface="home"] .sh-verdict {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 32px;
+  border: 2px solid var(--sh-line);
+  border-left-width: 16px;
+  border-radius: 12px;
+  background: var(--sh-card);
+}
+
+.app-frame[data-surface="home"] .sh-verdict > svg {
+  flex: 0 0 auto;
+  width: 72px;
+  height: 72px;
+}
+
+.app-frame[data-surface="home"] .sh-verdict h1 {
+  font-size: 44px;
+  font-weight: 800;
+  line-height: 1.12;
+}
+
+.app-frame[data-surface="home"] .sh-verdict p {
+  margin-top: 8px;
+  color: var(--sh-ink-soft);
+  font-size: 24px;
+}
+
+.app-frame[data-surface="home"] .sh-verdict.is-major { border-color: var(--sh-major); color: var(--sh-major); }
+.app-frame[data-surface="home"] .sh-verdict.is-degraded { border-color: var(--sh-degraded); color: var(--sh-degraded); }
+.app-frame[data-surface="home"] .sh-verdict.is-unknown { border-color: var(--sh-unknown); color: var(--sh-unknown); }
+.app-frame[data-surface="home"] .sh-verdict.is-operational { border-color: var(--sh-ok); color: var(--sh-ok); }
+.app-frame[data-surface="home"] .sh-verdict h1 { color: var(--sh-ink); }
+
+/* Sections */
+.app-frame[data-surface="home"] .sh-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.app-frame[data-surface="home"] .sh-section > h2,
+.app-frame[data-surface="home"] .sh-all-head h2 {
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.app-frame[data-surface="home"] .sh-section > h2,
+.app-frame[data-surface="home"] .sh-all-head h2 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--sh-ink);
+}
+
+.app-frame[data-surface="home"] .sh-section h2 svg { width: 30px; height: 30px; }
+.app-frame[data-surface="home"] .sh-section h2 span { color: var(--sh-ink-soft); font-weight: 600; }
+.app-frame[data-surface="home"] #sh-major svg { color: var(--sh-major); }
+.app-frame[data-surface="home"] #sh-degraded svg { color: var(--sh-degraded); }
+.app-frame[data-surface="home"] #sh-unknown svg { color: var(--sh-unknown); }
+
+/* Problem rows on the home screen */
+.app-frame[data-surface="home"] .sh-rows {
+  border: 2px solid var(--sh-major);
+  border-radius: 12px;
+  background: var(--sh-card);
+  overflow: hidden;
+}
+
+.app-frame[data-surface="home"] .sh-rows.is-degraded { border-color: var(--sh-degraded); }
+.app-frame[data-surface="home"] .sh-rows li + li { border-top: 1px solid var(--sh-line); }
+
+.app-frame[data-surface="home"] .sh-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 84px;
+  padding: 14px 20px;
+  border: 0;
+  background: transparent;
+  color: var(--sh-ink);
+  font-size: 20px;
+  line-height: 1.35;
+  text-align: left;
+  cursor: pointer;
+}
+
+.app-frame[data-surface="home"] .sh-row:hover { background: #eef1f5; }
+
+.app-frame[data-surface="home"] .sh-row-text {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.app-frame[data-surface="home"] .sh-row-text b { font-size: 24px; font-weight: 800; }
+.app-frame[data-surface="home"] .sh-row-text span { color: var(--sh-ink); }
+.app-frame[data-surface="home"] .sh-row-text .sh-row-more,
+.app-frame[data-surface="home"] .sh-row-when { color: var(--sh-ink-soft); font-size: 18px; }
+.app-frame[data-surface="home"] .sh-row-when { flex: 0 0 auto; white-space: nowrap; }
+.app-frame[data-surface="home"] .sh-chevron { flex: 0 0 auto; color: var(--sh-ink-soft); }
+
+/* State word with its shape */
+.app-frame[data-surface="home"] .sh-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 20px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.app-frame[data-surface="home"] .sh-state svg { flex: 0 0 auto; }
+.app-frame[data-surface="home"] .sh-state.is-major { color: var(--sh-major); }
+.app-frame[data-surface="home"] .sh-state.is-degraded { color: var(--sh-degraded); }
+.app-frame[data-surface="home"] .sh-state.is-unknown { color: var(--sh-unknown); }
+.app-frame[data-surface="home"] .sh-state.is-operational { color: var(--sh-ok); }
+
+/* Problem box */
+.app-frame[data-surface="home"] .sh-problem {
+  border: 2px solid var(--sh-major);
+  border-radius: 12px;
+  background: var(--sh-card);
+  overflow: hidden;
+}
+
+.app-frame[data-surface="home"] .sh-problem.is-degraded { border-color: var(--sh-degraded); }
+
+.app-frame[data-surface="home"] .sh-problem > header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 24px;
+  padding: 16px 24px;
+  background: var(--sh-major-bg);
+}
+
+.app-frame[data-surface="home"] .sh-problem.is-degraded > header { background: var(--sh-degraded-bg); }
+
+.app-frame[data-surface="home"] .sh-problem-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 28px;
+  line-height: 1.2;
+}
+
+.app-frame[data-surface="home"] .sh-problem-body {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 24px;
+}
+
+.app-frame[data-surface="home"] .sh-incident {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.app-frame[data-surface="home"] .sh-incident + .sh-incident {
+  padding-top: 20px;
+  border-top: 2px solid var(--sh-line);
+}
+
+.app-frame[data-surface="home"] .sh-incident h3 {
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+.app-frame[data-surface="home"] .sh-incident p {
+  color: var(--sh-ink);
+  font-size: 20px;
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+
+.app-frame[data-surface="home"] .sh-incident p.sh-when,
+.app-frame[data-surface="home"] .sh-parts {
+  color: var(--sh-ink-soft);
+  font-size: 18px;
+}
+
+.app-frame[data-surface="home"] .sh-updates {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+  padding-left: 20px;
+  border-left: 4px solid var(--sh-line);
+}
+
+.app-frame[data-surface="home"] .sh-updates li {
+  display: flex;
+  flex-direction: column;
+  font-size: 18px;
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+
+/* Simple lines: name on the left, sentence on the right */
+.app-frame[data-surface="home"] .sh-lines {
+  border: 2px solid var(--sh-line);
+  border-radius: 12px;
+  background: var(--sh-card);
+}
+
+.app-frame[data-surface="home"] .sh-lines li {
+  display: grid;
+  grid-template-columns: minmax(0, 260px) minmax(0, 1fr);
+  gap: 4px 24px;
+  padding: 16px 24px;
+  font-size: 20px;
+  overflow-wrap: anywhere;
+}
+
+.app-frame[data-surface="home"] .sh-lines li + li { border-top: 1px solid var(--sh-line); }
+.app-frame[data-surface="home"] .sh-lines li span { color: var(--sh-ink-soft); }
+
+/* All services */
+.app-frame[data-surface="home"] .sh-all-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px 24px;
+}
+
+.app-frame[data-surface="home"] .sh-find {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 18px;
+  color: var(--sh-ink-soft);
+}
+
+.app-frame[data-surface="home"] .sh-find input {
+  box-sizing: border-box;
+  width: 240px;
+  max-width: 100%;
+  min-height: 48px;
+  padding: 8px 14px;
+  border: 2px solid var(--sh-ink-soft);
+  border-radius: 8px;
+  background: var(--sh-card);
+  color: var(--sh-ink);
+  font-size: 20px;
+}
+
+.app-frame[data-surface="home"] .sh-services {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border: 2px solid var(--sh-line);
+  border-radius: 12px;
+  background: var(--sh-card);
+  overflow: hidden;
+}
+
+.app-frame[data-surface="home"] .sh-services li {
+  border-bottom: 1px solid var(--sh-line);
+}
+
+.app-frame[data-surface="home"] .sh-services li:nth-child(odd) {
+  border-right: 1px solid var(--sh-line);
+}
+
+.app-frame[data-surface="home"] .sh-service {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 64px;
+  padding: 10px 20px;
+  border: 0;
+  background: transparent;
+  color: var(--sh-ink);
+  font-size: 20px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.app-frame[data-surface="home"] .sh-service:hover { background: #eef1f5; }
+.app-frame[data-surface="home"] .sh-service.is-major { background: var(--sh-major-bg); }
+.app-frame[data-surface="home"] .sh-service.is-degraded { background: var(--sh-degraded-bg); }
+
+.app-frame[data-surface="home"] .sh-service-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.app-frame[data-surface="home"] .sh-empty {
+  font-size: 20px;
+  color: var(--sh-ink-soft);
+}
+
+/* Provider icons keep one size here */
+.app-frame[data-surface="home"] .provider-logo {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+}
+
+/* One service */
+.app-frame[data-surface="home"] .sh-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.app-frame[data-surface="home"] .sh-back {
+  align-self: flex-start;
+  min-height: 48px;
+  padding: 8px 0;
+  border: 0;
+  background: transparent;
+  color: var(--sh-link);
+  font-size: 20px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.app-frame[data-surface="home"] .sh-detail-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+}
+
+.app-frame[data-surface="home"] .sh-detail-title h1 {
+  font-size: 44px;
+  font-weight: 800;
+  line-height: 1.1;
+  margin-right: auto;
+}
+
+.app-frame[data-surface="home"] .sh-detail-title .sh-state { font-size: 24px; }
+
+.app-frame[data-surface="home"] .sh-plain {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 24px;
+  border: 2px solid var(--sh-line);
+  border-radius: 12px;
+  background: var(--sh-card);
+  font-size: 22px;
+}
+
+.app-frame[data-surface="home"] .sh-note {
+  color: var(--sh-ink-soft);
+  font-size: 18px;
+}
+
+.app-frame[data-surface="home"] .sh-how {
+  border: 2px solid var(--sh-line);
+  border-radius: 12px;
+  background: var(--sh-card);
+  font-size: 18px;
+}
+
+.app-frame[data-surface="home"] .sh-how summary {
+  min-height: 48px;
+  padding: 12px 24px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.app-frame[data-surface="home"] .sh-how dl { padding: 0 24px 16px; }
+
+.app-frame[data-surface="home"] .sh-how dl > div {
+  display: grid;
+  grid-template-columns: minmax(0, 240px) minmax(0, 1fr);
+  gap: 4px 24px;
+  padding: 10px 0;
+  border-top: 1px solid var(--sh-line);
+  overflow-wrap: anywhere;
+}
+
+.app-frame[data-surface="home"] .sh-how dt { color: var(--sh-ink-soft); }
+
+/* Footer */
+.app-frame[data-surface="home"] .sh-foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px 24px;
+  padding-top: 20px;
+  border-top: 2px solid var(--sh-line);
+  color: var(--sh-ink-soft);
+  font-size: 18px;
+}
+
+.app-frame[data-surface="home"] .sh-foot p:last-child {
+  display: flex;
+  gap: 24px;
+}
+
+/* Phones */
+@media (max-width: 720px) {
+  .app-frame[data-surface="home"] .sh-page { padding: 16px 16px 48px; gap: 24px; }
+  .app-frame[data-surface="home"] .sh-verdict { flex-direction: column; align-items: flex-start; gap: 12px; padding: 20px; border-left-width: 10px; }
+  .app-frame[data-surface="home"] .sh-verdict > svg { width: 52px; height: 52px; }
+  .app-frame[data-surface="home"] .sh-verdict h1,
+  .app-frame[data-surface="home"] .sh-detail-title h1 { font-size: 32px; }
+  .app-frame[data-surface="home"] .sh-verdict p { font-size: 20px; }
+  .app-frame[data-surface="home"] .sh-section > h2,
+  .app-frame[data-surface="home"] .sh-all-head h2 { font-size: 26px; }
+  .app-frame[data-surface="home"] .sh-problem-name { font-size: 24px; }
+  .app-frame[data-surface="home"] .sh-problem > header,
+  .app-frame[data-surface="home"] .sh-problem-body { padding: 16px; }
+  .app-frame[data-surface="home"] .sh-row { flex-wrap: wrap; padding: 14px 16px; }
+  .app-frame[data-surface="home"] .sh-row-text { flex-basis: calc(100% - 100px); }
+  .app-frame[data-surface="home"] .sh-row-when { margin-left: 48px; }
+  .app-frame[data-surface="home"] .sh-chevron { display: none; }
+  .app-frame[data-surface="home"] .sh-services { grid-template-columns: minmax(0, 1fr); }
+  .app-frame[data-surface="home"] .sh-services li:nth-child(odd) { border-right: 0; }
+  .app-frame[data-surface="home"] .sh-lines li,
+  .app-frame[data-surface="home"] .sh-how dl > div { grid-template-columns: minmax(0, 1fr); }
+  .app-frame[data-surface="home"] .sh-find,
+  .app-frame[data-surface="home"] .sh-find input { width: 100%; }
+  .app-frame[data-surface="home"] .sh-find { flex-direction: column; align-items: flex-start; gap: 6px; }
+}
