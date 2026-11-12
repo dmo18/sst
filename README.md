@@ -6,7 +6,7 @@ The 458×290 office tile now uses a seamless vertical incident feed instead of e
 
 A static, first-party-only service-status intelligence workspace for MSP operations. The application is hosted on GitHub Pages at `https://dmo18.github.io/sst/` and requires no backend, database, credentials, paid API, browser-side vendor calls, runtime logo CDN, or unofficial outage data.
 
-Current package version: `3.3.8`.
+Current package version: `3.4.0`.
 
 For the current repository, build, deployment, and production state, see [docs/system-status.md](docs/system-status.md). For the completed product-depth scope and evidence, see [docs/product-depth-command-system.md](docs/product-depth-command-system.md). For the architecture-overhaul scope and verification record, see [docs/architecture-reconciliation.md](docs/architecture-reconciliation.md).
 
@@ -18,7 +18,7 @@ The collector reads free public sources owned by monitored vendors, normalizes t
 - Source health: healthy, watch, or blind.
 - Source observation reliability: rolling seven-day and thirty-day SLO windows.
 - Parser trust: stable, changed, observing, or quarantined schema state.
-- Plain status screen by default: one verdict sentence, the services with problems, then every service on one line, in large high-contrast type. The technical console is at `?console=full`.
+- Plain status screen by default: one verdict sentence, the services with problems, then every service on one line, in a compact high-contrast layout, with a slide-in panel for each service. Every time is Eastern, including UTC times inside vendor text. The technical console is at `?console=full`.
 - Browser-local operator workflow: acknowledgement, follow, snooze, handled state, notes, assignee, pins, and lenses that never rewrite vendor truth.
 
 A source failure, parser quarantine, or source SLO breach never becomes a vendor outage or a green service conclusion. Routine maintenance, resolved history, marketing material, release notes, collector failures, and unreadable-source records are not promoted into the wallboard incident list. Temporal correlations remain non-causal.

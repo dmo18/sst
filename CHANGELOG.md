@@ -10,6 +10,13 @@ The project uses semantic versioning. Dates are shown in ISO format. The newest 
 
 ## Unreleased
 
+## [3.4.0] - 2026-11-12
+
+### Application layout and Eastern time (November 12, 2026)
+
+- The default status screen is now a compact application layout: a sticky top bar with a live "Updated" indicator, one summary card with the four totals and a proportion bar, issue cards on the left, the full service list with a filter and search on the right, and a slide-in panel for one service. Body text is 15 pixels and nothing is below 14.
+- UTC and GMT times written inside vendor incident and maintenance text are shown in Eastern time on every screen (`src/easternTime.ts`). Only the clock time is rewritten.
+
 ### Plain status screen, wallboard clipping, refresh stall (November 12, 2026)
 
 - The default screen is now a plain, light status screen modeled on the vendors' own status pages: one verdict sentence, major outages, degraded and unconfirmed services as single rows, then every service on one line. Selecting a service shows the vendor's text and updates. Body text is 20 pixels and nothing is below 18. The previous console remains at `?console=full`.

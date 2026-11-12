@@ -93,7 +93,7 @@ Local workflow state is explicitly non-authoritative and cannot modify `service_
 
 ### Readability layer
 
-The default screen is `src/StatusHome.tsx`, styled only by `src/styles/status-home.css` under `data-surface="home"`: one verdict, problem rows, every service on one line, and a per-service view with the vendor's text. `App.tsx` chooses the surface: `wallboard` for `view=wallboard`, `operator` (the technical console and its overlays) for `console=full` or any `view`, `focus` or `m365` parameter, otherwise `home`.
+The default screen is `src/StatusHome.tsx`, styled only by `src/styles/status-home.css` under `data-surface="home"`: a summary card, issue cards beside the service list, and a slide-in panel with the vendor's text. `src/easternTime.ts` rewrites UTC times in vendor text to Eastern inside `buildIssueConsoleModel`, so every surface shows one time zone. `App.tsx` chooses the surface: `wallboard` for `view=wallboard`, `operator` (the technical console and its overlays) for `console=full` or any `view`, `focus` or `m365` parameter, otherwise `home`.
 
 `src/styles/readable.css` is loaded after the other operator stylesheets and before the wallboard stylesheets. It sets an 18 pixel base, a 15 pixel floor, plain high-contrast panels and sentence-case labels for the operator application, and styles the problems-first overview in `OverviewView`. `App.tsx` marks the root with `data-surface="operator"` or `data-surface="wallboard"`, and every rule in the file is scoped to the operator value, so it cannot affect the wallboard. `scripts/__tests__/readable-operator-ui.test.js` enforces the scope and the size floor.
 
