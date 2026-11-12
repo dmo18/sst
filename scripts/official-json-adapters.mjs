@@ -104,26 +104,36 @@ function microsoftPost(raw, fallbackName) {
   };
 }
 
+function readableDocument(value) {
+  return value === undefined || value === null || value === '' ? null : safeJson(value);
+}
+
+// Each document is read on its own. During a broad outage Microsoft's status
+// service itself can fail for one document while another carries the incident,
+// so a degradation in any readable document is always reported. Only the
+// healthy conclusion needs both the admin center and the consumer documents.
 export function parseMicrosoftPublicStatus(documents = {}, provider = {}) {
-  const macRaw = safeJson(documents.mac);
-  const consumerRaw = safeJson(documents.consumer);
-  const ppacRaw = documents.ppac === undefined || documents.ppac === null || documents.ppac === '' ? undefined : safeJson(documents.ppac);
+  const macRaw = readableDocument(documents.mac);
+  const consumerRaw = readableDocument(documents.consumer);
+  const ppacRaw = readableDocument(documents.ppac);
 
   const mac = microsoftPost(macRaw, MICROSOFT_PUBLIC_STATUS_ENDPOINTS.mac.name);
-  const consumer = Array.isArray(consumerRaw) ? consumerRaw.map(item => microsoftPost(item, 'Microsoft consumer service')).filter(Boolean) : null;
-  if (!mac || !consumer || consumer.length === 0 || consumer.length !== consumerRaw.length) return null;
-  const ppac = ppacRaw === undefined ? null : microsoftPost(ppacRaw, MICROSOFT_PUBLIC_STATUS_ENDPOINTS.ppac.name);
+  const consumerPosts = Array.isArray(consumerRaw) ? consumerRaw.map(item => microsoftPost(item, 'Microsoft consumer service')).filter(Boolean) : null;
+  const consumer = consumerPosts && consumerPosts.length && consumerPosts.length === consumerRaw.length ? consumerPosts : null;
+  const ppac = microsoftPost(ppacRaw, MICROSOFT_PUBLIC_STATUS_ENDPOINTS.ppac.name);
+  if (!mac && !consumer && !ppac) return null;
 
   const posts = [
-    { ...mac, name: MICROSOFT_PUBLIC_STATUS_ENDPOINTS.mac.name, scope: 'enterprise' },
+    ...(mac ? [{ ...mac, name: MICROSOFT_PUBLIC_STATUS_ENDPOINTS.mac.name, scope: 'enterprise' }] : []),
     ...(ppac ? [{ ...ppac, name: MICROSOFT_PUBLIC_STATUS_ENDPOINTS.ppac.name, scope: 'enterprise' }] : []),
-    ...consumer.map(post => ({ ...post, scope: 'consumer' }))
+    ...(consumer || []).map(post => ({ ...post, scope: 'consumer' }))
   ];
   const components = posts.map(post => ({
     name: post.name,
     status: microsoftComponentStatus(post.status),
     group: post.scope === 'enterprise' ? 'Microsoft admin centers' : 'Microsoft 365 consumer services'
   }));
+  const missing = [...(mac ? [] : [MICROSOFT_PUBLIC_STATUS_ENDPOINTS.mac.name]), ...(consumer ? [] : [MICROSOFT_PUBLIC_STATUS_ENDPOINTS.consumer.name])];
 
   const degraded = posts.filter(post => MICROSOFT_DEGRADED.test(post.status));
   const unknown = posts.filter(post => microsoftComponentStatus(post.status) === 'unknown');
@@ -131,8 +141,11 @@ export function parseMicrosoftPublicStatus(documents = {}, provider = {}) {
 
   if (degraded.length) {
     const incidents = degraded.map(post => {
-      const title = post.title || `${post.name}: service degradation`;
       const note = post.message || `Microsoft's public status page reports service degradation for ${post.name}.`;
+      // Microsoft usually leaves the title empty and opens the message with
+      // "User impact: ...". That sentence is the headline.
+      const impact = /User impact:\s*([^.]{8,200}\.)/i.exec(note)?.[1];
+      const title = post.title || (impact ? `Microsoft 365: ${impact.trim()}` : `${post.name}: service degradation`);
       const broad = post.scope === 'enterprise';
       return {
         id: post.id || `public-${(post.workload || post.name).toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
@@ -150,6 +163,16 @@ export function parseMicrosoftPublicStatus(documents = {}, provider = {}) {
       };
     });
     return { kind: 'issues', incidents, components, maintenance: [] };
+  }
+
+  if (missing.length) {
+    return {
+      kind: 'limited',
+      missing,
+      message: `Microsoft's public status page did not return a readable document for ${missing.join(' and ')}. No operational conclusion was made.`,
+      components,
+      maintenance: []
+    };
   }
 
   if (unknown.length) {

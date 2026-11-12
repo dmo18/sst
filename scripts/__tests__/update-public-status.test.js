@@ -195,7 +195,7 @@ test('Microsoft 365 fails closed on a missing document, an unknown state, or a c
     const drifted = await loadPublicProvider(microsoftProvider);
     assert.equal(drifted.service_state, 'unknown');
     assert.equal(drifted.source_state, 'limited');
-    assert.match(drifted.message, /do not match the expected shape/i);
+    assert.match(drifted.message, /did not return a readable document for Microsoft 365 admin center/i);
 
     // The optional Power Platform document may be absent without blocking a conclusion.
     globalThis.fetch = microsoftFetch({ mac: microsoftPost(), m365Consumer: [microsoftWorkload('Outlook.com')] }).fetchImpl;
@@ -770,4 +770,40 @@ test('planned maintenance is a hard boundary between N-able active incidents', (
   const nable = providerSpecificConclusion({ id: 'n-able', name: 'N-able' }, fixture);
   assert.equal(nable.kind, 'issues');
   assert.equal(nable.incidents.length, 1);
+});
+
+test('a Microsoft outage is published even when another Microsoft status document fails', async () => {
+  const originalFetch = globalThis.fetch;
+  // During the November 12, 2026 outage the consumer document returned HTTP 501
+  // while the admin-center document carried the incident.
+  globalThis.fetch = microsoftFetch({
+    mac: microsoftPost({ Id: 'be04f54b', Title: '', Status: 'Service degradation', AuthoredDateTime: new Date().toISOString(), Message: '<div><span>User impact: Users may be unable to connect to multiple Microsoft 365 services.&nbsp;<br></span></div><div>More info: Potentially impacted services include:<br>- Exchange Online<br>- Microsoft Teams</div>' }),
+    ppac: microsoftPost({ Id: 'post-2' })
+  }).fetchImpl;
+  try {
+    const result = await loadPublicProvider(microsoftProvider);
+    assert.equal(result.service_state, 'major');
+    assert.equal(result.source_state, 'available');
+    assert.equal(result.ok, true);
+    assert.equal(result.incidents.length, 1);
+    assert.equal(result.incidents[0].title, 'Microsoft 365: Users may be unable to connect to multiple Microsoft 365 services.');
+    assert.equal(result.incidents[0].color, 'red');
+    assert.match(result.incidents[0].note, /Exchange Online/);
+    assert.equal(result.component_status.find(item => item.name === 'Microsoft 365 admin center').status, 'service_degradation');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('a degraded consumer workload is published when the admin-center document fails', async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = microsoftFetch({ m365Consumer: [microsoftWorkload('Outlook.com', { Status: 'Service degradation', Message: 'Some users may see delayed mail delivery.' }), microsoftWorkload('OneDrive')] }).fetchImpl;
+  try {
+    const result = await loadPublicProvider(microsoftProvider);
+    assert.equal(result.service_state, 'degraded');
+    assert.equal(result.incidents.length, 1);
+    assert.equal(result.incidents[0].affected_service, 'Outlook.com');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
