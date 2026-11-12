@@ -801,6 +801,49 @@
   animation: sh-breathe 1.2s ease-in-out infinite;
 }
 
+/* System details */
+.app-frame[data-surface="home"] .sh-details {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--sh-line);
+  border-radius: var(--sh-radius);
+  background: var(--sh-card);
+  box-shadow: var(--sh-shadow);
+}
+
+.app-frame[data-surface="home"] .sh-details h2 {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.app-frame[data-surface="home"] .sh-details dl {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 8px 24px;
+}
+
+.app-frame[data-surface="home"] .sh-details dl > div {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding-top: 8px;
+  border-top: 1px solid var(--sh-line);
+}
+
+.app-frame[data-surface="home"] .sh-details dt {
+  color: var(--sh-ink-soft);
+  font-size: 14px;
+}
+
+.app-frame[data-surface="home"] .sh-details dd {
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
 /* Footer */
 .app-frame[data-surface="home"] .sh-foot {
   display: flex;

@@ -128,7 +128,7 @@ The default screen is the plain status screen, `src/StatusHome.tsx` with `src/st
 
 - A light, compact application layout: sticky top bar, one summary card (verdict sentence, four totals, proportion bar), issue cards beside the full service list, and a slide-in panel that shows one service with the vendor's own text.
 - No text below 14 pixels; body text is 15 pixels. Sizes are in pixels. Motion is short and honors `prefers-reduced-motion`.
-- No collection detail on this screen. One collapsed "How we know this" block on a service is the limit.
+- Collection detail stays out of the main flow. A service has one collapsed "How we know this" block, and the page ends with a System details card (version, build commit and time, run IDs, data age, coverage). Keep that card.
 - It fails closed: with no validated payload no service is shown as working, and a payload older than 20 minutes shows a warning.
 - Times are Eastern. UTC and GMT times inside vendor text are rewritten to Eastern in the view model (`src/easternTime.ts`), so every screen shows the same time zone.
 - Every rule in `status-home.css` is scoped to `.app-frame[data-surface="home"]`.

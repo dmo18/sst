@@ -87,7 +87,7 @@ export function App(): JSX.Element {
       {route.wallboardMode
         ? <WallboardV2 nextBrowserRefreshAt={nextBrowserRefreshAt} model={model} lifecycle={state} now={now} browserCheckedAt={lastBrowserCheckAt} browserRefreshMs={browserRefreshMs} alertWindowMs={route.alertWindowMs} providerIds={wallboardProviderIds} onExit={exitWallboard} />
         : surface === 'home'
-          ? <StatusHome model={model} lifecycle={state} now={now} onRefresh={requestRefresh} />
+          ? <StatusHome model={model} lifecycle={state} now={now} onRefresh={requestRefresh} browserCheckedAt={lastBrowserCheckAt} />
           : <>
             <IssueConsole model={model} lifecycle={state} onRefresh={requestRefresh} browserCheckedAt={lastBrowserCheckAt} browserRefreshMs={browserRefreshMs} />
             <OperationsIntelligencePanel model={model} />

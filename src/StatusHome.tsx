@@ -194,7 +194,60 @@ function ServiceDetail({ source, incidents, maintenance, now, onClose }: { sourc
 
 type ServiceFilter = 'all' | 'issues' | 'working';
 
-export function StatusHome({ model, lifecycle, now, onRefresh }: { model: IssueConsoleModel | null; lifecycle: DataLifecycle; now: number; onRefresh: () => void }): JSX.Element {
+/** The release identity published beside the page: commit, run and build time. */
+function useDeployIdentity(refreshKey: string): Record<string, string> {
+  const [identity, setIdentity] = useState<Record<string, string>>({});
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`${import.meta.env.BASE_URL}deploy-version.txt?ts=${Date.now()}`, { cache: 'no-store' })
+      .then(response => response.ok ? response.text() : '')
+      .then(text => {
+        if (cancelled) return;
+        const parsed: Record<string, string> = {};
+        for (const line of text.split('\n')) {
+          const match = /^([a-z_]+):\s*(.+)$/.exec(line.trim());
+          if (match) parsed[match[1]] = match[2];
+        }
+        setIdentity(parsed);
+      })
+      .catch(() => { /* The details card simply shows less. */ });
+    return () => { cancelled = true; };
+  }, [refreshKey]);
+  return identity;
+}
+
+function fullTime(value: string | undefined): string {
+  const timestamp = parseTime(value);
+  if (!timestamp) return 'Unknown';
+  return new Intl.DateTimeFormat('en-US', { timeZone: EASTERN, month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true, timeZoneName: 'short' }).format(new Date(timestamp));
+}
+
+function SystemDetails({ model, lifecycle, now, browserCheckedAt, deploy }: { model: IssueConsoleModel | null; lifecycle: DataLifecycle; now: number; browserCheckedAt: number | null; deploy: Record<string, string> }): JSX.Element {
+  const summary = model?.summary;
+  const facts: Array<[string, string]> = [
+    ['Version', model?.version || 'Unknown'],
+    ['Build', deploy.commit ? deploy.commit.slice(0, 7) : 'Unknown'],
+    ['Built', fullTime(deploy.generated_at)],
+    ['Release run', deploy.run_id || 'Unknown'],
+    ['Data collected', model ? `${fullTime(model.generatedAt)} (${agoWords(model.generatedAt, now)})` : 'Not loaded'],
+    ['Browser checked', browserCheckedAt ? `${fullTime(new Date(browserCheckedAt).toISOString())} (${agoWords(new Date(browserCheckedAt).toISOString(), now)})` : 'Not yet'],
+    ['Collection run', model?.collection?.run_id || 'Unknown'],
+    ['Pipeline', model?.collection?.pipeline_version || 'Unknown'],
+    ['Services monitored', summary ? String(summary.enabled_provider_count ?? model?.diagnostics.length ?? 0) : 'Unknown'],
+    ['Sources read live', summary ? `${summary.live_source_coverage_percent ?? 0}% of ${summary.enabled_provider_count ?? 0} services` : 'Unknown'],
+    ['Source requests', model?.collection ? `${model.collection.successful_request_count} of ${model.collection.request_count} succeeded` : 'Unknown'],
+    ['Page state', lifecycle.phase === 'ready' ? 'Current' : lifecycle.phase === 'refreshing' ? 'Checking' : lifecycle.phase === 'stale' ? 'Showing the last good data' : lifecycle.phase === 'loading' ? 'Loading' : 'Unavailable']
+  ];
+  return (
+    <section className="sh-details" aria-labelledby="sh-details-title">
+      <h2 id="sh-details-title">System details</h2>
+      <dl>{facts.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
+    </section>
+  );
+}
+
+export function StatusHome({ model, lifecycle, now, onRefresh, browserCheckedAt = null }: { model: IssueConsoleModel | null; lifecycle: DataLifecycle; now: number; onRefresh: () => void; browserCheckedAt?: number | null }): JSX.Element {
+  const deploy = useDeployIdentity(model?.generatedAt || '');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<ServiceFilter>('all');
@@ -231,10 +284,13 @@ export function StatusHome({ model, lifecycle, now, onRefresh }: { model: IssueC
   );
 
   const footer = (
-    <footer className="sh-foot">
-      <p>Every status comes from the vendor's own official status page. Nothing is guessed.</p>
-      <p><a href="?view=wallboard">Wallboard</a><a href="?console=full">Technical console</a></p>
-    </footer>
+    <>
+      <SystemDetails model={model} lifecycle={lifecycle} now={now} browserCheckedAt={browserCheckedAt} deploy={deploy} />
+      <footer className="sh-foot">
+        <p>Every status comes from the vendor's own official status page. Nothing is guessed.</p>
+        <p><a href="?view=wallboard">Wallboard</a><a href="?console=full">Technical console</a></p>
+      </footer>
+    </>
   );
 
   if (!model) {

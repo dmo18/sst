@@ -15,6 +15,8 @@ The project uses semantic versioning. Dates are shown in ISO format. The newest 
 ### Application layout and Eastern time (November 12, 2026)
 
 - The default status screen is now a compact application layout: a sticky top bar with a live "Updated" indicator, one summary card with the four totals and a proportion bar, issue cards on the left, the full service list with a filter and search on the right, and a slide-in panel for one service. Body text is 15 pixels and nothing is below 14.
+- A System details card on the status screen shows the version, build commit, build time, release and collection run IDs, data and browser check times, pipeline version, live source coverage and request success.
+- Fixed: the technical console's top bar ran 66 pixels past a 1440 pixel viewport when the browser fell back to a wide font, which failed the deployed product check. The bar now wraps.
 - Yardi is now monitored from its official Statuspage summary (`https://status.yardi.com/api/v2/summary.json`), in a new Property Management category. The catalog is 81 raw entries with 42 active.
 - UTC and GMT times written inside vendor incident and maintenance text are shown in Eastern time on every screen (`src/easternTime.ts`). Only the clock time is rewritten.
 
