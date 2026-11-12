@@ -17,7 +17,7 @@ async function canonicalCatalog() {
 test('NUSO replaces the non-canonical Datto raw slot and remains first-class in production collection', async () => {
   const catalog = await canonicalCatalog();
   const nuso = catalog.find(provider => provider.id === 'nuso');
-  assert.equal(catalog.length, 41);
+  assert.equal(catalog.length, 42);
   assert.ok(catalog.every(provider => provider.enabled !== false));
   assert.equal(catalog.some(provider => provider.id === 'datto'), false);
   assert.ok(nuso, 'NUSO must be present in the canonical production catalog');

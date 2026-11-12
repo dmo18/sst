@@ -6,12 +6,12 @@ import { canonicalizeProviderCatalog } from '../update-public-status.mjs';
 
 const read = file => readFileSync(new URL(`../../${file}`, import.meta.url), 'utf8');
 
-test('only the 41 enabled consolidated providers participate in SST operations', () => {
+test('only the 42 enabled consolidated providers participate in SST operations', () => {
   const raw = JSON.parse(read('config/providers.json'));
   const consolidated = JSON.parse(read('config/provider-consolidation.json'));
   const providers = canonicalizeProviderCatalog(raw, consolidated);
-  assert.equal(raw.length, 80);
-  assert.equal(providers.length, 41);
+  assert.equal(raw.length, 81);
+  assert.equal(providers.length, 42);
   assert.ok(providers.every(provider => provider.enabled !== false));
   assert.deepEqual(providers.map(provider => provider.id), ACTIVE_PROVIDER_IDS);
   assert.deepEqual(providers.map(provider => provider.id), ENABLED_PROVIDER_IDS);
@@ -30,7 +30,7 @@ test('collector history and favicon builder explicitly exclude disabled work', (
   assert.match(favicon, /settings\.providers\.filter\(id => byId\.has\(id\)\)/);
   assert.match(normalizer, /activeIds\.has\(change\.provider_id\)/);
   assert.match(workflow, /name: Remove internal prior snapshot before publication/);
-  assert.match(read('.github/workflows/test.yml'), /name: Inspect all 41 enabled vendors through live official collection/);
+  assert.match(read('.github/workflows/test.yml'), /name: Inspect all 42 enabled vendors through live official collection/);
   assert.match(workflow, /name: Audit every enabled provider in this collection/);
   assert.doesNotMatch(workflow, /cp public\/previous-status\.json dist\/previous-status\.json/);
 });

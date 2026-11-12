@@ -23,10 +23,10 @@ Build and maintain a free, static, first-party-only MSP service-intelligence app
 
 ## Current repository facts
 
-- Package version: `3.3.8`.
+- Package version: `3.4.0`.
 - Collection pipeline: `3.0.0`.
-- Raw catalog entries: 80.
-- Active providers after consolidation: 41 (the other 39 raw entries are disabled).
+- Raw catalog entries: 81.
+- Active providers after consolidation: 42 (the other 39 raw entries are disabled).
 - Active wallboard: `src/WallboardV2.tsx`.
 - Primary compact wallboard target: 458 by 291 pixels.
 - Normal browser refresh interval: 180 seconds while visible.
@@ -56,7 +56,8 @@ src/wallboardRoute.ts                    view and alert-window parsing
 src/statusViewModel.ts                   action queue and UI models
 src/payloadValidation.ts                 browser payload validation
 src/styles/wallboard-v2.css              dedicated wallboard overlay, compact layout, and marquees
-src/styles/status-home.css               default status screen (20px base, 18px floor), never the wallboard
+src/styles/status-home.css               default status screen (15px base, 14px floor), never the wallboard
+src/easternTime.ts                       UTC times in vendor text shown as Eastern
 src/styles/readable.css                  technical console readability layer (18px base, 15px floor), never the wallboard
 .github/workflows/refresh-pages.yml       Pages build and deployment
 .github/workflows/status-freshness-watch.yml deployed freshness recovery
@@ -125,10 +126,11 @@ The operator application must stay easy to read for someone who has difficulty f
 
 The default screen is the plain status screen, `src/StatusHome.tsx` with `src/styles/status-home.css` (`data-surface="home"`). The technical console opens at `?console=full` or from any link that names one of its views.
 
-- Light, flat, one centered column. One verdict sentence, then major outages, degraded services and unconfirmed services as single rows, then every service on one line. A row opens that service with the vendor's own text.
-- No text below 18 pixels; body text is 20 pixels. Sizes are in pixels.
-- No collection detail on this screen. One collapsed "How we know this" block on a service is the limit.
+- A light, compact application layout: sticky top bar, one summary card (verdict sentence, four totals, proportion bar), issue cards beside the full service list, and a slide-in panel that shows one service with the vendor's own text.
+- No text below 14 pixels; body text is 15 pixels. Sizes are in pixels. Motion is short and honors `prefers-reduced-motion`.
+- Collection detail stays out of the main flow. A service has one collapsed "How we know this" block, and the page ends with a System details card (version, build commit and time, run IDs, data age, coverage). Keep that card.
 - It fails closed: with no validated payload no service is shown as working, and a payload older than 20 minutes shows a warning.
+- Times are Eastern. UTC and GMT times inside vendor text are rewritten to Eastern in the view model (`src/easternTime.ts`), so every screen shows the same time zone.
 - Every rule in `status-home.css` is scoped to `.app-frame[data-surface="home"]`.
 - Release and product checks that inspect the technical console must open it with `?console=full`.
 

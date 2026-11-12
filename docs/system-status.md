@@ -4,6 +4,8 @@
 
 The 458×290 office tile now uses a seamless vertical incident feed instead of eight-second pages. Rows include a brief verbatim vendor description; the fixed footer shows plainly labeled data freshness. Full-size views and collection semantics are unchanged.
 
+> Current configuration, November 12, 2026 (3.4.0): 81 raw catalog entries, 42 actively monitored after consolidation (Yardi added from its official Statuspage summary), and 39 fully disabled. The line below is the earlier configuration.
+>
 > Current configuration, October 23, 2026: 80 raw catalog entries, 41 actively monitored after consolidation, and 39 fully disabled. Historic 80-provider and artwork performance metrics below describe the earlier release baseline.
 
 
@@ -43,7 +45,7 @@ Status timestamp: 2026-08-19 18:33 Eastern Time
 - Repository: `dmo18/sst`
 - Visibility: public
 - Default branch: `main`
-- Package: `msp-status-hud` 3.3.8
+- Package: `msp-status-hud` 3.4.0
 - Current application baseline: `0f151684a913671b00c8dd2f00ef484599351614`
 - Active production catalog: 80 providers across 31 categories
 - Public contract: Status Contract v3

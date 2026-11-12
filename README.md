@@ -6,7 +6,7 @@ The 458×290 office tile now uses a seamless vertical incident feed instead of e
 
 A static, first-party-only service-status intelligence workspace for MSP operations. The application is hosted on GitHub Pages at `https://dmo18.github.io/sst/` and requires no backend, database, credentials, paid API, browser-side vendor calls, runtime logo CDN, or unofficial outage data.
 
-Current package version: `3.3.8`.
+Current package version: `3.4.0`.
 
 For the current repository, build, deployment, and production state, see [docs/system-status.md](docs/system-status.md). For the completed product-depth scope and evidence, see [docs/product-depth-command-system.md](docs/product-depth-command-system.md). For the architecture-overhaul scope and verification record, see [docs/architecture-reconciliation.md](docs/architecture-reconciliation.md).
 
@@ -18,7 +18,7 @@ The collector reads free public sources owned by monitored vendors, normalizes t
 - Source health: healthy, watch, or blind.
 - Source observation reliability: rolling seven-day and thirty-day SLO windows.
 - Parser trust: stable, changed, observing, or quarantined schema state.
-- Plain status screen by default: one verdict sentence, the services with problems, then every service on one line, in large high-contrast type. The technical console is at `?console=full`.
+- Plain status screen by default: one verdict sentence, the services with problems, then every service on one line, in a compact high-contrast layout, with a slide-in panel for each service. Every time is Eastern, including UTC times inside vendor text. The technical console is at `?console=full`.
 - Browser-local operator workflow: acknowledgement, follow, snooze, handled state, notes, assignee, pins, and lenses that never rewrite vendor truth.
 
 A source failure, parser quarantine, or source SLO breach never becomes a vendor outage or a green service conclusion. Routine maintenance, resolved history, marketing material, release notes, collector failures, and unreadable-source records are not promoted into the wallboard incident list. Temporal correlations remain non-causal.
@@ -40,7 +40,7 @@ config/providers.json + provider consolidation
   -> GitHub Pages
 ```
 
-The catalog retains 80 raw entries, but only 41 are enabled after consolidation, including NUSO in the former Datto slot. The other 39 are fully disabled: they produce no source requests, favicon fetches, status records, health intelligence, browser checks, or active/historical alerts. Disabled entries remain on disk solely for future re-enablement. The active catalog hash and deployed Status Contract include only enabled providers.
+The catalog retains 81 raw entries, but only 42 are enabled after consolidation, including NUSO in the former Datto slot and Yardi (added November 12, 2026). The other 39 are fully disabled: they produce no source requests, favicon fetches, status records, health intelligence, browser checks, or active/historical alerts. Disabled entries remain on disk solely for future re-enablement. The active catalog hash and deployed Status Contract include only enabled providers.
 
 The public payload uses Status Contract v3 with `schema_version: 3`, `contract_version: 3`, and a deterministic hash of the canonical active provider catalog. Browser validation, the release contract, and production smoke all require the same catalog identity.
 
@@ -98,7 +98,7 @@ Every active provider has a curated local recognition identity so operators can 
 
 The production contract currently has:
 
-- 41/41 enabled providers with curated identities;
+- 42/42 enabled providers with curated identities;
 - bundled local brand geometry for enabled providers;
 - fetched and bundled vendor favicon artwork only for enabled providers;
 - enabled-catalog-derived identity checks in the deployed provider table;

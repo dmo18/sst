@@ -1,5 +1,6 @@
 import { componentStatusIsProblem } from './componentStatus.ts';
 import { buildEventCorrelations, type EventCorrelation } from './eventCorrelation.ts';
+import { utcTextToEastern } from './easternTime.ts';
 import { effectiveIncidentTime } from './statusContract.ts';
 import type {
   AttentionLevel,
@@ -406,7 +407,10 @@ export function buildIssueConsoleModel(payload: StatusPayload, version: string, 
   const changed = new Set(payload.changes.map(change => change.provider_id));
   const mergedProviders = merge(payload, catalog);
   const providerMap = new Map(mergedProviders.map(provider => [provider.id, provider]));
-  const maintenance = [...(payload.maintenance || [])].sort((a, b) => {
+  const maintenance = (payload.maintenance || []).map(item => {
+    const reference = item.latest_update || item.starts_at || payload.generated_at;
+    return { ...item, title: utcTextToEastern(item.title, reference), note: utcTextToEastern(item.note, reference) };
+  }).sort((a, b) => {
     const stateDelta = Number(b.status === 'in_progress') - Number(a.status === 'in_progress');
     if (stateDelta) return stateDelta;
     return (Date.parse(a.starts_at || '') || Number.MAX_SAFE_INTEGER) - (Date.parse(b.starts_at || '') || Number.MAX_SAFE_INTEGER);
@@ -472,7 +476,15 @@ export function buildIssueConsoleModel(payload: StatusPayload, version: string, 
 
   const briefs = [...payload.incidents]
     .sort((a, b) => attentionRank[b.attention] - attentionRank[a.attention] || serviceRank[b.service_state] - serviceRank[a.service_state] || b.priority - a.priority)
-    .map(item => {
+    .map(raw => {
+      // Vendor text is shown in Eastern time, like every other time here.
+      const reference = effectiveIncidentTime(raw);
+      const item: Incident = {
+        ...raw,
+        title: utcTextToEastern(raw.title, reference),
+        note: utcTextToEastern(raw.note, reference),
+        ...(raw.updates ? { updates: raw.updates.map(update => ({ ...update, note: utcTextToEastern(update.note, update.at || reference) })) } : {})
+      };
       const provider = providerMap.get(item.providerId);
       const brief: IssueBrief = {
         ...item,

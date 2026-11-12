@@ -820,5 +820,14 @@
     "sourceType": "rendered-official",
     "url": "https://www.paypal-status.com/product/production",
     "message": "Current PayPal production health is read from the official rendered Production status page."
+  },
+  {
+    "id": "yardi",
+    "name": "Yardi",
+    "category": "Property Management",
+    "priority": 70,
+    "enabled": true,
+    "sourceType": "statuspage",
+    "url": "https://status.yardi.com/api/v2/summary.json"
   }
 ]

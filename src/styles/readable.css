@@ -559,3 +559,10 @@
 .app-frame[data-surface="operator"] .summary-stat span,
 .app-frame[data-surface="operator"] .summary-stat small { color: var(--rd-text-2); font-size: 15px; font-weight: 700; letter-spacing: 0; text-transform: none; }
 .app-frame[data-surface="operator"] .summary-stat strong { color: var(--rd-text); }
+
+/* The top bar must fit whatever font the browser falls back to. With a wide
+ * fallback font the action buttons ran 66 pixels past a 1440 pixel viewport. */
+.app-frame[data-surface="operator"] .workspace-topbar { display: flex; flex-wrap: wrap; align-items: center; }
+.app-frame[data-surface="operator"] .topbar-title { flex: 1 1 220px; min-width: 0; }
+.app-frame[data-surface="operator"] .topbar-live,
+.app-frame[data-surface="operator"] .topbar-actions { flex: 0 1 auto; flex-wrap: wrap; min-width: 0; }
