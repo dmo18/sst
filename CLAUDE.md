@@ -107,7 +107,7 @@ GitHub monitoring must remain first-party and unauthenticated.
 - Never run page-text keyword rules over a JSON document. An adapter that does not recognize a document returns no conclusion.
 - Never truncate or de-duplicate a component list before problem components have been identified.
 - The browser and the collector share one Statuspage parser (`parseStatuspageSummary`). Do not add a second one.
-- Microsoft 365 is read from `https://status.cloud.microsoft/api/posts/{mac,ppac,m365Consumer}` with no credentials. It describes Microsoft's public status, not tenant health.
+- Microsoft 365 is read from `https://status.cloud.microsoft/api/posts/{mac,ppac,m365Consumer}` with no credentials. A document the primary host fails to return is read from Microsoft's second host, `https://msit.status.cloud.microsoft`. It describes Microsoft's public status, not tenant health. A degradation in any one readable document is always published, even when another document fails; only the operational conclusion requires both `mac` and `m365Consumer`.
 
 ## Wallboard contract
 
@@ -149,7 +149,7 @@ GitHub Pages deployment is a separate failure domain from build and test.
 - Do not generate repeated commits to retry a stuck Pages deployment.
 - `actions/deploy-pages` has a maximum internal wait of 600000 milliseconds. Larger values are capped.
 - If Pages is stuck, inspect the Pages environment and deployment object before changing code.
-- Scheduled freshness recovery must not interrupt an active release. A release is taken over only after 45 minutes, beyond its two 20 minute job budgets.
+- Scheduled freshness recovery must not interrupt an active release. A running release is taken over only after 45 minutes, beyond its two 20 minute job budgets. A run that never started is replaced after 12 minutes.
 - Keep Pages deployments to about six an hour. The release cron runs every ten minutes, and the watcher and the continuity keeper never dispatch within nine minutes of the previous release start, whatever its outcome. From October 31 to November 10, 2026, at about eleven an hour, Pages accepted same-commit deployments without publishing them.
 - A successful build does not mean the commit is live.
 - A release is complete only after Pages publication, production smoke checks, headless rendering, and the exact Yodeck check succeed.

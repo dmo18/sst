@@ -44,6 +44,8 @@ test('freshness recovery detects a missed release, spaces dispatches, and replac
   assert.match(watcher, /actions\/runs\/\$\{id\}\/cancel/);
   assert.match(watcher, /steps\.release\.outputs\.stale_active == 'true'/);
   assert.match(watcher, /takeoverAfterMinutes = 45/);
+  assert.match(watcher, /queuedTakeoverAfterMinutes = 12/);
+  assert.match(watcher, /runAgeMinutes\(run\) >= takeoverThreshold\(run\)/);
   assert.match(watcher, /minReleaseSpacingMinutes = 9/);
   assert.match(watcher, /steps\.release\.outputs\.recent != 'true'/);
   assert.match(truthWatch, /const STALE_AFTER_MINUTES = 14/);

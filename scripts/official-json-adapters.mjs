@@ -74,10 +74,22 @@ function problemFirst(components, limit = 36) {
 // ---------------------------------------------------------------------------
 
 export const MICROSOFT_PUBLIC_STATUS_PAGE = 'https://status.cloud.microsoft/';
+// Microsoft serves the same status service on a second first-party host. It is
+// read only for a document the primary host failed to return: during the
+// November 12, 2026 outage the primary host answered HTTP 501 for the consumer
+// document while this host served it.
+const MICROSOFT_STATUS_HOST = 'https://status.cloud.microsoft';
+const MICROSOFT_STATUS_FALLBACK_HOST = 'https://msit.status.cloud.microsoft';
+const microsoftEndpoint = (path, name, required) => Object.freeze({
+  url: `${MICROSOFT_STATUS_HOST}/api/posts/${path}`,
+  fallbackUrl: `${MICROSOFT_STATUS_FALLBACK_HOST}/api/posts/${path}`,
+  name,
+  required
+});
 export const MICROSOFT_PUBLIC_STATUS_ENDPOINTS = Object.freeze({
-  mac: { url: 'https://status.cloud.microsoft/api/posts/mac', name: 'Microsoft 365 admin center', required: true },
-  consumer: { url: 'https://status.cloud.microsoft/api/posts/m365Consumer', name: 'Microsoft 365 consumer services', required: true },
-  ppac: { url: 'https://status.cloud.microsoft/api/posts/ppac', name: 'Power Platform admin center', required: false }
+  mac: microsoftEndpoint('mac', 'Microsoft 365 admin center', true),
+  consumer: microsoftEndpoint('m365Consumer', 'Microsoft 365 consumer services', true),
+  ppac: microsoftEndpoint('ppac', 'Power Platform admin center', false)
 });
 
 const MICROSOFT_HEALTHY = /^(?:available|operational|service restored)$/i;
@@ -104,26 +116,36 @@ function microsoftPost(raw, fallbackName) {
   };
 }
 
+function readableDocument(value) {
+  return value === undefined || value === null || value === '' ? null : safeJson(value);
+}
+
+// Each document is read on its own. During a broad outage Microsoft's status
+// service itself can fail for one document while another carries the incident,
+// so a degradation in any readable document is always reported. Only the
+// healthy conclusion needs both the admin center and the consumer documents.
 export function parseMicrosoftPublicStatus(documents = {}, provider = {}) {
-  const macRaw = safeJson(documents.mac);
-  const consumerRaw = safeJson(documents.consumer);
-  const ppacRaw = documents.ppac === undefined || documents.ppac === null || documents.ppac === '' ? undefined : safeJson(documents.ppac);
+  const macRaw = readableDocument(documents.mac);
+  const consumerRaw = readableDocument(documents.consumer);
+  const ppacRaw = readableDocument(documents.ppac);
 
   const mac = microsoftPost(macRaw, MICROSOFT_PUBLIC_STATUS_ENDPOINTS.mac.name);
-  const consumer = Array.isArray(consumerRaw) ? consumerRaw.map(item => microsoftPost(item, 'Microsoft consumer service')).filter(Boolean) : null;
-  if (!mac || !consumer || consumer.length === 0 || consumer.length !== consumerRaw.length) return null;
-  const ppac = ppacRaw === undefined ? null : microsoftPost(ppacRaw, MICROSOFT_PUBLIC_STATUS_ENDPOINTS.ppac.name);
+  const consumerPosts = Array.isArray(consumerRaw) ? consumerRaw.map(item => microsoftPost(item, 'Microsoft consumer service')).filter(Boolean) : null;
+  const consumer = consumerPosts && consumerPosts.length && consumerPosts.length === consumerRaw.length ? consumerPosts : null;
+  const ppac = microsoftPost(ppacRaw, MICROSOFT_PUBLIC_STATUS_ENDPOINTS.ppac.name);
+  if (!mac && !consumer && !ppac) return null;
 
   const posts = [
-    { ...mac, name: MICROSOFT_PUBLIC_STATUS_ENDPOINTS.mac.name, scope: 'enterprise' },
+    ...(mac ? [{ ...mac, name: MICROSOFT_PUBLIC_STATUS_ENDPOINTS.mac.name, scope: 'enterprise' }] : []),
     ...(ppac ? [{ ...ppac, name: MICROSOFT_PUBLIC_STATUS_ENDPOINTS.ppac.name, scope: 'enterprise' }] : []),
-    ...consumer.map(post => ({ ...post, scope: 'consumer' }))
+    ...(consumer || []).map(post => ({ ...post, scope: 'consumer' }))
   ];
   const components = posts.map(post => ({
     name: post.name,
     status: microsoftComponentStatus(post.status),
     group: post.scope === 'enterprise' ? 'Microsoft admin centers' : 'Microsoft 365 consumer services'
   }));
+  const missing = [...(mac ? [] : [MICROSOFT_PUBLIC_STATUS_ENDPOINTS.mac.name]), ...(consumer ? [] : [MICROSOFT_PUBLIC_STATUS_ENDPOINTS.consumer.name])];
 
   const degraded = posts.filter(post => MICROSOFT_DEGRADED.test(post.status));
   const unknown = posts.filter(post => microsoftComponentStatus(post.status) === 'unknown');
@@ -131,8 +153,11 @@ export function parseMicrosoftPublicStatus(documents = {}, provider = {}) {
 
   if (degraded.length) {
     const incidents = degraded.map(post => {
-      const title = post.title || `${post.name}: service degradation`;
       const note = post.message || `Microsoft's public status page reports service degradation for ${post.name}.`;
+      // Microsoft usually leaves the title empty and opens the message with
+      // "User impact: ...". That sentence is the headline.
+      const impact = /User impact:\s*([^.]{8,200}\.)/i.exec(note)?.[1];
+      const title = post.title || (impact ? `Microsoft 365: ${impact.trim()}` : `${post.name}: service degradation`);
       const broad = post.scope === 'enterprise';
       return {
         id: post.id || `public-${(post.workload || post.name).toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
@@ -150,6 +175,16 @@ export function parseMicrosoftPublicStatus(documents = {}, provider = {}) {
       };
     });
     return { kind: 'issues', incidents, components, maintenance: [] };
+  }
+
+  if (missing.length) {
+    return {
+      kind: 'limited',
+      missing,
+      message: `Microsoft's public status page did not return a readable document for ${missing.join(' and ')}. No operational conclusion was made.`,
+      components,
+      maintenance: []
+    };
   }
 
   if (unknown.length) {
@@ -261,9 +296,19 @@ export function parseNableDashboard(value, provider = {}, source = {}) {
     });
   }
 
+  // Maintenance the vendor has started is planned work: it is published as
+  // maintenance and leaves the service state alone. A service is counted as
+  // under maintenance only when a current maintenance event names it.
+  const underMaintenance = new Set();
+  for (const event of Array.isArray(board.events.maintenance) ? board.events.maintenance : []) {
+    if (!event || NABLE_CLOSED.test(clean(event.status))) continue;
+    for (const name of Array.isArray(event.services) ? event.services : []) if (scopedNames.has(name)) underMaintenance.add(name);
+  }
+
   const components = problemFirst(scopedServices.map(service => ({
     name: service.name,
-    status: severityByService.get(service.name) || (Number(service.status) === 0 ? 'operational' : 'unknown'),
+    status: severityByService.get(service.name)
+      || (Number(service.status) === 0 ? 'operational' : underMaintenance.has(service.name) ? 'under_maintenance' : 'unknown'),
     group: clean(service.group)
   })));
 
@@ -305,6 +350,14 @@ export function parseNableDashboard(value, provider = {}, source = {}) {
     return {
       kind: 'limited',
       message: `${provider.name || 'N-able'} lists ${unknown.length} service${unknown.length === 1 ? '' : 's'} in a state that is neither operational nor tied to a current incident. No operational conclusion was made.`,
+      ...extras
+    };
+  }
+  const maintained = components.filter(component => component.status === 'under_maintenance');
+  if (maintained.length) {
+    return {
+      kind: 'healthy',
+      status: `${provider.name || 'N-able'} reports no incident; planned maintenance is in progress (${uniqueNames(maintained.map(component => component.name), 3)})`,
       ...extras
     };
   }

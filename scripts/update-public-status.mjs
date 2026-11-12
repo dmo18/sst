@@ -708,16 +708,25 @@ async function parseAzureEntraSource(provider, source) {
 async function parseMicrosoftPublicSource(provider, source) {
   const logs = [];
   const documents = {};
+  const failures = [];
   for (const [key, endpoint] of Object.entries(MICROSOFT_PUBLIC_STATUS_ENDPOINTS)) {
-    const result = await fetchSource({ ...provider, url: endpoint.url, sourceType: source.mode }, 'application/json, text/json, */*');
+    let result = await fetchSource({ ...provider, url: endpoint.url, sourceType: source.mode }, 'application/json, text/json, */*');
     logs.push(...(result.logs || [result.log]));
-    if (result.ok) documents[key] = result.body;
-    else if (endpoint.required) {
-      return providerStatus(provider, source, `Source unavailable: HTTP ${result.status || 'failed'}`, 'blue', false, `${endpoint.name}: ${result.log?.error || result.log?.message || 'request failed'}`, logs, [], [], 'unavailable');
+    if (!result.ok && endpoint.fallbackUrl) {
+      result = await fetchSource({ ...provider, url: endpoint.fallbackUrl, sourceType: source.mode }, 'application/json, text/json, */*');
+      logs.push(...(result.logs || [result.log]));
     }
+    if (result.ok) documents[key] = result.body;
+    else if (endpoint.required) failures.push(`${endpoint.name}: HTTP ${result.status || 'failed'} ${result.log?.error || result.log?.message || ''}`.trim());
   }
+  // A failed document never ends the read early. During a broad outage one
+  // document can fail while another carries Microsoft's incident, and that
+  // incident must be published.
   const conclusion = parseMicrosoftPublicStatus(documents, provider);
-  const fingerprint = schemaFingerprint(documents.consumer, source.mode);
+  const fingerprint = schemaFingerprint(documents.consumer || documents.mac, source.mode);
+  if (failures.length && (!conclusion || conclusion.kind !== 'issues')) {
+    return providerStatus(provider, source, 'Source unavailable', 'blue', false, `Microsoft public status could not be read completely (${failures.join('; ')}). No operational conclusion was made.`, logs, [], [], 'unavailable', { components: conclusion?.components || [], schemaFingerprint: fingerprint });
+  }
   if (!conclusion) {
     return providerStatus(provider, source, 'Limited official source', 'blue', false, 'Microsoft public status returned documents that do not match the expected shape, so no service-health conclusion was made.', logs, [], [], 'limited', { schemaFingerprint: fingerprint });
   }

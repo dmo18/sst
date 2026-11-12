@@ -74,6 +74,8 @@ test('push/schedule plus independent hourly seed keep renewable bounded freshnes
   // A release that can still finish is never interrupted, and releases are
   // spaced so that Pages receives about six deployments an hour.
   assert.match(continuity, /takeoverAfterMinutes = 45/);
+  assert.match(continuity, /queuedTakeoverAfterMinutes = 12/);
+  assert.match(continuity, /ageMinutes\(run\) >= takeoverThreshold\(run\)/);
   assert.match(continuity, /minReleaseSpacingMinutes = 9/);
   assert.match(continuity, /minutesSinceRelease < minReleaseSpacingMinutes/);
   assert.match(continuity, /event_type: 'freshness-recovery'/);
