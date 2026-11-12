@@ -107,7 +107,7 @@ GitHub monitoring must remain first-party and unauthenticated.
 - Never run page-text keyword rules over a JSON document. An adapter that does not recognize a document returns no conclusion.
 - Never truncate or de-duplicate a component list before problem components have been identified.
 - The browser and the collector share one Statuspage parser (`parseStatuspageSummary`). Do not add a second one.
-- Microsoft 365 is read from `https://status.cloud.microsoft/api/posts/{mac,ppac,m365Consumer}` with no credentials. It describes Microsoft's public status, not tenant health. A degradation in any one readable document is always published, even when another document fails; only the operational conclusion requires both `mac` and `m365Consumer`.
+- Microsoft 365 is read from `https://status.cloud.microsoft/api/posts/{mac,ppac,m365Consumer}` with no credentials. A document the primary host fails to return is read from Microsoft's second host, `https://msit.status.cloud.microsoft`. It describes Microsoft's public status, not tenant health. A degradation in any one readable document is always published, even when another document fails; only the operational conclusion requires both `mac` and `m365Consumer`.
 
 ## Wallboard contract
 

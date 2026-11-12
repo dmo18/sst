@@ -74,10 +74,22 @@ function problemFirst(components, limit = 36) {
 // ---------------------------------------------------------------------------
 
 export const MICROSOFT_PUBLIC_STATUS_PAGE = 'https://status.cloud.microsoft/';
+// Microsoft serves the same status service on a second first-party host. It is
+// read only for a document the primary host failed to return: during the
+// November 12, 2026 outage the primary host answered HTTP 501 for the consumer
+// document while this host served it.
+const MICROSOFT_STATUS_HOST = 'https://status.cloud.microsoft';
+const MICROSOFT_STATUS_FALLBACK_HOST = 'https://msit.status.cloud.microsoft';
+const microsoftEndpoint = (path, name, required) => Object.freeze({
+  url: `${MICROSOFT_STATUS_HOST}/api/posts/${path}`,
+  fallbackUrl: `${MICROSOFT_STATUS_FALLBACK_HOST}/api/posts/${path}`,
+  name,
+  required
+});
 export const MICROSOFT_PUBLIC_STATUS_ENDPOINTS = Object.freeze({
-  mac: { url: 'https://status.cloud.microsoft/api/posts/mac', name: 'Microsoft 365 admin center', required: true },
-  consumer: { url: 'https://status.cloud.microsoft/api/posts/m365Consumer', name: 'Microsoft 365 consumer services', required: true },
-  ppac: { url: 'https://status.cloud.microsoft/api/posts/ppac', name: 'Power Platform admin center', required: false }
+  mac: microsoftEndpoint('mac', 'Microsoft 365 admin center', true),
+  consumer: microsoftEndpoint('m365Consumer', 'Microsoft 365 consumer services', true),
+  ppac: microsoftEndpoint('ppac', 'Power Platform admin center', false)
 });
 
 const MICROSOFT_HEALTHY = /^(?:available|operational|service restored)$/i;

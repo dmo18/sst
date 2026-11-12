@@ -119,9 +119,10 @@ const microsoftWorkload = (name, overrides = {}) => ({ ServiceDisplayName: name,
 function microsoftFetch(documents) {
   const requested = [];
   const fetchImpl = async url => {
+    const fallbackHost = String(url).startsWith('https://msit.status.cloud.microsoft/');
     const key = String(url).split('/').at(-1);
-    requested.push(key);
-    const document = documents[key];
+    requested.push(fallbackHost ? `fallback:${key}` : key);
+    const document = fallbackHost ? documents[`fallback:${key}`] : documents[key];
     if (document === undefined) return response('Not found', 404, 'text/plain');
     return response(typeof document === 'string' ? document : JSON.stringify(document), 200, 'application/json; charset=utf-8');
   };
@@ -803,6 +804,28 @@ test('a degraded consumer workload is published when the admin-center document f
     assert.equal(result.service_state, 'degraded');
     assert.equal(result.incidents.length, 1);
     assert.equal(result.incidents[0].affected_service, 'Outlook.com');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('a Microsoft document the primary host fails to return is read from the fallback host', async () => {
+  const originalFetch = globalThis.fetch;
+  const { fetchImpl, requested } = microsoftFetch({
+    mac: microsoftPost(),
+    ppac: microsoftPost({ Id: 'post-2' }),
+    'fallback:m365Consumer': [microsoftWorkload('Microsoft 365 (Consumer)', { Status: 'Service degradation', Message: 'Users may see delays in Outlook.com and OneDrive.' }), microsoftWorkload('OneDrive')]
+  });
+  globalThis.fetch = fetchImpl;
+  try {
+    const result = await loadPublicProvider(microsoftProvider);
+    assert.ok(requested.includes('fallback:m365Consumer'));
+    // The fallback is used only for the document that failed.
+    assert.ok(!requested.includes('fallback:mac'));
+    assert.equal(result.service_state, 'degraded');
+    assert.equal(result.incidents.length, 1);
+    assert.equal(result.incidents[0].affected_service, 'Microsoft 365 (Consumer)');
+    assert.equal(result.component_status.length, 4);
   } finally {
     globalThis.fetch = originalFetch;
   }

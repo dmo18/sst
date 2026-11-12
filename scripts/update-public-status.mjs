@@ -710,8 +710,12 @@ async function parseMicrosoftPublicSource(provider, source) {
   const documents = {};
   const failures = [];
   for (const [key, endpoint] of Object.entries(MICROSOFT_PUBLIC_STATUS_ENDPOINTS)) {
-    const result = await fetchSource({ ...provider, url: endpoint.url, sourceType: source.mode }, 'application/json, text/json, */*');
+    let result = await fetchSource({ ...provider, url: endpoint.url, sourceType: source.mode }, 'application/json, text/json, */*');
     logs.push(...(result.logs || [result.log]));
+    if (!result.ok && endpoint.fallbackUrl) {
+      result = await fetchSource({ ...provider, url: endpoint.fallbackUrl, sourceType: source.mode }, 'application/json, text/json, */*');
+      logs.push(...(result.logs || [result.log]));
+    }
     if (result.ok) documents[key] = result.body;
     else if (endpoint.required) failures.push(`${endpoint.name}: HTTP ${result.status || 'failed'} ${result.log?.error || result.log?.message || ''}`.trim());
   }
