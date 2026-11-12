@@ -249,6 +249,7 @@ const statuspageCandidates = {
   keeper: ['https://statuspage.keeper.io/api/v2/summary.json', 'Keeper'],
   xero: ['https://status.xero.com/api/v2/summary.json', 'Xero'],
   nuso: ['https://status.nuso.cloud/api/v2/summary.json', 'NUSO'],
+  yardi: ['https://status.yardi.com/api/v2/summary.json', 'Yardi'],
   'bitdefender-gravityzone': ['https://status.gravityzone.bitdefender.com/api/v2/summary.json', 'Bitdefender GravityZone']
 };
 

@@ -4,6 +4,8 @@
 
 The 458×290 office tile now uses a seamless vertical incident feed instead of eight-second pages. Rows include a brief verbatim vendor description; the fixed footer shows plainly labeled data freshness. Full-size views and collection semantics are unchanged.
 
+> Current configuration, November 12, 2026 (3.4.0): 81 raw catalog entries, 42 actively monitored after consolidation (Yardi added from its official Statuspage summary), and 39 fully disabled. The line below is the earlier configuration.
+>
 > Current configuration, October 23, 2026: 80 raw catalog entries, 41 actively monitored after consolidation, and 39 fully disabled. Historic 80-provider and artwork performance metrics below describe the earlier release baseline.
 
 

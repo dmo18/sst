@@ -40,7 +40,7 @@ config/providers.json + provider consolidation
   -> GitHub Pages
 ```
 
-The catalog retains 80 raw entries, but only 41 are enabled after consolidation, including NUSO in the former Datto slot. The other 39 are fully disabled: they produce no source requests, favicon fetches, status records, health intelligence, browser checks, or active/historical alerts. Disabled entries remain on disk solely for future re-enablement. The active catalog hash and deployed Status Contract include only enabled providers.
+The catalog retains 81 raw entries, but only 42 are enabled after consolidation, including NUSO in the former Datto slot and Yardi (added November 12, 2026). The other 39 are fully disabled: they produce no source requests, favicon fetches, status records, health intelligence, browser checks, or active/historical alerts. Disabled entries remain on disk solely for future re-enablement. The active catalog hash and deployed Status Contract include only enabled providers.
 
 The public payload uses Status Contract v3 with `schema_version: 3`, `contract_version: 3`, and a deterministic hash of the canonical active provider catalog. Browser validation, the release contract, and production smoke all require the same catalog identity.
 
@@ -98,7 +98,7 @@ Every active provider has a curated local recognition identity so operators can 
 
 The production contract currently has:
 
-- 41/41 enabled providers with curated identities;
+- 42/42 enabled providers with curated identities;
 - bundled local brand geometry for enabled providers;
 - fetched and bundled vendor favicon artwork only for enabled providers;
 - enabled-catalog-derived identity checks in the deployed provider table;

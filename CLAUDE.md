@@ -25,8 +25,8 @@ Build and maintain a free, static, first-party-only MSP service-intelligence app
 
 - Package version: `3.4.0`.
 - Collection pipeline: `3.0.0`.
-- Raw catalog entries: 80.
-- Active providers after consolidation: 41 (the other 39 raw entries are disabled).
+- Raw catalog entries: 81.
+- Active providers after consolidation: 42 (the other 39 raw entries are disabled).
 - Active wallboard: `src/WallboardV2.tsx`.
 - Primary compact wallboard target: 458 by 291 pixels.
 - Normal browser refresh interval: 180 seconds while visible.
