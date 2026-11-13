@@ -11,7 +11,18 @@ function rules(css) {
   for (const match of withoutComments.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
     const selector = match[1].trim();
     if (!selector || selector.startsWith('@')) continue;
-    out.push({ selectors: selector.split(',').map(item => item.replace(/^@media[^{]*\{/, '').trim()).filter(Boolean), body: match[2] });
+    // Split on commas that are not inside :is(...) or similar parentheses.
+    const parts = [];
+    let depth = 0;
+    let current = '';
+    for (const character of selector) {
+      if (character === '(') depth += 1;
+      if (character === ')') depth -= 1;
+      if (character === ',' && depth === 0) { parts.push(current); current = ''; }
+      else current += character;
+    }
+    parts.push(current);
+    out.push({ selectors: parts.map(item => item.replace(/^@media[^{]*\{/, '').trim()).filter(Boolean), body: match[2] });
   }
   return out;
 }
@@ -30,14 +41,14 @@ test('the readability layer cannot reach the wallboard', async () => {
   assert.match(main, /import '\.\/styles\/readable\.css';/);
 });
 
-test('the readability layer never sets text below 15 pixels and uses no root-relative sizes', async () => {
+test('the readability layer never sets text below 14 pixels and uses no root-relative sizes', async () => {
   const css = await read('src/styles/readable.css');
   const sizes = [...css.matchAll(/font-size:\s*([^;]+);/g)].map(match => match[1].trim());
   assert.ok(sizes.length > 60);
   for (const size of sizes) {
     assert.doesNotMatch(size, /rem/, `root-relative size: ${size}`);
     const pixels = [...size.matchAll(/(\d+(?:\.\d+)?)px/g)].map(match => Number(match[1]));
-    if (pixels.length) assert.ok(Math.min(...pixels) >= 15, `text smaller than 15px: ${size}`);
+    if (pixels.length) assert.ok(Math.min(...pixels) >= 14, `text smaller than 14px: ${size}`);
     else assert.match(size, /em$/, `unexpected size unit: ${size}`);
   }
 });

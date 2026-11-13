@@ -58,7 +58,7 @@ src/payloadValidation.ts                 browser payload validation
 src/styles/wallboard-v2.css              dedicated wallboard overlay, compact layout, and marquees
 src/styles/status-home.css               default status screen (15px base, 14px floor), never the wallboard
 src/easternTime.ts                       UTC times in vendor text shown as Eastern
-src/styles/readable.css                  technical console readability layer (18px base, 15px floor), never the wallboard
+src/styles/readable.css                  technical console light theme and readability layer (15px base, 14px floor), never the wallboard
 .github/workflows/refresh-pages.yml       Pages build and deployment
 .github/workflows/status-freshness-watch.yml deployed freshness recovery
 .github/workflows/refresh-continuity.yml  bounded refresh continuity heartbeat
@@ -115,14 +115,17 @@ GitHub monitoring must remain first-party and unauthenticated.
 
 ## Operator readability contract
 
-The operator application must stay easy to read for someone who has difficulty focusing on small or low-contrast text.
+The operator application must stay easy to read for someone who has difficulty focusing on small or low-contrast text. The technical console and every panel that opens over it (Microsoft 365 coverage, Dependency Universe, command palette, provider drawer, operations intelligence) share the status screen's light look.
 
-- No operator text below 15 pixels; body text is 18 pixels.
-- Plain, high-contrast panels behind text. No gradients, glow or blur behind text.
+- Light surfaces, dark text, one accent color. No dark panels, gradients or glow behind text.
+- No console text below 14 pixels; body text is 15 pixels.
+- Text contrast of at least 4.5 to 1 against its background.
 - Labels in sentence case, not small capitals.
 - A state is always written as a word (Major outage, Degraded, Not confirmed, Working), never shown by color alone.
 - The overview leads with what is wrong, in plain language, before any metric.
-- Every rule in `src/styles/readable.css` is scoped to `.app-frame[data-surface="operator"]`. It must never style the wallboard.
+- The console keeps all its views and features. Restyle it; do not remove information.
+- The top bar must fit any fallback font at 1440 pixels wide.
+- Every rule in `src/styles/readable.css` is scoped to `.app-frame[data-surface="operator"]`. It must never style the wallboard. Older layers set some surfaces with `!important`; an override there must use it too.
 
 The default screen is the plain status screen, `src/StatusHome.tsx` with `src/styles/status-home.css` (`data-surface="home"`). The technical console opens at `?console=full` or from any link that names one of its views.
 
