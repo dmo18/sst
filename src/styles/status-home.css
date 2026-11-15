@@ -787,6 +787,56 @@
 
 .app-frame[data-surface="home"] .sh-how dt { color: var(--sh-ink-soft); }
 
+/* Unofficial Microsoft admin feed */
+.app-frame[data-surface="home"] .sh-advisories h3,
+.app-frame[data-surface="home"] #sh-ms-advisories { display: flex; align-items: center; gap: 8px; }
+
+.app-frame[data-surface="home"] .sh-advisories h3 span {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--sh-degraded-bg);
+  color: #6b3900;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.app-frame[data-surface="home"] #sh-ms-advisories span { background: var(--sh-degraded-bg); color: #6b3900; }
+
+.app-frame[data-surface="home"] .sh-advisory-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.app-frame[data-surface="home"] .sh-how .sh-advisory-list { padding: 0 14px 12px; }
+
+.app-frame[data-surface="home"] .sh-advisory-list li {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px dashed var(--sh-line-strong);
+  border-radius: 10px;
+  background: #fbfcfd;
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+
+.app-frame[data-surface="home"] .sh-advisory-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.app-frame[data-surface="home"] .sh-advisory-head code {
+  color: var(--sh-ink-soft);
+  font-size: 14px;
+}
+
+.app-frame[data-surface="home"] .sh-advisory-title { font-weight: 600; }
+.app-frame[data-surface="home"] .sh-advisory-list p.sh-when { color: var(--sh-ink-soft); font-size: 14px; }
+
 /* Loading placeholder */
 .app-frame[data-surface="home"] .sh-skeleton {
   display: flex;

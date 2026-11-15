@@ -16,7 +16,7 @@ Build and maintain a free, static, first-party-only MSP service-intelligence app
 - No authenticated tenant data.
 - No browser-side vendor feed calls, with one exception: after loading the audited payload the browser may re-read official Statuspage summaries (`src/liveStatusTruth.ts`) using the collector's parser. The audited payload stays the baseline, a failed re-read changes nothing, and no other vendor source is called from the browser.
 - No synthetic monitoring used as vendor-health evidence.
-- No third-party outage scraping.
+- No third-party outage scraping, with one labelled exception: `scripts/collect-m365-advisories.mjs` reads the University of Pennsylvania's public relay of Microsoft's admin-console advisories into `m365-advisories.json`. It is supplementary reading on the status screen's Microsoft 365 panel, marked Unofficial. It must never set a service state, create an incident in `status.json`, change a total, or reach the wallboard, and it is dropped when unreadable or more than an hour old.
 - No crowdsourced outage data as operational truth.
 - Keep GitHub Pages static hosting.
 - Fail closed when source data is missing, malformed, stale, or ambiguous.
@@ -44,6 +44,7 @@ scripts/update-status.mjs                collection orchestration
 scripts/update-public-status.mjs         official-source collection
 scripts/structured-source-adapters.mjs   structured adapters and per-provider source overrides
 scripts/official-json-adapters.mjs       Microsoft, N-able, RingCentral, Salesforce and Google JSON adapters
+scripts/collect-m365-advisories.mjs      unofficial Microsoft advisories supplement (never a state)
 scripts/ensure-valid-status.mjs          server payload validation
 scripts/production-smoke.mjs             deployed production and commit-identity checks
 scripts/verify-yodeck-wallboard.mjs      exact 458 by 291 CDP wallboard verification

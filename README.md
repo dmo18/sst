@@ -19,6 +19,7 @@ The collector reads free public sources owned by monitored vendors, normalizes t
 - Source observation reliability: rolling seven-day and thirty-day SLO windows.
 - Parser trust: stable, changed, observing, or quarantined schema state.
 - Plain status screen by default: one verdict sentence, the services with problems, then every service on one line, in a compact high-contrast layout, with a slide-in panel for each service. Every time is Eastern, including UTC times inside vendor text. The technical console is at `?console=full`.
+- Unofficial Microsoft admin feed: per-service Microsoft incidents and advisories relayed by a university for its own tenant appear as labelled extra reading on the Microsoft 365 panel. They never set a state or reach the wallboard.
 - Browser-local operator workflow: acknowledgement, follow, snooze, handled state, notes, assignee, pins, and lenses that never rewrite vendor truth.
 
 A source failure, parser quarantine, or source SLO breach never becomes a vendor outage or a green service conclusion. Routine maintenance, resolved history, marketing material, release notes, collector failures, and unreadable-source records are not promoted into the wallboard incident list. Temporal correlations remain non-causal.

@@ -11,7 +11,7 @@
     "update-status:raw": "node --experimental-strip-types scripts/update-public-status.mjs",
     "ensure-valid-status": "node scripts/ensure-valid-status.mjs",
     "emit-status-contract": "node --experimental-strip-types scripts/emit-status-contract.mjs public/status.json",
-    "update-status": "npm run update-status:raw && npm run ensure-valid-status && npm run emit-status-contract",
+    "update-status": "npm run update-status:raw && npm run ensure-valid-status && npm run emit-status-contract && node scripts/collect-m365-advisories.mjs",
     "sync-provider-favicons": "node scripts/sync-provider-favicons.mjs",
     "validate-providers": "node scripts/validate-providers.mjs && node --experimental-strip-types scripts/validate-canonical-providers.mjs",
     "lint": "node scripts/source-quality.mjs",
