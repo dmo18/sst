@@ -10,6 +10,10 @@ The project uses semantic versioning. Dates are shown in ISO format. The newest 
 
 ## Unreleased
 
+### Microsoft admin feed supplement (November 14, 2026)
+
+- The Microsoft 365 panel on the status screen can show per-service Microsoft incidents and advisories that Microsoft's public status page does not carry. They are read from the University of Pennsylvania's public relay of its own tenant's admin-console feed and are marked Unofficial. They never set a state, never count in the totals, never reach `status.json` or the wallboard, and are dropped when the page is unreadable or more than an hour old.
+
 ### Technical console restyled (November 12, 2026)
 
 - The technical console and the panels that open over it (Microsoft 365 coverage, Dependency Universe, command palette, provider drawer, operations intelligence) now use the same light look as the status screen: light surfaces, dark text, one accent, 15 pixel body text with nothing below 14. Every view and feature is kept.

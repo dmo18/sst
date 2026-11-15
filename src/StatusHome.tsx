@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { componentStatusIsProblem } from './componentStatus';
 import { ProviderIcon } from './providerIcon';
+import { useMicrosoftAdvisories, type MicrosoftAdvisories, type MicrosoftAdvisory } from './microsoftAdvisories';
 import { effectiveIncidentTime } from './statusContract';
 import type { DiagnosticSource, IssueBrief, IssueConsoleModel } from './statusViewModel';
 import type { DataLifecycle, Maintenance, ServiceState } from './types';
@@ -152,7 +153,7 @@ function unknownReason(source: DiagnosticSource): string {
   return firstSentence(source.message || source.status || 'The vendor has not published a clear status.');
 }
 
-function ServiceDetail({ source, incidents, maintenance, now, onClose }: { source: DiagnosticSource; incidents: IssueBrief[]; maintenance: Maintenance[]; now: number; onClose: () => void }): JSX.Element {
+function ServiceDetail({ source, incidents, maintenance, now, onClose, advisories }: { source: DiagnosticSource; incidents: IssueBrief[]; maintenance: Maintenance[]; now: number; onClose: () => void; advisories: MicrosoftAdvisories | null }): JSX.Element {
   const troubled = source.serviceState === 'major' || source.serviceState === 'degraded';
   return (
     <div className="sh-drawer-layer">
@@ -176,6 +177,7 @@ function ServiceDetail({ source, incidents, maintenance, now, onClose }: { sourc
             </section>
           )}
           {source.id === 'microsoft365' && <p className="sh-note">This is what Microsoft publishes for everyone. It is not the health of one customer tenant.</p>}
+          {source.id === 'microsoft365' && advisories && <MicrosoftAdvisoryBlock advisories={advisories} now={now} />}
           <details className="sh-how">
             <summary>How we know this</summary>
             <dl>
@@ -189,6 +191,37 @@ function ServiceDetail({ source, incidents, maintenance, now, onClose }: { sourc
         <footer className="sh-drawer-foot"><a className="sh-button" href={incidents[0]?.url || source.source} target="_blank" rel="noopener noreferrer">Open the vendor's status page</a></footer>
       </aside>
     </div>
+  );
+}
+
+function AdvisoryItem({ item, now }: { item: MicrosoftAdvisory; now: number }): JSX.Element {
+  return (
+    <li>
+      <div className="sh-advisory-head"><b>{item.service}</b><code>{item.id}</code></div>
+      <p className="sh-advisory-title">{item.title}</p>
+      {item.currentStatus && <p>{item.currentStatus}</p>}
+      <p className="sh-when">Started {dayAndClock(item.startedAt, now)}. Last update {agoWords(item.lastUpdated, now)}.</p>
+    </li>
+  );
+}
+
+/** Extra reading for Microsoft 365. Clearly not official, and never part of the state above it. */
+function MicrosoftAdvisoryBlock({ advisories, now }: { advisories: MicrosoftAdvisories; now: number }): JSX.Element | null {
+  const incidents = advisories.items.filter(item => item.classification === 'incident');
+  const notices = advisories.items.filter(item => item.classification === 'advisory');
+  if (!advisories.items.length) return null;
+  return (
+    <section className="sh-block sh-advisories" aria-labelledby="sh-advisories-title">
+      <h3 id="sh-advisories-title">More from Microsoft's admin feed <span>Unofficial</span></h3>
+      <p className="sh-note">Relayed by {advisories.publisher} from its own Microsoft 365 tenant, read {agoWords(advisories.fetchedAt, now)}. It may not match your tenants and it does not change the status above. <a href={advisories.sourceUrl} target="_blank" rel="noopener noreferrer">Open the source page</a></p>
+      {incidents.length > 0 && <ul className="sh-advisory-list">{incidents.map(item => <AdvisoryItem key={item.id} item={item} now={now} />)}</ul>}
+      {notices.length > 0 && (
+        <details className="sh-how">
+          <summary>{notices.length} lower priority {notices.length === 1 ? 'advisory' : 'advisories'}</summary>
+          <ul className="sh-advisory-list">{notices.map(item => <AdvisoryItem key={item.id} item={item} now={now} />)}</ul>
+        </details>
+      )}
+    </section>
   );
 }
 
@@ -248,6 +281,7 @@ function SystemDetails({ model, lifecycle, now, browserCheckedAt, deploy }: { mo
 
 export function StatusHome({ model, lifecycle, now, onRefresh, browserCheckedAt = null }: { model: IssueConsoleModel | null; lifecycle: DataLifecycle; now: number; onRefresh: () => void; browserCheckedAt?: number | null }): JSX.Element {
   const deploy = useDeployIdentity(model?.generatedAt || '');
+  const advisories = useMicrosoftAdvisories(model?.generatedAt || '');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<ServiceFilter>('all');
@@ -390,6 +424,24 @@ export function StatusHome({ model, lifecycle, now, onRefresh, browserCheckedAt 
               </section>
             )}
 
+            {advisories && advisories.items.length > 0 && services.some(source => source.id === 'microsoft365') && (
+              <section className="sh-section" aria-labelledby="sh-ms-advisories">
+                <h2 id="sh-ms-advisories">Microsoft admin feed <span>Unofficial</span></h2>
+                <ul className="sh-rows">
+                  <li>
+                    <button type="button" className="sh-row is-unknown" onClick={() => setSelectedId('microsoft365')}>
+                      <ProviderIcon id="microsoft365" name="Microsoft 365" />
+                      <span className="sh-row-text">
+                        <span className="sh-row-head"><b>{count(advisories.items.filter(item => item.classification === 'incident').length, 'incident', 'incidents')} and {count(advisories.items.filter(item => item.classification === 'advisory').length, 'advisory', 'advisories')} per service</b></span>
+                        <span className="sh-row-title">Relayed by a third party from its own tenant. Not counted in the totals above.</span>
+                      </span>
+                      <svg className="sh-chevron" width="16" height="16" viewBox="0 0 20 20" aria-hidden="true"><path d="M7 3l7 7-7 7" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                    </button>
+                  </li>
+                </ul>
+              </section>
+            )}
+
             {quiet && <div className="sh-plain"><p>No vendor is reporting a problem right now.</p></div>}
           </div>
 
@@ -416,7 +468,7 @@ export function StatusHome({ model, lifecycle, now, onRefresh, browserCheckedAt 
         </div>
         {footer}
       </div>
-      {selected && <ServiceDetail source={selected} incidents={incidentsFor(selected.id)} maintenance={model.maintenance.filter(item => item.providerId === selected.id)} now={now} onClose={() => setSelectedId(null)} />}
+      {selected && <ServiceDetail source={selected} incidents={incidentsFor(selected.id)} maintenance={model.maintenance.filter(item => item.providerId === selected.id)} now={now} onClose={() => setSelectedId(null)} advisories={advisories} />}
     </div>
   );
 }

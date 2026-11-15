@@ -74,7 +74,7 @@ jobs:
           rm -rf /tmp/verified-app-shell
           mkdir -p /tmp/verified-app-shell
           cp -a dist/. /tmp/verified-app-shell/
-          rm -f /tmp/verified-app-shell/status.json /tmp/verified-app-shell/status-*.json /tmp/verified-app-shell/previous-status.json /tmp/verified-app-shell/deploy-version.txt
+          rm -f /tmp/verified-app-shell/status.json /tmp/verified-app-shell/status-*.json /tmp/verified-app-shell/previous-status.json /tmp/verified-app-shell/deploy-version.txt /tmp/verified-app-shell/m365-advisories.json
       - name: Publish verified application shell
         if: github.event_name != 'schedule' && github.event_name != 'repository_dispatch'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -113,6 +113,8 @@ jobs:
           unzip -q /tmp/verified-app-shell.zip -d dist
           node scripts/write-deploy-version.mjs
           cp public/status.json public/deploy-version.txt dist/
+          # Supplementary reading only; its absence must not stop a release.
+          cp public/m365-advisories.json dist/ 2>/dev/null || rm -f dist/m365-advisories.json
           node scripts/prepare-versioned-status.mjs dist
       - name: Fail-safe application build when reusable shell is unavailable
         if: (github.event_name == 'schedule' || github.event_name == 'repository_dispatch') && steps.shell.outputs.found != 'true'

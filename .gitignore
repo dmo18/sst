@@ -9,4 +9,5 @@ status.json
 public/status.json
 public/previous-status.json
 public/deploy-version.txt
+public/m365-advisories.json
 public/assets/logos/provider-favicons/
