@@ -21,13 +21,22 @@ const MAX_EXTRACT_AGE_MS = 2 * 60 * 60 * 1000;
 const MONTHS = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
 const ZONE_OFFSET_HOURS = { UTC: 0, GMT: 0, EST: -5, EDT: -4 };
 
+/**
+ * Plain text only. Tags are removed until none remain, angle brackets are
+ * never produced from entities, and any bracket left over is dropped, so the
+ * result cannot contain markup.
+ */
 function decode(value) {
-  return String(value)
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<[^>]*>/g, '')
+  let text = String(value).replace(/<br\s*\/?>/gi, '\n');
+  let previous;
+  do {
+    previous = text;
+    text = text.replace(/<[^>]*>/g, '');
+  } while (text !== previous);
+  return text
+    .replace(/[<>]/g, '')
     .replace(/&nbsp;/g, ' ')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
+    .replace(/&lt;|&gt;/g, ' ')
     .replace(/&quot;/g, '"')
     .replace(/&#0?39;|&rsquo;|&lsquo;/g, "'")
     .replace(/&amp;/g, '&')

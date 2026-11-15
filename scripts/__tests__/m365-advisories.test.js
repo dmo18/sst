@@ -52,6 +52,13 @@ test('only open incidents and advisories are kept, incidents first, with the lat
   assert.equal(incident.current_status, "We're restarting affected infrastructure.");
 });
 
+test('relayed text can never carry markup', () => {
+  const hostile = block({ id: 'EX1550543', title: 'Nested <scr<script>ipt>alert(1)</scr</script>ipt> and &lt;img src=x&gt; title' });
+  const [item] = parsePennIncidents(page(hostile), NOW).items;
+  assert.doesNotMatch(item.title, /[<>]/);
+  assert.doesNotMatch(JSON.stringify(item), /<script|<img/i);
+});
+
 test('a stale, undated or unrecognized page yields no items and is not ok', () => {
   const stale = parsePennIncidents(page(block({ id: 'EX1550543', title: 'Old' })), NOW + 3 * 60 * 60 * 1000);
   assert.equal(stale.ok, false);
